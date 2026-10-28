@@ -1,65 +1,88 @@
 # mermaid-tty v1 design: more diagram types (sub-project C)
 
-**Goal:** draw as many Mermaid diagram types as possible. Each one meets sub-project A's quality bar: flat, colored, exact width, validated, and fail-closed. The owner asked to "try to support as many charts in mermaid" as possible.
+**Goal:** draw as many Mermaid diagram types as possible at sub-project A's quality bar: flat, colored, exact width, validated and fail-closed. The owner asked: "try to support as many as charts in mermaid".
 
-**Approval:** waived by the PM under `/goal` autonomy on 2026-10-27. This sub-project depends on the core from sub-project A: `width`, `canvas`, `themes`, `validate`, the graph layout, and the `render` dispatcher.
+**Approval:** PM waiver under `/goal` autonomy, 2026-10-27.
+
+**Depends on:** A's core (`width`, `canvas`, `themes`, `validate`, the graph layout and the `render` dispatcher).
+
+**Normative companion:** [`2026-10-27-mermaid-tty-v1-diagram-matrix.md`](2026-10-27-mermaid-tty-v1-diagram-matrix.md). This spec sets the rules every type follows. The matrix sets each type's contract:
+- exact header keywords;
+- the supported syntax subset;
+- the text design;
+- the numeric rules;
+- the required fixtures and the rejection fixtures.
+
+## Tiers
+
+- **Tier 1, must ship in v1:** state, class, ER, mindmap, gantt, pie, gitGraph, timeline, journey, xychart, quadrant.
+- **Tier 2, gated:** requirement, C4 (`C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`), block, architecture, kanban, packet, sankey, treemap, radar, zenuml. A Tier 2 type is enabled only after its matrix fixtures and its visual review pass. Until then its keywords fall back.
 
 ## Rules for every type
 
-- **Parsing:** each type parses a documented subset of its syntax. If a diagram uses anything outside that subset, the whole diagram falls back to its source. The renderer never shows partial output.
-- **Width and validation:** output fits within `columns`. The validator checks that every item's label appears exactly once, that no glyph overwrites another, and that the width holds.
-- **Flat rows:** an item takes one row per label line. Only containers (frames, lanes and axes) draw border rows.
-- **Golden tests:** each type has golden snapshots at 80 and 120 columns. Their fixtures are adapted from the syntax pages on mermaid.js.org (MIT licensed) and include CJK variants.
-- **Tiers:**
-  - Tier 1 must ship in v1.
-  - A Tier 2 type ships once it passes its tests and a cross-family review of its golden renders. Until then its header keyword stays unsupported, so it falls back to the source, and the README lists it as planned.
+1. **Contract.**
+   - A diagram renders only if every statement is in its type's matrix subset.
+   - Anything else falls back to the source as a whole, including a valid prefix followed by unsupported syntax.
+   - Output is never partial.
+2. **Flat rows.**
+   - An item takes one row per label line.
+   - Only containers (frames, lanes, axes, tables) draw border rows.
+   - Member-list types (class, ER, requirement) add member rows, never border-only rows.
+3. **Width.** All widths come from A's width function. Every row fits in `columns`. Each type's fit ladder ends in fallback.
+4. **Validate.**
+   - Every label, member, event, actor and value from the source appears exactly once, either in place or in a keyed legend under rule 6.
+   - No glyph overwrites another.
+5. **Numbers.**
+   - **Domain:** values must be finite. Negative, NaN or out-of-domain values fall back unless the matrix allows them.
+   - **Bars:** a bar of value `v`, in a field `W` cells wide with scale maximum `M`, is `round(8·v/M·W)` eighth-cells long. Horizontal bars use `▏▎▍▌▋▊▉█`; vertical bars use `▁▂▃▄▅▆▇█`.
+   - **Zero:** a zero value draws no bar but keeps its label and value.
+   - **Printed values:** every bar prints its value. Percentages are `v/Σv` with one decimal.
+6. **Collisions.**
+   - When two items need the same cells, the renderer puts a short key there and lists the full text in a legend under the diagram, in source order. Typical cases are coincident points, overlapping series markers, and labels wider than their field.
+   - Keys are `1`, `2`, … for points and `a`, `b`, … for fields.
+   - If no deterministic placement exists, the whole diagram falls back. Nothing is moved, clipped or dropped silently.
+7. **Order.** Output follows source order. Exceptions are listed in the matrix; for example, pie sorts by value, descending, and ties keep source order.
 
-## Types
+## Registry
 
-| Type (header keyword) | Tier | Text design |
-|---|---|---|
-| state (`stateDiagram`, `stateDiagram-v2`) | 1 | Graph engine. `[*]` draws as a start dot ● or an end ◉. Composite states become frames, choice is ◇, fork and join are ━ bars, and notes are dim. |
-| class (`classDiagram`) | 1 | Graph engine. A class is a name pill followed by member rows, with visibility kept. Relation ends: ▷ inheritance, ◆ composition, ◇ aggregation, and a dashed line for dependency. Cardinality labels are shown. |
-| ER (`erDiagram`) | 1 | Graph engine. An entity is a pill followed by attribute rows (type, name, PK/FK). Cardinality appears at the edge ends as `1`, `0..1`, `1..*` or `0..*`, plus a relation label. |
-| mindmap | 1 | A horizontal tree that grows from the root with `├─` and `└─` branches. Shapes are pills. |
-| gantt | 1 | Task names on the left and bars on a date axis scaled to the width. Sections are headers and milestones are ◆. Color shows done, active and crit. |
-| pie | 1 | Horizontal bars sorted by size, each with label, value and percent. |
-| gitGraph | 1 | One lane per branch, each in its own color. Commits are ●, plus merges, tags and cherry-picks. |
-| timeline | 1 | Periods are headers with their events listed beneath. Sections are colored. |
-| journey | 1 | Sections of tasks, each with a score bar (1–5) and its actors. |
-| xychart (`xychart-beta`) | 1 | Bars drawn with `▁▂▃▄▅▆▇█` and lines drawn as markers, on axes with ticks. |
-| quadrant (`quadrantChart`) | 1 | A 2D grid with axis labels, quadrant titles and labeled points. |
-| requirement (`requirementDiagram`) | 2 | Graph engine. A requirement or element is a pill followed by field rows. Edges carry «satisfies»-style labels. |
-| C4 (`C4Context` and the others) | 2 | Graph engine. People, systems and containers are pills with a type tag. Boundaries are frames. |
-| block (`block-beta`) | 2 | A grid of pills laid out by `columns N`, with arrows between blocks. |
-| architecture (`architecture-beta`) | 2 | Graph engine. Services are pills with an icon tag, and groups are frames. |
-| kanban | 2 | Columns side by side with their cards. They wrap into rows when the terminal is narrow. |
-| packet (`packet-beta`) | 2 | Bit-field rows, 32 bits to a row, with labeled fields. |
-| sankey (`sankey-beta`) | 2 | Ranked layers, with links drawn as bars scaled by value. |
-| treemap | 2 | Nested, indented bars sized by value. |
-| radar (`radar-beta`) | 2 | Bars for each axis, per series. |
-| zenuml | 2 | Parsed into sub-project A's sequence model. |
+`core/registry.ts` maps every header keyword and alias to a renderer or an explicit fallback. Aliases include `stateDiagram` and `stateDiagram-v2`, `graph` and `flowchart`, and the `-beta` names. The registry exports `ENABLED`, the exact set of types allowed to render.
 
 ## Architecture
 
-- **Per-type modules:** each type lives in `core/diagrams/<type>/` with a `parse.ts` and a `layout.ts`. It is registered in `core/registry.ts` under its header keyword.
-- **Graph family:** state, class, ER, requirement, C4 and architecture reuse A's layered layout and router. They share a node and edge model that allows multi-row nodes, made of a header plus member rows. A's interfaces must expose this model from the start.
-- **Chart family:** gantt, xychart, pie, journey, quadrant, sankey and radar share `core/charts/{axis.ts,bars.ts}`.
+- **Per-type modules:** `core/diagrams/<type>/{parse,layout}.ts`, each registered in the registry.
+- **Graph family:** state, class, ER, requirement, C4 and architecture reuse A's layered layout and router. They share a node/edge model with multi-row nodes (a header plus member rows), which A's interfaces expose from the start.
+- **Chart family:** gantt, xychart, pie, journey, quadrant, sankey, radar and treemap share `core/charts/{scale,bars,legend}.ts`.
 
 ## Test strategy
 
-- `node --test` runs unit and golden tests for each type.
-- A registry test checks that every Mermaid header keyword maps either to a renderer or to an explicit fallback.
-- A property test runs over all fixtures and checks that each one fits the width and passes validation.
-- Sub-project B's README shows one example of each shipped type, and a support table that marks each type Tier 1, Tier 2 or planned.
+- **Feature coverage:** every matrix row (keyword, statement form, relation, cardinality, value rule) names the fixtures that cover it. A test fails if any row has none.
+- **Per type, required fixtures:** they render and validate at 60, 80 and 120 columns. Tests assert the expected numbers: bar lengths, percentages and dates.
+- **Per type, rejection fixtures:** each returns the original fence. They cover:
+  - a valid prefix plus an unsupported statement;
+  - malformed input;
+  - repeated labels;
+  - out-of-domain values.
+- **Integration:**
+  - No border-only rows appear outside containers.
+  - Each span carries its role's color from the active theme.
+  - W/F text next to box drawing measures exactly.
+  - At widths of fit −1, 0 and +1 cells, the renderer takes the specified ladder step or falls back.
+- **Registry:**
+  - `ENABLED` equals Tier 1 plus the Tier 2 types recorded as passed.
+  - Every alias resolves, and every disabled keyword falls back.
+  - The README support table matches the registry.
+- **Visual gate:** applies to every shipped type, Tier 1 included. A gallery is rendered from the goldens, as PNG through B's SVG pipeline, at 80 columns, at a narrow width, and with CJK.
+  - The PM reviews color and legibility.
+  - A cross-family reviewer checks the text and the role map.
+  - A type ships only after both pass.
 
 ## Decisions (self-answered)
 
-- **Pie and radar are drawn as bars, not circles.** Bars are legible and exact in a terminal.
-- **Multi-row nodes are allowed only for member lists** (class, ER and requirement). Even these never use a row just for a border.
-- **Unknown or unsupported keywords keep the engine's own drawing.**
+- Pie and radar are drawn as bars, with values printed.
+- Collisions get keys and a legend rather than moving or clipping anything.
+- Unknown or disabled keywords keep the engine's own drawing.
 
 ## Risks
 
-- **Breadth versus quality:** Tier 2 is gated rather than forced, so a weak renderer stays off instead of shipping.
-- **Shared graph model:** the graph engine must support multi-row nodes early, so the plan for A has to account for it.
+- **Breadth vs. quality:** Tier 2 is gated, and every shipped type passes the visual gate.
+- **Drift from Mermaid:** fixtures are adapted from the syntax pages on mermaid.js.org, and the matrix records the docs version.

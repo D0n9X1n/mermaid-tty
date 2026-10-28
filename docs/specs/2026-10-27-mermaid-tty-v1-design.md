@@ -29,10 +29,10 @@
    - **Also:** `+`/`-` activations; notes left of, right of or over; `alt`/`else`, `opt`, `loop`, `par`/`and`, `critical` and `break` frames; `autonumber`.
 3. **Flat nodes:** a node takes exactly one row per label line, with no border-only rows. End caps show the shape, so shape doesn't depend on color.
 4. **Width:**
-   - One function counts East Asian Width `W` and `F` characters as 2 columns, and everything else as 1, including box-drawing, arrows and `◇`.
+   - One function measures width: East Asian Width `W`/`F` characters count 2 columns; combining marks (Mn/Me) and zero-width characters count 0; everything else counts 1, including box-drawing, arrows and `◇`. Labels containing ZWJ, variation selectors, regional indicators, emoji modifiers or control characters fall back.
    - Every row fits within `e.viewport.columns`. To fit, try natural layout, tighter gaps, wrapped labels, then LR redrawn as TD; otherwise show the source.
 5. **Fail closed:**
-   - A validator confirms that each label appears once, each edge connects its endpoints, no glyph overwrites another, and every row fits the width.
+   - A validator confirms that each node's label appears once (counted per node id, so identical texts are fine), each edge connects its endpoints, no glyph overwrites another, and every row fits.
    - Any validator failure, parse error or unsupported type shows the original fence unchanged. The reason goes only to the debug log.
 6. **Source preserved:**
    - Only the drawing changes. ctrl+o shows the source.
@@ -44,8 +44,8 @@
 8. **Zero install:**
    - No runtime dependencies and no build step.
    - `claude plugin validate .` passes.
-   - The 90th-percentile corpus diagram renders in 50 ms or less.
-   - A bounded cache is keyed by text, width and theme.
+   - The 90th-percentile corpus diagram renders in 50 ms or less (cold, 80 columns, development Mac).
+   - An LRU cache of 64 entries is keyed by text, width and theme.
 
 ## Architecture
 
@@ -73,20 +73,16 @@ flowchart LR
 
 ## Test strategy
 
-- **`node --test`:**
-  - Unit tests for each module.
-  - Golden snapshots, at 80 and 120 columns, of committed synthetic fixtures that cover requirements 1–2, CJK, `<br/>` and subgraphs.
-  - Property checks that every row fits and validates.
-- **`claude plugin test .`:** hook tests. Prose and a diagram split correctly; bad source falls back; an unclosed fence is left untouched; a non-terminal surface is left untouched.
+- **Acceptance:** every requirement maps to the checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md): unit, golden, mutation, hook, portability, benchmark and visual-review checks.
 - **Corpus gate (local only, never committed):** all 87 of the owner's blocks render and validate at 80 and 120 columns.
-- **Runtime proof:** a CJK flowchart rendered in a tmux-driven Claude Code session, with an ANSI capture showing themed truecolor rows.
-- **Must-pass suite:** `scripts/check.sh` runs `node --test`, `claude plugin validate .`, `claude plugin test .` and the tests from sub-project B.
+- **Runtime proof:** a CJK flowchart rendered in a tmux-driven Claude Code session, with an ANSI capture showing themed truecolor rows, and ctrl+o showing the source.
+- **Must-pass suite:** `scripts/check.sh`.
 
 ## Decisions (grill, self-answered)
 
 - We own the renderer; no third-party layout code ("you control everything").
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
-- A failed render falls back silently. Version 0.1.0.
+- A failed render falls back silently. Version 1.0.0: the owner asked to "release the first version", and the plugin has no API to stabilize first.
 - The owner's docs are used as a corpus only on this machine.
 
 ## Prior art

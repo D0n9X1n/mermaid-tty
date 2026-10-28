@@ -1,6 +1,6 @@
 # mermaid-tty v1 design: docs, wiki pipeline, CI and release (sub-project B)
 
-**Goal:** make mermaid-tty easy to find, install and trust, with a polished README, a bilingual wiki published automatically the way SonicTerm's is, green CI, and a `v0.1.0` release.
+**Goal:** make mermaid-tty easy to find, install and trust, with a polished README, a bilingual wiki published automatically the way SonicTerm's is, green CI, and a `v1.0.0` release.
 
 **Approval:** PM waiver under `/goal` autonomy, 2026-10-27. Depends on sub-project A, `2026-10-27-mermaid-tty-v1-design.md`.
 
@@ -13,16 +13,16 @@
    - **Images:** SVGs that `scripts/render-svg.ts` generates from `core/`, so every image is real renderer output. Each glyph sits at its own cell's x position, so CJK alignment doesn't depend on the viewer's fonts.
 2. **wiki/**
    - **Pages:** pairs `<Page>.md` and `<Page>-zh-CN.md` for Home, Usage, Configuration-and-Themes, Architecture and Development-and-Release.
-   - **Language:** each page is written only in its file's language, and the two pages of a pair have the same headings.
+   - **Language:** each page is written only in its file's language (no CJK in English prose outside code; zh-CN prose is Chinese). The two pages of a pair have the same heading levels in the same order, and each opens with one link to its twin, the only cross-language link allowed.
 3. **Publishing**
    - **Workflow:** `.github/workflows/publish-wiki.yml` runs on every push to `main` and on `workflow_dispatch`, with a job-scoped `contents: write`.
    - **Script:** `scripts/publish-wiki.sh SOURCE WIKI_REPO SHA` mirrors the pages and commits only when something changed. Both the workflow and the script mirror SonicTerm's.
-   - **Tests:** `scripts/test-wiki-publish.sh` runs in throwaway Git repos. It checks mirroring and no-op runs, that every page has its zh-CN twin, that the twins' headings match, and that no link crosses languages.
+   - **Tests:** `scripts/test-wiki-publish.sh` runs in throwaway Git repos. It checks mirroring, no-op runs and stale-page removal, and the language rules above.
 4. **CI:** `.github/workflows/ci.yml` runs on pushes and pull requests and executes `scripts/check.sh`.
-   - The runner has Node 22 and Claude Code installed from npm, for `validate` and `test`.
+   - The runner has Node 24 and Claude Code installed from npm, for `validate` and `test`.
    - Actions are pinned by SHA.
 5. **Release:**
-   - Tag `v0.1.0` and publish a GitHub Release whose notes include the install commands.
+   - Tag `v1.0.0` and publish a GitHub Release whose notes include the install commands.
    - Verify that installing from the marketplace works, in a scratch session.
 6. **Icon:** `.claude-plugin/icon.png`, square, 512 px, under 2 MB, converted from a checked-in SVG.
 
@@ -32,12 +32,7 @@ GitHub creates a wiki's Git repo only after its first page is saved in the web U
 
 ## Test strategy
 
-`scripts/check.sh` includes:
-- `scripts/test-wiki-publish.sh`
-- a check that every relative link and image path in README and `wiki/` exists
-- a check that the committed SVGs match a fresh `render-svg` run
-
-CI must pass on the pull request.
+Every requirement maps to the B checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md). `scripts/check.sh` runs the automatic ones, and the release and review checks are recorded with the release. CI must pass on the pull request.
 
 ## Decisions (self-answered)
 
