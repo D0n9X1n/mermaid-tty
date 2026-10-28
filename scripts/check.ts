@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { claude } from './lib/claude.ts'
 import { isMain } from './lib/is-main.ts'
+import { scanPlaceholders } from './lib/placeholder-scan.ts'
 
 // A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID;
 // ['@kit'] runs `claude plugin test .`; an '@tmp' argument becomes a fresh temp
@@ -94,6 +95,11 @@ export function run(step: string[], id?: string): number {
 // skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that
 // passed; one ran when its name, or a suite's or parent test's name, starts with id.
 function nodeTests(id?: string): number {
+  // node:test passes a test with no function or an empty one, and a filtered run drops the guard test that names it
+  // (tests/scripts/no-placeholder-tests_test.ts), so a filtered run first fails on any placeholder in any test file.
+  const placeholders = id ? scanPlaceholders('.') : []
+  for (const p of placeholders) console.error(p)
+  if (placeholders.length > 0) return 1
   const files = readdirSync('tests', { recursive: true, encoding: 'utf8' })
     .filter(f => f.endsWith('_test.ts')).map(f => join('tests', f)).sort()
   // The ID, then no word character and no '-': A1 does not match A10, nor A8.no-build A8.no-build-x.

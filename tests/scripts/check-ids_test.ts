@@ -41,7 +41,7 @@ function emptyPath<T>(body: () => T): T {
   const saved = process.env.PATH; process.env.PATH = ''
   try { return body() } finally { process.env.PATH = saved }
 }
-const nodeTest = (...tests: string[]) => `import test, { describe, it } from 'node:test'\n${tests.join('\n')}\n`
+const nodeTest = (...tests: string[]) => `import test, { describe, it } from 'node:test'\nimport assert from 'node:assert/strict'\n${tests.join('\n')}\n`
 // Files @nt must not run: a kit test, and a .ts file not named *_test.ts.
 const DECOYS = { 'tests/hooks/k.test.tsx': "throw new Error('a kit test ran under node --test')\n", 'tests/helper.ts': "throw new Error('a non-test file ran')\n" }
 
@@ -117,8 +117,8 @@ test('A8.validation: a claude step goes through lib/claude.ts, and a claude that
   if (process.platform !== 'win32') assert.equal((error.mock.calls[0]?.arguments[0] as { code?: string }).code, 'ENOENT')
 })
 test('A8.validation: @nt runs the *_test.ts files under tests/, nested ones too, filtered to titles that start with the ID', () =>
-  scratch({ ...DECOYS, 'tests/a_test.ts': nodeTest("test('B1: top level', () => {})"),
-    'tests/deep/b_test.ts': nodeTest("test('A3: nested', () => {})", "test('B2: other row', () => { throw new Error('ran without the A3 filter') })") }, dir => {
+  scratch({ ...DECOYS, 'tests/a_test.ts': nodeTest("test('B1: top level', () => { assert.ok(true) })"),
+    'tests/deep/b_test.ts': nodeTest("test('A3: nested', () => { assert.ok(true) })", "test('B2: other row', () => { throw new Error('ran without the A3 filter') })") }, dir => {
     const r = check(dir, 'A3')
     assert.equal(r.status, 0); assert.deepEqual(r.steps, ['> @nt']); assert.match(r.stdout, /^ok \d+ - A3: nested$/m)
   }))
@@ -127,8 +127,16 @@ function assertNoRun(r: ReturnType<typeof check>, id: string): void {
   assert.equal(r.status, 1, id); assert.deepEqual(r.steps, ['> @nt'], id)
   assert.match(r.stderr, new RegExp(`^no tests ran for ${id.replaceAll('.', '\\.')}$`, 'm'), id)
 }
+// node:test passes a test with no function, and an ID's filter drops the guard test that would name it, so @nt scans first.
+test("A8.validation: @nt fails before running any test, naming the file and line, when an ID's only test is a placeholder", () =>
+  scratch({ 'tests/a_test.ts': nodeTest("test('A2: placeholder')") }, dir => {
+    const r = check(dir, 'A2')
+    assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.equal(r.stdout, '')
+    assert.match(r.stderr, /^tests\/a_test\.ts:3: test\('A2: placeholder'\) has no function$/m)
+  }))
+// An empty suite holds no test; its function is not empty, or @nt's scan would reject it before the run.
 test('A8.validation: @nt fails and stops the row when only an empty suite matches', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("describe('A1: empty suite', () => {})", "describe('A1: outer', () => { describe('inner', () => {}) })") }, dir =>
+  scratch({ 'tests/a_test.ts': nodeTest("describe('A1: empty suite', () => { assert.ok(true) })", "describe('A1: outer', () => { describe('inner', () => { assert.ok(true) }) })") }, dir =>
     assertNoRun(check(dir, 'A1'), 'A1')))
 test('A8.validation: @nt fails when every matching test is skipped, at the top level or in a suite, by option, .skip or t.skip', () =>
   scratch({ 'tests/a_test.ts': nodeTest("test('A4: skipped', { skip: true }, () => {})",
@@ -139,26 +147,26 @@ test('A8.validation: @nt fails and stops the row when every matching test is a t
     "describe('A5: suite', () => { it.todo('a'); it('b', t => { t.todo() }); it('c', { todo: true }, () => { throw new Error('known bug') }) })") }, dir =>
     assertNoRun(check(dir, 'A5'), 'A5')))
 test('A8.validation: @nt does not take A10 for A1, as a test or as a suite', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("test('A10: not A1', () => {})", "describe('A10: suite', () => { it('not A1 either', () => {}) })") }, dir =>
+  scratch({ 'tests/a_test.ts': nodeTest("test('A10: not A1', () => { assert.ok(true) })", "describe('A10: suite', () => { it('not A1 either', () => { assert.ok(true) }) })") }, dir =>
     assertNoRun(check(dir, 'A1'), 'A1')))
 test('A8.validation: @nt matches a dotted ID only to itself: the dot is literal, and a longer slug is another ID', () => {
-  const decoys = ['A4.width-table-v2', 'A4.width-tables', 'A4xwidth-table', 'A4'].map(id => `test('${id}: decoy', () => {})`)
+  const decoys = ['A4.width-table-v2', 'A4.width-tables', 'A4xwidth-table', 'A4'].map(id => `test('${id}: decoy', () => { assert.ok(true) })`)
   scratch({ 'tests/a_test.ts': nodeTest(...decoys) }, dir => assertNoRun(check(dir, 'A4.width-table'), 'A4.width-table'))
-  scratch({ 'tests/a_test.ts': nodeTest(...decoys, "test('A4.width-table: real', () => {})") }, dir => {
+  scratch({ 'tests/a_test.ts': nodeTest(...decoys, "test('A4.width-table: real', () => { assert.ok(true) })") }, dir => {
     const r = check(dir, 'A4.width-table')
     assert.equal(r.status, 0); assert.match(r.stdout, /^ok \d+ - A4\.width-table: real$/m); assert.doesNotMatch(r.stdout, /decoy/)
   })
 })
 test('A8.validation: @nt counts a passing test in a suite, matched by its own name or by its suite', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("describe('helpers', () => { it('A1: own name', () => {}) })",
-    "describe('A3: suite', () => { describe('deeper', () => { it('by ancestry', () => {}) }) })") }, dir => {
+  scratch({ 'tests/a_test.ts': nodeTest("describe('helpers', () => { it('A1: own name', () => { assert.ok(true) }) })",
+    "describe('A3: suite', () => { describe('deeper', () => { it('by ancestry', () => { assert.ok(true) }) }) })") }, dir => {
     for (const id of ['A1', 'A3']) assert.equal(check(dir, id).status, 0, id)
   }))
 test('A8.validation: all fails when no real test ran: a file without tests and an empty suite are not runs', () =>
   scratch({ 'tests/a_test.ts': '// no tests yet\n', 'tests/b_test.ts': nodeTest("describe('B1: empty', () => {})") }, dir =>
     assertNoRun(check(dir, 'all'), 'all')))
 test('A8.validation: @nt fails when a matching test fails, though another passed', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("test('A2: passes', () => {})", "test('A2: fails', () => { throw new Error('boom') })") }, dir => {
+  scratch({ 'tests/a_test.ts': nodeTest("test('A2: passes', () => { assert.ok(true) })", "test('A2: fails', () => { throw new Error('boom') })") }, dir => {
     const r = check(dir, 'A2')
     assert.equal(r.status, 1); assert.match(r.stdout, /^not ok \d+ - A2: fails$/m); assert.doesNotMatch(r.stderr, /no tests ran/)
   }))
@@ -184,7 +192,7 @@ test("A8.validation: @kit runs claude plugin test . after the row's Node tests",
   scratch({ '.claude-plugin/plugin.json': '{"name":"mtty-scratch","version":"0.0.0"}', 'hooks/hooks.json': '{"modules":["./register.tsx"]}',
     'hooks/register.tsx': "import type { Register } from 'claude-code'\nexport const register: Register = () => {}\n",
     'tests/hooks/k.test.tsx': "import { test, expect } from 'claude-code/testing'\ntest('K: kit runs', async () => { expect(1).toBe(1) })\n",
-    'tests/a_test.ts': nodeTest("test('A5: node side', () => {})") }, dir => {
+    'tests/a_test.ts': nodeTest("test('A5: node side', () => { assert.ok(true) })") }, dir => {
     const r = check(dir, 'A5')
     assert.equal(r.status, 0); assert.deepEqual(r.steps, ['> @nt', '> @kit']); assert.match(r.stdout, /^\(pass\) K: kit runs/m)
   }))
