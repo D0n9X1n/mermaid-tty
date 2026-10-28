@@ -1,0 +1,14 @@
+{
+  "name": "mermaid-tty",
+  "description": "Colored Mermaid diagrams in the terminal for Claude Code.",
+  "owner": {
+    "name": "D0n9X1n"
+  },
+  "plugins": [
+    {
+      "name": "mermaid-tty",
+      "description": "Draws the mermaid fences in Claude's replies as colored box-drawing diagrams in the terminal.",
+      "source": "./"
+    }
+  ]
+}
