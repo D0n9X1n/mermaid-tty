@@ -30,7 +30,7 @@ These rules apply to every type. A type's section can add to them but never cont
    - Under the mono theme, series differ by glyph, key or position, never by color alone.
 10. **Counting.** Every source label, member, event, actor and value appears exactly once, in place or in the legend. The exceptions are stated in their sections: sankey counts each link once, and packet bit numbers are positions, not values.
 11. **Coverage.** Each coverage row lists the fixtures that exercise its feature, OK or rejection. Every OK fixture must be cited by at least one row.
-12. **Glyphs.** Outside source text, the renderer draws only printable ASCII, the Box Drawing block (U+2500–U+257F), and the other glyphs a section names. None of them has the Unicode `Emoji` property. So heavy edges take heavy corners and junctions, and light, heavy and dashed lines meet with the block's mixed junctions.
+12. **Glyphs.** Outside source text, the renderer draws only printable ASCII, the Box Drawing block (U+2500–U+257F), and the other glyphs a section names. No non-ASCII glyph among them has the Unicode `Emoji` property. Heavy edges take heavy corners, and light and heavy lines meet with the block's mixed junctions. The block has no dashed corners, so a dashed line bends with a light corner.
 
 ### End caps
 
@@ -108,6 +108,9 @@ The Common rules and their end-cap table (`00-common.md`) apply to every section
 | `-47` | Edge IDs: `A e1@--> B`, then `e1@{ animate: true }`, both parsed and ignored |
 | `-48` | `:::name` on nodes, `accTitle` and `accDescr` parsed and ignored (common rule 4) |
 | `-49` | Bare `flowchart` header, no direction: drawn top-down |
+| `-50` | A thick `==>` edge that must bend: heavy segments and heavy corners (rule 12) |
+| `-51` | A thick and a solid edge share a junction: the matching light/heavy mixed junction glyph (rule 12) |
+| `-52` | A dotted `-.->` edge that must bend: dashed segments and a light corner (rule 12) |
 
 **Rejection fixtures** (common rule 1):
 
@@ -1721,6 +1724,9 @@ The title follows common rule 3. No config key is honored.
 | flowchart | `:::name` ignored | flowchart-ok-48 |
 | flowchart | `accTitle`/`accDescr` ignored | flowchart-ok-48 |
 | flowchart | bare header defaults to `TB` | flowchart-ok-49 |
+| flowchart | thick bend: heavy corners | flowchart-ok-50 |
+| flowchart | light/heavy mixed junction | flowchart-ok-51 |
+| flowchart | dotted bend: light corner | flowchart-ok-52 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |
