@@ -1,6 +1,6 @@
-# mermaid-tty v1 A — tasks T0–T12 (scaffold, core)
+# mermaid-tty v1 A — tasks T0–T11 (scaffold, core)
 
-**Depends on:** `2026-10-28-mermaid-tty-v1-A-renderer.md`: the interfaces in §6, the algorithms in §7, the checks in §9 and the review format in §10. A3 (`…-A3-tasks.md`, T13–T23) and A4 (`…-A4-tasks.md`, T24–T39) depend on T0–T12 here.
+**Depends on:** `2026-10-28-mermaid-tty-v1-A-renderer.md`: the interfaces in §6, the algorithms in §7, the checks in §9 and the review format in §10. A3 (`…-A3-tasks.md`, T12–T21), A4 (`…-A4-tasks.md`, T22–T32) and A5 (`…-A5-tasks.md`, T33–T39) depend on T0–T11 here.
 **Conventions:**
 - Every test title starts with its check ID.
 - Node tests are `*_test.ts`, run as `node --test <file>`. Kit tests are `tests/hooks/*.test.tsx`, run by `claude plugin test .`.
@@ -9,19 +9,19 @@
 - **Parallel groups:** tasks in one group touch disjoint files. A group starts when every dependency of its tasks is merged.
 - **Done-when:** each task's own command. `scripts/check.sh` goes green only at T38, when every row of §9 exists.
 
-## File structure (A2–A4)
+## File structure (A2–A5)
 ```text
 .gitattributes .gitignore package.json tsconfig.json README.md(B)      T0
 .claude-plugin/{plugin.json,marketplace.json}  hooks/{hooks.json,register.tsx}  T0, T21, T22
-types/mermaid-tty.d.ts (PluginState)                              T22
+types/mermaid-tty.d.ts (PluginState)                              T0, T22
 hooks/{fences.ts T8, mode.ts T21}
-core/{fail.ts T0, width.ts width-table.ts T2, glyphs.ts T3, caps.ts T4, themes.ts color.ts T5, lru.ts T6,
+core/{fail.ts T0, width.ts width-table.ts T2, glyphs.ts box-table.ts T3, caps.ts T4, themes.ts color.ts T5, lru.ts T6,
       source.ts T7, text.ts T9, canvas.ts T10, validate.ts T11, fit.ts registry.ts T12, render.ts T19}
 core/graph/{model.ts layered.ts T16, route.ts T17, draw.ts T18}
 core/diagrams/flowchart/{parse.ts T13-T15, layout.ts T19}   core/diagrams/sequence/{parse.ts T23, layout.ts T24}
 fixtures/{flowchart T20, sequence T25, corpus T29}/*.mmd    goldens/{flowchart,sequence}/*.golden  T20, T25
 tests/core/*_test.ts  tests/golden/golden_test.ts (T20)  tests/hooks/{*_test.ts,*.test.tsx}  tests/scripts/*_test.ts
-scripts/{check.sh check.ts check-ids.ts lib/claude.ts T1, gen-width-table.ts T2, check-palettes.ts T5,
+scripts/{check.sh check.ts check-ids.ts lib/check-ids.ts lib/claude.ts T1, gen-width-table.ts T2, gen-box-table.ts T3, check-palettes.ts T5,
          smoke.ts explain.ts T19, check-portable.ts fresh-clone.ts T27, bench.ts T28, gen-corpus.ts corpus-gate.ts T29,
          render-svg.ts render-gallery.ts T30, lib/tangle.ts check-tangle.ts T31, check-review-hashes.ts T32}
 scripts/e2e/{package.json package-lock.json CLAUDE_VERSION reply.ts mock.ts T33, env.ts driver.ts screen.ts T34, assert.ts run.ts T35-T37, stored.ts T36}
@@ -30,15 +30,17 @@ docs/decisions/task0-spikes.md T0    docs/reviews/ (PM)
 ```
 
 ### T0: Scaffold, line endings and loader spike
-**Group** P0 · **Deps** none · **Covers** A8.platforms (`.gitattributes`), A8.validation (manifest), S4
-**Files:** create `.gitattributes`, `.gitignore`, `package.json`, `tsconfig.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json`, `hooks/register.tsx`, `core/fail.ts` (§6) and `docs/decisions/task0-spikes.md`. Test: `tests/hooks/loader.test.tsx`.
+**Group** P0 · **Deps** none · **Covers** A8.platforms (`.gitattributes`), A8.validation (manifest, state declaration), S4, S6, S7
+**Files:** create `.gitattributes`, `.gitignore`, `package.json`, `tsconfig.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `hooks/hooks.json`, `hooks/register.tsx`, `types/mermaid-tty.d.ts`, `core/fail.ts` (§6) and `docs/decisions/task0-spikes.md`. Test: `tests/hooks/loader.test.tsx`.
 - [ ] **Failing test:** a mermaid reply draws the keyed probe, which proves that the `.ts` import loaded (F1).
 ```tsx
 import { test, expect } from 'claude-code/testing'
-test('A8.no-build: hooks import core with .ts suffixes', async $ => {
-  const ui = await $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage',
+test('A8.no-build: hooks import core with .ts suffixes; the hyphenated $.state key round-trips', async $ => {
+  const mount = () => $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage',
     props: { text: '```mermaid\nflowchart TD\nA-->B\n```', isFirstOfReply: true }, viewport: { columns: 80, rows: 24 } })
-  expect((await ui.find({ key: 'mermaid-0' }))?.text).toBe('probe:false')
+  expect((await (await mount()).find({ key: 'mermaid-0' }))?.text).toBe('probe:false:false')
+  await $.command.run({ command: 'mermaid-tty', args: 'source' })
+  expect((await (await mount()).find({ key: 'mermaid-0' }))?.text).toBe('probe:false:true')
 })
 ```
 - [ ] **Run** `claude plugin test .` → FAIL: `plugin mermaid-tty not found` (no manifest yet).
@@ -46,22 +48,25 @@ test('A8.no-build: hooks import core with .ts suffixes', async $ => {
   - `package.json`: `{"name":"mermaid-tty","version":"1.0.0","private":true,"type":"module","license":"MIT","engines":{"node":">=24"}}`, with no `dependencies`.
   - `.gitattributes`: `* text=auto eol=lf` and `*.png binary`. `.gitignore`: `.claude-plugin/types/`, `node_modules/`, `scripts/e2e/node_modules/`.
   - `tsconfig.json`: the options from types `index.d.ts:67-77`, with `"types": []` and `allowImportingTsExtensions: true`. It is for editors; CI's type check is T39 (D2).
-  - `plugin.json` holds the userConfig shown in F8, with options `default`, `nord`, `dracula`, `gruvbox`, `solarized`, `mono`. `marketplace.json` (F8) has `source: "./"`. `hooks/hooks.json` is `{"modules":["./register.tsx"]}`.
-  - `register.tsx` (probe; T21 replaces it): on the terminal, a reply holding "```mermaid" returns `<Box key="mermaid-0"><Text>{'probe:' + String(isFail(null))}</Text></Box>`; every other reply returns `next(e)`.
-  - `task0-spikes.md` records S4 (the alias list checked against `flowchart.md` at `1fb78698`). S2 closes on the first CI run of B's ci.yml.
-- [ ] **Done when:** `claude plugin test .` passes, and `claude plugin validate .` passes with only the ICON warning.
+  - `plugin.json` holds the userConfig shown in F8, with options `default`, `nord`, `dracula`, `gruvbox`, `solarized`, `mono`, and `"types": "./types/mermaid-tty.d.ts"`. `marketplace.json` (F8) has `source: "./"`. `hooks/hooks.json` is `{"modules":["./register.tsx"]}`.
+  - `types/mermaid-tty.d.ts`: `declare module 'claude-code' { interface PluginState { 'mermaid-tty': { source: boolean } } }`.
+  - `register.tsx` (probe; T21 and T22 replace it): `SOURCE = { plugin: 'mermaid-tty', key: 'source' }`. `session.start` registers `mermaid-tty`; `command.run` on it does `$.state.set(SOURCE, true)`. On the terminal, a reply holding "```mermaid" reads `src = (await $.state.get(SOURCE)).value === true` and returns `<Box key="mermaid-0"><Text>{'probe:' + String(isFail(null)) + ':' + String(src)}</Text></Box>`; every other reply returns `next(e)`.
+  - `task0-spikes.md` records S4 (the alias list checked against `flowchart.md` at `1fb78698`), S6 (the hyphenated key; fallback `mermaidTty` for the `PluginState` key and `SOURCE.plugin`, everywhere) and S7 (the kit's `$.command.run` reaches the command; fallback in main §2). S2 closes on the first CI run of B's ci.yml.
+- [ ] **Done when:** `claude plugin test .` passes, and `claude plugin validate .` passes, reports `declares state: …`, and warns only about the icon.
 - [ ] **Commit:** `git add -A && git commit -m "Scaffold mermaid-tty mod; prove .ts imports load"`
 
 ### T1: The must-pass entry, the per-ID runner and ID parity
 **Group** P1 · **Deps** T0 · **Covers** A8.validation, B7 binding (§9), the platform entry (§3)
-**Files:** create `scripts/check.sh` (exactly as in §9), `scripts/check.ts`, `scripts/check-ids.ts`, `scripts/lib/claude.ts`. Test: `tests/scripts/check-ids_test.ts`.
+**Files:** create `scripts/check.sh` (exactly as in §9), `scripts/check.ts`, `scripts/lib/check-ids.ts` (the one ID parser; B's `check-ci-coverage.ts` imports it), `scripts/check-ids.ts` (its CLI) and `scripts/lib/claude.ts`. Test: `tests/scripts/check-ids_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { spawnSync } from 'node:child_process'
-import { parseIds, diffIds } from '../../scripts/check-ids.ts'
-const DOC = '## Spec A\n| A4 | Width | **Width table:** x. **Fit ladder:** y |\n| A6 | S | ***release*:** z |\n## Visual review (*review*)\n**Gallery:** g\n'
-test('A8.validation: parses row IDs and bold labels', () =>
-  assert.deepEqual(parseIds(DOC), ['A4', 'A4.width-table', 'A4.fit-ladder', 'A6', 'VR.gallery']))
+import { parseIds, diffIds, slug } from '../../scripts/lib/check-ids.ts'
+const DOC = '## Spec A\n| A4 | Width | **Width table:** x. **Fit ladder:** y. **not a label** z |\n| A9 | E | **Stored / copied:** z |\n## Visual review (*review*)\n**Gallery:** g\n'
+test('A8.validation: only bold text with the colon inside is a label; slugs collapse non-[a-z0-9] runs (B7)', () => {
+  assert.deepEqual(parseIds(DOC), ['A4', 'A4.width-table', 'A4.fit-ladder', 'A9', 'A9.stored-copied', 'VR.gallery'])
+  assert.equal(slug('Stored / copied'), 'stored-copied'); assert.equal(slug('No build'), 'no-build')
+})
 test('A8.validation: diff reports missing and extra IDs', () =>
   assert.deepEqual(diffIds(['A4', 'A4.width-table'], ['A4', 'A9.harness']), { missing: ['A4.width-table'], extra: ['A9.harness'] }))
 test('A8.validation: an unknown ID fails', () =>
@@ -75,9 +80,8 @@ test('A8.validation: an unknown ID fails', () =>
     - `@nt` lists `tests/**/*_test.ts` with a `readdirSync` walk. It runs `--test --test-reporter=tap --test-name-pattern=^<escaped ID>\b <files>`, echoes the output, and fails unless the exit code is 0 and `# pass N` has N > 0.
     - `all` runs `@nt` once with no filter, then every other distinct step of the rows not marked `inAll: false`, deduplicated by `JSON.stringify` and run in table order, except `@kit` and `claude plugin validate .`, which `check.sh` runs itself. It exits at the first non-zero result.
     - An unknown ID prints `unknown check <ID>` and exits 1. `main()` runs only when `process.argv[1]` resolves to this file.
-  - **`check-ids.ts`:**
-    - `parseIds(md)`: under `## Spec A`, every `| (A\d+) |` row gives its ID, plus each `\*\*([A-Za-z][^*]*?):?\*\*` inside the row as `<row>.<slug>`. The slug is lowercase, with spaces replaced by `-`.
-    - Under `## Visual review`, it adds `VR.<slug>` for each bold label. The doc has no bare `VR` row, and B2's `IDS48` agrees.
+  - **`lib/check-ids.ts`** (B7's rules exactly; `check-ids.ts` is its CLI):
+    - `parseIds(md)`: under `## Spec A`, every `| (A\d+) |` row gives its ID, plus `<row>.<slug>` for each label in it: bold text with the colon inside, `/\*\*([^*:]+):\*\*/g`. Under `## Visual review`, each such label gives `VR.<slug>`; there is no bare `VR` row. `slug(s)` lowercases, collapses every run of characters outside `[a-z0-9]` into one `-`, and trims `-` at the ends.
     - `diffIds(doc, rows)` returns `{ missing, extra }`.
     - `main` parses `docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md` against `CHECKS` ids and exits 1 on any difference (48 IDs at a02e6cc; A owns 31).
 - [ ] **Done when:** the test passes, and `node scripts/check.ts A8.validation` passes. It runs `claude plugin validate .` and the tests above.
@@ -95,7 +99,7 @@ test('A4.width-table: widths', () => {
   assert.equal(isWide(0x1F680), true)
 })
 test('A4.width-table: unsupported text falls back', () => {
-  for (const s of ['👨‍👩', '✔️', '✔︎', '🇨🇳', '👍🏽', 'a\u0007b', 'a‏b']) assert.notEqual(unsupported(s), null, s)
+  for (const s of ['👨\u{200D}👩', '✔\u{FE0F}', '✔\u{FE0E}', 'a\u{FE00}', 'a\u{E0100}', '🇨🇳', '👍🏽', 'a\u0007b', 'a\u{200F}b']) assert.notEqual(unsupported(s), null, s)
   for (const s of ['plain', '中文', 'é', 'a​b']) assert.equal(unsupported(s), null, s)
 })
 ```
@@ -104,7 +108,7 @@ test('A4.width-table: unsupported text falls back', () => {
 ```ts
 import { WIDE } from './width-table.ts'
 const ZERO = /[\p{Mn}\p{Me}​‌⁠﻿]/u
-const BAD = /[‍︎️\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\p{Cc}]/u
+const BAD = /[\u{200D}\u{FE00}-\u{FE0F}\u{E0100}-\u{E01EF}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\p{Cc}]/u   // every variation selector (R4)
 export function isWide(cp: number): boolean {
   let lo = 0, hi = WIDE.length / 2 - 1
   while (lo <= hi) { const m = (lo + hi) >> 1; if (cp < WIDE[2 * m]!) hi = m - 1; else if (cp > WIDE[2 * m + 1]!) lo = m + 1; else return true }
@@ -120,45 +124,50 @@ export function unsupported(s: string): string | null {
 - [ ] **Done when:** `node --test tests/core/width_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add width(), unsupported() and the generated EAW table"`
 
-### T3: Glyph allow-list
-**Group** P1 · **Deps** T0 · **Covers** A8.platforms, F13, matrix rule 12, flowchart-ok-50…52 (glyph choice)
-**Files:** create `core/glyphs.ts`. Test: `tests/core/glyphs_test.ts`.
+### T3: Glyph allow-list and box glyphs by arm weight
+**Group** P1 · **Deps** T0 · **Covers** A8.platforms, F13, matrix rule 12 (mixed junctions), flowchart-ok-50…52 (glyph choice)
+**Files:** create `core/glyphs.ts`, `scripts/gen-box-table.ts` and the generated, committed `core/box-table.ts`. Test: `tests/core/glyphs_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs'
-import { GLYPHS, junction, crossing } from '../../core/glyphs.ts'
+import { GLYPHS, boxGlyph, junction } from '../../core/glyphs.ts'; import { BOX } from '../../core/box-table.ts'
 const MATRIX = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8')
+const inBox = (g: string) => g.codePointAt(0)! >= 0x2500 && g.codePointAt(0)! <= 0x257f
 test('A8.platforms: GLYPHS is rule 12: ASCII, Box Drawing, section-named glyphs; no non-ASCII Emoji', () => {
-  for (const g of GLYPHS) if (g > '~' && !(g >= '─' && g <= '╿')) assert.ok(MATRIX.includes(g), `not named: ${g}`)
+  for (const g of GLYPHS) if (g > '~' && !inBox(g)) assert.ok(MATRIX.includes(g), `not named: ${g}`)
   for (const g of GLYPHS) if (g > '~') assert.ok(!/\p{Emoji}/u.test(g), `emoji: ${g}`)
   assert.ok(GLYPHS.has('►') && GLYPHS.has('╂') && !GLYPHS.has('▶'))
 })
-test('A8.platforms: junctions, heavy corners, dashed bends and mixed crossings', () => {
-  assert.equal(junction(5, 'light'), '│'); assert.equal(junction(15, 'light'), '┼'); assert.equal(junction(6, 'light'), '┌')
-  assert.equal(junction(6, 'heavy'), '┏'); assert.equal(junction(14, 'heavy'), '┳'); assert.equal(junction(10, 'dotted'), '┄')
-  assert.equal(junction(5, 'dotted'), '┆'); assert.equal(junction(6, 'dotted'), '┌')
-  assert.equal(crossing('heavy', 'light'), '╂'); assert.equal(crossing('light', 'heavy'), '┿'); assert.equal(crossing('heavy', 'heavy'), '╋')
+test('A8.platforms: box glyphs by arm weight (up right down left; 0 none, 1 light, 2 heavy)', () => {
+  assert.equal(Object.keys(BOX).length, 80)
+  for (const [arms, g] of [['1010', '│'], ['1111', '┼'], ['0110', '┌'], ['0220', '┏'], ['0120', '┎'], ['2121', '╂'], ['1212', '┿'],
+    ['2120', '┠'], ['1210', '┝'], ['0222', '┳'], ['2222', '╋']] as const) assert.equal(boxGlyph(arms), g, arms)
+  assert.equal(junction(10, 'dotted'), '┄'); assert.equal(junction(5, 'dotted'), '┆'); assert.equal(junction(6, 'dotted'), '┌')
+  assert.equal(junction(6, 'heavy'), '┏'); assert.equal(junction(14, 'heavy'), '┳')
 })
 ```
 - [ ] **Run** `node --test tests/core/glyphs_test.ts` → FAIL: `Cannot find module …/core/glyphs.ts`.
 - [ ] **Implement:**
 ```ts
-const LIGHT = ' │─└││┌├─┘─┴┐┤┬┼', HEAVY = ' ┃━┗┃┃┏┣━┛━┻┓┫┳╋'   // index = dirs (1 up, 2 right, 4 down, 8 left)
+import { BOX } from './box-table.ts'          // generated: arms 'urdl' (0 none, 1 light, 2 heavy) → glyph; 80 entries
+export const boxGlyph = (arms: string): string => BOX[arms]!   // arms is never '0000'
 export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string {
   if (w === 'dotted' && (dirs === 1 || dirs === 4 || dirs === 5)) return '┆'
   if (w === 'dotted' && (dirs === 2 || dirs === 8 || dirs === 10)) return '┄'
-  return (w === 'heavy' ? HEAVY : LIGHT)[dirs]!                    // a dashed line bends and branches light (rule 12)
-}
-export function crossing(v: 'light' | 'heavy' | 'dotted', h: 'light' | 'heavy' | 'dotted'): string {
-  const V = v === 'heavy', H = h === 'heavy'; return V && H ? '╋' : V ? '╂' : H ? '┿' : '┼'
+  const k = w === 'heavy' ? '2' : '1'                                // a dashed line bends and branches light (rule 12)
+  return boxGlyph([1, 2, 4, 8].map(b => (dirs & b ? k : '0')).join(''))
 }
 const ASCII = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i))
-const BOX = Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x2500 + i))
-export const GLYPHS: ReadonlySet<string> = new Set([...ASCII, ...BOX, ...'►◄▲▼◇●◉'])
+const BOXES = Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x2500 + i))
+export const GLYPHS: ReadonlySet<string> = new Set([...ASCII, ...BOXES, ...'►◄▲▼◇●◉'])
 export const isAllowed = (g: string): boolean => GLYPHS.has(g)
 ```
+  - **`gen-box-table.ts <UnicodeData.txt> > core/box-table.ts`** (Unicode 16.0.0):
+    - For U+2500–U+257F, skip names holding DOUBLE, SINGLE, ARC, DASH or DIAGONAL, and split the rest at ` AND `.
+    - Each part names directions (UP, DOWN, LEFT, RIGHT; VERTICAL is up and down; HORIZONTAL is left and right) and a weight (LIGHT 1, HEAVY 2). A part without a weight takes the other part's.
+    - It writes `export const BOX: Readonly<Record<string, string>>` keyed by `urdl`; the test pins 80 entries.
 - [ ] **Done when:** `node --test tests/core/glyphs_test.ts` passes.
-- [ ] **Commit:** `git commit -m "Add the rule-12 glyph set, junctions and mixed crossings"`
+- [ ] **Commit:** `git commit -m "Add the rule-12 glyph set and box glyphs by arm weight"`
 
 ### T4: End caps and shape aliases
 **Group** P1 · **Deps** T0 · **Covers** A3 (distinct caps in mono), A1 (`@{shape}`), matrix End caps, S4
@@ -188,7 +197,7 @@ lean-l lean-left out-in → leanL · trap-b trapezoid priority → trap · trap-
 - [ ] **Commit:** `git commit -m "Add the end-caps table and @{shape} aliases"`
 
 ### T5: Themes, palettes and color checks
-**Group** P1 · **Deps** T0 · **Covers** A7, VR.in-ci (contrast ≥ 3:1, OKLab ≥ 0.08), matrix rule 9 (s1–s8)
+**Group** P1 · **Deps** T0 · **Covers** A7, VR.in-ci (contrast ≥ 3:1; ΔOKLab ≥ 0.08 pairwise over the 9 roles and over s1–s8), matrix rule 9 (s1–s8)
 **Files:** create `core/themes.ts`, `core/color.ts`, `scripts/check-palettes.ts`. Test: `tests/core/themes_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -197,7 +206,7 @@ import { contrast, oklabDistance } from '../../core/color.ts'; import { paletteP
 const R = ['node', 'decision', 'edge', 'arrow', 'label', 'frame', 'note'] as const
 const T = { default: 'suggestion warning inactive claude text permission subtle',
   nord: '#88C0D0 #EBCB8B #D8DEE9 #BF616A #A3BE8C #B48EAD #5E81AC', dracula: '#8BE9FD #F1FA8C #F8F8F2 #FF79C6 #50FA7B #BD93F9 #FFB86C',
-  gruvbox: '#83A598 #FABD2F #EBDBB2 #FB4934 #B8BB26 #D3869B #FE8019', solarized: '#268BD2 #B58900 #93A1A1 #CB4B16 #EEE8D5 #D33682 #2AA198' }
+  gruvbox: '#83A598 #FABD2F #928374 #FB4934 #B8BB26 #D3869B #FE8019', solarized: '#268BD2 #B58900 #93A1A1 #CB4B16 #EEE8D5 #D33682 #2AA198' }
 test('A7: the 7 role colors under the default mapping and each palette', () => {
   for (const [t, cs] of Object.entries(T)) cs.split(' ').forEach((c, i) => assert.equal(THEMES[t as 'nord'].roles[R[i]!], c, `${t}.${R[i]}`))
   for (const r of R) assert.equal(THEMES.mono.roles[r], null)
@@ -215,13 +224,13 @@ test('VR.in-ci: color math and curated palettes', () => {
 | Theme | background | onFill | title | value | s1…s8 | fill | dim |
 |---|---|---|---|---|---|---|---|
 | default | null | `inverseText` | `text` | `success` | suggestion success warning error merged claude permission planMode | true | [] |
-| nord | #2E3440 | #2E3440 | #ECEFF4 | #8FBCBB | 88C0D0 A3BE8C EBCB8B D08770 B48EAD 81A1C1 BF616A 8FBCBB | true | [] |
-| dracula | #282A36 | #282A36 | #F8F8F2 | #50FA7B | 8BE9FD 50FA7B F1FA8C FFB86C FF79C6 BD93F9 FF5555 6272A4 | true | [] |
-| gruvbox | #282828 | #282828 | #EBDBB2 | #8EC07C | 83A598 B8BB26 FABD2F FE8019 FB4934 D3869B 8EC07C 928374 | true | [] |
-| solarized | #002B36 | #FDF6E3 | #FDF6E3 | #859900 | 268BD2 859900 B58900 CB4B16 DC322F D33682 6C71C4 2AA198 | true | [] |
-| mono | null | null | null | null | all null | false | ['note'] |
+| nord | #2E3440 | #2E3440 | #D08770 | #81A1C1 | 88C0D0 A3BE8C EBCB8B D08770 B48EAD 81A1C1 BF616A 5E81AC | true | [] |
+| dracula | #282A36 | #282A36 | #FF5555 | #6272A4 | 8BE9FD 50FA7B F1FA8C FFB86C FF79C6 BD93F9 FF5555 6272A4 | true | [] |
+| gruvbox | #282828 | #282828 | #EBDBB2 | #458588 | 83A598 B8BB26 FABD2F FE8019 FB4934 D3869B 458588 928374 | true | [] |
+| solarized | #002B36 | #FDF6E3 | #6C71C4 | #859900 | 268BD2 859900 B58900 CB4B16 93A1A1 D33682 6C71C4 2AA198 | true | [] |
+| mono | null | null | null | null | all null | false | [] |
 
-Series values are `#`-prefixed in code. Only mono sets `dim`, because CC's `dimColor` replaces `color`.
+Series values are `#`-prefixed in code. No theme sets `dim`: CC's `dimColor` is itself a color, and mono must carry none (A3, A9).
 ```ts
 const lin = (h: string, i: number) => { const c = parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16) / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
 const lum = (h: string) => 0.2126 * lin(h, 0) + 0.7152 * lin(h, 1) + 0.0722 * lin(h, 2)
@@ -234,7 +243,7 @@ function oklab(h: string): [number, number, number] {
 }
 export function oklabDistance(a: string, b: string): number { const p = oklab(a), q = oklab(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) }
 ```
-  - **`check-palettes.ts`:** exports `paletteProblems(): string[]`. For nord, dracula, gruvbox and solarized, it checks that every one of the 9 roles has `contrast(color, background) ≥ 3`, and that every pair of the 7 roles has `oklabDistance ≥ 0.08`. Mono is exempt, and so is default, which uses theme keys. `main` prints the table and exits 1 on any problem. If a pair fails, apply R8 and update `T` to match.
+  - **`check-palettes.ts`:** exports `paletteProblems(): string[]`. For nord, dracula, gruvbox and solarized: every one of the 9 roles has `contrast(color, background) ≥ 3`, and every pair among the 9 roles (the 7 plus `title` and `value`) and every pair among `s1`–`s8` has `oklabDistance ≥ 0.08` (PM, 2026-10-28). Mono is exempt, and so is default, which uses theme keys. `main` prints the table and exits 1 on any problem. The values above already remove the collisions found by hand (Dracula `title` = `edge` and `value` = `label`; Nord, Gruvbox and Solarized `title`, `value` and series pairs; Gruvbox `edge`). A failure that remains takes R8, and `T` is updated to match.
 - [ ] **Done when:** `node --test tests/core/themes_test.ts` passes and `node scripts/check-palettes.ts` exits 0.
 - [ ] **Commit:** `git commit -m "Add themes, palettes, contrast and OKLab checks"`
 
@@ -369,7 +378,7 @@ export function wrap(line: string, max: number): Piece[] | null {
 - [ ] **Commit:** `git commit -m "Add label lines and width-aware wrapping"`
 
 ### T10: Canvas
-**Group** P3 · **Deps** T2, T3, T5, T9 · **Covers** A5.mutation-tests (the conflict log), A8.platforms (glyphs come only from `junction`, `crossing` and `CAPS`), A4 (combining marks join their base cell)
+**Group** P3 · **Deps** T2, T3, T5, T9 · **Covers** A5.mutation-tests (the conflict log), A8.platforms (glyphs come only from `boxGlyph`, `junction` and `CAPS`), A4 (combining marks join their base cell), matrix rule 12 (mixed junctions)
 **Files:** create `core/canvas.ts` (§6). Test: `tests/core/canvas_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -387,16 +396,19 @@ test('A5.mutation-tests: unrelated owners cross only perpendicular; text is excl
   c.text(0, 0, 'ab', 'label', 'n1'); c.text(0, 1, 'x', 'label', 'n2')
   const d = c.toDrawing(E); assert.equal(d.cells[1]![2]!.ch, '┼'); assert.equal(d.conflicts.length, 2)
 })
-test('A5.mutation-tests: a combining mark joins its base cell; light and heavy cross with the mixed glyph', () => {
-  const c = createCanvas(3, 6, 6); assert.equal(c.text(0, 0, 'éx', 'label', 'n1'), 2)
+test('A5.mutation-tests: a combining mark joins its base cell; arms merge into rule-12 mixed glyphs; unrelated meetings conflict', () => {
+  const c = createCanvas(4, 8, 8, (a, b) => a.split('>')[0] === b.split('>')[0]); assert.equal(c.text(0, 0, 'e\u{301}x', 'label', 'n1'), 2)
   c.line(2, 2, 5, 'heavy', 'edge', 'e1'); c.line(2, 2, 10, 'light', 'edge', 'e2')
-  const d = c.toDrawing(E); assert.equal(d.cells[0]![0]!.ch, 'é'); assert.equal(d.cells[2]![2]!.ch, '╂'); assert.deepEqual(d.conflicts, [])
+  c.line(1, 1, 5, 'heavy', 'edge', 'A>B'); c.line(1, 1, 2, 'light', 'edge', 'A>C')
+  c.line(3, 5, 5, 'heavy', 'edge', 'P>Q'); c.line(3, 5, 6, 'light', 'edge', 'R>S')
+  const d = c.toDrawing(E); assert.equal(d.cells[0]![0]!.ch, 'e\u{301}'); assert.equal(d.cells[2]![2]!.ch, '╂')
+  assert.equal(d.cells[1]![1]!.ch, '┠'); assert.equal(d.conflicts.length, 1)
 })
 ```
 - [ ] **Run** `node --test tests/core/canvas_test.ts` → FAIL: `Cannot find module …/core/canvas.ts`.
 - [ ] **Implement** the §6 write policy:
   - **`text`** writes lead cells (`kind 'text'`; the first cell carries `join`). A W/F character adds a `cont` cell. A zero-width character (Mn, Me, ZWSP) joins the previous cell's `ch` and takes no column. The call returns the width used. `owner` may be a list; its first entry owns the text. `cap`, `fill` (spaces) and `arrow` (role `arrow`) are exclusive in the same way. Writing onto an empty, frame or lifeline cell replaces it; writing onto any other cell logs `{ row, col, had, by }` and keeps the old cell.
-  - **`line`** writes onto an empty, frame or lifeline cell, storing its `weight`. On a line of the same weight it ORs the `dirs` when `shares(old, new)` holds for any old owner. A perpendicular crossing of unrelated owners (`{10, 5}` → `15`) appends the owner whatever the weights and draws `crossing(vertical weight, horizontal weight)` (rule 12). Anything else, including a line on an exclusive cell, is a conflict. Otherwise the glyph is `junction(dirs, weight)`.
+  - **`line`** keeps per-arm weights in `arms` (up, right, down, left; 0 none, 1 light, 2 heavy) and the style, and writes onto an empty, frame or lifeline cell. On a line it merges arm by arm when `shares(old, new)` holds for any old owner, or when unrelated owners cross straight and perpendicular (`{10, 5}`); light and heavy arms then meet in the matching mixed glyph, `boxGlyph(arms)` (rule 12, `flowchart-ok-51`). One arm claimed with two weights, unrelated owners meeting any other way, or a line on an exclusive cell is a conflict. A straight dotted run draws `┄`/`┆`; anything else draws `boxGlyph(arms)`.
   - **`frame`** draws `┌─┐│└┘` (kind `frame`) only into empty cells, then the title as `text` owned by the frame id at `(top, left + 2)`. **`lifeline`** writes `│`/`┃` (kind `lifeline`, role `note`, dirs 5) into empty cells only.
   - **`toDrawing(expect)`** returns `{ columns, cells, conflicts, expect }`.
 - [ ] **Done when:** `node --test tests/core/canvas_test.ts` passes.
@@ -434,59 +446,3 @@ test('A5.mutation-tests: identical text on distinct ids passes', () => assert.eq
   5. **Edge labels:** no cell of the label within Chebyshev distance 1 of an edge cell → `label-not-adjacent`.
 - [ ] **Done when:** `node --test tests/core/validate_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add the validator with mutation tests"`
-
-### T12: Fit ladder and registry
-**Group** P5 · **Deps** T7, T11 · **Covers** A4.fit-ladder (runner), A1 and flowchart-reject-05 (`flowchart-elk`), matrix rule 1, C's `ENABLED`
-**Files:** create `core/fit.ts`, `core/registry.ts`. Test: `tests/core/fit_test.ts`.
-- [ ] **Failing test:**
-```ts
-import test from 'node:test'; import assert from 'node:assert/strict'; import { createCanvas } from '../../core/canvas.ts'
-import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS } from '../../core/registry.ts'
-const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
-  layout: (_m: unknown, step: string, cols: number) => {
-    const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
-    return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [] }) } }
-test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () => {
-  assert.equal((fitLadder(fake as never, {}, 10) as { step: string }).step, 'tight')
-  assert.ok('reason' in fitLadder(fake as never, {}, 4))
-})
-test('A1: registry keywords; ENABLED is exactly A', () => {
-  assert.deepEqual([...ENABLED].sort(), ['flowchart', 'sequence'])
-  assert.equal(KEYWORDS['graph'], 'flowchart'); assert.equal(KEYWORDS['stateDiagram-v2'], 'state'); assert.equal(KEYWORDS['flowchart-elk'], null)
-  assert.deepEqual(lookup('flowchart-elk TD'), { reason: 'fallback:flowchart-elk' }); assert.deepEqual(lookup('pie title x'), { reason: 'disabled:pie' })
-  assert.deepEqual(lookup('Flowchart TD'), { reason: 'unknown-type' })
-})
-```
-- [ ] **Run** `node --test tests/core/fit_test.ts` → FAIL: `Cannot find module …/core/fit.ts`.
-- [ ] **Implement:**
-  - **`fitLadder`:** for each `mod.steps(model)`, run `layout`. Skip a `Fail`, and skip a drawing that `validate` rejects, remembering its reason. Return `{ step, drawing }` for the first that passes; otherwise the last reason, or `fail('too-wide')` when no step ran.
-  - **`KEYWORDS`** (matrix headers):
-
-    | Keyword(s) | Type |
-    |---|---|
-    | flowchart graph | flowchart |
-    | flowchart-elk | null |
-    | sequenceDiagram | sequence |
-    | stateDiagram stateDiagram-v2 | state |
-    | classDiagram classDiagram-v2 | class |
-    | erDiagram | er |
-    | requirementDiagram | requirement |
-    | requirement | null |
-    | C4Context C4Container C4Component C4Dynamic C4Deployment | c4 |
-    | architecture-beta | architecture |
-    | gantt pie journey mindmap gitGraph timeline kanban zenuml | each its own type |
-    | xychart-beta xychart | xychart |
-    | quadrantChart | quadrant |
-    | sankey-beta sankey | sankey |
-    | radar-beta | radar |
-    | treemap-beta treemap | treemap |
-    | block-beta block | block |
-    | packet-beta packet | packet |
-  - **`MODULES: Partial<Record<DiagramType, DiagramModule>>`** starts empty; T19 and T24 import their modules here.
-  - **`lookup(h)`:** take the first whitespace token, dropping a trailing `:`.
-    - `!Object.hasOwn(KEYWORDS, kw)` → `unknown-type` (headers are case-sensitive).
-    - `null` → `fallback:<kw>`.
-    - A type not in `ENABLED` → `disabled:<type>`; a type with no module → `unregistered:<type>`.
-    - Otherwise, the module.
-- [ ] **Done when:** `node --test tests/core/fit_test.ts` passes.
-- [ ] **Commit:** `git commit -m "Add the fit ladder runner and the diagram registry"`

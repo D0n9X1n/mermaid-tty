@@ -3,7 +3,7 @@
 **Goal:** in Claude Code's terminal on macOS, Linux and Windows, draw each closed mermaid fence (flowchart, sequence) as a flat, colored, width-exact diagram. Show the untouched source whenever any check fails, and whenever the user picks `/mermaid-tty source`.
 **Architecture:** `core/` is host-agnostic, dependency-free, erasable TypeScript. Its pipeline is source → registry → parse → layout → route → canvas → validate → theme, run inside a fit ladder and an LRU. `hooks/register.tsx` is thin: a `ui.render` hook on `AssistantMessage` (terminal only), plus `/mermaid-tty`, which keeps the mode in `$.state`. The checks live in Node (`scripts/*.ts`); `scripts/check.sh` is a thin bash entry point.
 **Tech stack:** Node ≥ 24 with type stripping (no build); `node:test`; the Claude Code 2.1.308 mods API and `claude-code/testing`. Only the separate e2e job installs packages: node-pty and @xterm/headless, under `scripts/e2e/`.
-**Plan files (each ≤ 500 lines):** this file holds the design, checks, traceability and risks. `…-A2-tasks.md` holds T0–T12 (scaffold, core). `…-A3-tasks.md` holds T13–T23 (flowchart, hook, command, sequence parse). `…-A4-tasks.md` holds T24–T39 (sequence layout and fixtures, gates, corpus, visual review, e2e, parity, type check). All three implement §6; A3 depends on A2, and A4 on A2 and A3.
+**Plan files (each ≤ 500 lines):** this file holds the design, checks, traceability and risks. `…-A2-tasks.md` holds T0–T11 (scaffold, core). `…-A3-tasks.md` holds T12–T21 (fit ladder, registry, flowchart, hook). `…-A4-tasks.md` holds T22–T32 (command, sequence, gates, corpus, visual review). `…-A5-tasks.md` holds T33–T39 (e2e, parity, type check). All four implement §6; each depends on the ones before it.
 **Inputs:** spec A, the acceptance doc and the matrix at `1dbf48a`, amended through `a02e6cc` (rule 12, bare headers, sequence `title`) and `994de0e` (rule 12 Emoji scope, `flowchart-ok-50…52`); the PM's answers of 2026-10-28; GPT-6's blind second design (§12).
 
 ## 1. Settled facts
@@ -28,6 +28,8 @@
 |---|---|---|
 | S2 | Does Node 24 bare `node --test` include `*_test.ts`? | check.ts passes explicit file lists; `fresh-clone.ts` runs both forms |
 | S4 | The `@{ shape }` alias list (T4) against `flowchart.md` at the pinned commit. | An unknown name draws rectangle caps (matrix line 66): a miss changes caps, never correctness. |
+| S6 | Does the engine accept the hyphenated `$.state` key (`plugin: 'mermaid-tty'`, `PluginState['mermaid-tty']`) for get and set? (T0) | `mermaidTty`, for the `PluginState` key and `SOURCE.plugin`, everywhere |
+| S7 | Does a kit test's `$.command.run({ command: 'mermaid-tty', args })` reach the command that `session.start` registers? (T0, T22) | The test sets the state itself with `$.state.set(SOURCE, true)`; the handler is tested as a pure function in `mode_test.ts` |
 | E1 | Does node-pty + @xterm/headless drive CC 2.1.308 on Linux and macOS (prompt ready, truecolor cells)? | `--driver tmux` (the proven recipe) on Linux and macOS; PTY on Windows only |
 | E2 | Windows launch: the `.cmd` shim via `cmd.exe /d /s /c`, `USERPROFILE`, and the trust-key path form. | Seed both `C:\…` and `C:/…` keys |
 | E3 | The 256-color run without tmux: `TMUX=e2e`, with `CLAUDE_CODE_TMUX_TRUECOLOR` unset. | `COLORTERM` unset with `TERM=xterm-256color`; else `--driver tmux` |
@@ -59,7 +61,7 @@ Every test title starts with its check ID (`A4.width-table: 中 counts 2`). `nod
 | E2E | `node scripts/e2e/run.ts` | `scripts/e2e/*` | A9, with a real CC and a mock API |
 | Type check (CI only) | `node scripts/typecheck.ts` | `core/`, plus `hooks/` when `.claude-plugin/types/` exists | strict, erasable TypeScript; PM decision D2, no acceptance ID |
 
-**Golden format** (`goldens/<type>/<fixture-id>.golden`, LF): for each width, `@<cols>` followed by the text rows, then `@<cols> roles` followed by one role row per text row, cell for cell. Role codes: uppercase is source text, lowercase is a drawn glyph. `N`/`n` node, `D`/`d` decision, `e` edge, `a` arrow or end mark, `L` label, `F`/`f` frame, `O`/`o` note (lifelines, `rect`), `T` title, `~` the second cell of a wide character, space for empty. `UPDATE_GOLDEN=1` rewrites goldens. A rewrite changes their hashes, which re-opens the review (§10).
+**Golden format** (`goldens/<type>/<fixture-id>.golden`, LF): for each width, `@<cols>` followed by the text rows, then `@<cols> roles` followed by one role row per text row, cell for cell. Role codes: uppercase is source text, lowercase is a drawn glyph. `N`/`n` node, `D`/`d` decision, `e` edge, `a` arrow or end mark, `L` label, `F`/`f` frame, `O`/`o` note (lifelines, `rect`), `T` title, `1`–`8` a series ink (C), `~` the second cell of a wide character, space for empty. `UPDATE_GOLDEN=1` rewrites goldens. A rewrite changes their hashes, which re-opens the review (§10).
 
 ## 5. Design check
 ### 5a. Bottom-up: what exists
@@ -101,7 +103,7 @@ Every test title starts with its check ID (`A4.width-table: 中 counts 2`). `nod
 |---|---|---|---|---|---|
 | `core/width.ts` + `width-table.ts` | Measures display columns | `width`, `unsupported`, `isWide` | generated EAW table | a Unicode update (regenerate the table) | table test A4.width-table |
 | `core/text.ts` | Splits labels into lines and wraps them by width | `labelLines`, `wrap` | width | the wrap policy | unit |
-| `core/glyphs.ts` | Lists every glyph the renderer may emit and picks junction glyphs | `GLYPHS`, `junction`, `crossing`, `isAllowed` | matrix rule 12 | a new section-named glyph | golden scan A8.platforms |
+| `core/glyphs.ts` + `box-table.ts` | Lists every glyph the renderer may emit and picks box glyphs by arm weight | `GLYPHS`, `boxGlyph`, `junction`, `isAllowed` | matrix rule 12; UnicodeData names | a new section-named glyph | golden scan A8.platforms; 80-entry table test |
 | `core/caps.ts` | Gives each shape its caps and resolves `@{shape}` aliases | `CAPS`, `capsFor`, `shapeFromName` | matrix End caps | C adds shapes | A3 mono-distinct |
 | `core/themes.ts` + `color.ts` | Maps roles and series to colors | `THEMES`, `palette`, `contrast`, `oklabDistance` | CC ThemeKeys | a new palette | A7, palette checks |
 | `core/lru.ts` | Bounded recency cache | `createLru(cap)` | — | — | A8.cache |
@@ -120,7 +122,7 @@ Every test title starts with its check ID (`A4.width-table: 中 counts 2`). `nod
 | `hooks/fences.ts` | Splits a reply into prose and closed fences | `splitFences` | — | fence rules | pure Node test |
 | `hooks/mode.ts` | Parses `/mermaid-tty` arguments and the reply text | `parseModeArgs`, `modeReply` | — | a new subcommand | pure Node test |
 | `hooks/register.tsx` | Wires the render hook, the command and the state | `register` | spike composition | API drift | A5, A6, A7 kit |
-| `scripts/check.ts` + `check.sh` + `lib/claude.ts` | The single must-pass entry, with per-ID steps | `node scripts/check.ts <ID\|all>` | — | B and C append to `CHECKS` | check-ids test |
+| `scripts/check.ts` + `check.sh` + `lib/claude.ts` + `lib/check-ids.ts` | The single must-pass entry, with per-ID steps; the one check-ID parser (B7's rules; B imports it) | `node scripts/check.ts <ID\|all>`; `parseIds`, `slug`, `diffIds` | — | B and C append to `CHECKS` | check-ids test |
 | `scripts/{check-portable,fresh-clone,bench}.ts` | Checks for A8 | CLI | core/render | new forbidden tokens | script tests |
 | `scripts/{gen-corpus,corpus-gate}.ts` | A10 corpus | CLI `DIR` | fences, render | mix targets | mix test |
 | `scripts/{render-svg,render-gallery}.ts` | SVG cells and the gallery artifact | `rowsToSvg`, CLI `OUT_DIR` | render | B's assets | VR.gallery self-check |
@@ -138,7 +140,7 @@ export const fail = (reason: string): Fail => ({ reason })
 export const isFail = (x: unknown): x is Fail => typeof x === 'object' && x !== null && 'reason' in x
 // core/width.ts
 export function width(s: string): number               // W/F 2; Mn/Me, U+200B/200C/2060/FEFF 0; else 1 (box drawing, ◇, ▶ too)
-export function unsupported(s: string): string | null   // first ZWJ, VS15/16, regional indicator, emoji modifier, Cc or other Cf, as 'U+XXXX'
+export function unsupported(s: string): string | null   // first ZWJ, variation selector (U+FE00–FE0F, U+E0100–E01EF), regional indicator, emoji modifier, Cc or other Cf, as 'U+XXXX'
 export function isWide(cp: number): boolean             // binary search over WIDE in core/width-table.ts (generated, committed)
 // core/text.ts
 export type Piece = { text: string; join: '' | ' ' | '\n' }   // how this piece attaches to the previous one
@@ -146,8 +148,8 @@ export function labelLines(label: string): string[]          // split at <br>, <
 export function wrap(line: string, max: number): Piece[] | null  // at spaces or between W/F chars; null if one word > max
 // core/glyphs.ts — printable ASCII plus the matrix-named non-ASCII glyphs; none has \p{Emoji}
 export const GLYPHS: ReadonlySet<string>  // matrix rule 12: printable ASCII, Box Drawing U+2500–U+257F, ►◄▲▼◇●◉; no non-ASCII \p{Emoji}
-export function junction(dirs: number, weight: 'light' | 'heavy' | 'dotted'): string  // dirs: 1 up 2 right 4 down 8 left
-export function crossing(v: 'light' | 'heavy' | 'dotted', h: 'light' | 'heavy' | 'dotted'): string  // ┼ ╋ ╂ ┿; dotted counts as light
+export function boxGlyph(arms: string): string           // arms 'urdl', each 0 none / 1 light / 2 heavy → a Box Drawing glyph, mixed weights included (rule 12)
+export function junction(dirs: number, weight: 'light' | 'heavy' | 'dotted'): string  // dirs: 1 up 2 right 4 down 8 left; a straight dotted run is ┄/┆, and it bends light
 // core/caps.ts — the matrix End caps table, all types
 export type Shape = 'rect' | 'round' | 'stadium' | 'subroutine' | 'cylinder' | 'hcyl' | 'circle' | 'dcircle' | 'diamond'
   | 'hexagon' | 'leanR' | 'leanL' | 'trap' | 'trapInv' | 'asym' | 'bang' | 'cloud' | 'arrowR' | 'arrowL' | 'arrowU' | 'arrowD' | 'plain'
@@ -156,6 +158,7 @@ export function shapeFromName(name: string): Shape       // @{shape: name}: alia
 // core/themes.ts — palette shape is a sub-project B dependency: keep stable
 export type Role = 'node' | 'decision' | 'edge' | 'arrow' | 'label' | 'frame' | 'note' | 'title' | 'value'
 export type SeriesKey = 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7' | 's8'
+export type Ink = Role | SeriesKey                         // a cell's color source: a role, or a series color (C)
 export type ThemeName = 'default' | 'nord' | 'dracula' | 'gruvbox' | 'solarized' | 'mono'
 export type Color = string                                 // a CC ThemeKey ('suggestion') or '#rrggbb'
 export type Palette = {
@@ -165,7 +168,7 @@ export type Palette = {
   onFill: Color | null                                     // label text on a role-filled pill
   series: Readonly<Record<SeriesKey, Color | null>>        // mono: all null (series differ by glyph, key or position)
   fill: boolean                                            // false in mono: no backgrounds
-  dim: readonly Role[]                                     // drawn with dimColor: ['note'] in mono only (CC's dimColor replaces color)
+  dim: readonly Role[]                                     // drawn with dimColor: [] in every theme (dimColor is itself a color; mono carries none)
 }
 export const THEMES: Readonly<Record<ThemeName, Palette>>
 export function palette(name: string): Palette            // unknown name → THEMES.default
@@ -195,22 +198,23 @@ export function lookup(header: string): DiagramModule | Fail        // 'unknown-
 ```ts
 // core/canvas.ts — a cell grid with owners, a write policy and a conflict log
 export type Kind = 'text' | 'cap' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'  // cont = 2nd cell of a W/F char
-export type Cell = { ch: string; role: Role; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; weight?: 'light' | 'heavy' | 'dotted' }
+export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted' }  // arms: per-arm weights 'urdl'
 export type Conflict = { row: number; col: number; had: string; by: string }
 export type Drawing = { columns: number; cells: (Cell | null)[][]; conflicts: readonly Conflict[]; expect: Expect }
 export type Canvas = {
-  text(r: number, c: number, s: string, role: Role, owner: string | readonly string[], join?: Piece['join']): number  // columns used; owners[0] owns the text
-  cap(r: number, c: number, s: string, role: Role, owner: string): void
-  fill(r: number, c: number, n: number, role: Role, owner: string): void
-  line(r: number, c: number, dirs: number, weight: 'light' | 'heavy' | 'dotted', role: Role, owner: string): void
+  text(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], join?: Piece['join']): number  // columns used; owners[0] owns the text
+  cap(r: number, c: number, s: string, role: Ink, owner: string): void
+  fill(r: number, c: number, n: number, role: Ink, owner: string): void
+  line(r: number, c: number, dirs: number, weight: 'light' | 'heavy' | 'dotted', role: Ink, owner: string): void
   arrow(r: number, c: number, ch: string, owner: string): void
-  frame(top: number, left: number, bottom: number, right: number, role: Role, owner: string, title?: string): void
+  frame(top: number, left: number, bottom: number, right: number, role: Ink, owner: string, title?: string): void
   lifeline(r: number, c: number, heavy: boolean, owner: string): void
   toDrawing(expect: Expect): Drawing
 }
 export function createCanvas(rows: number, cols: number, columns: number, shares?: (a: string, b: string) => boolean): Canvas  // shares: may two owners merge a line cell (default a === b)
-// Write policy: text, cap, fill, arrow and title cells are exclusive, so any later write is a Conflict. A line on a line merges dirs
-// when the owners share an endpoint; unrelated owners may only cross straight and perpendicular (┼); anything else is a Conflict.
+// Write policy: text, cap, fill, arrow and title cells are exclusive, so any later write is a Conflict. A line on a line merges arm by arm
+// when the owners share an endpoint, light and heavy arms meeting in their mixed glyph (rule 12); unrelated owners may only cross
+// straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two weights, or anything else, is a Conflict.
 // A line on a frame or lifeline replaces it; a frame or lifeline on a line is a no-op.
 // core/validate.ts
 export type Expect = {
@@ -257,7 +261,7 @@ export type Mode = 'diagram' | 'source'
 export function parseModeArgs(args: string): { set: Mode } | { report: true } | { error: string }
 export function modeReply(mode: Mode, changed: boolean): string
 ```
-**What C builds on:** the shared model with multi-row nodes (`Graph`, `GNode.rows`); `layoutGraph`, `routeGraph` and `drawGraph`; `createCanvas` and `Drawing`; `validate`; `KEYWORDS`, `ENABLED`, `lookup` and `DiagramModule`; `Palette.series` (s1–s8, cycling in source order); `CAPS` and `shapeFromName`; `width`, `unsupported` and `wrap`; `fitLadder` and the `Step` union. **Legend:** A keys nothing, so A ships no legend (YAGNI). C adds `core/charts/legend.ts`. It needs no change in A: `validate` counts text cells per owner, so a legend row owned by the item is that item's one instance (matrix rule 7, rule 10).
+**What C builds on:** the shared model with multi-row nodes (`Graph`, `GNode.rows`); `layoutGraph`, `routeGraph` and `drawGraph`; `createCanvas` and `Drawing`; `validate`; `KEYWORDS`, `ENABLED`, `lookup` and `DiagramModule`; `Palette.series` (s1–s8, cycling in source order; a cell takes one through `Ink`); `CAPS` and `shapeFromName`; `width`, `unsupported` and `wrap`; `fitLadder` and the `Step` union. **Legend:** A keys nothing, so A ships no legend (YAGNI). C adds `core/charts/legend.ts`. It needs no change in A: `validate` counts text cells per owner, so a legend row owned by the item is that item's one instance (matrix rule 7, rule 10).
 
 ## 7. Algorithms and constants (normative for A2–A4)
 **Flowchart parse** (matrix lines 72–121; flowchart.md syntax):
@@ -292,7 +296,7 @@ A pill is `capL ␠ text ␠ capR`; in color themes the fill covers the two spac
 - One port for each (node, face, style, end) group: edges of equal style and end share a stem. Other ports spread across the face, sorted by the far end's cross position, and are nudged so that no top pin shares a column with a bottom pin in the same channel when the face is wide enough.
 - Every gap is a channel, with one net per source port. Each net gets a horizontal track, assigned by the left-edge algorithm under vertical constraints. A cyclic constraint fails with 'route-conflict', and the ladder moves on. A gap's rows are its tracks, one straight in-stem row, then the head row, so no head sits on a junction or crossing.
 - Ends: `►◄▲▼` sit in the cell before the target face; the circle is `o` and the cross is `x` (ASCII); with no end, the line meets the face.
-- Lines are light for solid, heavy for thick (heavy corners and junctions), and `┄`/`┆` for dotted, which bend with light corners. A thick line crossing a solid one takes the mixed glyph (`╂` or `┿`). Junction glyphs come from the dirs bitmask.
+- Lines are light for solid, heavy for thick (heavy corners and junctions), and `┄`/`┆` for dotted, which bend with light corners. A cell's glyph is `boxGlyph(arms)`, so light and heavy lines meeting in one cell (a crossing, or a shared endpoint) take the matching mixed glyph (`┠`, `╂`, `┿`, …).
 
 **Sequence layout:**
 - **Lifelines:** one x per participant, in declaration order. A neighbour gap is the largest of: the pill halves + 2, the widest label spanning only that gap + `pad`, and 2 × the frame borders between them. A message that spans several gaps spreads its need evenly over them.
@@ -364,12 +368,12 @@ node scripts/check.ts all
 | A10 | `node scripts/corpus-gate.ts fixtures/corpus`; on the Mac also `--private <dir>` | yes | T29 |
 | VR.gallery | `node scripts/render-gallery.ts OUT_DIR` (CI uploads OUT_DIR; it self-checks glyph x = col × cell) | yes (tmp dir) | T30 |
 | VR.tangled | `node scripts/check-tangle.ts` | yes | T31 |
-| VR.reviewers | `node scripts/check-review-hashes.ts` (record format and hashes) | yes | T32 |
-| VR.passes | `node scripts/check-review-hashes.ts --require-pass` (release gate) | no | T32 |
-| VR.in-ci | `node scripts/check.ts VR.in-ci`: gallery self-check, tangle, `check-palettes.ts`, hashes | yes | T5, T30–T32, T38 |
+| VR.reviewers | `node scripts/check-review-hashes.ts --require-pass` (record format, hashes, and a pass for every required scope) | yes | T32 |
+| VR.passes | `node scripts/check-review-hashes.ts --require-pass`: the merge gate; CI stays red until each verdict is recorded (PM, 2026-10-28) | yes | T32 |
+| VR.in-ci | `node scripts/check.ts VR.in-ci`: gallery self-check, tangle, `check-palettes.ts` | yes | T5, T30, T31, T38 |
 | — (CI type check, D2) | `node scripts/typecheck.ts`: B binds a CI step to it; no check ID | no | T39 |
 
-These are A's 31 of the 48 IDs, matching B2's `IDS48`; B owns the other 17. `scripts/check-ids.ts` (T1, T38) parses the acceptance doc and fails when an A or VR ID has no row here, or when a row names an ID the doc lacks.
+These are A's 31 of the 48 IDs, matching B2's `IDS48`; B owns the other 17. One parser, `scripts/lib/check-ids.ts` (T1), serves `scripts/check-ids.ts` (T1, T38) and B's `check-ci-coverage.ts`, so the two cannot drift. It fails when an A or VR ID has no row here, or when a row names an ID the doc lacks.
 
 ## 10. Review verdict record (`docs/reviews/<date>-<scope>.md`; `check-review-hashes.ts` reads it; a B dependency, keep stable)
 ```markdown
@@ -388,7 +392,7 @@ reviewers: [PM, cross-family:<model id>]
 - <finding> → <fix commit, or "accepted">
 ```
 - **Integrity (CI, VR.reviewers):** for every record, the front matter has exactly these keys, and every Files row names an existing file whose current SHA-256 matches. A mismatch exits 1, listing the path, the recorded hash and the actual hash.
-- **Release (VR.passes):** `--require-pass` also needs every `goldens/**` file and `core/themes.ts` listed in a `scope: vr-A`, `verdict: pass` record.
+- **Merge gate (VR.reviewers, VR.passes, B1.beauty-review, B2.translation-review):** CI always runs `--require-pass`. `docs/reviews/required.json` maps each scope to path globs (A seeds `vr-A` → `goldens/**`, `core/themes.ts`; B adds `beauty` and `translation`), and every path needs a `verdict: pass` record of its scope. CI stays red until the reviews are recorded (PM, 2026-10-28).
 - **Helper:** `--table <paths…>` prints the Files rows for reviewers to paste.
 
 ## 11. Traceability (every requirement has a task; every task has a requirement)
@@ -404,7 +408,7 @@ reviewers: [PM, cross-family:<model id>]
 | R8 zero install · A8.portability · .benchmark · .cache · .no-build · .validation · .platforms | T27 · T28 · T6, T19 · T27 · T1 · T0, T3, T7, T8, T20, T27 |
 | A9.harness · A9.stored · A9.release · scheduled per-CC-version run | T33, T34, T35 · T36 · T37 · T35 (`--claude-version`; B's `cc-versions.ts` picks the versions) |
 | A10 corpus (CI synthetic ≥ 90; Mac private 87) | T29 |
-| VR.gallery · VR.in-ci · VR.tangled · VR.reviewers · VR.passes | T30 · T5, T30, T31, T32 · T31 · T32 · T32 + PM |
+| VR.gallery · VR.in-ci · VR.tangled · VR.reviewers · VR.passes | T30 · T5, T30, T31 · T31 · T32 (`--require-pass`) · T32 + PM (merge gate) |
 | Runtime proof | T35 `--driver tmux` on the Mac (the PM runs it). **Windows and Linux evidence:** CI runs `scripts/check.sh` (`node --test`, `claude plugin validate .`, `claude plugin test .`) and the A9 job on each OS. |
 | `/mermaid-tty source\|diagram` toggle; `isExpanded` pass-through | T22, T35 · T21 |
 | Platform rules (§3) | T0, T1, T3, T7, T8, T20, T27 |
@@ -449,7 +453,7 @@ GPT-6's blind second design (2026-10-28), compared topic by topic. Every *theirs
 | R5 | A terminal disagrees with `width()` (an ambiguous-width glyph drawn wide) | an A9 screen where a diagram row's cell count ≠ `width(row)`, or a user report | The glyph allow-list already excludes Emoji glyphs; add an ASCII glyph set behind `theme: mono` |
 | R6 | The empty prose before a leading diagram draws an extra row (D5) | T35's lead check | Drop the empty `next()` (no bullet); re-pin T21's hook test |
 | R7 | K₂,₂-style crossings make channel constraints cyclic | `flowchart-ok-51`, or a corpus block, falls back with `route-conflict` | Port nudging (§7), then doglegs (R2) |
-| R8 | A curated palette's official colors cannot pass 3:1 and ΔOKLab ≥ 0.08 | `check-palettes` fails after trying every official color of that palette | Use the nearest passing color; record it in the VR record notes |
+| R8 | A curated palette's colors cannot pass 3:1 and ΔOKLab ≥ 0.08 over all 9 roles and over s1–s8 | `check-palettes` fails after trying every official color of that palette | Use the nearest passing color; record it in the VR record notes |
 | R9 | The Windows e2e harness (ConPTY, `.cmd`, trust key) | E2 unresolved after T34 | Fix the harness; no skip is designed in. A native engine failure goes to the PM. |
 | R10 | node-pty native build on the runners | E7 fails | Switch to the prebuilt fork; pin it in `scripts/e2e/package-lock.json` |
 | R11 | Private corpus syntax lies outside the matrix subset | A10 on the Mac falls back on a block the owner expects drawn | Report the feature to the PM; a matrix amendment comes before code |
@@ -459,4 +463,4 @@ GPT-6's blind second design (2026-10-28), compared topic by topic. Every *theirs
 - **Source toggle:** in the same kept session (attach with the command `--keep` printed), type `/mermaid-tty source`, then press ctrl+o, and confirm both views show the Mermaid source; `/mermaid-tty diagram` draws it again; bare `/mermaid-tty` reports the mode.
 - **Gallery review:** `node scripts/render-gallery.ts /tmp/mtty-gallery --png` (PNGs need `rsvg-convert`). Review every golden at 80 and 60 columns, the CJK set, and the palette sheets, with the tangle rules. The cross-family reviewer reads the `.golden` text and role rows. Record the verdict with `node scripts/check-review-hashes.ts --table goldens core/themes.ts` (§10).
 - **Private corpus:** `node scripts/corpus-gate.ts fixtures/corpus --private <dir>` on the Mac. The output gives counts and block indexes only; never commit the corpus or its path.
-- **Release gate:** `node scripts/check-review-hashes.ts --require-pass`, then B's `release.yml` runs A9.release.
+- **Merge gate:** record each verdict (§10) so that `node scripts/check-review-hashes.ts --require-pass` passes in CI; then B's `release.yml` runs A9.release.

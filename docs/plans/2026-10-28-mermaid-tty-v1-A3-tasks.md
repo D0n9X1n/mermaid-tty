@@ -1,7 +1,63 @@
-# mermaid-tty v1 A — tasks T13–T23 (flowchart, hook, command, sequence parse)
+# mermaid-tty v1 A — tasks T12–T21 (fit ladder, registry, flowchart, hook)
 
-**Depends on:** the main plan (§6 interfaces, §7 algorithms, §9 checks) and A2 (T0–T12). A4 (T24–T39) depends on T19–T23 here.
+**Depends on:** the main plan (§6 interfaces, §7 algorithms, §9 checks) and A2 (T0–T11). A4 (T22–T32) and A5 (T33–T39) depend on T19–T21 here.
 **Conventions:** as in A2. Graph tests build their inputs with `tests/core/graph-fixture.ts`: `g(dir, edges, labels?)` returns a `Graph`, nodes in first-seen order. Its name does not end in `_test`, so no runner loads it as a test.
+
+### T12: Fit ladder and registry
+**Group** P5 · **Deps** T7, T11 · **Covers** A4.fit-ladder (runner), A1 and flowchart-reject-05 (`flowchart-elk`), matrix rule 1, C's `ENABLED`
+**Files:** create `core/fit.ts`, `core/registry.ts`. Test: `tests/core/fit_test.ts`.
+- [ ] **Failing test:**
+```ts
+import test from 'node:test'; import assert from 'node:assert/strict'; import { createCanvas } from '../../core/canvas.ts'
+import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS } from '../../core/registry.ts'
+const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
+  layout: (_m: unknown, step: string, cols: number) => {
+    const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
+    return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [] }) } }
+test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () => {
+  assert.equal((fitLadder(fake as never, {}, 10) as { step: string }).step, 'tight')
+  assert.ok('reason' in fitLadder(fake as never, {}, 4))
+})
+test('A1: registry keywords; ENABLED is exactly A', () => {
+  assert.deepEqual([...ENABLED].sort(), ['flowchart', 'sequence'])
+  assert.equal(KEYWORDS['graph'], 'flowchart'); assert.equal(KEYWORDS['stateDiagram-v2'], 'state'); assert.equal(KEYWORDS['flowchart-elk'], null)
+  assert.deepEqual(lookup('flowchart-elk TD'), { reason: 'fallback:flowchart-elk' }); assert.deepEqual(lookup('pie title x'), { reason: 'disabled:pie' })
+  assert.deepEqual(lookup('Flowchart TD'), { reason: 'unknown-type' })
+})
+```
+- [ ] **Run** `node --test tests/core/fit_test.ts` → FAIL: `Cannot find module …/core/fit.ts`.
+- [ ] **Implement:**
+  - **`fitLadder`:** for each `mod.steps(model)`, run `layout`. Skip a `Fail`, and skip a drawing that `validate` rejects, remembering its reason. Return `{ step, drawing }` for the first that passes; otherwise the last reason, or `fail('too-wide')` when no step ran.
+  - **`KEYWORDS`** (matrix headers):
+
+    | Keyword(s) | Type |
+    |---|---|
+    | flowchart graph | flowchart |
+    | flowchart-elk | null |
+    | sequenceDiagram | sequence |
+    | stateDiagram stateDiagram-v2 | state |
+    | classDiagram classDiagram-v2 | class |
+    | erDiagram | er |
+    | requirementDiagram | requirement |
+    | requirement | null |
+    | C4Context C4Container C4Component C4Dynamic C4Deployment | c4 |
+    | architecture-beta | architecture |
+    | gantt pie journey mindmap gitGraph timeline kanban zenuml | each its own type |
+    | xychart-beta xychart | xychart |
+    | quadrantChart | quadrant |
+    | sankey-beta sankey | sankey |
+    | radar-beta | radar |
+    | treemap-beta treemap | treemap |
+    | block-beta block | block |
+    | packet-beta packet | packet |
+  - **`MODULES: Partial<Record<DiagramType, DiagramModule>>`** starts empty; T19 and T24 import their modules here.
+  - **`lookup(h)`:** take the first whitespace token, dropping a trailing `:`.
+    - `!Object.hasOwn(KEYWORDS, kw)` → `unknown-type` (headers are case-sensitive).
+    - `null` → `fallback:<kw>`.
+    - A type not in `ENABLED` → `disabled:<type>`; a type with no module → `unregistered:<type>`.
+    - Otherwise, the module.
+- [ ] **Done when:** `node --test tests/core/fit_test.ts` passes.
+- [ ] **Commit:** `git commit -m "Add the fit ladder runner and the diagram registry"`
 
 ### T13: Flowchart parse — header, nodes, shapes, labels
 **Group** P3 · **Deps** T4, T7, T9 · **Covers** A1, flowchart-ok-01…22, -49 (bare header), flowchart-reject-01, -03
@@ -173,13 +229,14 @@ test('A1: bends have corners; each head follows a straight cell; crossings are p
 - [ ] **Commit:** `git commit -m "Add the orthogonal channel router"`
 
 ### T18: Draw a placed, routed graph
-**Group** P5 · **Deps** T10, T17 · **Covers** A3 (flat nodes, caps on every row), A1 (edges, frames, titles), flowchart-ok-50…52 (heavy bends, dashed bends, mixed junctions), C contract (member-row identity)
+**Group** P5 · **Deps** T10, T17 · **Covers** A3 (every shape: one-line, `<br/>` and wrapped labels; caps on every row), A1 (edges, frames, titles), flowchart-ok-50…52 (heavy bends, dashed bends, mixed junctions), C contract (member-row identity)
 **Files:** create `core/graph/draw.ts`. Test: `tests/core/draw_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { layoutGraph, type Placed } from '../../core/graph/layered.ts'; import { routeGraph, type Route } from '../../core/graph/route.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { validate } from '../../core/validate.ts'; import { g, text } from './graph-fixture.ts'
+import { CAPS, type Shape } from '../../core/caps.ts'
 const D = (gr: ReturnType<typeof g>, wrapAt: number | null = null) => {
   const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt }) as Placed; return { p, d: drawGraph(p, routeGraph(p) as Route[], 80) }
 }
@@ -193,6 +250,12 @@ test('A3: one row per label line; no border-only rows', () => {
 test('A3: a wrapped label takes one row per wrapped line', () => {
   const { p, d } = D(g('TB', ['A>B'], { A: 'alpha beta gamma' }), 8)
   assert.equal(validate(d), null); assert.equal(p.boxes.get('A')!.rows, 3)
+})
+test('A3: every shape: a one-line label takes 1 row, a <br/> label N rows, a wrapped label one row per wrapped line', () => {
+  for (const shape of Object.keys(CAPS) as Shape[]) for (const [label, wrapAt, rows] of [['one', null, 1], ['a<br/>b<br/>c', null, 3], ['alpha beta gamma', 8, 3]] as const) {
+    const gr = g('TB', ['A>B'], { A: label }); gr.nodes[0]!.shape = shape
+    const { p, d } = D(gr, wrapAt); assert.equal(validate(d), null, `${shape} ${label}`); assert.equal(p.boxes.get('A')!.rows, rows, `${shape} ${label}`)
+  }
 })
 test('A1: thick bends are heavy; dotted bends are dashed with light corners; thick crosses solid with ╂ or ┿', () => {
   const heavy = text(D(g('TB', ['A=>B', 'A=>C'])).d).join('\n'); assert.match(heavy, /[┏┓┗┛]/); assert.match(heavy, /[┳┻┣┫]/)
@@ -209,19 +272,20 @@ test('A3: a member row is owned by its own id (C contract)', () => {
 - [ ] **Implement:**
   - **Nodes:** every row of a node box gets `cap` left and right (from `CAPS[shape]`, role color), `fill` pads and the centered piece as `text`. The first piece of label line k > 0 has `join '\n'`; a wrapped continuation has the wrap's join. Caps and fill are owned by the node; a row's text by `[row.id ?? node.id, node.id]` (deduplicated), so `owners[0]` names the label and edges still touch the node.
   - **Clusters and titles:** `frame()` per cluster, titled. The graph title is a bold `text` row 0, role `title`, owner `title`.
-  - **Routes:** `line()` per cell, weight by style: solid light; thick heavy, with heavy corners and junctions; dotted `┄`/`┆`, bending with light corners. A crossing of different weights takes `crossing()` (rule 12). `arrow()` per end. Edge labels are `text`, role `label`, owner `${edge}:label`.
-  - **`shares(a, b)`:** true when edges a and b share an endpoint and have equal style and end.
+  - **Routes:** `line()` per cell, weight by style: solid light; thick heavy, with heavy corners and junctions; dotted `┄`/`┆`, bending with light corners. Light and heavy arms meeting in one cell take `boxGlyph(arms)` (rule 12). `arrow()` per end. Edge labels are `text`, role `label`, owner `${edge}:label`.
+  - **`shares(a, b)`:** true when edges a and b share an endpoint, whatever their styles. Their arms then merge cell by cell, so a thick and a solid edge from one node meet in the matching mixed junction (rule 12, `flowchart-ok-51`).
   - **Expect:** every node label, one entry per text owner (rows of one owner joined by `\n`), every edge label (owner `${id}:label`), every cluster title (owner cluster id) and the title. Edges are every non-invisible edge with its original `from` and `to` and `heads` = its end glyphs; `edgeLabels` pairs each label with its edge.
 - [ ] **Done when:** `node --test tests/core/draw_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw placed graphs: pills, frames, routes, labels"`
 
 ### T19: Flowchart module, render entry, cache, smoke and explain
-**Group** P6 · **Deps** T5, T6, T12, T15, T18 · **Covers** A4.fit-ladder (steps), A5.errors (`null`), A7 (spans), A8.cache, A8.no-build (smoke), R5
+**Group** P6 · **Deps** T5, T6, T12, T15, T18 · **Covers** A4.fit-ladder (steps), A5.errors (`null`), A7 (spans; series inks for C), A8.cache, A8.no-build (smoke), R5
 **Files:** create `core/diagrams/flowchart/layout.ts`, `core/render.ts`, `scripts/smoke.ts`, `scripts/explain.ts`, `fixtures/flowchart/flowchart-ok-01.mmd`; modify `core/registry.ts` (`MODULES.flowchart = flowchart`). Test: `tests/core/render_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { renderMermaid, explain, createRenderer, type Span } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'
+import { renderMermaid, explain, createRenderer, toRows, type Span } from '../../core/render.ts'; import { THEMES, palette } from '../../core/themes.ts'
+import { createCanvas } from '../../core/canvas.ts'
 const FC = 'flowchart TD\nA[读取配置文件] --> B{完成?}', O = { columns: 80, theme: 'nord' }
 const spans = (rows: Span[][] | null) => rows!.flat()
 test('A5.errors: parse errors and unsupported types return null', () => {
@@ -243,6 +307,10 @@ test('A8.cache: a hit; a miss when any key part changes; LRU eviction at the 65t
   for (let i = 0; i < 64; i++) r.render(`flowchart TD\nN${i}`, O)
   assert.equal(r.size, 64); r.render(FC, O); assert.equal(calls, 69)
 })
+test('A7: a cell inked with a series key takes the palette series color (C contract)', () => {
+  const c = createCanvas(1, 4, 4); c.text(0, 0, 'ab', 's3', 'x')
+  assert.equal(toRows(c.toDrawing({ labels: [], edges: [], edgeLabels: [] }), palette('nord'))[0]![0]!.color, THEMES.nord.series.s3)
+})
 ```
 - [ ] **Run** `node --test tests/core/render_test.ts` → FAIL: `Cannot find module …/core/render.ts`.
 - [ ] **Implement:**
@@ -253,7 +321,7 @@ test('A8.cache: a hit; a miss when any key part changes; LRU eviction at the 65t
     - Each try runs `layoutGraph` → `routeGraph` → `drawGraph`, passing any `Fail` through.
   - **`explain(s, o)`:** `readSource` → `lookup(header)` → `mod.parse` → `fitLadder(mod, model, o.columns)`; the first `Fail` wins.
   - **`renderMermaid`:** `toRows(explain(…).drawing, palette(o.theme))`, or `null` on a `Fail`.
-  - **`toRows(d, p)`:** per cell, color = `p.roles[role]`.
+  - **`toRows(d, p)`:** per cell, color = `p.roles[role]`, or `p.series[role]` for a series ink `s1`–`s8` (§6 `Ink`).
     - Node and decision `text`/`fill` cells get `backgroundColor` = the role color and `color` = `p.onFill` when `p.fill`; caps get `color` only.
     - `title` is bold; roles in `p.dim` get `dimColor`.
     - `cont` cells are skipped. Each span carries its cells' `role` (blank runs have none; the hook strips it). Neighbours with equal role and style merge into one span; trailing blank spans are trimmed; null props are omitted.
@@ -323,11 +391,11 @@ test('A1: weight glyphs in flowchart-ok-50…52', () => {
 - [ ] **Commit:** `git commit -m "Add flowchart fixtures, goldens and the golden glyph scan"`
 
 ### T21: Hook render path
-**Group** P7 · **Deps** T8, T19 · **Covers** A5.errors, A6.hook-tests (incl. CRLF), A7 (spans), R6 (read-only props kept), `isExpanded` pass-through, D5 (a leading diagram keeps its bullet)
-**Files:** create `hooks/mode.ts` (`passThrough`); replace `hooks/register.tsx`; modify `tests/hooks/loader.test.tsx` (register a `ui.render` hook beneath it, since D5's empty prose calls `next()`, and expect `toContain('A')`). Tests: `tests/hooks/render.test.tsx`, `tests/hooks/mode_test.ts`.
+**Group** P7 · **Deps** T8, T19 · **Covers** A5.errors, A6.hook-tests (incl. CRLF and whitespace-only prose between fences), A7 (all 7 roles under the default mapping and each curated palette), R6 (read-only props kept), `isExpanded` pass-through, D5 (a leading diagram keeps its bullet)
+**Files:** create `hooks/mode.ts` (`passThrough`); replace `hooks/register.tsx`; modify `tests/hooks/loader.test.tsx` (register a `ui.render` hook beneath it, since D5's empty prose calls `next()`; expect `toContain('A')`; its `$.command.run` step moves to T22's command test). Tests: `tests/hooks/render.test.tsx`, `tests/hooks/mode_test.ts`.
 - [ ] **Failing tests:**
 ```tsx
-import { test, expect } from 'claude-code/testing'
+import { test, expect } from 'claude-code/testing'; import { THEMES } from '../../core/themes.ts'
 const FC = '```mermaid\nflowchart TD\nA[读取] --> B[完成]\n```\n', BAD = '```mermaid\nflowchart TD\nA[👨‍👩]\n```\n'
 const mount = ($: any, text: string, surface = 'terminal', extra: object = {}) => $.ui.mount({ plugin: 'mermaid-tty', surface, component: 'AssistantMessage',
   props: { text, isFirstOfReply: true, ...extra }, viewport: { columns: 80, rows: 40 } })
@@ -340,6 +408,7 @@ test('A6.hook-tests: prose reaches next() unchanged; diagrams render in order', 
   expect(c.seen).toEqual(['Intro\n', 'Outro']); expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
   c.seen.length = 0; const two = await mount($, FC + FC); expect(c.seen).toEqual(['']); expect(await two.find({ key: 'mermaid-1' })).toBeDefined()  // D5: empty prose
   c.seen.length = 0; await mount($, `P1\r\n\r\n${FC.replace(/\n/g, '\r\n')}\r\nP2`); expect(c.seen).toEqual(['P1\r\n\r\n', '\r\nP2'])
+  c.seen.length = 0; await mount($, `${FC}\r\n\r\n${FC}`); expect(c.seen).toEqual(['', '\r\n\r\n'])  // whitespace-only prose between fences reaches next() unchanged
 })
 test('A6.hook-tests: read-only props pass through; a leading diagram keeps its bullet (D5)', async ($, on) => {
   const c = capture(on); await mount($, `Intro\n${FC}Outro`, 'terminal', { isSummary: true }); expect(c.props.map(p => p.isSummary)).toEqual([true, true])
@@ -354,10 +423,13 @@ test('A5.errors: a failed diagram draws the original fence; the reason goes only
   expect(c.seen).toEqual([reply]); expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
   expect(JSON.stringify(await ui.drawn()).includes('unsupported')).toBe(false); expect(c.logs).toEqual(['debug:mermaid-tty fallback: unsupported-char U+200D'])
 })
-for (const [theme, bg] of [['nord', '#88C0D0'], ['default', 'suggestion']] as const)
-  test(`A7: drawn spans carry the ${theme} colors`, { options: { theme } }, async ($, on) => {
-    capture(on); const ui = await mount($, FC)
-    expect((await ui.findAll({ type: 'Text' })).find(s => s.text.includes('读取') && s.props.backgroundColor)?.props.backgroundColor).toBe(bg)
+const ROLES = 'flowchart TD\nA[读取] -->|yes| B{ok?}\nsubgraph F [Frame]\nC[x]\nend\n', SEQ = 'sequenceDiagram\nA->>B: hi\nNote over A: memo\n'
+for (const theme of ['default', 'nord', 'dracula', 'gruvbox', 'solarized'] as const)
+  test(`A7: all 7 roles draw in their ${theme} colors`, { options: { theme } }, async ($, on) => {
+    capture(on); const ui = await mount($, '```mermaid\n' + ROLES + '```\n\n```mermaid\n' + SEQ + '```\n'), r = THEMES[theme].roles
+    const s = (await ui.findAll({ type: 'Text' })).filter(x => x.props.color || x.props.backgroundColor), has = (re: RegExp, k: string, v: unknown) => s.some(x => re.test(x.text) && x.props[k] === v)
+    expect([has(/读取/, 'backgroundColor', r.node), has(/ok\?/, 'backgroundColor', r.decision), has(/[│─┌┐└┘┼]/, 'color', r.edge),
+      has(/[►◄▲▼]/, 'color', r.arrow), has(/yes/, 'color', r.label), has(/Frame/, 'color', r.frame), has(/memo/, 'color', r.note)]).toEqual([true, true, true, true, true, true, true])
   })
 ```
   - **`mode_test.ts`:** `test('A6.hook-tests: pass-through rules', …)` asserts `passThrough('desktop', {}, 'diagram')`, `passThrough('terminal', {}, 'source')` and `passThrough('terminal', { isExpanded: true }, 'diagram')` are true, and `passThrough('terminal', {}, 'diagram')` is false.
@@ -379,7 +451,6 @@ export const register: Register = (on, options) => {
     if (!parts.some(p => 'rows' in p)) return next(e)
     const { Box, Text } = $.ui.resolve(e), kids = []; let first = e.props.isFirstOfReply, n = 0
     for (const p of parts) {
-      if ('prose' in p && !p.prose.trim()) continue
       if ('rows' in p && first) kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))  // D5: keep the bullet
       if ('rows' in p) kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
         <Text wrap="truncate-end">{row.map(({ text, role: _r, ...style }) => <Text {...style}>{text}</Text>)}</Text>)}</Box>)
@@ -392,97 +463,3 @@ export const register: Register = (on, options) => {
 ```
 - [ ] **Done when:** `claude plugin test .` and `node --test tests/hooks/mode_test.ts` pass.
 - [ ] **Commit:** `git commit -m "Draw diagrams in replies; prose and failures go through next()"`
-
-### T22: `/mermaid-tty source|diagram`
-**Group** P8 · **Deps** T21 (F10 spike code) · **Covers** A6.command, R6 (source view in `$.state`)
-**Files:** create `types/mermaid-tty.d.ts`, `tests/hooks/command.test.tsx`; modify `hooks/mode.ts`, `hooks/register.tsx`, `.claude-plugin/plugin.json` (`"types": "./types/mermaid-tty.d.ts"`), `tests/hooks/mode_test.ts`.
-- [ ] **Failing tests:**
-```tsx
-// mode_test.ts (append)
-test('A6.command: arguments and replies', () => {
-  assert.deepEqual(parseModeArgs(' source '), { set: 'source' }); assert.deepEqual(parseModeArgs(''), { report: true }); assert.ok('error' in parseModeArgs('svg'))
-  assert.equal(modeReply('source', true), 'mermaid-tty: showing diagrams as source'); assert.equal(modeReply('diagram', false), 'mermaid-tty mode: diagram')
-})
-// command.test.tsx — $.command.run takes CommandRunArgs { command, args } (types :1817)
-import { test, expect } from 'claude-code/testing'
-const FC = '```mermaid\nflowchart TD\nA --> B\n```\n', RUN = ($: any, args: string) => $.command.run({ command: 'mermaid-tty', args })
-test('A6.command: source passes replies through; diagram draws again; bare reports', async ($, on) => {
-  const logs: string[] = []; on('ui.log', async (_$: any, e: any) => { logs.push(e.text); return { value: undefined } })
-  on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
-  const ui = await $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage', props: { text: FC, isFirstOfReply: true }, viewport: { columns: 80, rows: 24 } })
-  expect(await ui.find({ key: 'mermaid-0' })).toBeDefined()
-  await RUN($, 'source'); expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined(); expect(await ui.find({ type: 'Text', text: 'flowchart TD' })).toBeDefined()
-  expect(JSON.stringify([await RUN($, ''), logs])).toContain('mode: source')
-  await RUN($, 'diagram'); expect(await ui.find({ key: 'mermaid-0' })).toBeDefined()
-})
-```
-- [ ] **Run** `node --test tests/hooks/mode_test.ts` → FAIL: `parseModeArgs is not a function`.
-- [ ] **Implement:**
-  - **`mode.ts`:** `parseModeArgs(a)`. A trimmed `''` gives `{ report: true }`; `source` or `diagram` gives `{ set }`; anything else gives `{ error: 'usage: /mermaid-tty [source|diagram]' }`. `modeReply(m, changed)` returns, when changed, `mermaid-tty: showing diagrams as source` or `mermaid-tty: drawing diagrams`; otherwise `mermaid-tty mode: ${m}`.
-  - **`types/mermaid-tty.d.ts`:** `declare module 'claude-code' { interface PluginState { 'mermaid-tty': { source: boolean } } }` (F10).
-  - **`register.tsx`:** the F10 spike code, renamed (`source: true` shows the source):
-```tsx
-  const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const, mode = async ($: any): Promise<Mode> => ((await $.state.get(SOURCE)).value === true ? 'source' : 'diagram')
-  on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'mermaid-tty', description: 'Show Mermaid diagrams as source or diagram: /mermaid-tty [source|diagram]' })
-    return next(e)
-  })
-  on('command.run', { command: 'mermaid-tty' }, async ($, e) => {
-    const a = parseModeArgs(String(e.args ?? '')), cur = await mode($)
-    if ('error' in a) return { text: a.error }
-    if ('report' in a) return { text: modeReply(cur, false) }
-    await $.state.set(SOURCE, a.set === 'source'); $.ui.invalidate('ui.render'); return { text: modeReply(a.set, a.set !== cur) }
-  })
-```
-- [ ] **Done when:**
-  - `node --test tests/hooks/mode_test.ts` and `claude plugin test .` pass.
-  - `claude plugin validate .` reports `declares state: …`.
-- [ ] **Commit:** `git commit -m "Add /mermaid-tty source|diagram, kept in \$.state"`
-
-### T23: Sequence parse
-**Group** P3 · **Deps** T7, T9 · **Covers** A2, sequence-ok-01…25, -30…37, -39 (`title`), sequence-reject-01, -02, -03, -05, -06, -07, -08
-**Files:** create `core/diagrams/sequence/parse.ts` (`parseSequence(src): Seq | Fail`; `Seq` = `{ title, participants: {id, kind, label}[], boxes: {label, ids}[], autonumber: {start, step} | null, items: Item[] }`, where an `Item` is a `msg` `{from, to, line, tail, head, text, activate, deactivate}`, a `note` `{side, ids, text}`, a `frame` `{type, sections: {cond, items}[]}`, or a `create`/`destroy`/`activate`/`deactivate` with an `id`). Test: `tests/core/sequence-parse_test.ts`.
-- [ ] **Failing test:**
-```ts
-import test from 'node:test'; import assert from 'node:assert/strict'
-import { parseSequence } from '../../core/diagrams/sequence/parse.ts'; import { readSource, type Source } from '../../core/source.ts'
-const P = (t: string) => parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any
-test('A2: participants, actors and aliases keep declaration order', () => assert.deepEqual(
-  P('participant B\nactor A as Alice\nB->>C: hi').participants.map((p: any) => [p.id, p.kind, p.label]),
-  [['B', 'participant', 'B'], ['A', 'actor', 'Alice'], ['C', 'participant', 'C']]))
-test('A2: ten arrows; activations, notes, frames, autonumber, create, destroy', () => {
-  const A = ['->>', '-->>', '->', '-->', '-x', '--x', '-)', '--)', '<<->>', '<<-->>']
-  assert.deepEqual(A.map(a => { const m = P(`A${a}B: t`).items[0]; return `${m.line} ${m.tail} ${m.head}` }), ['solid none arrow', 'dotted none arrow',
-    'solid none open', 'dotted none open', 'solid none cross', 'dotted none cross', 'solid none async', 'dotted none async', 'solid arrow arrow', 'dotted arrow arrow'])
-  const s = P('autonumber 10 5\nA->>+B: x\nB-->>-A: y\nNote over A,B: n\nalt ok\nA->>B: a\nelse no\nA->>B: b\nend\ncreate participant C\nA->>C: c\ndestroy C\nA-xC: bye')
-  assert.deepEqual([s.autonumber, s.items.map((i: any) => i.kind)], [{ start: 10, step: 5 }, ['msg', 'msg', 'note', 'frame', 'create', 'msg', 'destroy', 'msg']])
-  assert.deepEqual([s.items[0].activate, s.items[1].deactivate, s.items[3].sections.map((x: any) => x.cond)], [true, true, ['ok', 'no']]); assert.equal(P('title Checkout\nA->>B: x').title, 'Checkout')
-})
-test('A5.errors: malformed, order, box and ZWJ rejections', () => {
-  for (const [t, r] of [['A->>: hi', /^syntax:2/], ['loop x\nA->>B: y', /^unclosed-frame/], ['create participant C\nA->>B: x', /^create/],
-    ['destroy B\nA-xB: bye\nA->>B: again', /^destroyed/], ['A->>C: hi\nbox G\nparticipant A\nparticipant B\nend', /^box-split/],
-    ['title A\ntitle B\nA->>B: x', /^title/],
-    ['A->>B: 👨‍👩', /^unsupported-char/]] as const) assert.match(P(t).reason, r, t)
-})
-```
-- [ ] **Run** `node --test tests/core/sequence-parse_test.ts` → FAIL: `Cannot find module …/sequence/parse.ts`.
-- [ ] **Implement** (keywords are case-sensitive; ids match `[\p{L}\p{N}_.]+`):
-  - **Participants:** `participant|actor ID( as LABEL)?`. Participants are implicit on first mention; columns follow declaration order.
-  - **Messages:** `ID ARROW [+-]?ID: text`. ARROW is tried longest first: `<<-->>`, `<<->>`, `-->>`, `->>`, `--x`, `-x`, `--)`, `-)`, `-->`, `->`. `+` activates the target; `-` deactivates the sender.
-  - **Frames:**
-    - `alt|opt|loop|par|critical|break [cond]` pushes a frame. `else`, `and` and `option` add a section to the matching top frame (`alt`, `par`, `critical`).
-    - `rect <color>` pushes an untitled frame.
-    - `box [color] [label]` holds only `participant` and `actor` lines. A leading CSS color is dropped from the label: one of the 148 CSS names, `transparent`, `#hex`, `rgb()`/`rgba()` or `hsl()`/`hsla()`.
-    - `end` pops. An unpopped frame fails `unclosed-frame`.
-  - **Other statements:**
-    - `Note (left of|right of|over) A[,B]: text`.
-    - `autonumber [start [step]]`, defaulting to 1 1.
-    - `activate X` and `deactivate X`.
-    - `title <text>` sets `Seq.title`; a second title, or one after a frontmatter title, fails `title`. `accTitle` and `accDescr` are ignored; anything else, including `link` and half arrows, fails `syntax:<n>`.
-  - **Order rules:**
-    - After `create … X`, the next message must target X, else fail `create`.
-    - After `destroy X`, the next message must have X at one end, else `destroy`; any later mention of X fails `destroyed`.
-    - Box members must be contiguous in column order, else `box-split`.
-    - Labels go through `labelLines` and `unsupported()`.
-- [ ] **Done when:** `node --test tests/core/sequence-parse_test.ts` passes.
-- [ ] **Commit:** `git commit -m "Parse the sequence subset with order and box rules"`
