@@ -2,12 +2,12 @@
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** nothing from B2 or B3; npm and network for T1's one install. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T6) and T13 (T5). T2 and T7 sit in B3 to keep this file under 500 lines.
+**Needs:** nothing from B2 or B3; npm and network for T1's one install. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T6), T13 (T5) and T18 (T1, T6). T2 and T7 sit in B3 to keep this file under 500 lines.
 
 ### T1 — GFM parser (D15c)
-- **Files:** create `scripts/docs/package.json` (C0), `scripts/docs/package-lock.json` (generated), `scripts/docs/markdown.ts` (C1) and `scripts/tests/markdown_test.ts` (C2); add `scripts/docs/node_modules/` to `.gitignore`. **Acceptance:** B1, B2. **Depends on:** none. **Group:** G1.
-- **Failing check:** add C2; `node --test scripts/tests/markdown_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/docs/markdown.ts`.
-- **Implement:** C0; `npm install --prefix scripts/docs --before=2026-10-14` writes the lockfile, so every package, transitive ones included, was released at least 2 weeks before 2026-10-28 (`mdast-util-from-markdown` 2.1.0 on 2026-10-03, `mdast-util-gfm` 3.1.0 on 2025-02-10, `micromark-extension-gfm` 3.0.0 on 2023-06-26); then C1. **Done when:** `rm -rf scripts/docs/node_modules && npm ci --prefix scripts/docs` succeeds; the test → `ℹ pass 3`, `ℹ fail 0`; `git check-ignore scripts/docs/node_modules` prints the path. **Commit:** `B: pinned CommonMark+GFM parser for the docs checks`
+- **Files:** create `scripts/docs/package.json` (C0), `scripts/docs/package-lock.json` (generated), `scripts/docs/markdown.ts` (C1), `scripts/tests/markdown.docs-spec.ts` (C2) and `scripts/tests/no-install_test.ts` (C14); add `scripts/docs/node_modules/` to `.gitignore`. Tests that need `scripts/docs` are named `*.docs-spec.ts`, which Node's default `--test` discovery never matches (D17). **Acceptance:** B1, B2, A8 no-install. **Depends on:** none. **Group:** G1.
+- **Failing check:** add C2 and C14; `node --test scripts/tests/markdown.docs-spec.ts scripts/tests/no-install_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/docs/markdown.ts`.
+- **Implement:** C0; `npm install --prefix scripts/docs --before=2026-10-14` writes the lockfile, so every package, transitive ones included, was released at least 2 weeks before 2026-10-28 (`mdast-util-from-markdown` 2.1.0 on 2026-10-03, `mdast-util-gfm` 3.1.0 on 2025-02-10, `micromark-extension-gfm` 3.0.0 on 2023-06-26); then C1. **Done when:** `rm -rf scripts/docs/node_modules && npm ci --prefix scripts/docs` succeeds; the same command → `ℹ pass 5`, `ℹ fail 0`, so bare `node --test` in a fresh copy discovers no `.docs-spec.ts` (C14); `git check-ignore scripts/docs/node_modules` prints the path. **Commit:** `B: pinned CommonMark+GFM parser for the docs checks`
 ````json C0 — scripts/docs/package.json
 {
   "name": "mermaid-tty-docs-tooling",
@@ -50,7 +50,7 @@ export function section(md: string, title: string): string | null {
 const R = [[0x3040, 0x30ff], [0x3400, 0x4dbf], [0x4e00, 0x9fff], [0xac00, 0xd7af], [0xf900, 0xfaff]];
 export const CJK = new RegExp(`[${R.map(([a, b]) => `${String.fromCharCode(a!)}-${String.fromCharCode(b!)}`).join('')}]`);
 ````
-````ts C2 — scripts/tests/markdown_test.ts
+````ts C2 — scripts/tests/markdown.docs-spec.ts
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CJK, all, headings, links, parse, section, text } from '../docs/markdown.ts';
@@ -72,11 +72,44 @@ test('section runs to the next h1/h2; text drops code; CJK', () => {
   assert.ok(CJK.test('中') && CJK.test('한') && !CJK.test('─►é'));
 });
 ````
+````ts C14 — scripts/tests/no-install_test.ts
+// A8 no-install: bare `node --test` in a fresh clone, with nothing installed, must discover no test that needs the docs parser.
+// Those tests are named *.docs-spec.ts, outside Node's default patterns; check.sh runs them after `npm ci --prefix scripts/docs`.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here = fileURLToPath(new URL('.', import.meta.url)), docs = resolve(here, '../docs') + sep;
+const reaches = (f: string, seen = new Set<string>()): boolean => !seen.has(f) && !!seen.add(f) &&
+  [...readFileSync(f, 'utf8').matchAll(/from '(\.[^']+)'/g)].map((m) => resolve(dirname(f), m[1]!)).some((p) => p.startsWith(docs) || reaches(p, seen));
+const files = readdirSync(here), specs = files.filter((f) => f.endsWith('.docs-spec.ts'));
+test('no-install: every test that reaches scripts/docs is a .docs-spec.ts, and no *_test.ts does', () => {
+  assert.deepEqual(files.filter((f) => f.endsWith('_test.ts') && reaches(join(here, f))), []);
+  assert.ok(specs.length > 0 && specs.every((f) => reaches(join(here, f))), specs.join());
+});
+// A child of a test run inherits NODE_TEST_CONTEXT and reports to its parent instead of running; drop it, as in a fresh shell.
+const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== 'NODE_TEST_CONTEXT'));
+test('no-install: bare node --test in a fresh copy with nothing installed discovers no .docs-spec.ts', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mtty-fresh-')), run = () => spawnSync(process.execPath, ['--test'], { cwd: dir, encoding: 'utf8', env });
+  try {
+    writeFileSync(join(dir, 'probe_test.ts'), "import test from 'node:test';\ntest('probe', () => {});\n");
+    for (const f of specs) copyFileSync(join(here, f), join(dir, f));
+    const clean = run();
+    assert.equal(clean.status, 0, clean.stdout + clean.stderr);
+    assert.match(clean.stdout, /probe/);
+    renameSync(join(dir, specs[0]!), join(dir, 'renamed_test.ts')); // the mutation: a default name is discovered, and it fails
+    assert.notEqual(run().status, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+````
 
 ### T3 — Acceptance rules
-- **Files:** create `scripts/lib/workflow.ts` (C13), `scripts/lib/doc-rules.ts` (C5) and `scripts/tests/doc-rules_test.ts` (C6). **Acceptance:** B1, B3, B6, and the workflow helpers B2 reuses (C13 holds no Markdown, so the release and version jobs need no docs tooling). **Depends on:** T1. **Group:** G2.
-- **Failing check:** add C6; `node --test scripts/tests/doc-rules_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/doc-rules.ts`.
-- **Implement:** C13, C5. **Done when:** → `ℹ pass 34`, `ℹ fail 0`; each D15c repro (an invalid fence opener, an image in a double-backtick code span, an image in an extra table cell, an image on the line after the hero) is a failing fixture. **Commit:** `B: acceptance rules on the GFM tree for README, publish-wiki and icon`
+- **Files:** create `scripts/lib/workflow.ts` (C13), `scripts/lib/doc-rules.ts` (C5) and `scripts/tests/doc-rules.docs-spec.ts` (C6). **Acceptance:** B1, B3, B6, and the workflow helpers B2 reuses (C13 holds no Markdown, so the release and version jobs need no docs tooling). **Depends on:** T1. **Group:** G2.
+- **Failing check:** add C6; `node --test scripts/tests/doc-rules.docs-spec.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/doc-rules.ts`.
+- **Implement:** C13, C5. **Done when:** → `ℹ pass 35`, `ℹ fail 0`; each D15c repro (an invalid fence opener, an image in a double-backtick code span, an image in an extra table cell, an image on the line after the hero) and D15d's 1,001-backtick code span are failing fixtures. **Commit:** `B: acceptance rules on the GFM tree for README, publish-wiki and icon`
 ````ts C13 — scripts/lib/workflow.ts
 // Workflow YAML helpers shared by doc-rules.ts, ci-rules.ts and cc-versions.ts; no Markdown, so the release and version jobs need no docs tooling (D15c).
 export const INSTALL = ['claude plugin marketplace add D0n9X1n/mermaid-tty', 'claude plugin install mermaid-tty@mermaid-tty'];
@@ -145,6 +178,12 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
   for (const t of all(tree, 'table')) for (const r of t.children!.slice(1))
     if (r.children!.length > t.children![0]!.children!.length) at(r, 'table row has more cells than its header; GitHub drops them');
   for (const n of all(tree, 'text')) if (n.value!.includes('[[')) at(n, '[[wiki link]]; link by page name: [Label](Page)');
+  // Defense in depth (D15d): cmark-gfm ends code spans at 1,000 backticks and micromark does not, so long runs fail on the raw text.
+  md.split('\n').forEach((l, i) => {
+    const w = `${where}:${i + 1}`, fence = /^ {0,3}(`{3,})[^`]*$/.exec(l);
+    if (fence && fence[1]!.length > 5) e.push(`${w}: fence longer than 5 backticks (D15d)`);
+    else if (!fence && /`{4,}/.test(l)) e.push(`${w}: backtick run longer than 3 outside a fence delimiter (D15d)`);
+  });
   return e;
 }
 export function readmeErrors(md: string, generated: string[]): string[] {
@@ -185,7 +224,7 @@ export function iconErrors(png: Uint8Array): string[] {
   return [...(w === 512 && h === 512 ? [] : [`icon.png: ${w}×${h}, want 512×512`]), ...(png.length < 2_000_000 ? [] : [`icon.png: ${png.length} bytes, want under 2 MB`])];
 }
 ````
-````ts C6 — scripts/tests/doc-rules_test.ts
+````ts C6 — scripts/tests/doc-rules.docs-spec.ts
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, publishWikiErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
@@ -209,6 +248,7 @@ test('complete fixtures pass', () => {
   assert.deepEqual([rm(README), publishWikiErrors(WIKI), iconErrors(png(512, 512))], [[], [], []]);
   assert.deepEqual(supportedTypes(README), ['flowchart']);
 });
+const LONG = '`'.repeat(1001); // past cmark-gfm's 1,000-backtick code-span limit (D15d)
 const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, TAGLINE, 'A renderer', 'tagline'], [rm, README, '[![Stars]', '[![Fans]', 'stars badge'],
   [rm, README, INSTALL[1]!, 'claude plugin install mermaid-tty', 'install'], [rm, README, '## FAQ', '## Questions', '## FAQ'],
@@ -222,6 +262,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, '## Before and after\n\n', '## Before and after\n\n``` `\n\n![x](assets/rogue.svg)\n\n', 'displays assets/rogue.svg'],
   [rm, README, '| `flowchart` | `flowchart`, `graph` |', '| `flowchart` | `flowchart`, `graph` | ![x](assets/rogue.svg) |', 'more cells than its header'],
   [rm, README.replace('![after](assets/readme/after.svg)', ''), '</p>\n\n', '</p>\n![after](assets/readme/after.svg)\n\n', 'not shown in README'],
+  [rm, README, '![after](assets/readme/after.svg)', LONG + '![after](assets/readme/after.svg)' + LONG, 'backtick run longer than 3'],
   [rm, README, '| `flowchart` |', '| flowchart |', 'table'], [rm, README, 'node scripts/e2e/run.ts', 'npm test', 'e2e/run.ts'],
   [rm, README, '## Themes', '──► A\n\n## Themes', 'hand-drawn'],
   [rm, README, '; `/copy` copies', '; it copies', '/copy'], [rm, README, '## Themes', 'ctrl+o shows the source.\n\n## Themes', 'ctrl+o'],
@@ -235,7 +276,7 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
   const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>', G = (md: string, readme = true) => grammarErrors('x.md', md, readme);
   const F = (rest: string) => '``` `\n' + rest; // an invalid fence opener: a backtick info string is not a fence
   assert.deepEqual(G(H + '\n\n[![b](https://img.shields.io/b)](https://github.com/D0n9X1n/mermaid-tty/releases) [w](https://github.com/D0n9X1n/mermaid-tty/wiki) [l](LICENSE)\n\n' +
-    '| ![d](assets/readme/a.svg) |\n|---|\n\nx `<b>` y ``![c](x)`` ![u][none]\n\n```sh\n<b> [[x]]\n```\n\n    <i>\n'), []);
+    '| ![d](assets/readme/a.svg) |\n|---|\n\nx `<b>` y ``![c](x)`` ![u][none]\n\n```sh\n<b> [[x]]\n```\n\n    <i>\n\n````md\n```sh\nx\n```\n````\n'), []);
   assert.deepEqual(G('[Usage](Usage) [m](https://mermaid.js.org/syntax/flowchart.html)\n\n- a\n\n  b', false), []);
   for (const [md, want, readme] of [
     // cycle 1: HTML anchors, scheme and entity tricks, protocol-relative and .md links
@@ -255,7 +296,9 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
     ['\\![a](assets/readme/after.svg)', 'link target not allowed', true], ['[[Page]]', '[[wiki link]]', false],
     // D15c: where the old scanner and GitHub disagreed
     [F('![x](https://evil.dev/a.svg)'), 'src must match', true], [F('[y](https://evil.dev)'), 'link target not allowed', true],
-    ['| a |\n|---|\n| b | ![x](assets/rogue.svg) |', 'more cells than its header', true], [H + '\n![x](assets/readme/after.svg)', 'raw HTML other than', true]] as const)
+    ['| a |\n|---|\n| b | ![x](assets/rogue.svg) |', 'more cells than its header', true], [H + '\n![x](assets/readme/after.svg)', 'raw HTML other than', true],
+    // D15d: past cmark-gfm's 1,000-backtick code-span limit, and over-long fences
+    [LONG + '[c](Usage-zh-CN)' + LONG, 'backtick run longer than 3', false], ['``````sh\nx\n``````', 'fence longer than 5', true]] as const)
     assert.ok(G(md, readme).some((e) => e.includes(want)), want);
 });
 test('wiki images: rendered diagrams or allow-listed only', () => {
@@ -287,7 +330,7 @@ test('icon rule reads the IHDR size', () => {
 ### T5 — Wiki checker
 - **Files:** create `scripts/check-wiki.ts` (C8); append the rest of C7 to `scripts/test-wiki-publish.sh`. **Acceptance:** B2. **Depends on:** T1, T3, T4. **Group:** G3.
 - **Failing check:** append the rest of C7; `bash scripts/test-wiki-publish.sh` → `publisher ok`, then FAIL `wiki publish test: checker is missing`.
-- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 23 mutations fail with their diagnostics, the D15c invalid fence opener included; the fixture runs the real checker as `node scripts/check-wiki.ts DIR`), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
+- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 24 mutations fail with their diagnostics, D15c's invalid fence opener and D15d's 1,001-backtick code span included; the fixture runs the real checker as `node scripts/check-wiki.ts DIR`), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
 ````ts C8 — scripts/check-wiki.ts
 // B2 wiki rules on the GFM tree (D15c), ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity, links) plus
 // B2's exact openers, page-name links only, per-unit language rules with no exemption, and the wiki grammar (D15b). Exit 1 lists every failure.
@@ -392,6 +435,8 @@ rejects wiki-link '[[wiki link]]' edit wiki/Usage.md 'See [Home](Home).' 'See [H
 rejects badge-cross-link 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [![zh](../assets/icon.svg)](Usage-zh-CN).'
 rejects html-anchor 'raw HTML' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <a href="Usage-zh-CN">x</a>.'
 rejects invalid-fence 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' $'See [Home](Home).\n\n``` `\n\nSee [Chinese](Usage-zh-CN).'
+long=$(node -e 'process.stdout.write("`".repeat(1001))') # D15d: past cmark-gfm's 1,000-backtick code-span limit
+rejects long-code-span 'backtick run longer than 3' edit wiki/Usage.md 'See [Home](Home).' "See [Home](Home). ${long}[Chinese](Usage-zh-CN)${long}"
 printf 'wiki publish test: ok\n'
 ````
 

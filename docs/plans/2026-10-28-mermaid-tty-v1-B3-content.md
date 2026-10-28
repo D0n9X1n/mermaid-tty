@@ -1,8 +1,8 @@
-# mermaid-tty v1 B3: SVG serializer, icon, release checks, install, content and LF (T2, T7, T9–T14, T16)
+# mermaid-tty v1 B3: SVG serializer, icon, release checks, install, content, render cross-check and LF (T2, T7, T9–T14, T16, T18)
 
-Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules; T18's cross-check also ran live against GitHub's renderer. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T5 (`check-wiki.ts`) and T6 (`check-docs.ts`); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. T7 needs `rsvg-convert` and `sips` on the dev Mac. **Unblocks:** B2's T15.
+**Needs:** B1's T1 (the parser), T5 (`check-wiki.ts`) and T6 (`check-docs.ts`); from B2, T9 and T18 need T8, T12 needs T8 and T17, and T16 needs T15. T7 needs `rsvg-convert` and `sips` on the dev Mac. **Unblocks:** B2's T15.
 
 ### T2 — SVG serializer
 - **Files:** create `scripts/lib/svg.ts` (C3) and `scripts/tests/svg_test.ts` (C4). **Acceptance:** B1 (glyph x = col × cell width). **Depends on:** none. **Group:** G1.
@@ -409,6 +409,82 @@ More in the [English](https://github.com/D0n9X1n/mermaid-tty/wiki) and [简体�
 - **Failing check:** T13's ten lines.
 - **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, no paragraph is exempt from the language rules, and the page stays in the wiki grammar (D15b); every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
 - **Done when:** `node scripts/check-wiki.ts` → `check-wiki: ok (10 pages)`. Translation review at R3. **Commit:** `B: Chinese wiki`
+
+### T18 — GitHub render cross-check (D15d)
+- **Files:** create `scripts/lib/github-render.ts` (P14) and `scripts/tests/github-render.docs-spec.ts` (P15); add C10's `// T18` lines to `scripts/check-docs.ts`. **Acceptance:** B1 (B1.docs-check) and B2, as a step of the `check` job; no new ID. **Depends on:** B1's T1 and T6; B2's T8 (`GH_TOKEN` on the check step). **Group:** G5.
+- **Failing check:** add P15; `node --test scripts/tests/github-render.docs-spec.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/github-render.ts`.
+- **Implement:** P14 and the `// T18` lines (the import after the `images.ts` import; the block before the output loop). `gh api markdown` output recorded on 2026-10-28: each image sits in `<a target="_blank" … href="<its src>">`; an external image is proxied, its source in `data-canonical-src`; an `@name` outside code becomes a live link, so write it in code. `-F text=@file` sends the file; `-f` would send the literal string.
+- **Done when:** the test → `ℹ pass 3`; `node scripts/check-docs.ts` prints the skip line without `GH_TOKEN` and fails with `GITHUB_ACTIONS=true`; `GH_TOKEN=$(gh auth token) node scripts/check-docs.ts` passes on the README and fails with both D15d lines on a wiki page holding the 1,001-backtick repro. **Commit:** `B: cross-check every page against GitHub's own render`
+````ts P14 — scripts/lib/github-render.ts
+// D15d: GitHub's own render of each page must show exactly the GFM tree's links and images, so any micromark/cmark-gfm divergence (such as code spans past 1,000 backticks) fails in CI.
+import { spawnSync } from 'node:child_process';
+import { all, parse } from '../docs/markdown.ts';
+const REPO = 'D0n9X1n/mermaid-tty';
+const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const attr = (tag: string, name: string) => { const m = new RegExp(`\\s${name}="([^"]*)"`).exec(tag); return m ? decode(m[1]!) : undefined; };
+// Live links and images in GitHub's HTML, minus its image wrappers (<a target="_blank" href="<the img src>">) and heading anchors; a proxied image keeps data-canonical-src.
+export function githubRefs(html: string): string[] {
+  const out: string[] = [];
+  for (const [, a, img, one] of html.matchAll(/(<a\s[^>]*>)(<img\s[^>]*>)|(<(?:a|img)\s[^>]*>)/g))
+    for (const t of a ? [a, img!] : [one!]) {
+      if (t.startsWith('<img')) { out.push(`image ${attr(t, 'data-canonical-src') ?? attr(t, 'src')}`); continue; }
+      const href = attr(t, 'href'), wrapper = !!img && href === attr(img, 'src') && /\starget="_blank"/.test(t);
+      if (href !== undefined && !wrapper && !/\sclass="anchor"/.test(t)) out.push(`link ${href}`);
+    }
+  return out;
+}
+// What the checker sees: link and image nodes, plus <a href> and <img src> inside raw HTML (the README hero).
+export function treeRefs(md: string): string[] {
+  const tree = parse(md), html = all(tree, 'html').flatMap((h) => [...h.value!.matchAll(/<(a|img)\s[^>]*>/g)])
+    .flatMap(([t, k]) => { const v = attr(t!, k === 'a' ? 'href' : 'src'); return v === undefined ? [] : [`${k === 'a' ? 'link' : 'image'} ${v}`]; });
+  return [...all(tree, 'link').map((l) => `link ${l.url}`), ...all(tree, 'image').map((i) => `image ${i.url}`), ...html];
+}
+const minus = (a: string[], b: string[]) => { const rest = [...b]; return a.filter((x) => { const i = rest.indexOf(x); if (i >= 0) rest.splice(i, 1); return i < 0; }); };
+export function renderErrors(where: string, md: string, html: string): string[] {
+  const gh = githubRefs(html), ours = treeRefs(md);
+  return [...minus(gh, ours).map((r) => `${where}: GitHub renders ${r}, which the checker does not see (D15d)`),
+    ...minus(ours, gh).map((r) => `${where}: the checker sees ${r}, which GitHub does not render (D15d)`)];
+}
+// GitHub's render of a repo file, as `gh api markdown` returns it; CI passes the job's GITHUB_TOKEN as GH_TOKEN.
+export function githubHtml(file: string, cwd: string): string {
+  const r = spawnSync('gh', ['api', 'markdown', '-F', `text=@${file}`, '-f', 'mode=gfm', '-f', `context=${REPO}`], { cwd, encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`gh api markdown failed: ${(r.stderr || r.error?.message || 'no output').trim()}`);
+  return r.stdout;
+}
+````
+````ts P15 — scripts/tests/github-render.docs-spec.ts
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { githubRefs, renderErrors, treeRefs } from '../lib/github-render.ts';
+const T = '`'.repeat(1001), HERO = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'; // the HTML below is shaped like gh api markdown output recorded on 2026-10-28
+const W = (src: string) => `<a target="_blank" rel="noopener noreferrer" href="${src}"><img src="${src}" alt="x" style="max-width: 100%;"></a>`;
+test('githubRefs drops image wrappers and heading anchors and reads data-canonical-src', () => {
+  const camo = 'https://camo.githubusercontent.com/abc';
+  const html = `<p dir="auto">${W('assets/icon.svg')} <a target="_blank" rel="noopener noreferrer nofollow" href="${camo}"><img src="${camo}" alt="s" data-canonical-src="https://img.shields.io/b.svg?x=1&amp;y=2" style="max-width: 100%;"></a> ` +
+    '<a href="https://github.com/D0n9X1n/mermaid-tty/releases"><img src="https://github.com/D0n9X1n/mermaid-tty/actions/workflows/ci.yml/badge.svg" alt="r"></a></p><h2><a class="anchor" href="#install"></a>Install</h2><a href="LICENSE">l</a>';
+  assert.deepEqual(githubRefs(html), ['image assets/icon.svg', 'image https://img.shields.io/b.svg?x=1&y=2', 'link https://github.com/D0n9X1n/mermaid-tty/releases',
+    'image https://github.com/D0n9X1n/mermaid-tty/actions/workflows/ci.yml/badge.svg', 'link LICENSE']);
+});
+test('the 1,001-backtick repro: GitHub renders a link and an image that the GFM tree hides in code spans', () => {
+  const md = `[a](Usage-zh-CN) ${T}[Chinese](Usage-zh-CN)${T} ${T}![x](assets/rogue.svg)${T}`;
+  const html = `<p dir="auto"><a href="Usage-zh-CN">a</a> ${T}<a href="Usage-zh-CN">Chinese</a>${T} ${T}${W('assets/rogue.svg')}${T}</p>`;
+  assert.deepEqual(renderErrors('wiki/Usage.md', md, html), ['wiki/Usage.md: GitHub renders link Usage-zh-CN, which the checker does not see (D15d)',
+    'wiki/Usage.md: GitHub renders image assets/rogue.svg, which the checker does not see (D15d)']);
+});
+test('agreement passes, the hero counts, and a ref only the checker sees fails', () => {
+  assert.deepEqual(treeRefs(`${HERO}\n\n[l](LICENSE)`), ['link LICENSE', 'image assets/icon.svg']);
+  assert.deepEqual(renderErrors('README', `${HERO}\n\n[l](LICENSE)`, `${W('assets/icon.svg')}<a href="LICENSE">l</a>`), []);
+  assert.deepEqual(renderErrors('README', '[l](LICENSE)', '<p>[l](LICENSE)</p>'), ['README: the checker sees link LICENSE, which GitHub does not render (D15d)']);
+});
+````
+````ts C10 — scripts/check-docs.ts, the // T18 lines
+import { githubHtml, renderErrors } from './lib/github-render.ts'; // T18
+// T18 begin: D15d, GitHub's render of each page must show the tree's links and images; CI passes GH_TOKEN, and a local run without it skips.
+if (process.env.GH_TOKEN) for (const p of ['README.md', ...pages]) try { errors.push(...renderErrors(p, read(p), githubHtml(p, root))); } catch (e) { errors.push(`${p}: ${(e as Error).message}`); }
+else if (process.env.GITHUB_ACTIONS === 'true') errors.push('GitHub render cross-check: GH_TOKEN is not set in CI (D15d)');
+else console.log('check-docs: GitHub render cross-check skipped: no GH_TOKEN (CI sets it)');
+// T18 end
+````
 
 ### T16 — LF on every OS
 - **Files:** modify `.gitattributes`, only if a check prints anything. **Acceptance:** A8 platforms (B's files), B4. **Depends on:** T15. **Group:** G9.

@@ -2,13 +2,13 @@
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules and a stub of plan A's `scripts/lib/check-ids.ts` (`parseIds`, D16). A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T3 (`workflow.ts`, `doc-rules.ts`) and T6 (`check-docs.ts`); plan A's T1 (`scripts/lib/check-ids.ts`, the one check-ID parser, D16); T15 also needs B3's T9–T14, because `check.sh` runs every check. **Unblocks:** B3's T9 (T8), T12 (T8, T17) and T16 (T15). Tasks are in run order; T9, T10 and T16 are in B3 to keep this file under 500 lines.
+**Needs:** B1's T3 (`workflow.ts`, `doc-rules.ts`) and T6 (`check-docs.ts`); plan A's T1 (`scripts/lib/check-ids.ts`, the one check-ID parser, D16); T15 also needs B3's T9–T14 and T18, because `check.sh` runs every check. **Unblocks:** B3's T9 (T8), T12 (T8, T17), T18 (T8) and T16 (T15). Tasks are in run order; T9, T10 and T16 are in B3 to keep this file under 500 lines.
 
 ### T8 — CI and release workflows
 - **Files:** create `scripts/lib/ci-rules.ts` (C11), `scripts/tests/ci-rules_test.ts` (C12), `.github/workflows/ci.yml` (P3) and `.github/workflows/release.yml` (P4); add C10's two `// T8` lines to `scripts/check-docs.ts`. **Acceptance:** B4, B5, B7, A8 platforms, A9 and VR wiring. **Depends on:** T3, T6, and A's T1 (`parseIds`, D16). **Group:** G4. **Waits on A** for green runs: `check.sh`, `scripts/e2e/` (`run.ts`, `package-lock.json`), `render-gallery.ts`, `check-review-hashes.ts`.
 - **Failing check:** add C12; `node --test scripts/tests/ci-rules_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/ci-rules.ts`. After C11 and the `// T8` lines, `node scripts/check-docs.ts 2>&1 | grep -E 'ci\.yml|release\.yml'` → `missing …` lines.
 - **Implement:** C11; the `// T8` lines (the import before the `doc-rules.ts` import, the `errors.push` right after the `const errors` statement); P3 and P4. The pins are checkout `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1), setup-node `949feb2413d6458794dcd2491c4babbbce0c15c1` (v7.1.0) and upload-artifact `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (v7.0.2), from `gh api repos/actions/<name>/commits/<tag> -q .sha` on 2026-10-28.
-- **Done when:** the test → `ℹ pass 23`; the grep prints nothing; `ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f) }' .github/workflows/*.yml` exits 0; green on three OSes at R2. The 48-ID test runs plan A's `parseIds` on the real acceptance file (D16; B keeps no parser of its own): when its labels change, update `IDS48` and `ci/coverage.json` in the same commit. **Commit:** `B: CI and release rules; CI on three OSes with e2e and gallery; release on v*`
+- **Done when:** the test → `ℹ pass 24` (the check step passes `GH_TOKEN` for D15d's render cross-check); the grep prints nothing; `ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f) }' .github/workflows/*.yml` exits 0; green on three OSes at R2. The 48-ID test runs plan A's `parseIds` on the real acceptance file (D16; B keeps no parser of its own): when its labels change, update `IDS48` and `ci/coverage.json` in the same commit. **Commit:** `B: CI and release rules; CI on three OSes with e2e and gallery; release on v*`
 ````ts C11 — scripts/lib/ci-rules.ts
 // CI and release rules: B4 ci.yml, release.yml and check.sh; B5 tag and notes; B7 check IDs and the coverage map. Text in, errors out.
 import { INSTALL, common, need } from './workflow.ts';
@@ -18,7 +18,8 @@ const MATRIX: [string, string | RegExp][] = [['fail-fast: false', 'fail-fast: fa
   ['pinned Claude Code from npm', /npm install -g @anthropic-ai\/claude-code@\d+\.\d+\.\d+\n/]];
 export const ciErrors = (yml: string) => [...common('ci.yml', yml), ...need('ci.yml', yml, [
   ['pull_request trigger', /^  pull_request:/m], ['push trigger on every branch', /^  push:\n(?! {4}branches)/m], ['concurrency that cancels superseded runs', 'group: ci-${{ github.ref }}\n  cancel-in-progress: true']]),
-  ...need('ci.yml check job', job(yml, 'check'), [...MATRIX, ['check.sh under bash', 'shell: bash\n        run: bash scripts/check.sh']]),
+  ...need('ci.yml check job', job(yml, 'check'), [...MATRIX, ['check.sh under bash', 'shell: bash\n        run: bash scripts/check.sh'],
+    ['GH_TOKEN for the GitHub render cross-check (D15d)', 'run: bash scripts/check.sh\n        env:\n          GH_TOKEN: ${{ github.token }}\n']]),
   ...need('ci.yml e2e job', job(yml, 'e2e'), [...MATRIX, ['tmux on Linux', 'sudo apt-get install -y tmux'], ['tmux on macOS', 'brew install tmux'],
     ['Windows-only e2e tooling', "if: runner.os == 'Windows'\n        run: npm ci --prefix scripts/e2e"],
     ['C.UTF-8 on Linux', /LC_ALL: \$\{\{ runner\.os == 'Linux' && 'C\.UTF-8' \|\| '' \}\}/], ['A9 run', 'node scripts/e2e/run.ts']]),
@@ -56,7 +57,7 @@ const NODE = PIN('setup-node', 'v7.1.0') + '        with:\n          node-versio
 const CLAUDE = '      - run: npm install -g @anthropic-ai/claude-code@2.1.308\n';
 const OS3 = '    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, macos-latest, windows-latest]\n    runs-on: ${{ matrix.os }}\n    steps:\n';
 const CI = "on:\n  pull_request:\n  push:\nconcurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\njobs:\n" +
-  `  check:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - id: check\n        shell: bash\n        run: bash scripts/check.sh\n` +
+  `  check:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - id: check\n        shell: bash\n        run: bash scripts/check.sh\n        env:\n          GH_TOKEN: \${{ github.token }}\n` +
   `  e2e:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - if: runner.os == 'Linux'\n        run: sudo apt-get update && sudo apt-get install -y tmux\n      - if: runner.os == 'macOS'\n        run: brew install tmux\n      - id: e2e-tooling\n        if: runner.os == 'Windows'\n        run: npm ci --prefix scripts/e2e\n      - id: e2e\n        env:\n          LC_ALL: \${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}\n        run: node scripts/e2e/run.ts\n` +
   `  gallery:\n    runs-on: ubuntu-latest\n    steps:\n      - id: gallery\n        run: node scripts/render-gallery.ts\n${PIN('upload-artifact', 'v7.0.2')}`;
 const REL = "on:\n  push:\n    tags: ['v*']\n\njobs:\n  release:\n    permissions:\n      contents: write\n      actions: read\n    steps:\n" + PIN('checkout', 'v7.0.1') +
@@ -75,6 +76,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [ciErrors, CI, 'run: node scripts/e2e/run.ts', 'run: node scripts/e2e/other.ts', 'A9 run'], [ciErrors, CI, 'actions/upload-artifact@', 'actions/upload-artifact@v7 #', 'artifact'],
   [releaseErrors, REL, "tags: ['v*']", 'branches: [main]', 'v* tag'], [releaseErrors, REL, ' --installed', '', 'installed copy'], [releaseErrors, REL, '      actions: read\n', '', 'actions: read'],
   [releaseErrors, REL, 'test "$conclusion" = success', 'true', 'publish-wiki concluded success'],
+  [ciErrors, CI, '          GH_TOKEN: ${{ github.token }}\n', '', 'GH_TOKEN for the GitHub render cross-check'],
   [checkShErrors, SH, 'set -euo pipefail\n', '', 'set -euo pipefail'], [checkShErrors, SH, 'validate .', 'validate . || true', 'masks'],
 ];
 for (const [rule, base, from, to, want] of cases)
@@ -137,6 +139,8 @@ jobs:
         name: Must-pass suite (Git Bash on Windows; set -euo pipefail fails on any command)
         shell: bash
         run: bash scripts/check.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
       - id: review-hashes
         name: Review verdicts still match the reviewed files (SHA-256)
         run: node scripts/check-review-hashes.ts
@@ -444,7 +448,7 @@ errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml')
 ````
 
 ### T15 — check.sh wiring and CI coverage
-- **Files:** create `scripts/check-ci-coverage.ts` (P13) and `ci/coverage.json`; append to `scripts/check.sh`. **Acceptance:** B7, B4, B5. **Depends on:** T3–T14, T17. **Group:** G8. **Waits on A:** T1's `check.sh` with its header and `scripts/lib/check-ids.ts` (`parseIds`, D16), and the scripts it runs.
+- **Files:** create `scripts/check-ci-coverage.ts` (P13) and `ci/coverage.json`; append to `scripts/check.sh`. **Acceptance:** B7, B4, B5. **Depends on:** T3–T14, T17, T18. **Group:** G8. **Waits on A:** T1's `check.sh` with its header and `scripts/lib/check-ids.ts` (`parseIds`, D16), and the scripts it runs.
 - **Failing check:** add P13; `node scripts/check-ci-coverage.ts` → 48 lines ending `: no CI step`.
 - **Implement:** generate the manifest, then review it; most IDs run inside `check.sh`, under the `check` step:
   ```bash
@@ -460,7 +464,7 @@ errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml')
   ```bash
   # Sub-project B: docs, wiki, install and CI coverage
   [[ -d scripts/docs/node_modules ]] || npm ci --prefix scripts/docs  # D15c: install the pinned parser once
-  node --test 'scripts/tests/*_test.ts'
+  node --test 'scripts/tests/*_test.ts' 'scripts/tests/*.docs-spec.ts'
   node scripts/check-docs.ts
   node scripts/check-wiki.ts
   bash scripts/test-wiki-publish.sh
