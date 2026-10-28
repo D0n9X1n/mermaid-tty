@@ -11,7 +11,7 @@
   - Flowcharts, including subgraphs, and sequence diagrams. Together they make up all 87 blocks in the corpus from the owner's docs.
 - **Out:**
   - Copilot CLI comes after v1; a spike showed plain `session.log` keeps truecolor SGR.
-  - Other diagram types, Desktop, VS Code and images keep the engine's own drawing.
+  - Other diagram types are sub-project C. Desktop, VS Code and images keep the engine's own drawing.
   - `classDef` and `style` colors are not applied.
 
 ## Requirements (must pass)
@@ -86,7 +86,7 @@ flowchart LR
 
 - We own the renderer; no third-party layout code ("you control everything").
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
-- A failed render falls back silently. The first version is 0.1.0.
+- A failed render falls back silently. Version 0.1.0.
 - The owner's docs are used as a corpus only on this machine.
 
 ## Prior art
