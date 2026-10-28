@@ -1,14 +1,14 @@
 # mermaid-tty v1 design: renderer and Claude Code mod
 
-**Goal:** be the best Mermaid rendering in a CLI. In Claude Code's terminal, each closed ```mermaid fence in a reply is drawn as a colored, flat box-drawing diagram, while the transcript keeps the source.
+**Goal:** be the best Mermaid rendering in a CLI. In Claude Code's terminal, each closed ```mermaid fence in a reply draws as a colored, flat box-drawing diagram; the transcript keeps the source.
 
-**Approval:** PM waiver under `/goal` autonomy, 2026-10-27. Docs, wiki, CI and release are sub-project B (`2026-10-27-mermaid-tty-v1-docs-release.md`).
+**Approval:** PM waiver under `/goal` autonomy, 2026-10-27. Docs, wiki, CI and release: sub-project B.
 
 ## Scope
 
 - **In:**
   - The Claude Code terminal surface on macOS, Linux and Windows. Mods need 2.1.287 or later; tested on 2.1.308.
-  - Flowcharts, including subgraphs, and sequence diagrams. Together they make up all 87 blocks in the corpus from the owner's docs.
+  - Flowcharts, including subgraphs, and sequence diagrams. They are all 87 blocks of the owner's docs.
 - **Out:**
   - Copilot CLI comes after v1.
   - Other diagram types are sub-project C. Desktop, VS Code and images keep the engine's own drawing.
@@ -33,15 +33,16 @@
    - One function measures width: East Asian Width `W`/`F` characters count 2 columns; combining marks (Mn/Me) and zero-width characters count 0; everything else counts 1, including box-drawing, arrows and `◇`. Labels containing ZWJ, variation selectors, regional indicators, emoji modifiers or control characters fall back.
    - Every row fits within `e.viewport.columns`. To fit, try natural layout, tighter gaps, wrapped labels, then LR redrawn as TD; otherwise show the source.
 5. **Fail closed:**
-   - A validator confirms that each node's label appears once (counted per node id, so identical texts are fine), each edge connects its endpoints, no glyph overwrites another, and every row fits.
+   - A validator confirms that each node's label appears once (per node id, so identical texts are fine), each edge connects its endpoints, no glyph overwrites another, and every row fits.
    - Any validator failure, parse error or unsupported type shows the original fence unchanged. The reason goes only to the debug log.
 6. **Source preserved:**
-   - Only the drawing changes. ctrl+o shows the source.
+   - Only the drawing changes: the stored reply and `/copy` keep the exact source.
+   - `/mermaid-tty source` shows every diagram as its source, on screen and under ctrl+o; `/mermaid-tty diagram` draws them again. (The API doesn't flag the ctrl+o view.)
    - Unclosed fences are left alone.
-   - The engine draws the prose around each diagram through `next()`.
+   - The prose around diagrams goes through `next()`.
 7. **Colors:**
    - By default, the roles node, decision, edge, arrow, label, frame and note map to Claude Code theme keys, so diagrams follow the user's theme.
-   - The `theme` option picks a curated palette instead: nord, dracula, gruvbox, solarized or mono.
+   - The `theme` option picks a curated palette: nord, dracula, gruvbox, solarized or mono.
 8. **Zero install:**
    - No runtime dependencies and no build step.
    - `claude plugin validate .` passes.
@@ -58,10 +59,9 @@ flowchart LR
   V -->|fail| F[original fence]
 ```
 
-- **Plugin root:** the repo root is the plugin; the marketplace entry uses `source: "./"`.
+- **Plugin root:** the repo root; the marketplace entry uses `source: "./"`.
 - **`core/`:** host-agnostic, dependency-free TypeScript in erasable syntax only, so it runs under both Claude Code's loader and Node's type stripping.
-  - `width.ts`: the width function.
-  - `parse/`: the parsers.
+  - `width.ts` (the width function) and `parse/`.
   - `layout/flowchart.ts`: cycle breaking, ranks (edge labels get their own), barycenter sweeps, grid coordinates.
   - `layout/sequence.ts`: sequence layout.
   - `route.ts`: orthogonal tracks; a junction bitmask picks the box-drawing glyph.
@@ -71,20 +71,21 @@ flowchart LR
 - **`hooks/register.tsx`:** a `ui.render` hook on `AssistantMessage`, terminal surface only.
   - It splits the reply at closed mermaid fences and passes the prose to `next()`.
   - It draws each diagram as colored `Text` rows with `wrap: 'truncate-end'`, and caches the result.
+  - It registers `/mermaid-tty` and keeps the mode in `$.state`.
 - **`.claude-plugin/`:** `plugin.json` (`userConfig.theme`), `marketplace.json`, and an icon.
 
 ## Test strategy
 
-- **Acceptance:** every requirement maps to the checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md): unit, golden, mutation, hook, portability, benchmark, end-to-end and visual-review checks. CI runs every automatic check.
+- **Acceptance:** every requirement maps to the checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md). CI runs every automatic check.
 - **Corpus gate:** a committed synthetic corpus with the owner's feature mix runs in CI; the owner's 87 blocks also run locally, never committed.
-- **Runtime proof (CI, three OSes):** real Claude Code, driven headlessly against a mock API, draws a CJK flowchart as themed truecolor rows, and ctrl+o shows the source.
+- **Runtime proof (CI, three OSes):** real Claude Code, driven headlessly against a mock API, draws a CJK flowchart as themed truecolor rows, and `/mermaid-tty source` shows the source.
 - **Must-pass suite:** `scripts/check.sh`.
 
 ## Decisions (grill, self-answered)
 
 - We own the renderer; no third-party layout code.
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
-- A failed render falls back silently. Version 1.0.0, as the owner asked.
+- Failed renders fall back silently. Version 1.0.0.
 
 ## Prior art
 
@@ -93,10 +94,9 @@ flowchart LR
 | termaid | fasouto/termaid | Correct CJK and subgraphs, but 3-row boxes and a subprocess |
 | merman-cli | Latias94/merman | Fails on subgraph routes |
 | beautiful-mermaid | lukilabs/beautiful-mermaid | Misaligns CJK (owner's screenshot) |
-| Community mods | ngothanhluc, ejklock, BukeLy | Weeks old (research) |
-| `cc-plugin-mermaid` | Claude Code binary | Turned off by its flag |
+| Community mods; built-in `cc-plugin-mermaid` | ngothanhluc, ejklock, BukeLy; Claude Code | Weeks old; flagged off |
 
 ## Risks
 
 - **Tangled dense graphs:** if more than 5 corpus diagrams stay tangled after 3 fix cycles, port termaid's placement and routing, keeping flat nodes.
-- **Early-access mods API:** re-test each Claude Code release.
+- **Early-access mods API:** the weekly CI run catches changes.
