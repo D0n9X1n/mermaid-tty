@@ -30,6 +30,7 @@ These rules apply to every type. A type's section can add to them but never cont
    - Under the mono theme, series differ by glyph, key or position, never by color alone.
 10. **Counting.** Every source label, member, event, actor and value appears exactly once, in place or in the legend. The exceptions are stated in their sections: sankey counts each link once, and packet bit numbers are positions, not values.
 11. **Coverage.** Each coverage row lists the fixtures that exercise its feature, OK or rejection. Every OK fixture must be cited by at least one row.
+12. **Glyphs.** Outside source text, the renderer draws only printable ASCII, the Box Drawing block (U+2500–U+257F), and the other glyphs a section names. None of them has the Unicode `Emoji` property. So heavy edges take heavy corners and junctions, and light, heavy and dashed lines meet with the block's mixed junctions.
 
 ### End caps
 
@@ -71,7 +72,7 @@ The Common rules and their end-cap table (`00-common.md`) apply to every section
 
 ### flowchart
 
-**Tier:** spec A (ships in v1). **Keywords:** `flowchart`, `graph`, with `TD`, `TB`, `BT`, `LR` or `RL`. `flowchart-elk` has its own Mermaid detector and is not an alias here; it falls back.
+**Tier:** spec A (ships in v1). **Keywords:** `flowchart`, `graph`, alone or with `TD`, `TB`, `BT`, `LR` or `RL`; alone means `TB`, as in Mermaid. `flowchart-elk` has its own Mermaid detector and is not an alias here; it falls back.
 
 **Contract:** defined by spec A requirement 1, with requirements 3 (flat nodes) and 4 (width), plus the additions below. "Every classic bracket shape" includes the double circle `(((…)))` from the docs' *Node shapes* list. Caps per the common table.
 
@@ -106,6 +107,7 @@ The Common rules and their end-cap table (`00-common.md`) apply to every section
 | `-46` | Invisible link `A ~~~ B`: it changes the layout and is never drawn |
 | `-47` | Edge IDs: `A e1@--> B`, then `e1@{ animate: true }`, both parsed and ignored |
 | `-48` | `:::name` on nodes, `accTitle` and `accDescr` parsed and ignored (common rule 4) |
+| `-49` | Bare `flowchart` header, no direction: drawn top-down |
 
 **Rejection fixtures** (common rule 1):
 
@@ -135,6 +137,7 @@ box <color> <label> … end                both optional; holds participant and 
 create participant|actor X [as alias]    the next message must target X
 destroy X                                the next message must have X at one end
 A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
+title <text>                             a bold title row (common rule 3)
 ```
 
 **Text design** (base):
@@ -183,6 +186,7 @@ A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
 | `-36` | Bidirectional `A<<->>B: hi` |
 | `-37` | Bidirectional dotted `A<<-->>B: hi` |
 | `-38` | Base design: an `actor` and a `participant` (caps differ in mono), solid and dotted messages, a self-message, an activation, a note over two lifelines |
+| `-39` | `title Checkout` statement: a bold title row above the diagram |
 
 **Rejection fixtures:**
 
@@ -195,6 +199,7 @@ A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
 | `-05` | Malformed: `create participant C`, then a message that does not target `C` |
 | `-06` | Order: `destroy B` and its message, then a later message to `B` |
 | `-07` | Order: `A->>C: hi`, then a `box` holding `A` and `B`, which `C` splits |
+| `-08` | A frontmatter `title` and a `title` statement (common rule 3) |
 
 Repeated text is valid (counted per participant id), so `-30` covers it and there is no duplicate-label rejection.
 
@@ -1715,6 +1720,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | edge IDs `e1@-->` and `e1@{ animate: true }` ignored | flowchart-ok-47 |
 | flowchart | `:::name` ignored | flowchart-ok-48 |
 | flowchart | `accTitle`/`accDescr` ignored | flowchart-ok-48 |
+| flowchart | bare header defaults to `TB` | flowchart-ok-49 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |
@@ -1758,6 +1764,7 @@ The title follows common rule 3. No config key is honored.
 | sequence | message `<<->>` | sequence-ok-36 |
 | sequence | message `<<-->>` | sequence-ok-37 |
 | sequence | base design: actor vs participant caps, lifelines, self-message, activation, note | sequence-ok-38 |
+| sequence | `title` statement; a second title falls back | sequence-ok-39, sequence-reject-08 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |
