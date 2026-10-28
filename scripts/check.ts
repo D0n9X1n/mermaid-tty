@@ -1,7 +1,7 @@
 // node scripts/check.ts <ID|all>: runs the steps of one acceptance check ID,
 // or, for `all`, every step check.sh needs beyond validate and the kit.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -89,22 +89,30 @@ export function run(step: string[], id?: string): number {
 }
 
 // node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob),
-// filtered to titles that start with id. It fails unless a test ran and none failed.
-// It counts the top-level `ok` lines itself, because node reports a file whose tests
-// the filter all skipped as one passing test: `# pass` can be 1 when nothing ran.
+// filtered to titles that start with id. It fails unless a real test ran and none failed.
+// TAP's `ok` lines cannot tell: they count suites, and a file whose tests the filter all
+// skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that
+// passed; one ran when its name, or a suite's or parent test's name, starts with id.
 function nodeTests(id?: string): number {
   const files = readdirSync('tests', { recursive: true, encoding: 'utf8' })
     .filter(f => f.endsWith('_test.ts')).map(f => join('tests', f)).sort()
-  const prefix = id ? `${id.replaceAll('.', '\\.')}\\b` : ''
-  const filter = id ? [`--test-name-pattern=^${prefix}`] : []
-  const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...filter, ...files],
-    { encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'], maxBuffer: Infinity })
-  process.stdout.write(r.stdout ?? '')
-  if (r.status !== 0) return r.status ?? 1
-  const ran = (r.stdout ?? '').match(new RegExp(`^ok \\d+ - ${prefix}(?!.* # (SKIP|TODO))`, 'gm'))?.length ?? 0
-  if (ran > 0) return 0
-  console.error(`no tests ran for ${id ?? 'all'}`)
-  return 1
+  // The ID, then no word character and no '-': A1 does not match A10, nor A8.no-build A8.no-build-x.
+  const pattern = id ? `^${id.replaceAll('.', '\\.')}(?![\\w-])` : ''
+  const tmp = mkdtempSync(join(tmpdir(), 'mtty-'))
+  try {
+    const passed = join(tmp, 'passed.jsonl')
+    const reporter = new URL('./lib/passed-tests-reporter.ts', import.meta.url).href
+    const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-reporter-destination=stdout',
+      `--test-reporter=${reporter}`, `--test-reporter-destination=${passed}`,
+      ...(id ? [`--test-name-pattern=${pattern}`] : []), ...files], { stdio: 'inherit' })
+    if (r.status !== 0) return r.status ?? 1
+    const match = new RegExp(pattern)
+    const lines = readFileSync(passed, 'utf8').split('\n').filter(Boolean)
+    const ran = lines.filter(line => (JSON.parse(line) as string[]).some(name => match.test(name))).length
+    if (ran > 0) return 0
+    console.error(`no tests ran for ${id ?? 'all'}`)
+    return 1
+  } finally { rmSync(tmp, { recursive: true, force: true }) }
 }
 
 function main(): number {
