@@ -41,9 +41,9 @@ A pill is a label drawn on a background color between two caps. The caps show th
 
 | Shape | Left | Right | Used by |
 |---|---|---|---|
-| rectangle | `[` | `]` | flowchart `[ ]`, mindmap `[ ]`, block rect, class, ER, requirement, architecture service |
+| rectangle | `[` | `]` | flowchart `[ ]`, mindmap `[ ]`, block rect, class, ER, requirement, architecture service, sequence `participant` |
 | round | `(` | `)` | flowchart/mindmap/block `( )`, state, C4 element (default) |
-| stadium | `([` | `])` | flowchart/block `([ ])`, C4 person |
+| stadium | `([` | `])` | flowchart/block `([ ])`, C4 person, sequence `actor` |
 | subroutine | `[[` | `]]` | flowchart/block `[[ ]]` |
 | cylinder | `[(` | `)]` | flowchart/block `[( )]`, C4 `Db` |
 | horizontal cylinder | `(\|` | `\|)` | flowchart `@{shape: h-cyl}`, C4 `Queue` |
@@ -137,6 +137,16 @@ destroy X                                the next message must have X at one end
 A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
 ```
 
+**Text design** (base):
+- **Participants:** one header row of pills in declaration order, each drawn once. Mermaid's mirrored footer is off, which counting rule 10 needs. A `participant` uses rectangle caps and an `actor` uses stadium caps, so the two differ in mono. An `as` alias shows the alias text.
+- **Lifelines:** a dim `│` (note role) under the centre of each pill, down to the last row. Column gaps widen to fit the widest message label between neighbours.
+- **Messages:** one row each, sender to receiver. The line is `─` for solid or `┄` for dotted (edge role). The end is `▶`/`◀` for an arrow, no head for an open end, `x` for a cross, or `)` for async (arrow role). The label (label role) sits on the row above, starting at the line.
+- **Self-messages:** a two-row loop, `─┐` then `◀┘`.
+- **Activations:** the lifeline becomes `┃` for the span.
+- **Notes:** dim pills, plain caps, placed left of, right of, or across the lifelines they name.
+- **Frames:** `alt`/`opt`/`loop`/`par`/`critical`/`break` are frames (frame role) titled `kind [condition]`. `else` and `and` add a dashed divider row with their condition.
+- **`autonumber`:** prefixes each message label with `1.`, `2.`, ….
+
 **Text design** (additions):
 - `rect` is a dim, untitled frame (note role) around its statements.
 - `box` is a frame (frame role) around its participants' columns, titled with its label. As in Mermaid, a leading CSS color, such as `Aqua`, `transparent` or `rgb(33, 66, 99)`, is not part of the label; like a `rect` color, it is ignored. A box's participants must be adjacent in column order, or the diagram falls back.
@@ -172,6 +182,7 @@ A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
 | `-35` | Docs create/destroy example: `create participant`, `create actor … as …`, `destroy` at either end of a message |
 | `-36` | Bidirectional `A<<->>B: hi` |
 | `-37` | Bidirectional dotted `A<<-->>B: hi` |
+| `-38` | Base design: an `actor` and a `participant` (caps differ in mono), solid and dotted messages, a self-message, an activation, a note over two lifelines |
 
 **Rejection fixtures:**
 
@@ -622,7 +633,7 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules.
    - For a bend (one side `L` or `R`, the other `T` or `B`), move it one more cell away from its own side.
    - If that cell is taken, use the next free cell below it when the placed side is `L` or `R`, or to its right when it is `T` or `B`.
 3. When no edge has exactly one placed end, the next unplaced node (services first, then junctions, each in declaration order) goes in row 0, one column right of every placed cell.
-4. Repeat steps 2 and 3 until every node is placed. Each grid row and column takes the size of its largest pill. The gaps hold the routes and edge labels, which spec A's router draws.
+4. Repeat steps 2 and 3 until every node is placed. Each grid row and column takes the size of its largest pill. A row or column holding only junctions is 1 cell, the junction glyph's size. The gaps hold the routes and edge labels, which spec A's router draws.
 
 Fall back if:
 - an edge's sides disagree with its ends' cells: `R` needs the other end strictly to the right, `T` strictly above, and so on. Same-side pairs such as `R`–`R` always fail this.
@@ -661,6 +672,7 @@ Fall back if:
 | `-21` | Two services with identical titles both render |
 | `-22` | Edges written before their services, which Mermaid allows |
 | `-23` | `accTitle: x` and `accDescr: y` parsed and ignored |
+| `-24` | Junctions only: `junction a`, `junction b`, `a:R -- L:b`; each 1-cell column |
 
 **Rejection fixtures:**
 
@@ -1742,6 +1754,7 @@ The title follows common rule 3. No config key is honored.
 | sequence | `destroy` | sequence-ok-35 |
 | sequence | message `<<->>` | sequence-ok-36 |
 | sequence | message `<<-->>` | sequence-ok-37 |
+| sequence | base design: actor vs participant caps, lifelines, self-message, activation, note | sequence-ok-38 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |
@@ -1982,6 +1995,7 @@ The title follows common rule 3. No config key is honored.
 | architecture | identical titles on distinct services | architecture-ok-21 |
 | architecture | free statement order (edges before services) | architecture-ok-22 |
 | architecture | `accTitle`/`accDescr` ignored | architecture-ok-23 |
+| architecture | junction-only rows and columns size to 1 cell | architecture-ok-24 |
 | gantt | header `gantt` | gantt-ok-01 |
 | gantt | `title`, `section`, tasks in source order | gantt-ok-01, gantt-ok-05 |
 | gantt | `dateFormat` tokens and literals; default `YYYY-MM-DD` | gantt-ok-01, gantt-ok-08, gantt-ok-09, gantt-ok-15, gantt-reject-03 |
