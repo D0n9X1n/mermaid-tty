@@ -2,6 +2,7 @@
 // background, and every pair of roles, and every pair of series colors, is at least
 // 0.08 apart in OKLab. `default` (theme keys) and `mono` (no color) are exempt.
 // Usage: node scripts/check-palettes.ts  (prints the table; exits 1 on any problem)
+import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { contrast, oklabDistance } from '../core/color.ts'
@@ -67,18 +68,20 @@ function table(themes: Readonly<Record<ThemeName, Palette>>): string {
   return rows.map(r => r.map((cell, k) => (numeric.has(k) ? cell.padStart(widths[k]!) : cell.padEnd(widths[k]!))).join('  ').trimEnd()).join('\n')
 }
 
-function main(): void {
+function main(): number {
   console.log(table(THEMES))
   const problems = paletteProblems()
   for (const p of problems) console.error(p)
-  if (problems.length) process.exitCode = 1
-  else console.log(`ok: ${CHECKED.join(', ')} pass: contrast >= ${MIN_CONTRAST}, OKLab distance >= ${MIN_DISTANCE}`)
+  if (problems.length) return 1
+  console.log(`ok: ${CHECKED.join(', ')} pass: contrast >= ${MIN_CONTRAST}, OKLab distance >= ${MIN_DISTANCE}`)
+  return 0
 }
 
-// An absolute path with an upper-case drive letter, so two spellings of one Windows path
-// compare equal; on Windows, resolve also turns each '/' into '\'.
-const canonical = (file: string) => resolve(file).replace(/^[a-z]:/, d => d.toUpperCase())
-
-// main() runs only when node is given this file, not when a test imports paletteProblems.
-// Node's own main-module flag arrived in 24.2, and package.json allows 24.0.
-if (process.argv[1] && canonical(process.argv[1]) === canonical(fileURLToPath(import.meta.url))) main()
+// main() runs only when node is given this file, not when a test imports paletteProblems:
+// Node's own main-module flag arrived in 24.2, and package.json allows 24.0. Both paths go
+// through realpath, because argv[1] keeps the path node was given, which may pass through a
+// symlink (macOS temp dirs: /var -> /private/var), while the module's URL is the real path.
+// A path that names no file (node -e code arg) is compared as given.
+const real = (p: string) => { try { return realpathSync(p) } catch { return p } }
+const argv1 = process.argv[1]
+if (argv1 && real(resolve(argv1)) === real(fileURLToPath(import.meta.url))) process.exitCode = main()
