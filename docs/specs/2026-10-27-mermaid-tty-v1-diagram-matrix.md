@@ -58,7 +58,7 @@ A pill is a label drawn on a background color between two caps. The caps show th
 | asymmetric | `>` | `]` | flowchart/block `> ]` |
 | bang | `))` | `((` | mindmap `))…((` |
 | cloud | `)` | `(` | mindmap `)…(` |
-| block arrow right / left / up / down | (none) / `◀` / `▲` / (none) | `▶` / (none) / (none) / `▼` | block `<[ ]>(dir)`. Several directions join in the order right, left, up, down: `x` is `◀ … ▶`, `y` is `▲ … ▼` |
+| block arrow right / left / up / down | (none) / `◄` / `▲` / (none) | `►` / (none) / (none) / `▼` | block `<[ ]>(dir)`. Several directions join in the order right, left, up, down: `x` is `◄ … ►`, `y` is `▲ … ▼` |
 | plain | (none) | (none) | mindmap default node, kanban card, timeline period and event |
 
 The following are drawn as glyphs or containers, not pills, so they have no caps: start and end (`●`, `◉`), choice (`◇`), fork and join (`━`), notes, junctions and frames.
@@ -140,8 +140,8 @@ A<<->>B: text    A<<-->>B: text          bidirectional, solid and dotted
 **Text design** (base):
 - **Participants:** one header row of pills in declaration order, each drawn once. Mermaid's mirrored footer is off, which counting rule 10 needs. A `participant` uses rectangle caps and an `actor` uses stadium caps, so the two differ in mono. An `as` alias shows the alias text.
 - **Lifelines:** a dim `│` (note role) under the centre of each pill, down to the last row. Column gaps widen to fit the widest message label between neighbours.
-- **Messages:** one row each, sender to receiver. The line is `─` for solid or `┄` for dotted (edge role). The end is `▶`/`◀` for an arrow, no head for an open end, `x` for a cross, or `)` for async (arrow role). The label (label role) sits on the row above, starting at the line.
-- **Self-messages:** a two-row loop, `─┐` then `◀┘`.
+- **Messages:** one row each, sender to receiver. The line is `─` for solid or `┄` for dotted (edge role). The end is `►`/`◄` for an arrow, no head for an open end, `x` for a cross, or `)` for async (arrow role). The label (label role) sits on the row above, starting at the line.
+- **Self-messages:** a two-row loop, `─┐` then `◄┘`.
 - **Activations:** the lifeline becomes `┃` for the span.
 - **Notes:** dim pills, plain caps, placed left of, right of, or across the lifelines they name.
 - **Frames:** `alt`/`opt`/`loop`/`par`/`critical`/`break` are frames (frame role) titled `kind [condition]`. `else` and `and` add a dashed divider row with their condition.
