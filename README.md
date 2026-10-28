@@ -1,11 +1,8 @@
-# mermaid-cli
+# mermaid-tty
 
 Colored Mermaid diagrams inside AI coding CLIs. It draws the ```mermaid
 fences in Claude Code and GitHub Copilot CLI replies as box-drawing diagrams,
 right in the terminal, while the conversation keeps the Mermaid source.
-
-> Not affiliated with [mermaid-js/mermaid-cli](https://github.com/mermaid-js/mermaid-cli)
-> (`mmdc`), which exports Mermaid diagrams to SVG, PNG and PDF.
 
 ## Status
 
