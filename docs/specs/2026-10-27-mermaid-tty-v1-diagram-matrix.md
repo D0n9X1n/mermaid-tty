@@ -19,7 +19,7 @@ These rules apply to every type. A type's section can add to them but never cont
 6. **Text.**
    - Widths follow spec A requirement 4. Text wraps at spaces or between W/F characters, and a word wider than its field falls back.
    - Title and header rows wrap whenever they exceed `columns`.
-7. **Legend.** A legend lists `key text` rows under the diagram, in source order. Keys are `1, 2, …` for points and `a`…`z`, `aa`, `ab`, … for fields, so a legend never runs out of keys. A legend row wider than `columns` wraps, indented under its text. **All or none:** if any item of a keyed class (fields, points, timings) in a diagram is shown by its key, every item of that class is, so a key can never be mistaken for a literal label.
+7. **Legend.** A legend lists `key text` rows under the diagram, in source order. Keys are `1, 2, …` for points and `a`…`z`, `aa`, `ab`, … for fields, so a legend never runs out of keys. A legend row wider than `columns` wraps, indented under its text. **All or none:** if any item of a keyed class (fields, points, timings, notes, relation or edge labels) in a diagram is shown by its key, every item of that class is, so a key can never be mistaken for a literal label. A section's ladder step that keys a class keys every item of that class.
 8. **Numbers.**
    - Source numbers print as written. Arithmetic is exact decimal, and rounding is half up.
    - A horizontal bar field is `W = min(60, cells left in the row)` unless a section fixes it.
@@ -1026,7 +1026,7 @@ Reach
 
 **Collisions and narrow widths:**
 - Points take keys in source order. A point whose key would sit in, or next to on the same row, an existing key's cells joins that key (the lowest-numbered one). Otherwise it takes the next number, drawn from its cell rightward. Every point keeps its own legend row.
-- A quadrant or x-axis text wider than `q` becomes a field key `a`, `b`, … in its place, listed in the legend in source order. The title and y-axis texts wrap like header rows.
+- If any quadrant or x-axis text is wider than `q`, every quadrant and x-axis text becomes a field key `a`, `b`, … in its place (common rule 7, all or none), listed in the legend in source order. The title and y-axis texts wrap like header rows.
 - Ladder: (1) every text in place; (2) texts wider than `q` become field keys; (3) fall back when `q < 8` (`columns < 19`) or a key would run into the cross or the frame.
 
 **Required fixtures** (60, 80 and 120 columns):
@@ -1037,7 +1037,7 @@ Reach
 - `quadrant-ok-05`: 12 points; keys 10–12 take two cells.
 - `quadrant-ok-06`: unquoted CJK title, quadrant texts and point names.
 - `quadrant-ok-07`: docs' config example (`"Important ❤"`; config ignored): no points, so no legend.
-- `quadrant-ok-08`: a 28-cell quadrant text: in place at 59 and 60 (q = 28), a field key at 58 (q = 27).
+- `quadrant-ok-08`: a 28-cell quadrant text: in place at 59 and 60 (q = 28); at 58 (q = 27) every quadrant and x-axis text is keyed.
 - `quadrant-ok-09`: a legend row of exactly 60 cells: one row at 60, wrapped at 59.
 - `quadrant-ok-10`: docs' class example (`Point A:::class1: [0.9, 0.0]` … `classDef class3 color: #f00fff, radius : 10`): `:::name` and `classDef` parsed and ignored (common rule 4). Points C and D, both at (0.7, 0.2), share key 3; four legend rows.
 
