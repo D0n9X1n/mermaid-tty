@@ -76,3 +76,93 @@ test('A6.hook-tests: a fence closed before a diagram stays prose, and so does on
   assert.deepEqual(splitFences('``` a`b\n' + D), [prose('``` a`b\n'), d]) // a backtick in a backtick info: not an opener
   assert.deepEqual(splitFences(D + '```mermaid\nB\n'), [d, prose('```mermaid\nB\n')])
 })
+
+// CommonMark ends a line at LF, CRLF or a lone CR, and nowhere else: U+2028 and U+2029 (JS line terminators, which `.`
+// does not match) and U+0085 are ordinary characters. They may sit in an info string, never on a closer line.
+const SEP = [0x2028, 0x2029, 0x85].map(c => String.fromCharCode(c)) // from code points: raw, they are invisible in source
+
+test('A6.hook-tests: QA repro: U+2028 in the info string of an outer fence still opens it, so its nested diagram stays prose', () => {
+  const r = '````md' + SEP[0] + 'x\n```mermaid\nflowchart TD\nA-->B\n```\n````\n' // SEP[0] is U+2028
+  assert.deepEqual(splitFences(r), [prose(r)])
+})
+
+test('A6.hook-tests: QA repro: a lone CR ends a line, and every segment keeps its bytes', () => {
+  assert.deepEqual(splitFences('Hi\r```mermaid\rflowchart TD\rA-->B\r```\rBye'),
+    [prose('Hi\r'), mermaid('```mermaid\rflowchart TD\rA-->B\r```\r', 'flowchart TD\rA-->B'), prose('Bye')])
+})
+
+test('A6.hook-tests: U+2028, U+2029 and U+0085 are plain info-string characters: the fence opens, and beside mermaid they make it no diagram', () => {
+  const D = '```mermaid\nA\n```\n'
+  for (const s of SEP) {
+    for (const r of [
+      '````md' + s + 'x\n' + D + '````\n', // an outer fence with the char in its info hides the diagram
+      '~~~' + s + '\n' + D + '~~~\n', // ...and so does a tilde one
+      '```mermaid' + s + '\nA\n```\n', // the info is trimmed of spaces and tabs only, so this info is not mermaid
+      '```' + s + 'mermaid\nA\n```\n',
+    ]) assert.deepEqual(splitFences(r), [prose(r)], JSON.stringify(r))
+    const fence = '```' + s + 'x\nB\n```\n' // a closed fence with the char in its info, then a diagram
+    assert.deepEqual(splitFences(fence + D), [prose(fence), mermaid(D, 'A')], JSON.stringify(s))
+  }
+})
+
+test('A6.hook-tests: a closing run with U+2028, U+2029 or U+0085 before or after it on its line does not close (LF, CRLF, lone CR)', () => {
+  for (const eol of ['\n', '\r\n', '\r']) for (const s of SEP) for (const bad of ['```' + s, '``` ' + s, s + '```']) {
+    const r = ['```mermaid', 'A', bad, '```', ''].join(eol)
+    assert.deepEqual(splitFences(r), [mermaid(r, 'A' + eol + bad)], JSON.stringify(r))
+  }
+})
+
+test('A6.hook-tests: LF, CRLF and lone CR mixed in one reply: each is one line end, and every segment keeps its bytes', () => {
+  const F1 = '```mermaid\r\nA\rB\n```\r' // opener CRLF; body CR then LF; closer CR
+  const F2 = '~~~mermaid\rC\r\nD\n~~~\r\n' // opener CR; body CRLF then LF; closer CRLF
+  const F3 = '````mermaid\nE\r```\r\n````\n' // a shorter run ending CRLF is body
+  assert.deepEqual(splitFences('a\nb\r\nc\r' + F1 + 'mid\r\n' + F2 + '\r' + F3 + 'end'), [
+    prose('a\nb\r\nc\r'), mermaid(F1, 'A\rB'), prose('mid\r\n'), mermaid(F2, 'C\r\nD'), prose('\r'), mermaid(F3, 'E\r```'), prose('end'),
+  ])
+})
+
+test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+2028/U+2029, ` and ~) split into the segments they were built from', () => {
+  let seed = 20261028 // fixed, so every run checks the same replies
+  const rand = () => { // mulberry32
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  const int = (n: number) => Math.floor(rand() * n), pick = (a: string[]) => a[int(a.length)]!
+  const [S, P] = SEP as [string, string]
+  // Prose lines never open a fence and body lines never close one; an info is mermaid only when trimmed of spaces and tabs.
+  const PROSE = ['', 'text', ' x', S + 'y' + P, '``mermaid', '~~', '    ```mermaid', S + '```mermaid', 'a' + S + '~~~', '``` a`b', '```mermaid`']
+  const BODY = ['', 'flowchart TD', 'A-->B', S + 'A' + P, '```mermaid', '~~~mermaid', '``` x', '    ```', '```' + S, '~~~' + P, S + '```', '``']
+  const MERMAID = ['mermaid', ' mermaid \t', '\tmermaid']
+  const OTHER = ['', 'js', 'md' + S + 'x', 'mermaid' + S, P + 'mermaid', 'mermaid' + P, 'mermaid\u0085', 'mermaidx']
+  for (let n = 0; n < 600; n++) {
+    const want: Segment[] = []
+    let reply = '', last = '', from = 0
+    const line = (text: string) => {
+      last = pick(['\n', '\r\n', '\r'])
+      if (text === '' && last === '\n' && reply.endsWith('\r')) last = '\r\n' // else the lone CR and this LF read as one CRLF
+      reply += text + last
+    }
+    const blocks = int(7)
+    for (let b = 0; b < blocks; b++) {
+      if (rand() < 0.4) { line(pick(PROSE)); continue }
+      const ch = pick(['`', '~']), other = ch === '`' ? '~' : '`', len = 3 + int(3), at = reply.length, isMermaid = rand() < 0.5
+      line(' '.repeat(int(4)) + ch.repeat(len) + (isMermaid ? pick(MERMAID) : pick(ch === '`' ? OTHER : [...OTHER, 'a`b'])))
+      const bodyAt = reply.length
+      for (let k = int(4); k > 0; k--) line(pick([...BODY, other.repeat(3 + int(3)), ...(len > 3 ? [ch.repeat(len - 1)] : [])]))
+      const body = reply.length > bodyAt ? reply.slice(bodyAt, reply.length - last.length) : ''
+      if (b === blocks - 1 && rand() < 0.2) continue // the last fence may stay open: prose to the end
+      line(' '.repeat(int(4)) + ch.repeat(len + int(2)) + pick(['', ' ', '\t', ' \t ']))
+      if (isMermaid) { if (at > from) want.push(prose(reply.slice(from, at))); want.push(mermaid(reply.slice(at), body)); from = reply.length }
+    }
+    if (reply && rand() < 0.3) { // no final line end
+      reply = reply.slice(0, -last.length)
+      if (from > reply.length) { const end = want.at(-1)!; end.text = end.text.slice(0, -last.length); from = reply.length }
+    }
+    if (from < reply.length) want.push(prose(reply.slice(from)))
+    const got = splitFences(reply)
+    assert.equal(got.map(x => x.text).join(''), reply, JSON.stringify(reply))
+    assert.deepEqual(got, want, JSON.stringify(reply))
+  }
+})
