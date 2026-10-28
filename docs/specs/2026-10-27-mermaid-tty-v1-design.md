@@ -36,7 +36,7 @@
    - A validator confirms that each node's label appears once (per node id, so identical texts are fine), each edge connects its endpoints, no glyph overwrites another, and every row fits.
    - Any validator failure, parse error or unsupported type shows the original fence unchanged. The reason goes only to the debug log.
 6. **Source preserved:**
-   - Only the drawing changes: the stored reply and `/copy` keep the exact source.
+   - Only the drawing changes: the stored reply keeps the exact source, so `/copy` copies it.
    - `/mermaid-tty source` shows every diagram as its source, on screen and under ctrl+o; `/mermaid-tty diagram` draws them again. (The API doesn't flag the ctrl+o view.)
    - Unclosed fences are left alone.
    - The prose around diagrams goes through `next()`.
@@ -99,4 +99,4 @@ flowchart LR
 ## Risks
 
 - **Tangled dense graphs:** if more than 5 corpus diagrams stay tangled after 3 fix cycles, port termaid's placement and routing, keeping flat nodes.
-- **Early-access mods API:** the weekly CI run catches changes.
+- **Early-access mods API:** a scheduled CI job tests every new Claude Code release.

@@ -21,7 +21,7 @@
 4. **CI:** `.github/workflows/ci.yml` runs on pushes and pull requests and executes `scripts/check.sh`.
    - It runs on Linux, macOS and Windows runners, each with Node 24 and Claude Code installed from npm, for `validate` and `test`.
    - **Everything automatic runs in CI:** `scripts/check.sh`, the end-to-end job (real Claude Code against a mock API), the synthetic corpus gate, a benchmark ceiling, a local-marketplace install, and the objective parts of every review gate. `scripts/check-ci-coverage.ts` fails if an acceptance check has no CI step.
-   - `release.yml` runs the release checks on a `v*` tag. A weekly scheduled run repeats CI with the latest Claude Code, so a mods API change is caught early.
+   - `release.yml` runs the release checks on a `v*` tag. A scheduled job tests every newly published Claude Code version, so a mods API change is caught early.
    - Actions are pinned by SHA.
 5. **Release:**
    - Tag `v1.0.0` and publish a GitHub Release whose notes include the install commands.
