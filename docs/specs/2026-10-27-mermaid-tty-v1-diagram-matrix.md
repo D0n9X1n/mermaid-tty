@@ -19,7 +19,7 @@ These rules apply to every type. A type's section can add to them but never cont
 6. **Text.**
    - Widths follow spec A requirement 4. Text wraps at spaces or between W/F characters, and a word wider than its field falls back.
    - Title and header rows wrap whenever they exceed `columns`.
-7. **Legend.** A legend lists `key text` rows under the diagram, in source order. Keys are `1, 2, …` for points and `a`…`z`, `aa`, `ab`, … for fields, so a legend never runs out of keys. A legend row wider than `columns` wraps, indented under its text.
+7. **Legend.** A legend lists `key text` rows under the diagram, in source order. Keys are `1, 2, …` for points and `a`…`z`, `aa`, `ab`, … for fields, so a legend never runs out of keys. A legend row wider than `columns` wraps, indented under its text. **All or none:** if any item of a keyed class (fields, points, timings) in a diagram is shown by its key, every item of that class is, so a key can never be mistaken for a literal label.
 8. **Numbers.**
    - Source numbers print as written. Arithmetic is exact decimal, and rounding is half up.
    - A horizontal bar field is `W = min(60, cells left in the row)` unless a section fixes it.
@@ -1585,7 +1585,7 @@ Labels use `"…"` or `'…'`. The title follows common rule 3. Honored config k
 
 **Text design:** a ruler row marks every 8th bit offset. Each row of `bitsPerRow` bits (default 32) is one text row, its first bit number in a left gutter as wide as the largest such number plus a space. Each bit is c columns. A field spans its bits and opens with `│`; the row closes with `│`; a partial last row ends at its last field. `bitOrder: descending` mirrors each row and the ruler, padding a partial row on the left. Labels are centered. A field crossing a row edge is split: its widest part (first on ties) holds the label, the others `…`. Fields take series colors in source order (common rule 9); ruler and gutter take the label role, `│` the frame role, and the title row follows the common rules.
 
-**Collisions and narrow widths:** a label wider than its field's interior becomes a field key in the legend (common rule 7), in the field's color. c is the smallest value ≥ 2 that gives the fewest keys and fits. Ladder: (1) rows of `bitsPerRow` bits; (2) rows of half that, rounded up; then fall back. A key wider than its field falls back.
+**Collisions and narrow widths:** if any label is wider than its field's interior, every field is shown by its key, in its field's color, and the legend lists all labels (common rule 7, all or none). c is the smallest value ≥ 2 that fits; with keys, the fewest keyed rows wins. Ladder: (1) rows of `bitsPerRow` bits; (2) rows of half that, rounded up; then fall back. A key wider than its field falls back.
 
 **Required fixtures:**
 - `packet-ok-01`: docs TCP example: frontmatter title; keyed 1-bit flags; step 2 at 60.
@@ -1593,9 +1593,10 @@ Labels use `"…"` or `'…'`. The title follows common rule 3. Honored config k
 - `packet-ok-03`: header `packet-beta`; single-bit fields; `24-39` split at a row edge.
 - `packet-ok-04`: docs `bitOrder: descending` example (`bitsPerRow: 16`) plus a partial row.
 - `packet-ok-05`: two `Reserved` fields; single-quoted labels; a whole-line comment.
-- `packet-ok-06`: CJK labels, one keyed.
+- `packet-ok-06`: CJK labels; one too wide, so all fields are keyed.
 - `packet-ok-07`: `bitsPerRow: 28`, 112 bits: exactly 60 columns at step 1; 59 takes step 2.
 - `packet-ok-08`: valid fields, then `accTitle: TCP`; accTitle parsed and ignored.
+- `packet-ok-09`: key/label collision. `bitsPerRow: 28` at 60 columns with `0: "Long label"`, `1: "a"`, `2-27: "Rest"`: all three fields are keyed (`a`, `b`, `c`) and the legend lists `a Long label`, `b a`, `c Rest`, so swapping the first two labels changes the legend.
 
 **Rejection fixtures:**
 - `packet-reject-01`: `0-15: Source Port` (unquoted).
@@ -2201,6 +2202,7 @@ The title follows common rule 3. No config key is honored.
 | packet | CJK width | packet-ok-06 |
 | packet | fit ladder steps 1-2 and fallback | packet-ok-01, packet-ok-07, packet-reject-07 |
 | packet | `accTitle` parsed and ignored | packet-ok-08 |
+| packet | all-or-none keys: a key never looks like a literal label | packet-ok-09 |
 | zenuml | header `zenuml` (subset TBD; falls back until pinned) | zenuml-ok-01 |
 | zenuml | `title` statement, frontmatter title | zenuml-ok-01, zenuml-ok-10 |
 | zenuml | participants: from messages, declared, `as` alias, `@Actor` | zenuml-ok-01, zenuml-ok-02, zenuml-ok-03, zenuml-ok-04, zenuml-reject-02, zenuml-reject-07 |
