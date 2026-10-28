@@ -757,10 +757,10 @@ Build
 - Ticks sit at `t0 + k·step`, up to `t1`, at cell `⌊W·k·step/M⌋`. `step` is the smallest of 1 5 10 50 100 500 ms; 1 5 15 30 s; 1 5 15 30 min; 1 3 6 12 h; 1 2 7 14 30 90 180 365 730 1825 3650 7300 18250 36500 d with `⌊W·step/M⌋ ≥ L + 1`, where `L` is the label width. Every supported token has a fixed width; `%b` and `%a` print English abbreviations (`Jan`, `Mon`). If no step qualifies, only `t0` is labeled. A tick is drawn only if its label fits in the field.
 - Timings are text, not numbers: they print as written and are never resolved or converted. Only the resolved starts and ends place bars, `◆` and ticks.
 
-**Collisions and narrow widths:** each task owns a row, and ticks are at least `L + 1` cells apart, so marks never collide; keys appear only when timings move into the legend. A task row is `N + T + W + 5` cells with timings in place, or `N + W + 6` with keys. Ladder:
+**Collisions and narrow widths:** each task owns a row, and ticks are at least `L + 1` cells apart, so marks never collide; keys appear only when timings move into the legend. A task row is `N + T + W + 5` cells with timings in place, or `N + W + 5 + K` with keys, where `K` is the widest key's width (1 for up to 26 tasks, 2 for 27–702). Ladder:
 1. Timings in place: `W = min(60, columns − N − T − 5)`, if that is at least 20.
-2. Timings move into the keyed legend: each task gets a key `a`, `b`, … in source order, drawn in the `label` role where its timing was, and the legend lists `key timing` rows under the tick labels. `W = min(60, columns − N − 6)`, if that is at least 20.
-3. As step 2, with `W = 20`; task names wrap to `columns − 26` cells, with the key and bar on the name's first row.
+2. Timings move into the keyed legend: each task gets a key `a`, `b`, … in source order, drawn in the `label` role where its timing was, and the legend lists `key timing` rows under the tick labels. `W = min(60, columns − N − 5 − K)`, if that is at least 20.
+3. As step 2, with `W = 20`; task names wrap to `columns − 25 − K` cells, with the key and bar on the name's first row.
 4. Fall back. Steps 2 and 3 give each task its own key (`a`…`z`, then `aa`, `ab`, …; common rule 7), so the number of tasks is never a reason to fall back.
 
 The sketch source at 40 columns reaches step 2 (W = 30):
@@ -794,6 +794,7 @@ c 2024-01-31 · 0d
 - `gantt-ok-13`: wrapped names with keyed timings; step 3 first fits at 60 (names wrap to 34 cells).
 - `gantt-ok-14`: valid chart, then `click a1 href "https://example.com"`: parsed and ignored (common rule 4); the drawing is unchanged.
 - `gantt-ok-15`: timings move into the legend. `dateFormat YYYY-MM-DD HH:mm`, `axisFormat %H:%M`; `Load trucks :l, 2024-03-01 08:00, 2024-03-01 11:30`, `Drive :d, after l, 2024-03-01 15:00`, `Unload :after d, 90m` (`N` = 11, `T` = 35). Step 1 at 120 (W = 60) and 80 (W = 29). At 60, step 1 leaves W = 9, so step 2 draws keys `a`, `b`, `c` (W = 43): bars 142, 142 and 61 eighths from cells 0, 17 and 35; ticks 08:00, 11:00, 14:00 at 0, 15, 30; legend rows `a 2024-03-01 08:00 · 2024-03-01 11:30`, `b after l · 2024-03-01 15:00`, `c after d · 90m`.
+- `gantt-ok-16`: two-character keys. 27 tasks `t01`…`t27`, each `2024-01-01, 1d` (N = 3, T = 15), at 42 columns. Step 1 gives W = 19, so step 2 applies: keys `a`…`z`, `aa` (K = 2), W = 32. Every task row, `aa` included, is exactly 42 cells.
 
 **Rejection fixtures** (each returns the original fence):
 - `gantt-reject-01`: valid chart, then `excludes weekends`.
@@ -1142,7 +1143,7 @@ Grid  ┬→ Homes ███████████████ 70
 - Roles: each source's name and bars take its series color, by first appearance; connectors `edge`, with `→` in `arrow`; targets `label`; values `value`.
 - **Counting** (the sankey exception to common rule 10): each source link appears exactly once, as its own row, and validation counts link rows. A node's name can appear several times: as its group's heading, if the node has outgoing links, and in the row of each link into it.
 
-**Numbers:** `M` is the largest link value. A bar is `round(8·v/M·W)` eighth-cells; a zero link draws no bar and prints `0`. `M = 0` falls back.
+**Numbers:** `M` is the largest link value. A bar is `round(8·v/M·W)` eighth-cells; a zero link draws no bar and prints its value as written (common rule 8). `M = 0` falls back.
 
 **Collisions and narrow widths:** each link owns a row, so nothing collides. A row is `S + T + W + V + 6` cells. Ladder:
 1. `W = min(60, columns − S − T − V − 6)`, if that is at least 10.
@@ -1278,7 +1279,7 @@ Products        ████████████████████ 180
 - A row: the indented name padded to the widest indented name `N`, a space, the bar field `W`, a space, and the value right-aligned to the widest value `V`.
 - Each top-level node and its subtree take one series color, for bars and section names; leaf names are `label`; values `value`.
 
-**Numbers:** a section's value is the sum of its leaves, printed with as many decimals as its most precise leaf. `M` is the sum of the top-level values. A bar is `round(8·v/M·W)` eighth-cells, so it shows its node's share of the whole map. A zero leaf or an empty section draws no bar and prints `0`. `M = 0` falls back.
+**Numbers:** a section's value is the sum of its leaves, printed with as many decimals as its most precise leaf. `M` is the sum of the top-level values. A bar is `round(8·v/M·W)` eighth-cells, so it shows its node's share of the whole map. A zero leaf draws no bar and prints its value as written (common rule 8); an empty section draws no bar and prints its sum, `0` with its leaves' decimals. `M = 0` falls back.
 
 **Collisions and narrow widths:** each node owns a row, so nothing collides. A row is `N + W + V + 2` cells. Ladder:
 1. `W = min(60, columns − N − V − 2)`, if that is at least 10.
@@ -1297,6 +1298,7 @@ Products        ████████████████████ 180
 - `treemap-ok-09`: wrapped names; step 2 first fits at 60.
 - `treemap-ok-10`: docs' styling example (`"Section 1.2":::class1`, `"Leaf 2.1": 20:::class1`, `classDef class1 …`): `:::name` and `classDef` parsed and ignored (common rule 4). Section 1 is 24, Section 1.2 is 12, Section 2 is 57; `M` = 81.
 - `treemap-ok-11`: valid map, then `accTitle: Budget`: parsed and ignored (common rule 4); the drawing is unchanged.
+- `treemap-ok-12`: decimal zero: `"Z": 0.00` and `"P": 1`; `M = 1`; Z draws no bar and prints `0.00`, as written.
 
 **Rejection fixtures:**
 - `treemap-reject-01`: a row indented under a leaf.
@@ -2018,6 +2020,7 @@ The title follows common rule 3. No config key is honored.
 | gantt | `click` parsed and ignored (common rule 4) | gantt-ok-14 |
 | gantt | `excludes` and `vert` fall back | gantt-reject-01, gantt-reject-12 |
 | gantt | task names Mermaid lexes as a comment or as tokens fall back | gantt-reject-15, gantt-reject-16, gantt-reject-17 |
+| gantt | two-character keys budgeted in the row width | gantt-ok-16 |
 | pie | header `pie` | pie-ok-01 |
 | pie | `showData` and `title` on the header line; `%%` comments | pie-ok-01, pie-ok-05 |
 | pie | `title` on its own line; `showData` has no effect | pie-ok-02, pie-ok-06 |
@@ -2117,6 +2120,7 @@ The title follows common rule 3. No config key is honored.
 | treemap | fit ladder steps 1-2 and fallback | treemap-ok-08, treemap-ok-09, treemap-reject-07 |
 | treemap | `:::name` and `classDef` parsed and ignored (common rule 4) | treemap-ok-10 |
 | treemap | `accTitle` parsed and ignored (common rule 4) | treemap-ok-11 |
+| treemap | zero printed as written (`0.00`) | treemap-ok-12 |
 | mindmap | header `mindmap` | mindmap-ok-01, mindmap-reject-05 |
 | mindmap | nesting by indentation, single root | mindmap-ok-01, mindmap-ok-05, mindmap-reject-02 |
 | mindmap | default shape (no caps) | mindmap-ok-01, mindmap-ok-02 |
