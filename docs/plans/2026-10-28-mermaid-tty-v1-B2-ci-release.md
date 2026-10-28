@@ -1,17 +1,17 @@
 # mermaid-tty v1 B2: CI and release (T8, T15, T17)
 
-Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules and a stub of plan A's `scripts/lib/check-ids.ts` (`parseIds`, D16). A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T3 (`doc-rules.ts`) and T6 (`check-docs.ts`); T15 also needs B3's T9–T14, because `check.sh` runs every check. **Unblocks:** B3's T9 (T8), T12 (T8, T17) and T16 (T15). Tasks are in run order; T9, T10 and T16 are in B3 to keep this file under 500 lines.
+**Needs:** B1's T3 (`workflow.ts`, `doc-rules.ts`) and T6 (`check-docs.ts`); plan A's T1 (`scripts/lib/check-ids.ts`, the one check-ID parser, D16); T15 also needs B3's T9–T14, because `check.sh` runs every check. **Unblocks:** B3's T9 (T8), T12 (T8, T17) and T16 (T15). Tasks are in run order; T9, T10 and T16 are in B3 to keep this file under 500 lines.
 
 ### T8 — CI and release workflows
-- **Files:** create `scripts/lib/ci-rules.ts` (C11), `scripts/tests/ci-rules_test.ts` (C12), `.github/workflows/ci.yml` (P3) and `.github/workflows/release.yml` (P4); add C10's two `// T8` lines to `scripts/check-docs.ts`. **Acceptance:** B4, B5, B7, A8 platforms, A9 and VR wiring. **Depends on:** T3, T6. **Group:** G4. **Waits on A** for green runs: `check.sh`, `scripts/e2e/` (`run.ts`, `package-lock.json`), `render-gallery.ts`, `check-review-hashes.ts`.
+- **Files:** create `scripts/lib/ci-rules.ts` (C11), `scripts/tests/ci-rules_test.ts` (C12), `.github/workflows/ci.yml` (P3) and `.github/workflows/release.yml` (P4); add C10's two `// T8` lines to `scripts/check-docs.ts`. **Acceptance:** B4, B5, B7, A8 platforms, A9 and VR wiring. **Depends on:** T3, T6, and A's T1 (`parseIds`, D16). **Group:** G4. **Waits on A** for green runs: `check.sh`, `scripts/e2e/` (`run.ts`, `package-lock.json`), `render-gallery.ts`, `check-review-hashes.ts`.
 - **Failing check:** add C12; `node --test scripts/tests/ci-rules_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/ci-rules.ts`. After C11 and the `// T8` lines, `node scripts/check-docs.ts 2>&1 | grep -E 'ci\.yml|release\.yml'` → `missing …` lines.
 - **Implement:** C11; the `// T8` lines (the import before the `doc-rules.ts` import, the `errors.push` right after the `const errors` statement); P3 and P4. The pins are checkout `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1), setup-node `949feb2413d6458794dcd2491c4babbbce0c15c1` (v7.1.0) and upload-artifact `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (v7.0.2), from `gh api repos/actions/<name>/commits/<tag> -q .sha` on 2026-10-28.
-- **Done when:** the test → `ℹ pass 23`; the grep prints nothing; `ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f) }' .github/workflows/*.yml` exits 0; green on three OSes at R2. The 48-ID test reads the real acceptance file: when its labels change, update `IDS48` and `ci/coverage.json` in the same commit. **Commit:** `B: CI and release rules; CI on three OSes with e2e and gallery; release on v*`
+- **Done when:** the test → `ℹ pass 23`; the grep prints nothing; `ruby -ryaml -e 'ARGV.each { |f| YAML.load_file(f) }' .github/workflows/*.yml` exits 0; green on three OSes at R2. The 48-ID test runs plan A's `parseIds` on the real acceptance file (D16; B keeps no parser of its own): when its labels change, update `IDS48` and `ci/coverage.json` in the same commit. **Commit:** `B: CI and release rules; CI on three OSes with e2e and gallery; release on v*`
 ````ts C11 — scripts/lib/ci-rules.ts
 // CI and release rules: B4 ci.yml, release.yml and check.sh; B5 tag and notes; B7 check IDs and the coverage map. Text in, errors out.
-import { INSTALL, common, need } from './doc-rules.ts';
+import { INSTALL, common, need } from './workflow.ts';
 const job = (yml: string, name: string) => new RegExp(`^  ${name}:\\n((?:(?: {4}.*)?\\n)*)`, 'm').exec(yml)?.[1] ?? '';
 const MATRIX: [string, string | RegExp][] = [['fail-fast: false', 'fail-fast: false'], ['3-OS matrix', 'os: [ubuntu-latest, macos-latest, windows-latest]'],
   ['runs-on matrix.os', 'runs-on: ${{ matrix.os }}'], ['Node 24 via pinned actions/setup-node', /uses: actions\/setup-node@[0-9a-f]{40} # v\S+\n\s+with:\n\s+node-version: '?24'?\n/],
@@ -32,19 +32,6 @@ export const checkShErrors = (sh: string) => [...(sh.startsWith('#!/usr/bin/env 
   ...(/\|\|\s*true\b|\bset \+e\b/.test(sh) ? ['check.sh: masks a failing command (|| true or set +e)'] : [])];
 export const tagErrors = (tag: string, version: string) => (tag === `v${version}` ? [] : [`tag ${tag} does not match plugin.json version ${version}`]);
 export const notesErrors = (notes: string) => INSTALL.filter((l) => !notes.includes(l)).map((l) => `release notes lack: ${l}`);
-// B7 (70a26e2): each row ID; row.slug(label) per bold "Label:" in the row; VR.slug(label) per label in the visual-review section.
-const slug = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-export function checkIds(acceptance: string): string[] {
-  const ids: string[] = [];
-  let vr = false;
-  for (const line of acceptance.split(/\r?\n/)) {
-    if (line.startsWith('## ')) vr = line.startsWith('## Visual review');
-    const row = /^\| ([AB]\d+) \|/.exec(line), labels = [...line.matchAll(/\*\*([^*]+?):\*\*/g)].map((m) => slug(m[1]!));
-    if (row) ids.push(row[1]!, ...labels.map((s) => row[1] + '.' + s));
-    else if (vr) ids.push(...labels.map((s) => 'VR.' + s));
-  }
-  return [...new Set(ids)];
-}
 export const stepIds = (...ymls: string[]) => new Set(ymls.flatMap((y) => [...y.matchAll(/^\s+(?:- )?id: ([\w-]+)\s*$/gm)].map((m) => m[1]!)));
 export function coverageErrors(ids: string[], coverage: Record<string, string | string[]>, steps: Set<string>): string[] {
   const e: string[] = [];
@@ -60,8 +47,9 @@ export function coverageErrors(ids: string[], coverage: Record<string, string | 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkIds, checkShErrors, ciErrors, coverageErrors, notesErrors, releaseErrors, stepIds, tagErrors } from '../lib/ci-rules.ts';
-import { INSTALL } from '../lib/doc-rules.ts';
+import { checkShErrors, ciErrors, coverageErrors, notesErrors, releaseErrors, stepIds, tagErrors } from '../lib/ci-rules.ts';
+import { INSTALL } from '../lib/workflow.ts';
+import { parseIds } from '../lib/check-ids.ts';
 const SHA = 'a'.repeat(40);
 const PIN = (a: string, v: string) => `      - uses: actions/${a}@${SHA} # ${v}\n`;
 const NODE = PIN('setup-node', 'v7.1.0') + '        with:\n          node-version: 24\n';
@@ -95,15 +83,13 @@ test('release: tag equals v + plugin.json version; notes carry both install comm
   assert.deepEqual([tagErrors('v1.0.0', '1.0.0'), notesErrors(INSTALL.join('\n'))], [[], []]);
   assert.equal(tagErrors('v1.0.1', '1.0.0').length + notesErrors(INSTALL[0]!).length, 2);
 });
-const ACC = '| A8 | Zero | **Portability:** a **No build:** b |\n## Visual review\n\n**In CI:** x\n\n## Spec B\n\n| B1 | R | **Beauty review:** c |\n';
 const IDS = ['A8', 'A8.portability', 'A8.no-build', 'VR.in-ci', 'B1', 'B1.beauty-review'], COV = Object.fromEntries(IDS.map((id) => [id, 'check']));
 const IDS48 = ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 A6.hook-tests A6.command A6.in-claude-code ' +
   'A7 A8 A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A9 A9.harness A9.stored A9.release ' +
   'A10 VR.gallery VR.in-ci VR.reviewers VR.tangled VR.passes B1 B1.docs-check B1.beauty-review B2 B2.per-paragraph ' +
   'B2.translation-review B3 B3.publish-test B3.workflow-check B3.release B4 B5 B5.every-pr B5.release B6 B7 B7.check-ids').split(' ');
-test('check IDs: row IDs, row.slug(label) and VR.slug(label), derived from the real acceptance file', () => {
-  assert.deepEqual(checkIds(ACC), IDS);
-  assert.deepEqual(checkIds(readFileSync(new URL('../../docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', import.meta.url), 'utf8')), IDS48);
+test('check IDs: plan A\'s one parser yields the 48 IDs that coverage.json maps; step ids', () => {
+  assert.deepEqual(parseIds(readFileSync(new URL('../../docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', import.meta.url), 'utf8')).sort(), [...IDS48].sort());
   assert.deepEqual([...stepIds(CI)], ['check', 'e2e-tooling', 'e2e', 'gallery']);
 });
 test('coverage map: every check ID maps to an existing step id, and no unknown ID', () => {
@@ -264,7 +250,7 @@ jobs:
 - **Done when:** the test → `ℹ pass 4`, the stall scenario included; `node scripts/check-docs.ts 2>&1 | grep -F claude-code-versions.yml` prints nothing; after merge, the first dispatched run tests the latest version and creates the `claude-code-tested` branch (R5). Every selected version is recorded, pass or fail; retry one with `gh workflow run claude-code-versions.yml -f version=X.Y.Z`. **Commit:** `B: run A9 on every new Claude Code version`
 ````ts V2 — scripts/lib/cc-versions.ts
 // The scheduled Claude Code version job (spec B 4, B4): which versions to test, how a run's legs become results, and its workflow rule.
-import { common, need } from './doc-rules.ts';
+import { common, need } from './workflow.ts';
 const STABLE = /^\d+\.\d+\.\d+$/, OSES = ['ubuntu-latest', 'macos-latest', 'windows-latest'];
 // tested.txt holds `VERSION pass|fail` lines; a recorded version is never selected again (retry it with workflow_dispatch).
 export const recorded = (text: string) => [...text.matchAll(/^(\d+\.\d+\.\d+) (?:pass|fail)$/gm)].map((m) => m[1]!);
@@ -458,13 +444,13 @@ errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml')
 ````
 
 ### T15 — check.sh wiring and CI coverage
-- **Files:** create `scripts/check-ci-coverage.ts` (P13) and `ci/coverage.json`; append to `scripts/check.sh`. **Acceptance:** B7, B4, B5. **Depends on:** T3–T14, T17. **Group:** G8. **Waits on A:** `check.sh` with its header, and the scripts it runs.
+- **Files:** create `scripts/check-ci-coverage.ts` (P13) and `ci/coverage.json`; append to `scripts/check.sh`. **Acceptance:** B7, B4, B5. **Depends on:** T3–T14, T17. **Group:** G8. **Waits on A:** T1's `check.sh` with its header and `scripts/lib/check-ids.ts` (`parseIds`, D16), and the scripts it runs.
 - **Failing check:** add P13; `node scripts/check-ci-coverage.ts` → 48 lines ending `: no CI step`.
 - **Implement:** generate the manifest, then review it; most IDs run inside `check.sh`, under the `check` step:
   ```bash
   node --input-type=module -e "
-  import { checkIds } from '$PWD/scripts/lib/ci-rules.ts'; import { readFileSync, writeFileSync } from 'node:fs';
-  const ids = checkIds(readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', 'utf8')), R = 'review-hashes';
+  import { parseIds } from '$PWD/scripts/lib/check-ids.ts'; import { readFileSync, writeFileSync } from 'node:fs';
+  const ids = parseIds(readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', 'utf8')), R = 'review-hashes';
   const special = { A9: 'e2e', 'A9.harness': 'e2e', 'A9.release': 'release-e2e', 'A6.in-claude-code': 'e2e', 'A9.stored': 'e2e', 'B3.release': ['release-wiki-run', 'release-wiki'],
     'B5.release': ['release-tag', 'release-notes', 'release-notes-published', 'release-install', 'release-e2e'], 'VR.gallery': ['gallery', 'gallery-upload'],
     'VR.in-ci': ['gallery', 'gallery-upload', 'check'], 'VR.reviewers': R, 'VR.passes': R, 'B1.beauty-review': R, 'B2.translation-review': R };
@@ -473,6 +459,7 @@ errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml')
   Append to `scripts/check.sh`, leaving A's lines above it unchanged:
   ```bash
   # Sub-project B: docs, wiki, install and CI coverage
+  [[ -d scripts/docs/node_modules ]] || npm ci --prefix scripts/docs  # D15c: install the pinned parser once
   node --test 'scripts/tests/*_test.ts'
   node scripts/check-docs.ts
   node scripts/check-wiki.ts
@@ -480,16 +467,17 @@ errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml')
   bash scripts/test-local-install.sh
   node scripts/check-ci-coverage.ts
   ```
-- **Done when:** → `check-ci-coverage: ok (48 check IDs mapped)`, and `bash scripts/check.sh` exits 0 on the Mac. **Commit:** `B: wire B checks into check.sh; CI coverage map`
+- **Done when:** → `check-ci-coverage: ok (48 check IDs mapped)`, and `bash scripts/check.sh` exits 0 on the Mac, also after `rm -rf scripts/docs/node_modules` (its guard runs `npm ci --prefix scripts/docs`). **Commit:** `B: wire B checks into check.sh; CI coverage map`
 ````ts P13 — scripts/check-ci-coverage.ts
-// B7: every check ID parsed from the acceptance file maps, in ci/coverage.json, to the id: of a step in ci.yml or release.yml.
+// B7: every check ID, from plan A's one parser (scripts/lib/check-ids.ts), maps, in ci/coverage.json, to the id: of a step in ci.yml or release.yml.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkIds, coverageErrors, stepIds } from './lib/ci-rules.ts';
+import { parseIds } from './lib/check-ids.ts';
+import { coverageErrors, stepIds } from './lib/ci-rules.ts';
 const root = fileURLToPath(new URL('..', import.meta.url)), at = (p: string) => join(root, p);
 const read = (p: string) => (existsSync(at(p)) ? readFileSync(at(p), 'utf8').replace(/\r\n/g, '\n') : '');
-const ids = checkIds(read('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md')), coverage = JSON.parse(read('ci/coverage.json') || '{}');
+const ids = parseIds(read('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md')), coverage = JSON.parse(read('ci/coverage.json') || '{}');
 const errors = coverageErrors(ids, coverage, stepIds(read('.github/workflows/ci.yml'), read('.github/workflows/release.yml')));
 for (const e of errors) console.error(`check-ci-coverage: ${e}`);
 if (errors.length) process.exit(1);

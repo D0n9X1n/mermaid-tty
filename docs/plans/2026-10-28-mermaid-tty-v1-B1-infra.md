@@ -2,91 +2,100 @@
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** nothing from B2 or B3. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T6) and T13 (T5). T2 and T7 sit in B3 to keep this file under 500 lines.
+**Needs:** nothing from B2 or B3; npm and network for T1's one install. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T6) and T13 (T5). T2 and T7 sit in B3 to keep this file under 500 lines.
 
-### T1 — Markdown scanner
-- **Files:** create `scripts/lib/markdown.ts` (C1) and `scripts/tests/markdown_test.ts` (C2). **Acceptance:** B1, B2. **Depends on:** none. **Group:** G1.
-- **Failing check:** add C2; `node --test scripts/tests/markdown_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/markdown.ts`.
-- **Implement:** C1. **Done when:** the same command → `ℹ pass 4`, `ℹ fail 0`. **Commit:** `B: fence-aware Markdown scanner`
-````ts C1 — scripts/lib/markdown.ts
-// Fence-aware Markdown scanning shared by check-wiki.ts and doc-rules.ts.
-export type Block = { kind: 'heading' | 'para' | 'code'; line: number; lines: string[] };
-const FENCE = /^ {0,3}(`{3,}|~{3,})/, HEADING = /^(#{1,6})[ \t]+(.*)$/;
-export const CJK = /[぀-ヿ㐀-䶿一-鿿가-힯豈-﫿]/;
-export function blocks(text: string): Block[] {
-  const out: Block[] = [];
-  let fence = '', cur: Block | null = null;
-  text.split(/\r?\n/).forEach((line, i) => {
-    const m = FENCE.exec(line);
-    if (fence) {
-      cur!.lines.push(line);
-      if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && line.trim() === m[1]) { fence = ''; cur = null; }
-    } else if (m) { fence = m[1]!; out.push((cur = { kind: 'code', line: i + 1, lines: [line] })); }
-    else if (HEADING.test(line)) { out.push({ kind: 'heading', line: i + 1, lines: [line] }); cur = null; }
-    else if (!line.trim()) cur = null;
-    else if (cur) cur.lines.push(line);
-    else out.push((cur = { kind: 'para', line: i + 1, lines: [line] }));
-  });
-  return out;
+### T1 — GFM parser (D15c)
+- **Files:** create `scripts/docs/package.json` (C0), `scripts/docs/package-lock.json` (generated), `scripts/docs/markdown.ts` (C1) and `scripts/tests/markdown_test.ts` (C2); add `scripts/docs/node_modules/` to `.gitignore`. **Acceptance:** B1, B2. **Depends on:** none. **Group:** G1.
+- **Failing check:** add C2; `node --test scripts/tests/markdown_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/docs/markdown.ts`.
+- **Implement:** C0; `npm install --prefix scripts/docs --before=2026-10-14` writes the lockfile, so every package, transitive ones included, was released at least 2 weeks before 2026-10-28 (`mdast-util-from-markdown` 2.1.0 on 2026-10-03, `mdast-util-gfm` 3.1.0 on 2025-02-10, `micromark-extension-gfm` 3.0.0 on 2023-06-26); then C1. **Done when:** `rm -rf scripts/docs/node_modules && npm ci --prefix scripts/docs` succeeds; the test → `ℹ pass 3`, `ℹ fail 0`; `git check-ignore scripts/docs/node_modules` prints the path. **Commit:** `B: pinned CommonMark+GFM parser for the docs checks`
+````json C0 — scripts/docs/package.json
+{
+  "name": "mermaid-tty-docs-tooling",
+  "private": true,
+  "description": "Pinned parser for the docs checks (D15c); not part of the plugin. The root package.json keeps no dependencies.",
+  "type": "module",
+  "dependencies": {
+    "mdast-util-from-markdown": "2.1.0",
+    "mdast-util-gfm": "3.1.0",
+    "micromark-extension-gfm": "3.0.0"
+  }
 }
-export const headings = (text: string) => blocks(text).filter((b) => b.kind === 'heading')
-  .map((b) => { const m = HEADING.exec(b.lines[0]!)!; return { depth: m[1]!.length, text: m[2]!.trim(), line: b.line }; });
-// Links and images come only from D15b's Markdown forms; comments are blanked first, keeping line numbers.
-export type Ref = { line: number; kind: 'link' | 'image'; label: string; target: string };
-const FORMS = /\[!\[([^\]]*)\]\(([^)\s]+)\)\]\(([^)\s]+)\)|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]*)\]\(([^)\s]+)\)/g;
-export function refs(text: string): Ref[] {
-  const out: Ref[] = [];
-  for (const b of blocks(text.replace(/<!--[\s\S]*?-->/g, (c) => c.replace(/[^\n]/g, ' '))).filter((b) => b.kind !== 'code'))
-    b.lines.forEach((l, k) => {
-      for (const m of l.replace(/`[^`]*`/g, (c) => ' '.repeat(c.length)).matchAll(FORMS)) {
-        const line = b.line + k;
-        if (m[3]) out.push({ line, kind: 'image', label: m[1]!, target: m[2]! }, { line, kind: 'link', label: m[1]!, target: m[3] });
-        else if (m[5]) out.push({ line, kind: 'image', label: m[4]!, target: m[5] });
-        else if (m[7]) out.push({ line, kind: 'link', label: m[6]!, target: m[7] });
-      }
-    });
-  return out;
+````
+````ts C1 — scripts/docs/markdown.ts
+// Markdown as GitHub renders it (D15c): a spec-compliant CommonMark + GFM tree, so every docs rule reads what the renderer reads.
+import { fromMarkdown } from 'mdast-util-from-markdown';
+import { gfmFromMarkdown } from 'mdast-util-gfm';
+import { gfm } from 'micromark-extension-gfm';
+type Point = { line: number; offset: number };
+export type Node = { type: string; value?: string; url?: string; alt?: string; depth?: number; children?: Node[]; parent?: Node; position?: { start: Point; end: Point } };
+export function parse(md: string): Node {
+  const tree = fromMarkdown(md, { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] }) as unknown as Node;
+  const link = (n: Node): void => n.children?.forEach((c) => { c.parent = n; link(c); });
+  link(tree);
+  return tree;
 }
-export const links = (text: string) => refs(text).filter((r) => r.kind === 'link');
-export const prose = (s: string) => s.replace(/`[^`]*`/g, ' ').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/<[^>]*>/g, ' ');
-export function section(text: string, title: string): string | null {
-  const bs = blocks(text), start = bs.findIndex((b) => b.kind === 'heading' && b.lines[0] === `## ${title}`);
-  if (start < 0) return null;
-  const end = bs.findIndex((b, i) => i > start && b.kind === 'heading' && /^#{1,2}[ \t]/.test(b.lines[0]!));
-  return bs.slice(start + 1, end < 0 ? undefined : end).map((b) => b.lines.join('\n')).join('\n\n');
+export const all = (n: Node, type: string): Node[] => [...(n.type === type ? [n] : []), ...(n.children ?? []).flatMap((c) => all(c, type))];
+export const within = (n: Node, type: string): boolean => !!n.parent && (n.parent.type === type || within(n.parent, type));
+// Visible text: code, inline code and raw HTML count as a space.
+export const text = (n: Node): string => (['code', 'inlineCode', 'html'].includes(n.type) ? ' ' : n.value ?? (n.children ?? []).map(text).join(''));
+export const headings = (md: string) => all(parse(md), 'heading').map((h) => ({ depth: h.depth!, text: text(h), line: h.position!.start.line }));
+export const links = (md: string) => all(parse(md), 'link').map((l) => ({ line: l.position!.start.line, label: text(l), target: l.url! }));
+// The raw text of a level-2 section, from the line after its heading to the next h1 or h2.
+export function section(md: string, title: string): string | null {
+  const hs = all(parse(md), 'heading').filter((h) => h.depth! <= 2), i = hs.findIndex((h) => h.depth === 2 && text(h) === title);
+  if (i < 0) return null;
+  const nl = md.indexOf('\n', hs[i]!.position!.start.offset);
+  return md.slice(nl < 0 ? md.length : nl + 1, hs[i + 1]?.position!.start.offset ?? md.length);
 }
+const R = [[0x3040, 0x30ff], [0x3400, 0x4dbf], [0x4e00, 0x9fff], [0xac00, 0xd7af], [0xf900, 0xfaff]];
+export const CJK = new RegExp(`[${R.map(([a, b]) => `${String.fromCharCode(a!)}-${String.fromCharCode(b!)}`).join('')}]`);
 ````
 ````ts C2 — scripts/tests/markdown_test.ts
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CJK, blocks, headings, links, prose, section } from '../lib/markdown.ts';
+import { CJK, all, headings, links, parse, section, text } from '../docs/markdown.ts';
 const md = '# T\n\n[中文](Home-zh-CN)\n\n```sh\n# not a heading [x](Fake)\n```\n\n## A\n`[c](Code)` and [Usage](Usage) ![i](a.svg)\n\n### A1\n\n## B\n';
-test('blocks keep fences whole and split on blank lines', () => assert.deepEqual(blocks(md).map((b) => [b.kind, b.line]),
-  [['heading', 1], ['para', 3], ['code', 5], ['heading', 9], ['para', 10], ['heading', 12], ['heading', 14]]));
-test('headings and links skip code; images and inline code are not links', () => {
+test('the GFM tree: fenced and inline code hold no headings, links or images', () => {
   assert.deepEqual(headings(md).map((h) => h.depth), [1, 2, 3, 2]);
   assert.deepEqual(links(md).map((l) => l.target), ['Home-zh-CN', 'Usage']);
+  assert.deepEqual(all(parse(md), 'image').map((i) => i.url), ['a.svg']);
 });
-test('prose keeps link text and drops code and tags; CJK ignores box drawing and accents', () => {
-  assert.equal(prose('`x` [甲](Y) <b>z</b>').trim(), '甲  z');
-  assert.ok(CJK.test('中') && CJK.test('한') && !CJK.test('─►é'));
+test('what the old scanner got wrong: an invalid fence opener, a double-backtick span, HTML continuation', () => {
+  assert.equal(all(parse('``` `\n\n![x](a.svg)'), 'image').length, 1);
+  assert.equal(all(parse('``![x](a.svg)``'), 'image').length, 0);
+  assert.equal(all(parse('<p align="center"></p>\n![x](a.svg)'), 'image').length, 0);
 });
-test('section runs to the next h1/h2; an unclosed fence runs to the end', () => {
-  assert.equal(section(md, 'A'), md.split('\n').slice(9, 12).join('\n'));
+test('section runs to the next h1/h2; text drops code; CJK', () => {
+  assert.equal(section(md, 'A'), '`[c](Code)` and [Usage](Usage) ![i](a.svg)\n\n### A1\n\n');
   assert.equal(section(md, 'Missing'), null);
-  assert.deepEqual(headings('```\n# x'), []);
+  assert.equal(text(parse('`x` [甲](Y) z')).trim(), '甲 z');
+  assert.ok(CJK.test('中') && CJK.test('한') && !CJK.test('─►é'));
 });
 ````
 
 ### T3 — Acceptance rules
-- **Files:** create `scripts/lib/doc-rules.ts` (C5) and `scripts/tests/doc-rules_test.ts` (C6). **Acceptance:** B1, B3, B6, and the workflow helpers B2 reuses. **Depends on:** T1. **Group:** G2.
+- **Files:** create `scripts/lib/workflow.ts` (C13), `scripts/lib/doc-rules.ts` (C5) and `scripts/tests/doc-rules_test.ts` (C6). **Acceptance:** B1, B3, B6, and the workflow helpers B2 reuses (C13 holds no Markdown, so the release and version jobs need no docs tooling). **Depends on:** T1. **Group:** G2.
 - **Failing check:** add C6; `node --test scripts/tests/doc-rules_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/doc-rules.ts`.
-- **Implement:** C5. **Done when:** → `ℹ pass 29`, `ℹ fail 0`. **Commit:** `B: acceptance rules for README, publish-wiki and icon`
-````ts C5 — scripts/lib/doc-rules.ts
-// Pure acceptance rules: B1 README, B3 publish-wiki.yml, B6 icon; plus the workflow helpers that ci-rules.ts and cc-versions.ts reuse.
-import { blocks, refs, section } from './markdown.ts';
-export const TAGLINE = 'Yet, just another Mermaid renderer for your terminal';
+- **Implement:** C13, C5. **Done when:** → `ℹ pass 34`, `ℹ fail 0`; each D15c repro (an invalid fence opener, an image in a double-backtick code span, an image in an extra table cell, an image on the line after the hero) is a failing fixture. **Commit:** `B: acceptance rules on the GFM tree for README, publish-wiki and icon`
+````ts C13 — scripts/lib/workflow.ts
+// Workflow YAML helpers shared by doc-rules.ts, ci-rules.ts and cc-versions.ts; no Markdown, so the release and version jobs need no docs tooling (D15c).
 export const INSTALL = ['claude plugin marketplace add D0n9X1n/mermaid-tty', 'claude plugin install mermaid-tty@mermaid-tty'];
+const PIN = /^\s*(-\s+)?uses:\s*[\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d/;
+const steps = (yml: string) => yml.split(/\n(?=\s+- )/);
+const first = (s: string) => s.trim().split('\n')[0];
+export const common = (name: string, yml: string) => [
+  ...yml.split('\n').filter((l) => /^\s*(-\s+)?uses:/.test(l) && !PIN.test(l)).map((l) => `${name}: action not pinned by full SHA with a # version comment: ${l.trim()}`),
+  ...steps(yml).filter((s) => /\brun:[\s\S]*\.sh\b/.test(s) && !/\bshell: bash\b/.test(s)).map((s) => `${name}: step runs a .sh script without shell: bash: ${first(s)}`),
+  ...steps(yml).filter((s) => /\brun:[\s\S]*(scripts\/|gh release|claude plugin)/.test(s) && !/\bid: [\w-]+/.test(s)).map((s) => `${name}: check step has no stable id: ${first(s)}`)];
+export const need = (name: string, yml: string, rules: [string, string | RegExp][]) => rules
+  .filter(([, r]) => (typeof r === 'string' ? !yml.includes(r) : !r.test(yml))).map(([what]) => `${name}: missing ${what}`);
+````
+````ts C5 — scripts/lib/doc-rules.ts
+// Pure acceptance rules on the GFM tree (D15c): B1 README, B3 publish-wiki.yml, B6 icon. The workflow helpers live in ci-rules.ts.
+import { type Node, all, parse, section, text, within } from '../docs/markdown.ts';
+import { INSTALL, common, need } from './workflow.ts';
+export { INSTALL };
+export const TAGLINE = 'Yet, just another Mermaid renderer for your terminal';
 export const LOCAL = ['bash scripts/check.sh', 'npm ci --prefix scripts/e2e', 'node scripts/e2e/run.ts', 'node scripts/render-gallery.ts', 'node scripts/check-ci-coverage.ts'];
 export const CTRL_O = /ctrl\+o (shows|reveals|displays)/i;
 const REPO = 'https://github.com/D0n9X1n/mermaid-tty', SHIELDS = 'img\\.shields\\.io\\/github';
@@ -99,60 +108,59 @@ const FAQ = [/falls? ?back/i, /width|columns/i, /CJK/, /Windows Terminal/, /macO
 export const supportedTypes = (md: string) => [...(section(md, 'Supported diagrams') ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!);
 // B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram list.
 export const NON_DIAGRAM = ['assets/icon.svg'];
-export const visible = (md: string) => blocks(md).filter((b) => b.kind !== 'code').map((b) => b.lines.join('\n')).join('\n\n')
-  .replace(/<!--[\s\S]*?-->/g, '').replace(/`[^`]*`/g, '');
-export const assetImages = (md: string) => refs(md).filter((r) => r.kind === 'image').map((r) => r.target.replace(/^.*?(?=assets\/)/, '')).filter((p) => p.startsWith('assets/'));
+export const assetImages = (md: string) => all(parse(md), 'image').map((i) => i.url!.replace(/^.*?(?=assets\/)/, '')).filter((p) => p.startsWith('assets/'));
 export const imageErrors = (where: string, md: string, diagrams: string[]) => assetImages(md)
   .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p)).map((p) => `${where}: displays ${p}, which is neither a rendered diagram nor allow-listed`);
-// D15b: a grammar small enough that every accepted image is displayed and every link target is known (supersedes D15's HTML and URL forms).
-// README: one HTML block, the hero; images are inline or badges; links go to its two wiki URLs, LICENSE or allowlisted https hosts.
-// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. No comments; the support table sits under ## Supported diagrams.
+// D15b, read from the GFM tree (D15c): every accepted image is displayed and every link target is known.
+// README: one HTML node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs, LICENSE or allowlisted https hosts.
+// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks, reference forms, footnotes, extra table cells and [[wiki links]] fail.
 export const HERO = /^<p align="center"><img src="assets\/icon\.svg" alt="[^"<>]*" width="\d+"><\/p>$/;
-const SRC = /^assets\/[a-z0-9/_-]+\.svg$/, PAGE = /^[A-Za-z0-9-]+$/, MARKER = /^\s*([-*+]|\d+[.)])\s/;
+const SRC = /^assets\/[a-z0-9/_-]+\.svg$/, PAGE = /^[A-Za-z0-9-]+$/;
+const REFS = ['linkReference', 'imageReference', 'definition', 'footnoteReference', 'footnoteDefinition'];
 const BADGE_HOSTS = ['https://img.shields.io/', 'https://github.com/D0n9X1n/mermaid-tty/actions/'], LINK_HOSTS = ['github.com', 'mermaid.js.org', 'docs.anthropic.com'];
-const TOKEN = /\[!\[[^\]]*\]\(([^)\s]+)\)\]\(([^)\s]+)\)|!\[[^\]]*\]\(([^)\s]+)\)|\[[^\]]*\]\(([^)\s]+)\)/g;
 function linkOk(t: string, readme: boolean): boolean {
   if (readme ? [`${REPO}/wiki`, `${REPO}/wiki/Home-zh-CN`, 'LICENSE'].includes(t) : PAGE.test(t)) return true;
   const host = /^https:\/\/([^/]+)/.exec(t)?.[1];
   return !!host && LINK_HOSTS.includes(host) && !/[%&\\]|\/\/|\/wiki/i.test(t.slice(8));
 }
+const firstH2 = (tree: Node, md: string) => all(tree, 'heading').find((h) => h.depth === 2)?.position!.start.offset ?? md.length;
 export function grammarErrors(where: string, md: string, readme: boolean): string[] {
-  const e: string[] = [], bad = (n: number, what: string) => e.push(`${where}:${n}: ${what} (D15b)`);
-  let html = 0, inList = false;
-  for (const b of blocks(md).filter((b) => b.kind !== 'code')) b.lines.forEach((l, k) => {
-    const n = b.line + k, marker = MARKER.test(l);
-    if (marker) inList = true; else if (k === 0 && !/^\s/.test(l)) inList = false;
-    if (readme && HERO.test(l)) { if (++html > 1) bad(n, 'a second HTML block'); return; }
-    const t = l.replace(/`[^`]*`/g, ' '), rest = t.replace(TOKEN, ' '), shifted = marker || inList || /^\s/.test(l);
-    if (k === 0 && /^( {4}|\t)/.test(l) && !inList) bad(n, 'indented code block');
-    if (/\\[[\]()!<>]/.test(t)) bad(n, 'backslash escape of link or image syntax');
-    if (/<[a-z/!?]/i.test(t)) bad(n, readme ? 'tag-like < outside code; only the hero HTML is allowed' : 'tag-like < outside code; the wiki allows no HTML');
-    for (const [, bImg, bUrl, img, url] of t.matchAll(TOKEN)) {
-      if (bImg && !readme) bad(n, 'badge link outside the README');
-      else if (bImg && !BADGE_HOSTS.some((h) => bImg.startsWith(h))) bad(n, `badge image host not allowed: ${bImg}`);
-      if (img && !readme) bad(n, 'image in a wiki page; draw it with a mermaid fence');
-      else if (img && !SRC.test(img)) bad(n, `image src must match ^assets/[a-z0-9/_-]+.svg$: ${img}`);
-      if ((bImg || img) && shifted) bad(n, 'image in a list item or indented');
-      const to = bUrl ?? url;
-      if (to && !linkOk(to, readme)) bad(n, to.endsWith('.md') ? `link must omit .md: ${to}` : `link target not allowed: ${to}`);
-    }
-    if (/\]\[|^\s*\[[^\]]*\]:/.test(rest)) bad(n, 'reference-style link, image or definition');
-    else if (/https?:\/\/|www\./i.test(rest)) bad(n, 'bare URL');
-    else if (/[[\]]/.test(rest)) bad(n, 'bracket outside a link or image');
+  const e: string[] = [], tree = parse(md), h2 = firstH2(tree, md), at = (n: Node, what: string) => e.push(`${where}:${n.position!.start.line}: ${what} (D15b)`);
+  all(tree, 'html').forEach((n, i) => {
+    if (!readme) at(n, 'raw HTML; the wiki allows none');
+    else if (i > 0 || !HERO.test(n.value!) || n.position!.start.offset > h2) at(n, 'raw HTML other than the one hero line');
   });
+  for (const n of all(tree, 'image')) {
+    const badge = n.parent!.type === 'link' && n.parent!.children!.length === 1;
+    if (!readme) at(n, 'image in a wiki page; draw it with a mermaid fence');
+    else if (badge && !BADGE_HOSTS.some((h) => n.url!.startsWith(h))) at(n, `badge image host not allowed: ${n.url}`);
+    else if (!badge && !SRC.test(n.url!)) at(n, `image src must match ^assets/[a-z0-9/_-]+.svg$: ${n.url}`);
+    if (within(n, 'listItem')) at(n, 'image in a list item');
+  }
+  for (const n of all(tree, 'link')) {
+    if (md[n.position!.start.offset] !== '[') at(n, `autolink or bare URL; write [label](url): ${n.url}`);
+    else if (!linkOk(n.url!, readme)) at(n, n.url!.endsWith('.md') ? `link must omit .md: ${n.url}` : `link target not allowed: ${n.url}`);
+  }
+  for (const n of REFS.flatMap((t) => all(tree, t))) at(n, 'reference-style link, image, definition or footnote');
+  for (const t of all(tree, 'table')) for (const r of t.children!.slice(1))
+    if (r.children!.length > t.children![0]!.children!.length) at(r, 'table row has more cells than its header; GitHub drops them');
+  for (const n of all(tree, 'text')) if (n.value!.includes('[[')) at(n, '[[wiki link]]; link by page name: [Label](Page)');
   return e;
 }
 export function readmeErrors(md: string, generated: string[]): string[] {
-  const e: string[] = [], hero = visible(md.split(/^## /m)[0]!), faq = section(md, 'FAQ') ?? '', dev = section(md, 'Development') ?? '';
-  if (!hero.split('\n').some((l) => HERO.test(l))) e.push('hero: logo <img src="assets/icon.svg"> missing');
-  if (!hero.includes(TAGLINE)) e.push('hero: tagline missing');
-  for (const [name, re] of BADGES) if (!re.test(hero)) e.push(`hero: ${name} badge missing`);
-  if (!blocks(md).some((b) => b.kind === 'code' && b.lines.slice(1, -1).join('\n') === INSTALL.join('\n')))
-    e.push('install: no code block holding exactly the two install commands');
+  const e: string[] = [], tree = parse(md), h2 = firstH2(tree, md), faq = section(md, 'FAQ') ?? '', dev = section(md, 'Development') ?? '';
+  const top = tree.children!.filter((n) => n.position!.start.offset < h2);
+  if (!all(tree, 'html').some((n) => HERO.test(n.value!) && n.position!.start.offset < h2)) e.push('hero: logo <img src="assets/icon.svg"> missing');
+  if (!top.map(text).join('\n').includes(TAGLINE)) e.push('hero: tagline missing');
+  const badges = top.flatMap((n) => all(n, 'link')).filter((l) => l.children!.length === 1 && l.children![0]!.type === 'image')
+    .map((l) => `[![${l.children![0]!.alt}](${l.children![0]!.url})](${l.url})`).join('\n');
+  for (const [name, re] of BADGES) if (!re.test(badges)) e.push(`hero: ${name} badge missing`);
+  if (!all(tree, 'code').some((c) => c.value === INSTALL.join('\n'))) e.push('install: no code block holding exactly the two install commands');
   for (const s of SECTIONS) if (section(md, s) === null) e.push(`section missing: ## ${s}`);
   for (const re of FAQ) if (!re.test(faq)) e.push(`FAQ: no answer matching /${re.source}/`);
-  if (!md.includes(`[English](${REPO}/wiki)`)) e.push('wiki link missing: English');
-  if (!md.includes(`[简体中文](${REPO}/wiki/Home-zh-CN)`)) e.push('wiki link missing: 简体中文');
+  const wiki = all(tree, 'link').map((l) => `${text(l)} ${l.url}`);
+  if (!wiki.includes(`English ${REPO}/wiki`)) e.push('wiki link missing: English');
+  if (!wiki.includes(`简体中文 ${REPO}/wiki/Home-zh-CN`)) e.push('wiki link missing: 简体中文');
   const shown = assetImages(md);
   for (const f of generated) if (!shown.includes(f)) e.push(`image not shown in README: ${f}`);
   e.push(...imageErrors('README', md, generated));
@@ -164,15 +172,6 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   e.push(...grammarErrors('README', md, true));
   return e;
 }
-const PIN = /^\s*(-\s+)?uses:\s*[\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d/;
-const steps = (yml: string) => yml.split(/\n(?=\s+- )/);
-const first = (s: string) => s.trim().split('\n')[0];
-export const common = (name: string, yml: string) => [
-  ...yml.split('\n').filter((l) => /^\s*(-\s+)?uses:/.test(l) && !PIN.test(l)).map((l) => `${name}: action not pinned by full SHA with a # version comment: ${l.trim()}`),
-  ...steps(yml).filter((s) => /\brun:[\s\S]*\.sh\b/.test(s) && !/\bshell: bash\b/.test(s)).map((s) => `${name}: step runs a .sh script without shell: bash: ${first(s)}`),
-  ...steps(yml).filter((s) => /\brun:[\s\S]*(scripts\/|gh release|claude plugin)/.test(s) && !/\bid: [\w-]+/.test(s)).map((s) => `${name}: check step has no stable id: ${first(s)}`)];
-export const need = (name: string, yml: string, rules: [string, string | RegExp][]) => rules
-  .filter(([, r]) => (typeof r === 'string' ? !yml.includes(r) : !r.test(yml))).map(([what]) => `${name}: missing ${what}`);
 export const publishWikiErrors = (yml: string) => [...common('publish-wiki.yml', yml), ...need('publish-wiki.yml', yml, [
   ['push to main', 'on:\n  push:\n    branches: [main]\n'], ['workflow_dispatch', '\n  workflow_dispatch:\n'],
   ['read-only workflow token', '\npermissions:\n  contents: read\n'], ['job-scoped contents: write', '\n    permissions:\n      contents: write\n'],
@@ -216,8 +215,13 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, 'CJK labels', 'Wide labels', 'CJK'], [rm, README, 'Ghostty', 'Kitty', 'Ghostty'], [rm, README, '256-color', 'basic', '256'],
   [rm, README, '[简体中文]', '[Chinese]', '简体中文'], [rm, README, IMG[0]!, 'assets/rogue.svg', 'displays assets/rogue.svg, which is neither'],
   [rm, README, '![after](assets/readme/after.svg)', '<!-- ![after](assets/readme/after.svg) -->', 'not shown in README'],
-  [rm, README, '![after](', '\\![after](', 'backslash escape'], [rm, README, '![after](assets/readme/after.svg)', '\n    ![after](assets/readme/after.svg)', 'indented code block'],
-  [rm, README, '![after](assets/readme/after.svg)', "<img src='assets/rogue.svg'>", 'tag-like'], [rm, README, '![after](assets/readme/after.svg)', '![x][ref]\n\n[ref]: assets/rogue.svg', 'reference-style'],
+  [rm, README, '![after](', '\\![after](', 'not shown in README'], [rm, README, '![after](assets/readme/after.svg)', '\n    ![after](assets/readme/after.svg)', 'not shown in README'],
+  [rm, README, '![after](assets/readme/after.svg)', "<img src='assets/rogue.svg'>", 'raw HTML'], [rm, README, '![after](assets/readme/after.svg)', '![x][ref]\n\n[ref]: assets/rogue.svg', 'reference-style'],
+  [rm, README, '![after](assets/readme/after.svg)', '``![after](assets/readme/after.svg)``', 'not shown in README'],
+  [rm, README, '![after](assets/readme/after.svg)', '- item\n\n      ![after](assets/readme/after.svg)', 'not shown in README'],
+  [rm, README, '## Before and after\n\n', '## Before and after\n\n``` `\n\n![x](assets/rogue.svg)\n\n', 'displays assets/rogue.svg'],
+  [rm, README, '| `flowchart` | `flowchart`, `graph` |', '| `flowchart` | `flowchart`, `graph` | ![x](assets/rogue.svg) |', 'more cells than its header'],
+  [rm, README.replace('![after](assets/readme/after.svg)', ''), '</p>\n\n', '</p>\n![after](assets/readme/after.svg)\n\n', 'not shown in README'],
   [rm, README, '| `flowchart` |', '| flowchart |', 'table'], [rm, README, 'node scripts/e2e/run.ts', 'npm test', 'e2e/run.ts'],
   [rm, README, '## Themes', '──► A\n\n## Themes', 'hand-drawn'],
   [rm, README, '; `/copy` copies', '; it copies', '/copy'], [rm, README, '## Themes', 'ctrl+o shows the source.\n\n## Themes', 'ctrl+o'],
@@ -227,21 +231,31 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
 ];
 for (const [rule, base, from, to, want] of cases)
   test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`));
-test('D15b grammar: only the hero is HTML, every accepted image is displayed, every link target is known', () => {
+test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image is displayed, every link target is known', () => {
   const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>', G = (md: string, readme = true) => grammarErrors('x.md', md, readme);
-  assert.deepEqual(G(H + '\n\n[![b](https://img.shields.io/b)](https://github.com/D0n9X1n/mermaid-tty/releases) [w](https://github.com/D0n9X1n/mermaid-tty/wiki) [l](LICENSE)\n\n| ![d](assets/readme/a.svg) |\n\nx `<b>` y\n\n```sh\n<b> [[x]]\n```\n'), []);
+  const F = (rest: string) => '``` `\n' + rest; // an invalid fence opener: a backtick info string is not a fence
+  assert.deepEqual(G(H + '\n\n[![b](https://img.shields.io/b)](https://github.com/D0n9X1n/mermaid-tty/releases) [w](https://github.com/D0n9X1n/mermaid-tty/wiki) [l](LICENSE)\n\n' +
+    '| ![d](assets/readme/a.svg) |\n|---|\n\nx `<b>` y ``![c](x)`` ![u][none]\n\n```sh\n<b> [[x]]\n```\n\n    <i>\n'), []);
   assert.deepEqual(G('[Usage](Usage) [m](https://mermaid.js.org/syntax/flowchart.html)\n\n- a\n\n  b', false), []);
   for (const [md, want, readme] of [
-    ['<a href="//github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN">x</a>', 'tag-like', false], ['[x](http://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN)', 'link target not allowed', false],
+    // cycle 1: HTML anchors, scheme and entity tricks, protocol-relative and .md links
+    ['<a href="//github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN">x</a>', 'raw HTML', false], ['[x](http://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN)', 'link target not allowed', false],
     ['[x](https://github&#46;com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN)', 'link target not allowed', false], ['[x](//github.com/a)', 'link target not allowed', false],
-    ['<a data-href="Home" href="Usage-zh-CN">x</a>', 'tag-like', false], ['<source srcset="assets/readme/after.svg">', 'tag-like', true],
-    ['<img data-src="x" src="assets/icon.svg">', 'tag-like', true], ['<picture><source srcset="x assets/rogue.svg 2x"></picture>', 'tag-like', true],
-    ['<img src="assets/icon.svg" srcset="assets/rogue.svg 2x">', 'tag-like', true], ['[<img src="assets/rogue.svg">](Home)', 'tag-like', false],
-    ['- item\n\n      ![x](assets/readme/after.svg)', 'list item or indented', true], ['![x](assets/readme/after.svg)', 'image in a wiki page', false],
+    ['<a data-href="Home" href="Usage-zh-CN">x</a>', 'raw HTML', false], ['[x](Home.md)', 'omit .md', false],
+    // cycle 2: HTML image forms, list items, image and badge hosts, encoded paths
+    ['<source srcset="assets/readme/after.svg">', 'raw HTML other than', true], ['<img data-src="x" src="assets/icon.svg">', 'raw HTML other than', true],
+    ['<picture><source srcset="x assets/rogue.svg 2x"></picture>', 'raw HTML other than', true], ['<img src="assets/icon.svg" srcset="assets/rogue.svg 2x">', 'raw HTML other than', true],
+    ['[<img src="assets/rogue.svg">](Home)', 'raw HTML', false], ['- ![x](assets/readme/after.svg)', 'image in a list item', true], ['![x](assets/readme/after.svg)', 'image in a wiki page', false],
     ['![x](https://example.com/a.svg)', 'src must match', true], ['[![b](https://evil.dev/b.svg)](https://github.com/D0n9X1n/mermaid-tty)', 'badge image host', true],
-    ['[x](https://github.com/D0n9X1n/mermaid-tty/blob/a%2Fb)', 'link target not allowed', true], ['[x](Home.md)', 'omit .md', false],
-    [H + '\n\n' + H, 'second HTML block', true], ['see https://x.dev', 'bare URL', false], ['![a][r]', 'reference-style', true], ['[r]: x', 'reference-style', false],
-    ['\\![a](assets/readme/after.svg)', 'backslash escape', true], ['# h\n\n    x', 'indented code', false], ['<!-- c -->', 'tag-like', true], ['[[Page]]', 'bracket outside', false]] as const)
+    ['[x](https://github.com/D0n9X1n/mermaid-tty/blob/a%2Fb)', 'link target not allowed', true],
+    // cycle 3: a second or late HTML block, comments, bare URLs and autolinks, reference forms, footnotes, escapes, [[wiki links]]
+    [H + '\n\n' + H, 'raw HTML other than', true], ['## h\n\n' + H, 'raw HTML other than', true], ['<!-- c -->', 'raw HTML other than', true],
+    ['see https://x.dev', 'autolink or bare URL', false], ['<https://github.com/D0n9X1n>', 'autolink or bare URL', true],
+    ['![a][r]\n\n[r]: assets/rogue.svg', 'reference-style', true], ['[r]: x', 'reference-style', false], ['a[^1]\n\n[^1]: b', 'footnote', true],
+    ['\\![a](assets/readme/after.svg)', 'link target not allowed', true], ['[[Page]]', '[[wiki link]]', false],
+    // D15c: where the old scanner and GitHub disagreed
+    [F('![x](https://evil.dev/a.svg)'), 'src must match', true], [F('[y](https://evil.dev)'), 'link target not allowed', true],
+    ['| a |\n|---|\n| b | ![x](assets/rogue.svg) |', 'more cells than its header', true], [H + '\n![x](assets/readme/after.svg)', 'raw HTML other than', true]] as const)
     assert.ok(G(md, readme).some((e) => e.includes(want)), want);
 });
 test('wiki images: rendered diagrams or allow-listed only', () => {
@@ -273,20 +287,19 @@ test('icon rule reads the IHDR size', () => {
 ### T5 — Wiki checker
 - **Files:** create `scripts/check-wiki.ts` (C8); append the rest of C7 to `scripts/test-wiki-publish.sh`. **Acceptance:** B2. **Depends on:** T1, T3, T4. **Group:** G3.
 - **Failing check:** append the rest of C7; `bash scripts/test-wiki-publish.sh` → `publisher ok`, then FAIL `wiki publish test: checker is missing`.
-- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 22 mutations fail with their diagnostics), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
+- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 23 mutations fail with their diagnostics, the D15c invalid fence opener included; the fixture runs the real checker as `node scripts/check-wiki.ts DIR`), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
 ````ts C8 — scripts/check-wiki.ts
-// B2 wiki rules, ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity, links) plus
+// B2 wiki rules on the GFM tree (D15c), ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity, links) plus
 // B2's exact openers, page-name links only, per-unit language rules with no exemption, and the wiki grammar (D15b). Exit 1 lists every failure.
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CTRL_O, LOCAL, grammarErrors } from './lib/doc-rules.ts';
-import { CJK, blocks, headings, links, prose } from './lib/markdown.ts';
+import { type Node, CJK, all, parse, text } from './docs/markdown.ts';
 const ZH = '-zh-CN', REQUIRED = ['Home', 'Usage', 'Configuration-and-Themes', 'Architecture', 'Development-and-Release'];
-const dir = fileURLToPath(new URL('../wiki/', import.meta.url)), errors: string[] = [], pages = new Map<string, string>();
+const dir = process.argv[2] ? resolve(process.argv[2]) : fileURLToPath(new URL('../wiki/', import.meta.url));
+const errors: string[] = [], pages = new Map<string, string>();
 const twin = (p: string) => (p.endsWith(ZH) ? p.slice(0, -ZH.length) : p + ZH);
-const units = (lines: string[]) => lines.reduce<string[]>((out, l) =>
-  (/^\s*([-*+]|\d+[.)])\s|^\s*\|/.test(l) || !out.length ? out.push(l) : (out[out.length - 1] += ` ${l}`), out), []);
 let names: string[] = [];
 try { names = readdirSync(dir, { recursive: true }).map(String).filter((f) => f.endsWith('.md')); }
 catch { errors.push('wiki/: directory missing'); }
@@ -300,32 +313,32 @@ for (const p of ['Usage', 'Usage-zh-CN']) for (const os of ['Windows', 'macOS', 
 for (const p of ['Development-and-Release', 'Development-and-Release-zh-CN']) for (const c of LOCAL)
   if (pages.has(p) && !pages.get(p)!.includes(c)) errors.push(`wiki/${p}.md: does not show ${c}`);
 for (const [p, t] of pages) if (CTRL_O.test(t)) errors.push(`wiki/${p}.md: claims ctrl+o shows the source`);
-for (const [page, text] of pages) {
-  const f = `wiki/${page}.md`, zh = page.endsWith(ZH);
-  errors.push(...grammarErrors(f, text, false));
+const trees = new Map([...pages].map(([p, t]) => [p, parse(t)]));
+const src = (md: string, n: Node) => md.slice(n.position!.start.offset, n.position!.end.offset);
+const levels = (p: string) => all(trees.get(p)!, 'heading').map((h) => h.depth).join();
+for (const [page, md] of pages) {
+  const f = `wiki/${page}.md`, zh = page.endsWith(ZH), tree = trees.get(page)!;
+  errors.push(...grammarErrors(f, md, false));
   if (!pages.has(twin(page))) { errors.push(`${f}: missing language counterpart ${twin(page)}`); continue; }
-  const bs = blocks(text), opener = bs[0]?.kind === 'heading' && bs[0].lines[0]!.startsWith('# ') ? bs[1] : bs[0];
+  const [h1, second] = tree.children!, opener = h1?.type === 'heading' && h1.depth === 1 ? second : h1;
   const want = zh ? `[英文版](${twin(page)})` : `[Chinese (Simplified)](${twin(page)})`;
-  if (opener?.kind !== 'para' || opener.lines.join('\n').trim() !== want) errors.push(`${f}: must open with exactly ${want}`);
+  if (opener?.type !== 'paragraph' || src(md, opener) !== want) errors.push(`${f}: must open with exactly ${want}`);
   let crossing = 0, chinese = 0;
-  for (const l of links(text)) {
-    if (!/^[A-Za-z0-9-]+$/.test(l.target)) continue; // any other target is checked by grammarErrors (D15b)
-    if (!pages.has(l.target)) errors.push(`${f}:${l.line}: link target does not exist: ${l.target}`);
-    else if (l.target.endsWith(ZH) !== zh) crossing++;
+  for (const l of all(tree, 'link')) {
+    if (!/^[A-Za-z0-9-]+$/.test(l.url!)) continue; // any other target is checked by grammarErrors (D15b)
+    if (!pages.has(l.url!)) errors.push(`${f}:${l.position!.start.line}: link target does not exist: ${l.url}`);
+    else if (l.url!.endsWith(ZH) !== zh) crossing++;
   }
   if (crossing > 1) errors.push(`${f}: ${crossing} cross-language links; only the opening twin link is allowed`);
-  for (const b of bs) {
-    if (b.kind === 'code') continue;
-    for (const u of units(b.lines)) {
-      const t = prose(u), has = CJK.test(t);
-      if (zh && has && b.kind === 'para' && b !== opener) chinese++;
-      if (zh && !has && /\p{L}/u.test(t)) errors.push(`${f}:${b.line}: untranslated, no CJK: ${u.trim().slice(0, 60)}`);
-      if (!zh && has) errors.push(`${f}:${b.line}: CJK outside code: ${u.trim().slice(0, 60)}`);
-    }
+  // Language units, outside code: each heading, paragraph (list items hold paragraphs) and table row.
+  for (const u of ['heading', 'paragraph', 'tableRow'].flatMap((t) => all(tree, t))) {
+    const t = text(u), has = CJK.test(t), at = `${f}:${u.position!.start.line}`, shown = src(md, u).trim().slice(0, 60);
+    if (zh && has && u.type === 'paragraph' && u !== opener) chinese++;
+    if (zh && !has && /\p{L}/u.test(t)) errors.push(`${at}: untranslated, no CJK: ${shown}`);
+    if (!zh && has) errors.push(`${at}: CJK outside code: ${shown}`);
   }
   if (zh && !chinese) errors.push(`${f}: no Chinese prose`);
-  const mine = headings(text).map((h) => h.depth).join(), theirs = headings(pages.get(twin(page))!).map((h) => h.depth).join();
-  if (!zh && mine !== theirs) errors.push(`${f}: heading levels [${mine}] differ from ${twin(page)} [${theirs}]`);
+  if (!zh && levels(page) !== levels(twin(page))) errors.push(`${f}: heading levels [${levels(page)}] differ from ${twin(page)} [${levels(twin(page))}]`);
 }
 for (const e of errors.sort()) console.error(`check-wiki: ${e}`);
 if (errors.length) process.exit(1);
@@ -334,10 +347,9 @@ console.log(`check-wiki: ok (${pages.size} pages)`);
 ````bash C7 — scripts/test-wiki-publish.sh from line 57 (T4 appends the first line; T5 the rest)
 printf 'wiki publish test: publisher ok\n'
 
-# Checker (B2): a valid fixture wiki passes and each mutation fails with its diagnostic, in throwaway dirs.
+# Checker (B2): the real checker passes a valid fixture wiki and fails each mutation with its diagnostic, in throwaway dirs.
 [[ -f "$checker" ]] || fail "checker is missing"
-base="$tmp/checker"; mkdir -p "$base/scripts/lib" "$base/wiki"
-cp "$checker" "$base/scripts/"; cp "$root/scripts/lib/markdown.ts" "$root/scripts/lib/doc-rules.ts" "$base/scripts/lib/"
+base="$tmp/checker"; mkdir -p "$base/wiki"
 pair() { # pair STEM ENGLISH_TITLE CHINESE_TITLE
   printf '# %s\n\n[Chinese (Simplified)](%s-zh-CN)\n\n## Overview\n\nSee [Home](Home).\n\n```text\n中文 in code is fine\n```\n' "$2" "$1" > "$base/wiki/$1.md"
   printf '# %s\n\n[英文版](%s)\n\n## 概述\n\n参见[首页](Home-zh-CN)。\n\n```text\nEnglish in code is fine\n```\n' "$3" "$1" > "$base/wiki/$1-zh-CN.md"
@@ -349,12 +361,12 @@ printf '\n支持 Windows、macOS 和 Linux。用 `/mermaid-tty source` 或 `/mer
 for p in Development-and-Release Development-and-Release-zh-CN; do
   printf '\n```sh\nbash scripts/check.sh\nnpm ci --prefix scripts/e2e\nnode scripts/e2e/run.ts\nnode scripts/render-gallery.ts\nnode scripts/check-ci-coverage.ts\n```\n' >> "$base/wiki/$p.md"
 done
-(cd "$base" && node scripts/check-wiki.ts) >/dev/null || fail "checker rejected a valid wiki"
+(cd "$base" && node "$checker" wiki) >/dev/null || fail "checker rejected a valid wiki"
 edit() { node -e 'const fs=require("fs"),[f,a,b]=process.argv.slice(1),s=fs.readFileSync(f,"utf8");if(!s.includes(a))process.exit(9);fs.writeFileSync(f,s.replace(a,b))' "$@"; }
 rejects() { # rejects NAME EXPECTED MUTATION...
   local name="$1" expected="$2" fixture="$tmp/$1"; shift 2
   cp -R "$base" "$fixture"; (cd "$fixture" && "$@") || fail "mutation $name did not apply"
-  if (cd "$fixture" && node scripts/check-wiki.ts >output 2>&1); then fail "checker accepted $name"; fi
+  if (cd "$fixture" && node "$checker" wiki >output 2>&1); then fail "checker accepted $name"; fi
   grep -Fq -- "$expected" "$fixture/output" || { cat "$fixture/output" >&2; fail "$name: expected '$expected'"; }
 }
 rejects missing-twin 'missing language counterpart Usage-zh-CN' rm wiki/Usage-zh-CN.md
@@ -375,10 +387,11 @@ rejects usage-source 'wiki/Usage.md: does not cover /copy' edit wiki/Usage.md ';
 rejects ctrl-o-claim 'claims ctrl+o shows the source' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home). ctrl+o shows the source.'
 rejects old-opener 'untranslated, no CJK: [English](Usage)' edit wiki/Usage-zh-CN.md '[英文版](Usage)' '[English](Usage)'
 rejects absolute-cross-link 'link target not allowed' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [Chinese page](https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN).'
-rejects autolink 'tag-like' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN>.'
-rejects wiki-link 'bracket outside a link or image' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [[Usage-zh-CN]].'
+rejects autolink 'autolink or bare URL' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN>.'
+rejects wiki-link '[[wiki link]]' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [[Usage-zh-CN]].'
 rejects badge-cross-link 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [![zh](../assets/icon.svg)](Usage-zh-CN).'
-rejects html-anchor 'tag-like' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <a href="Usage-zh-CN">x</a>.'
+rejects html-anchor 'raw HTML' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <a href="Usage-zh-CN">x</a>.'
+rejects invalid-fence 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' $'See [Home](Home).\n\n``` `\n\nSee [Chinese](Usage-zh-CN).'
 printf 'wiki publish test: ok\n'
 ````
 
