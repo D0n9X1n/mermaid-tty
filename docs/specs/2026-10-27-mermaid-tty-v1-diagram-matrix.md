@@ -1588,7 +1588,7 @@ Labels use `"…"` or `'…'`. The title follows common rule 3. Honored config k
 **Collisions and narrow widths:** if any label is wider than its field's interior, every field is shown by its key, in its field's color, and the legend lists all labels (common rule 7, all or none). c is the smallest value ≥ 2 that fits; with keys, the fewest keyed rows wins. Ladder: (1) rows of `bitsPerRow` bits; (2) rows of half that, rounded up; then fall back. A key wider than its field falls back.
 
 **Required fixtures:**
-- `packet-ok-01`: docs TCP example: frontmatter title; keyed 1-bit flags; step 2 at 60.
+- `packet-ok-01`: docs TCP example: frontmatter title; the 1-bit flags are too narrow for their labels, so all fields are keyed (rule 7); step 2 at 60.
 - `packet-ok-02`: docs UDP example: `title`; `+16` mixed with ranges.
 - `packet-ok-03`: header `packet-beta`; single-bit fields; `24-39` split at a row edge.
 - `packet-ok-04`: docs `bitOrder: descending` example (`bitsPerRow: 16`) plus a partial row.
