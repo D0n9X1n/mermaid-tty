@@ -1,11 +1,11 @@
 // node scripts/check.ts <ID|all>: runs the steps of one acceptance check ID,
 // or, for `all`, every step check.sh needs beyond validate and the kit.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { claude } from './lib/claude.ts'
+import { isMain } from './lib/is-main.ts'
 
 // A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID;
 // ['@kit'] runs `claude plugin test .`; an '@tmp' argument becomes a fresh temp
@@ -127,9 +127,5 @@ function main(): number {
   return 0
 }
 
-// main() runs only when node runs this file: the repo convention, resolve(argv[1])
-// equal to fileURLToPath(import.meta.url), with both sides passed through realpath,
-// because argv[1] keeps a symlinked temp dir's path (macOS /var) and the module's does not.
-const real = (p: string) => { try { return realpathSync(p) } catch { return p } }
-const argv1 = process.argv[1]
-if (argv1 && real(resolve(argv1)) === real(fileURLToPath(import.meta.url))) process.exitCode = main()
+// main() runs only when node runs this file, not when a test imports CHECKS or run.
+if (isMain(import.meta.url)) process.exitCode = main()

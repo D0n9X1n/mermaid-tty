@@ -5,6 +5,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmdirSync, symlinkSync, unlinkS
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { samePath } from '../../scripts/lib/is-main.ts'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
@@ -19,13 +20,38 @@ function tsFiles(dir: string): string[] {
 }
 
 // import.meta.main arrived in Node 24.2, but package.json allows 24.0: there a script guarded
-// by it skips its body and exits 0, so a check passes without running. Compare process.argv[1].
+// by it skips its body and exits 0, so a check passes without running. Scripts use lib/is-main.ts.
 test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.meta.main', () => {
   const files = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d))
   for (const f of ['scripts/check-palettes.ts', 'core/themes.ts', 'hooks/fences.ts']) assert.ok(files.includes(f), `${f} was not scanned`)
   const uses = files.flatMap(f => readFileSync(join(ROOT, f), 'utf8').split(/\r?\n/)
     .flatMap((line, i) => (line.includes('import.meta.main') ? [`${f}:${i + 1}: ${line.trim()}`] : [])))
   assert.deepEqual(uses, [])
+})
+
+// One shared guard, not a copy per script: the copies compared the paths exactly, so on a Windows
+// UNC path, whose host realpath keeps in its case and the module URL lowercases, each one skipped
+// main() and exited 0 without checking anything.
+test('A8.portability: every script with a main() guards it with isMain from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
+  const mains = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d)).filter(f => /\bfunction main\(/.test(readFileSync(join(ROOT, f), 'utf8')))
+  for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) assert.ok(mains.includes(f), `${f} was not scanned`)
+  const bad = mains.flatMap(f => {
+    const text = readFileSync(join(ROOT, f), 'utf8')
+    return [...(text.includes('if (isMain(import.meta.url)) process.exitCode = main()') ? [] : [`${f}: no isMain(import.meta.url) guard`]),
+      ...(/process\.argv\[1\]|realpathSync/.test(text) ? [`${f}: an inline argv[1] or realpath guard`] : [])]
+  })
+  assert.deepEqual(bad, [])
+})
+test('A8.portability: on Windows, samePath ignores the case of a UNC host', () =>
+  assert.equal(samePath('\\\\SERVER\\share\\x.ts', '\\\\server\\share\\x.ts', 'win32'), true))
+test('A8.portability: on Windows, samePath ignores the case of a drive letter, and still tells two paths apart', () => {
+  assert.equal(samePath('C:\\a\\x.ts', 'c:\\a\\x.ts', 'win32'), true)
+  assert.equal(samePath('C:\\a\\x.ts', 'C:\\b\\x.ts', 'win32'), false)
+})
+test('A8.portability: elsewhere, samePath compares exactly, case included', () => {
+  for (const platform of ['linux', 'darwin']) {
+    assert.equal(samePath('/A/x.ts', '/a/x.ts', platform), false, platform); assert.equal(samePath('/a/x.ts', '/a/x.ts', platform), true, platform)
+  }
 })
 
 // Node gives the main module its real path, but argv[1] keeps the path node was given,

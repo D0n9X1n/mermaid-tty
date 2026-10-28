@@ -2,12 +2,10 @@
 // background, and every pair of roles, and every pair of series colors, is at least
 // 0.08 apart in OKLab. `default` (theme keys) and `mono` (no color) are exempt.
 // Usage: node scripts/check-palettes.ts  (prints the table; exits 1 on any problem)
-import { realpathSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { contrast, oklabDistance } from '../core/color.ts'
 import { THEMES } from '../core/themes.ts'
 import type { Palette, ThemeName } from '../core/themes.ts'
+import { isMain } from './lib/is-main.ts'
 
 const CHECKED: readonly ThemeName[] = ['nord', 'dracula', 'gruvbox', 'solarized']
 const MIN_CONTRAST = 3, MIN_DISTANCE = 0.08
@@ -77,11 +75,5 @@ function main(): number {
   return 0
 }
 
-// main() runs only when node is given this file, not when a test imports paletteProblems:
-// Node's own main-module flag arrived in 24.2, and package.json allows 24.0. Both paths go
-// through realpath, because argv[1] keeps the path node was given, which may pass through a
-// symlink (macOS temp dirs: /var -> /private/var), while the module's URL is the real path.
-// A path that names no file (node -e code arg) is compared as given.
-const real = (p: string) => { try { return realpathSync(p) } catch { return p } }
-const argv1 = process.argv[1]
-if (argv1 && real(resolve(argv1)) === real(fileURLToPath(import.meta.url))) process.exitCode = main()
+// main() runs only when node is given this file, not when a test imports paletteProblems.
+if (isMain(import.meta.url)) process.exitCode = main()
