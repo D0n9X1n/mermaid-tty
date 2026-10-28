@@ -4,9 +4,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 
 // Runs the generator on `text`, saved as EastAsianWidth.txt in a fresh temp dir.
-function generate(t: TestContext, text: string | Uint8Array) {
+function generate(t: TestContext, text: string) {
   const dir = mkdtempSync(join(tmpdir(), 'mermaid-tty-eaw-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const file = join(dir, 'EastAsianWidth.txt')
@@ -87,24 +88,16 @@ test('A4.width-table: the generator throws on a malformed line', t => {
   }
 })
 
-const EAW_URL = 'https://www.unicode.org/Public/16.0.0/ucd/EastAsianWidth.txt'
+// Unicode 16.0.0 EastAsianWidth.txt, committed byte for byte so the check below runs offline.
+const FIXTURE = 'scripts/data/EastAsianWidth-16.0.0.txt'
+const FIXTURE_SHA256 = '43adc76c0686a42cb370764eb8cfe2b2a45b10b855e5572a2db4a0eecce15d5b'
 
-// Downloads url, or says why the network could not deliver it.
-async function download(url: string): Promise<{ status: number, body: Buffer } | { error: string }> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(60_000) })
-    return { status: res.status, body: Buffer.from(await res.arrayBuffer()) }
-  } catch (e) {
-    const cause = e instanceof Error && e.cause instanceof Error ? ': ' + e.cause.message : ''
-    return { error: (e instanceof Error ? e.message : String(e)) + cause }
-  }
-}
+test('A4.width-table: the committed Unicode 16.0.0 EastAsianWidth.txt matches its recorded SHA-256', () => {
+  assert.equal(createHash('sha256').update(readFileSync(FIXTURE)).digest('hex'), FIXTURE_SHA256)
+})
 
-test('A4.width-table: regenerating from Unicode 16.0.0 EastAsianWidth.txt reproduces core/width-table.ts byte for byte', async t => {
-  const got = await download(EAW_URL)
-  if ('error' in got) { t.skip(`network unavailable; cannot download ${EAW_URL} (${got.error})`); return }
-  assert.equal(got.status, 200, `${EAW_URL}: HTTP ${got.status}`)
-  const r = generate(t, got.body)
+test('A4.width-table: regenerating from Unicode 16.0.0 EastAsianWidth.txt reproduces core/width-table.ts byte for byte', () => {
+  const r = spawnSync(process.execPath, ['scripts/gen-width-table.ts', FIXTURE])
   assert.equal(r.status, 0, r.stderr.toString())
   // latin1 maps each byte to one character, so equal strings mean equal bytes.
   assert.equal(r.stdout.toString('latin1'), readFileSync('core/width-table.ts', 'latin1'))
