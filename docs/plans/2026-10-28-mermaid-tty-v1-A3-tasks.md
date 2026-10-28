@@ -307,9 +307,10 @@ test('A8.cache: a hit; a miss when any key part changes; LRU eviction at the 65t
   for (let i = 0; i < 64; i++) r.render(`flowchart TD\nN${i}`, O)
   assert.equal(r.size, 64); r.render(FC, O); assert.equal(calls, 69)
 })
-test('A7: a cell inked with a series key takes the palette series color (C contract)', () => {
+test('A7: a series-inked cell yields a span with role s3 and the palette series color (C contract)', () => {
   const c = createCanvas(1, 4, 4); c.text(0, 0, 'ab', 's3', 'x')
-  assert.equal(toRows(c.toDrawing({ labels: [], edges: [], edgeLabels: [] }), palette('nord'))[0]![0]!.color, THEMES.nord.series.s3)
+  const span = toRows(c.toDrawing({ labels: [], edges: [], edgeLabels: [] }), palette('nord'))[0]![0]!
+  assert.deepEqual([span.role, span.color], ['s3', THEMES.nord.series.s3])
 })
 ```
 - [ ] **Run** `node --test tests/core/render_test.ts` → FAIL: `Cannot find module …/core/render.ts`.
@@ -324,7 +325,7 @@ test('A7: a cell inked with a series key takes the palette series color (C contr
   - **`toRows(d, p)`:** per cell, color = `p.roles[role]`, or `p.series[role]` for a series ink `s1`–`s8` (§6 `Ink`).
     - Node and decision `text`/`fill` cells get `backgroundColor` = the role color and `color` = `p.onFill` when `p.fill`; caps get `color` only.
     - `title` is bold; roles in `p.dim` get `dimColor`.
-    - `cont` cells are skipped. Each span carries its cells' `role` (blank runs have none; the hook strips it). Neighbours with equal role and style merge into one span; trailing blank spans are trimmed; null props are omitted.
+    - `cont` cells are skipped. Each span carries its cells' `role`, an `Ink` (a role, or a series key `s1`–`s8` kept as is; blank runs have none; the hook strips it). Neighbours with equal role and style merge into one span; trailing blank spans are trimmed; null props are omitted.
   - **`createRenderer(cap = 64, inner = explain)`:** an LRU keyed by `JSON.stringify([s, o.columns, o.theme])` caches `Rows | Fail`. `onMiss(fail)` is called only on a miss.
   - **`smoke.ts`:** renders `fixtures/flowchart/flowchart-ok-01.mmd` (`flowchart TD`, `A[Start] --> B{Ready?}`, `B -->|yes| C([Done])`) at 80 columns under nord. It prints the rows and exits 1 on `null`.
   - **`explain.ts FILE COLS`:** prints `step`, the widest row's width, and the rows, or the reason. T20 sizes fixtures with it.

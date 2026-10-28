@@ -247,7 +247,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number):
 export const flowchart: DiagramModule<Graph>
 export const sequence: DiagramModule<Seq>                          // Seq is defined in sequence/parse.ts
 // core/render.ts
-export type Span = { text: string; role?: Role; color?: Color; backgroundColor?: Color; bold?: boolean; dimColor?: boolean }  // the hook strips role
+export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: Color; bold?: boolean; dimColor?: boolean }  // role is an Ink, so series keys s1–s8 survive (C); the hook strips it
 export type Rows = Span[][]
 export type Options = { columns: number; theme?: string }  // theme defaults to 'default'
 export function renderMermaid(source: string, o: Options): Rows | null                       // spec A's signature
@@ -373,7 +373,7 @@ node scripts/check.ts all
 | VR.in-ci | `node scripts/check.ts VR.in-ci`: gallery self-check, tangle, `check-palettes.ts` | yes | T5, T30, T31, T38 |
 | — (CI type check, D2) | `node scripts/typecheck.ts`: B binds a CI step to it; no check ID | no | T39 |
 
-These are A's 31 of the 48 IDs, matching B2's `IDS48`; B owns the other 17. One parser, `scripts/lib/check-ids.ts` (T1), serves `scripts/check-ids.ts` (T1, T38) and B's `check-ci-coverage.ts`, so the two cannot drift. It fails when an A or VR ID has no row here, or when a row names an ID the doc lacks.
+These are A's 31 of the 48 IDs, matching B2's `IDS48`; B owns the other 17. One parser, `scripts/lib/check-ids.ts` (T1), derives all 48 from the acceptance doc (Spec A and Spec B rows, their labels, and the visual-review labels), and a T1 test pins the exact 48. `scripts/check-ids.ts` (T1, T38) fails when an A or VR ID has no row here, or when a row names an ID the doc lacks. B's `check-ci-coverage.ts` imports the same parser, so the two cannot drift.
 
 ## 10. Review verdict record (`docs/reviews/<date>-<scope>.md`; `check-review-hashes.ts` reads it; a B dependency, keep stable)
 ```markdown

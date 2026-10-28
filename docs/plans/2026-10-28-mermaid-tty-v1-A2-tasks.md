@@ -60,13 +60,18 @@ test('A8.no-build: hooks import core with .ts suffixes; the hyphenated $.state k
 **Files:** create `scripts/check.sh` (exactly as in §9), `scripts/check.ts`, `scripts/lib/check-ids.ts` (the one ID parser; B's `check-ci-coverage.ts` imports it), `scripts/check-ids.ts` (its CLI) and `scripts/lib/claude.ts`. Test: `tests/scripts/check-ids_test.ts`.
 - [ ] **Failing test:**
 ```ts
-import test from 'node:test'; import assert from 'node:assert/strict'; import { spawnSync } from 'node:child_process'
+import test from 'node:test'; import assert from 'node:assert/strict'; import { spawnSync } from 'node:child_process'; import { readFileSync } from 'node:fs'
 import { parseIds, diffIds, slug } from '../../scripts/lib/check-ids.ts'
-const DOC = '## Spec A\n| A4 | Width | **Width table:** x. **Fit ladder:** y. **not a label** z |\n| A9 | E | **Stored / copied:** z |\n## Visual review (*review*)\n**Gallery:** g\n'
+const DOC = '## Spec A\n| A4 | Width | **Width table:** x. **Fit ladder:** y. **not a label** z |\n| A9 | E | **Stored / copied:** z |\n## Visual review (*review*)\n**Gallery:** g\n## Spec B\n| B7 | CI | **Check IDs:** c |\n'
 test('A8.validation: only bold text with the colon inside is a label; slugs collapse non-[a-z0-9] runs (B7)', () => {
-  assert.deepEqual(parseIds(DOC), ['A4', 'A4.width-table', 'A4.fit-ladder', 'A9', 'A9.stored-copied', 'VR.gallery'])
+  assert.deepEqual(parseIds(DOC), ['A4', 'A4.width-table', 'A4.fit-ladder', 'A9', 'A9.stored-copied', 'VR.gallery', 'B7', 'B7.check-ids'])
   assert.equal(slug('Stored / copied'), 'stored-copied'); assert.equal(slug('No build'), 'no-build')
 })
+test('A8.validation: the real acceptance file yields exactly the 48 B7 IDs, in order', () => assert.deepEqual(
+  parseIds(readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', 'utf8')), ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 ' +
+  'A6.hook-tests A6.command A6.in-claude-code A7 A8 A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A9 A9.harness A9.stored A9.release ' +
+  'A10 VR.gallery VR.in-ci VR.reviewers VR.tangled VR.passes B1 B1.docs-check B1.beauty-review B2 B2.per-paragraph B2.translation-review B3 B3.publish-test ' +
+  'B3.workflow-check B3.release B4 B5 B5.every-pr B5.release B6 B7 B7.check-ids').split(' ')))
 test('A8.validation: diff reports missing and extra IDs', () =>
   assert.deepEqual(diffIds(['A4', 'A4.width-table'], ['A4', 'A9.harness']), { missing: ['A4.width-table'], extra: ['A9.harness'] }))
 test('A8.validation: an unknown ID fails', () =>
@@ -81,9 +86,9 @@ test('A8.validation: an unknown ID fails', () =>
     - `all` runs `@nt` once with no filter, then every other distinct step of the rows not marked `inAll: false`, deduplicated by `JSON.stringify` and run in table order, except `@kit` and `claude plugin validate .`, which `check.sh` runs itself. It exits at the first non-zero result.
     - An unknown ID prints `unknown check <ID>` and exits 1. `main()` runs only when `process.argv[1]` resolves to this file.
   - **`lib/check-ids.ts`** (B7's rules exactly; `check-ids.ts` is its CLI):
-    - `parseIds(md)`: under `## Spec A`, every `| (A\d+) |` row gives its ID, plus `<row>.<slug>` for each label in it: bold text with the colon inside, `/\*\*([^*:]+):\*\*/g`. Under `## Visual review`, each such label gives `VR.<slug>`; there is no bare `VR` row. `slug(s)` lowercases, collapses every run of characters outside `[a-z0-9]` into one `-`, and trims `-` at the ends.
+    - `parseIds(md)` (B7's rule): in `## Spec A` and `## Spec B`, every `| ([AB]\d+) |` row gives its ID, plus `<row>.<slug>` for each label in the row: bold text with the colon inside, `/\*\*([^*:]+):\*\*/g`. In `## Visual review`, each label gives `VR.<slug>` (no bare `VR`). IDs keep document order. `slug(s)` lowercases, collapses every run of characters outside `[a-z0-9]` into one `-`, and trims `-` at the ends.
     - `diffIds(doc, rows)` returns `{ missing, extra }`.
-    - `main` parses `docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md` against `CHECKS` ids and exits 1 on any difference (48 IDs at a02e6cc; A owns 31).
+    - `main` compares the acceptance doc's A and VR IDs (31 of the 48) with `CHECKS` ids and exits 1 on any difference. B's `check-ci-coverage.ts` imports `parseIds` for all 48.
 - [ ] **Done when:** the test passes, and `node scripts/check.ts A8.validation` passes. It runs `claude plugin validate .` and the tests above.
 - [ ] **Commit:** `git commit -m "Add check.sh entry, per-ID check runner and ID parity"`
 
