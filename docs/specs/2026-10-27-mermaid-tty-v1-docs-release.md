@@ -19,7 +19,7 @@
    - **Script:** `scripts/publish-wiki.sh SOURCE WIKI_REPO SHA` mirrors the pages and commits only when something changed. Both the workflow and the script mirror SonicTerm's.
    - **Tests:** `scripts/test-wiki-publish.sh` runs in throwaway Git repos. It checks mirroring, no-op runs and stale-page removal, and the language rules above.
 4. **CI:** `.github/workflows/ci.yml` runs on pushes and pull requests and executes `scripts/check.sh`.
-   - The runner has Node 24 and Claude Code installed from npm, for `validate` and `test`.
+   - It runs on Linux, macOS and Windows runners, each with Node 24 and Claude Code installed from npm, for `validate` and `test`.
    - Actions are pinned by SHA.
 5. **Release:**
    - Tag `v1.0.0` and publish a GitHub Release whose notes include the install commands.

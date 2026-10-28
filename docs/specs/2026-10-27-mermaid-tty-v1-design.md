@@ -7,7 +7,7 @@
 ## Scope
 
 - **In:**
-  - The Claude Code terminal surface. Mods need 2.1.287 or later; tested on 2.1.308.
+  - The Claude Code terminal surface on macOS, Linux and Windows. Mods need 2.1.287 or later; tested on 2.1.308.
   - Flowcharts, including subgraphs, and sequence diagrams. Together they make up all 87 blocks in the corpus from the owner's docs.
 - **Out:**
   - Copilot CLI comes after v1; a spike showed plain `session.log` keeps truecolor SGR.
@@ -47,6 +47,7 @@
    - `claude plugin validate .` passes.
    - p90 corpus render time is at most 50 ms (cold, 80 columns, development Mac).
    - An LRU cache of 64 entries is keyed by text, width and theme.
+   - Works the same on macOS, Linux and Windows: no OS-specific code, and CI runs the full suite on all three.
 
 ## Architecture
 
@@ -83,7 +84,7 @@ flowchart LR
 
 - We own the renderer; no third-party layout code ("you control everything").
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
-- A failed render falls back silently. Version 1.0.0: the owner asked to "release the first version", and the plugin has no API to stabilize first.
+- A failed render falls back silently. Version 1.0.0, as the owner asked.
 - The owner's docs are used as a corpus only on this machine.
 
 ## Prior art
