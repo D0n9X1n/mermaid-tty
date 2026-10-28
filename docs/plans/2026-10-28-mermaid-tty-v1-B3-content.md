@@ -1,8 +1,37 @@
-# mermaid-tty v1 B3: release checks, install, content and LF (T9–T14, T16)
+# mermaid-tty v1 B3: icon, release checks, install, content and LF (T7, T9–T14, T16)
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T2 (`svg.ts`), T5 (`check-wiki.ts`), T6 (`check-docs.ts`) and T7 (icon); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. **Unblocks:** B2's T15.
+**Needs:** B1's T2 (`svg.ts`), T5 (`check-wiki.ts`) and T6 (`check-docs.ts`); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. T7 needs `rsvg-convert` and `sips` on the dev Mac. **Unblocks:** B2's T15.
+
+### T7 — Plugin icon
+- **Files:** create `assets/icon.svg` (P1), `scripts/make-icon.sh` (P2) and `.claude-plugin/icon.png`. **Acceptance:** B6. **Depends on:** T6. **Group:** G4.
+- **Failing check:** `node scripts/check-docs.ts 2>&1 | grep -F icon.png` → `check-docs: icon.png: missing`.
+- **Implement:** P1, P2; on the Mac, `bash scripts/make-icon.sh` (needs `brew install librsvg`).
+- **Done when:** → `make-icon: .claude-plugin/icon.png 512x512, … bytes (sips)`, and the grep prints nothing. **Commit:** `B: plugin icon from assets/icon.svg`
+````xml P1 — assets/icon.svg
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1e1f26"/>
+  <rect x="136" y="72" width="240" height="72" rx="36" fill="#d77757"/>
+  <path d="M256 144v44M256 340v44" stroke="#999999" stroke-width="16"/>
+  <path d="M234 184h44l-22 26zM234 380h44l-22 26z" fill="#b1b9f9"/>
+  <path d="M256 214l84 62-84 62-84-62z" fill="#ffc107"/>
+  <rect x="136" y="410" width="240" height="72" rx="36" fill="#4eba65"/>
+</svg>
+````
+````bash P2 — scripts/make-icon.sh
+#!/usr/bin/env bash
+# B6 (dev Mac): assets/icon.svg -> .claude-plugin/icon.png, 512×512, under 2 MB, confirmed by sips. CI re-reads the PNG header in check-docs.ts.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+command -v rsvg-convert >/dev/null || { printf 'make-icon: needs rsvg-convert (brew install librsvg)\n' >&2; exit 1; }
+rsvg-convert -w 512 -h 512 assets/icon.svg -o .claude-plugin/icon.png
+read -r w h < <(sips -g pixelWidth -g pixelHeight .claude-plugin/icon.png | awk '/pixel/ {print $2}' | paste -s -d ' ' -)
+bytes=$(( $(wc -c < .claude-plugin/icon.png) ))
+[[ "$w" == 512 && "$h" == 512 ]] || { printf 'make-icon: %sx%s, want 512x512\n' "$w" "$h" >&2; exit 1; }
+(( bytes < 2000000 )) || { printf 'make-icon: %s bytes, want under 2 MB\n' "$bytes" >&2; exit 1; }
+printf 'make-icon: .claude-plugin/icon.png 512x512, %s bytes (sips)\n' "$bytes"
+````
 
 ### T9 — Release checks and notes
 - **Files:** create `scripts/check-release.ts` (P5) and `docs/release-notes/v1.0.0.md` (P6). **Acceptance:** B5. **Depends on:** T8. **Group:** G5. **Waits on A:** `plugin.json` version `1.0.0`.
@@ -190,12 +219,10 @@ for (const img of IMAGES) {
 ### T12 — README
 - **Files:** modify `README.md` (P12). **Acceptance:** B1; the FAQ's platforms entry. **Depends on:** T7, T8, T11, T17. **Group:** G7. **Waits on C:** one support-table row per `ENABLED` id, with its header keywords. **Waits on A:** `plugin.json` `userConfig.theme` values for the Configuration row, and `check.sh`'s header.
 - **Failing check:** `node scripts/check-docs.ts` → `hero:`, `section missing:`, `FAQ:`, `Development:` and wiki-link lines.
-- **Implement:** P12, then fit the table and the Configuration row. The FAQ documents `/mermaid-tty source`, `/mermaid-tty diagram`, bare `/mermaid-tty` and `/copy`, and makes no ctrl+o claim (D12).
+- **Implement:** P12 (in the Markdown subset, D15), then fit the table and the Configuration row. The FAQ documents `/mermaid-tty source`, `/mermaid-tty diagram`, bare `/mermaid-tty` and `/copy`, and makes no ctrl+o claim (D12).
 - **Done when:** → `check-docs: ok (README, 10 images, 4 workflows, check.sh, icon)`. Beauty review at R3. **Commit:** `B: README`
 ````markdown P12 — README.md
-<div align="center">
-
-<img src="assets/icon.svg" width="120" height="120" alt="mermaid-tty logo">
+<p align="center"><img src="assets/icon.svg" width="120" height="120" alt="mermaid-tty logo"></p>
 
 # mermaid-tty
 
@@ -205,8 +232,6 @@ for (const img of IMAGES) {
 [![Release](https://img.shields.io/github/v/release/D0n9X1n/mermaid-tty)](https://github.com/D0n9X1n/mermaid-tty/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/D0n9X1n/mermaid-tty?style=flat)](https://github.com/D0n9X1n/mermaid-tty/stargazers)
-
-</div>
 
 A Claude Code plugin that redraws each closed mermaid code fence in Claude's replies as a colored, flat, box-drawing diagram sized to your terminal. The transcript keeps the Mermaid source.
 
@@ -221,12 +246,11 @@ Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows.
 
 ## Before and after
 
-<table><tr>
-<td><img src="assets/readme/before.svg" alt="A mermaid fence as Claude Code shows it today"></td>
-<td><img src="assets/readme/after.svg" alt="The same fence drawn by mermaid-tty"></td>
-</tr></table>
+| Before | After |
+|---|---|
+| ![A mermaid fence as Claude Code shows it today](assets/readme/before.svg) | ![The same fence drawn by mermaid-tty](assets/readme/after.svg) |
 
-<img src="assets/readme/sequence.svg" alt="A sequence diagram drawn by mermaid-tty">
+![A sequence diagram drawn by mermaid-tty](assets/readme/sequence.svg)
 
 ## Supported diagrams
 
@@ -243,11 +267,13 @@ Any other diagram keeps Claude Code's own drawing.
 
 Diagrams follow your Claude Code theme unless you pick a curated palette.
 
-<table>
-<tr><td><img src="assets/readme/theme-default.svg" alt="default"><br>default</td><td><img src="assets/readme/theme-nord.svg" alt="nord"><br>nord</td></tr>
-<tr><td><img src="assets/readme/theme-dracula.svg" alt="dracula"><br>dracula</td><td><img src="assets/readme/theme-gruvbox.svg" alt="gruvbox"><br>gruvbox</td></tr>
-<tr><td><img src="assets/readme/theme-solarized.svg" alt="solarized"><br>solarized</td><td><img src="assets/readme/theme-mono.svg" alt="mono"><br>mono</td></tr>
-</table>
+| default | nord |
+|---|---|
+| ![default](assets/readme/theme-default.svg) | ![nord](assets/readme/theme-nord.svg) |
+| **dracula** | **gruvbox** |
+| ![dracula](assets/readme/theme-dracula.svg) | ![gruvbox](assets/readme/theme-gruvbox.svg) |
+| **solarized** | **mono** |
+| ![solarized](assets/readme/theme-solarized.svg) | ![mono](assets/readme/theme-mono.svg) |
 
 ## Configuration
 
@@ -267,7 +293,7 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **Do CJK labels line up?** Yes. Wide characters count as 2 columns and combining marks as 0, so CJK labels stay aligned.
 
-<img src="assets/readme/cjk.svg" alt="A flowchart with Chinese labels drawn by mermaid-tty">
+![A flowchart with Chinese labels drawn by mermaid-tty](assets/readme/cjk.svg)
 
 **How do I see the Mermaid source?** Run `/mermaid-tty source` to show every diagram as its Mermaid source, on screen and in the ctrl+o transcript; `/mermaid-tty diagram` draws them again, and `/mermaid-tty` alone reports the current mode. `/copy` copies the exact source.
 
@@ -303,12 +329,13 @@ More in the [English](https://github.com/D0n9X1n/mermaid-tty/wiki) and [简体�
 | Architecture | Architecture / 架构 | Pipeline / 流水线; Modules / 模块; Validation and fallback / 校验与回退; Width / 宽度; Hook and cache / 钩子与缓存 | a localized Mermaid flowchart; the `core/` files at HEAD; the validator's invariants; the glyph allow-list (no `Emoji` glyphs; `►`/`◄`); the 64-entry LRU |
 | Development-and-Release | Development and Release / 开发与发布 | Repository / 仓库; Local checks / 本地检查; CI / 持续集成; Images and icon / 图片与图标; Wiki / 百科; Release / 发布 | the five `LOCAL` commands in one `sh` block; `check` and `e2e` on three OSes; the gallery; the scheduled A9 run on each new Claude Code version; `shell: bash` and `set -euo pipefail`; `render-svg.ts --readme` and `make-icon.sh`; `wiki/` is the only source, and edits to the GitHub wiki are overwritten; R1–R8 |
 
+- **Markdown subset (D15):** pages use only inline links and images, badge links, fenced code, tables, headings, lists and the allowlisted HTML; `check-wiki.ts` rejects anything else.
 - **Done when:** `node scripts/check-wiki.ts` lists only five `missing language counterpart …-zh-CN` lines and five `…-zh-CN.md: required page missing` lines. **Commit:** `B: English wiki`
 
 ### T14 — Chinese wiki
 - **Files:** create the five `wiki/*-zh-CN.md`. **Acceptance:** B2. **Depends on:** T13. **Group:** G5.
 - **Failing check:** T13's ten lines.
-- **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, and no paragraph is exempt from the language rules; every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
+- **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, no paragraph is exempt from the language rules, and the page stays in the Markdown subset (D15); every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
 - **Done when:** `node scripts/check-wiki.ts` → `check-wiki: ok (10 pages)`. Translation review at R3. **Commit:** `B: Chinese wiki`
 
 ### T16 — LF on every OS

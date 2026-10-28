@@ -6,9 +6,9 @@
 
 **Tech stack:** Node 24 type stripping (erasable TS, `node:test`, no dependencies), bash (Git Bash on Windows), GitHub Actions pinned by SHA, Claude Code 2.1.308 from npm, and `rsvg-convert` 2.63.4 plus `sips` on the dev Mac.
 
-**Inputs:** the specs at `6c204f4` (spec B requirements 1–6; acceptance B1–B7, A8 platforms, A9, VR), the coordinator's notes of 2026-10-28 (three OSes, `►`/`◄` from core only, CI tests everything, `shell: bash`, E2E CI needs, the source view, a scheduled A9 run on each new Claude Code version), the PM's decisions on plan B, and GPT-6's audit of `3a40e3a`.
+**Inputs:** the specs at `6c204f4` (spec B requirements 1–6; acceptance B1–B7, A8 platforms, A9, VR), the coordinator's notes of 2026-10-28 (three OSes, `►`/`◄` from core only, CI tests everything, `shell: bash`, E2E CI needs, the source view, a scheduled A9 run on each new Claude Code version), the PM's decisions on plan B, and GPT-6's audit of `3a40e3a` and its confirm of `dfc4687`.
 
-**Sub-plans:** [B1 infra](2026-10-28-mermaid-tty-v1-B1-infra.md) (T1–T7), [B2 CI and release](2026-10-28-mermaid-tty-v1-B2-ci-release.md) (T8, T15, T17) and [B3 content](2026-10-28-mermaid-tty-v1-B3-content.md) (T9–T14, T16) each hold their tasks with the code, under 500 lines apiece; see [Sub-plans](#sub-plans). The code ran on 2026-10-28 in a scratch tree against stub `core/` modules: 60 unit tests, `test-wiki-publish.sh`, `check-docs.ts`, `check-ci-coverage.ts` (48 IDs), `check-release.ts`, the `cc-versions.ts` CLI and an offline local-marketplace install pass, and Ruby's YAML parser loads all four workflows.
+**Sub-plans:** [B1 infra](2026-10-28-mermaid-tty-v1-B1-infra.md) (T1–T6), [B2 CI and release](2026-10-28-mermaid-tty-v1-B2-ci-release.md) (T8, T15, T17) and [B3 content](2026-10-28-mermaid-tty-v1-B3-content.md) (T7, T9–T14, T16) each hold their tasks with the code, under 500 lines apiece; see [Sub-plans](#sub-plans). The code ran on 2026-10-28 in a scratch tree against stub `core/` modules: 65 unit tests, `test-wiki-publish.sh`, `check-docs.ts`, `check-ci-coverage.ts` (48 IDs), `check-release.ts`, the `cc-versions.ts` CLI and an offline local-marketplace install pass, and Ruby's YAML parser loads all four workflows.
 
 **Commits:** one per task on `feat/v1`; each message ends with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
@@ -54,7 +54,8 @@ Requirements → responsibilities → components → tasks are in [Traceability]
 - **D11 Not ported from SonicTerm:** the Home-link and crate rules (GitHub's sidebar lists the pages; there are no crates) and the `CLAUDE.md` greps.
 - **D12 Source view:** ctrl+o does not show the source. The README FAQ and wiki Usage document `/mermaid-tty source`, `/mermaid-tty diagram`, bare `/mermaid-tty` and `/copy`; `readmeErrors` and `check-wiki.ts` require those commands and reject any claim that ctrl+o shows, reveals or displays the source. A9's run without truecolor asserts `38;5;n` on diagram rows (6c204f4), so CI tests the FAQ's 256-color claim.
 - **D13 Wiki openers (PM call):** English pages open with exactly `[Chinese (Simplified)](<Page>-zh-CN)`, zh-CN pages with exactly `[英文版](<Page>)`. `check-wiki.ts` requires them and applies every language rule to every paragraph, the opener included. Absolute links to this wiki (`https://github.com/D0n9X1n/mermaid-tty/wiki/<Page>`) are normalized to page names, so they count toward the only-twin-link rule.
-- **D14 Images:** only displayed images count: `<img src=…>` or `![…](…)` outside comments and code. Each `assets/` image the README or wiki displays is a rendered diagram in `images.ts` (fresh render and glyph checks) or on the short `NON_DIAGRAM` list (the logo); anything else fails.
+- **D14 Images:** only displayed images count, read from D15's allowed forms. Each `assets/` image the README or wiki displays is a rendered diagram in `images.ts` (fresh render and glyph checks) or on the short `NON_DIAGRAM` list (the logo); anything else fails.
+- **D15 Markdown subset (PM call):** the README and wiki pages are written in a strict, checkable subset, and `subsetErrors` fails on anything outside it. Allowed: inline links `[text](url)`, inline images `![alt](src)`, badge links `[![alt](img)](url)`, fenced code, tables, headings, lists, the two `types:` marker comments, and raw HTML limited to `<p align="center">`, `<img>`, `<a href>`, `<picture>` and `<source>` with double-quoted attributes. Rejected: autolinks and bare URLs; reference-style links, images and definitions; backslash escapes of link or image syntax; indented code blocks; single-quoted or unquoted attributes; any other tag or comment; and stray brackets such as `[[Page]]`. Links and images are then read only from the allowed forms (`refs` in `markdown.ts`), so none can hide.
 
 ## Test Strategy
 
@@ -62,8 +63,8 @@ Every check below is a CI step. The only human gates are the judgments, and CI p
 
 | Kind | What it proves | Command | CI step `id:` |
 |---|---|---|---|
-| Unit (`node:test`, 60 tests) | Markdown scanning; glyph cells and SVG; every B rule, each with a passing fixture and one mutation per clause, commented-out and rogue images included; the 48 check IDs derived from the real acceptance file; the version job's selection, including a release that keeps failing; every role resolves under every theme | `node --test 'scripts/tests/*_test.ts'` | `check` |
-| Throwaway repos | Publisher: mirror, no-op, stale-page removal, rename. Checker: a valid fixture wiki passes, and 18 mutations each fail with their diagnostic, among them a wrong opener and an absolute same-wiki cross-language link | `bash scripts/test-wiki-publish.sh` | `check` |
+| Unit (`node:test`, 65 tests) | Markdown scanning; glyph cells and SVG; every B rule, each with a passing fixture and one mutation per clause, commented-out and rogue images included; the Markdown subset, with a failing fixture per rejected form and for each audit repro (escaped, indented, single-quoted and reference-style images); the 48 check IDs derived from the real acceptance file; the version job's selection, including a release that keeps failing; every role resolves under every theme | `node --test 'scripts/tests/*_test.ts'` | `check` |
+| Throwaway repos | Publisher: mirror, no-op, stale-page removal, rename. Checker: a valid fixture wiki passes, and 21 mutations each fail with their diagnostic, among them a wrong opener, an absolute same-wiki cross-language link, an autolink, a `[[wiki link]]` and a badge link to the twin | `bash scripts/test-wiki-publish.sh` | `check` |
 | Real files | README; every image the README and wiki display (a rendered diagram with a fresh render and glyph cells, or allow-listed); the four workflows; the `check.sh` header; the icon header; the real wiki; the coverage map | `node scripts/check-docs.ts`, `node scripts/check-wiki.ts`, `node scripts/check-ci-coverage.ts` | `check` |
 | Local install | `marketplace.json` and `plugin.json` install from `./` into a throwaway config | `bash scripts/test-local-install.sh` | `check` |
 | End to end (A's harness) | Real Claude Code, a mock API, a PTY at 100 columns, every theme, no color under mono, `38;5;n` without truecolor, the stored transcript source and `/copy` | `node scripts/e2e/run.ts` | `e2e` on 3 OSes |
@@ -76,12 +77,12 @@ Every check below is a CI step. The only human gates are the judgments, and CI p
 
 | Component | Job | Interface | Reuses or extends | Likely change | Test seam |
 |---|---|---|---|---|---|
-| `scripts/lib/markdown.ts` | Fence-aware Markdown scanning | `blocks`, `headings`, `links`, `prose`, `section`, `CJK` | ports `check-wiki.py:65-109` | a new Markdown construct | `markdown_test.ts` |
-| `scripts/check-wiki.ts` | B2 rules on `wiki/` | exit 0, or 1 with `check-wiki: file:line: rule` | ports `check-wiki.py`; adds exact openers in each page's language, absolute same-wiki links counted as pages, per-unit language rules with no exemption, Usage OSes and source view, Development commands, and no ctrl+o claim | a new wiki rule | 18 mutations in `test-wiki-publish.sh` |
+| `scripts/lib/markdown.ts` | Fence-aware Markdown scanning; links and images read only from the allowed forms | `blocks`, `headings`, `refs`, `links`, `prose`, `section`, `CJK` | ports `check-wiki.py:65-109` | a new allowed form | `markdown_test.ts`, `doc-rules_test.ts` |
+| `scripts/check-wiki.ts` | B2 rules on `wiki/` | exit 0, or 1 with `check-wiki: file:line: rule` | ports `check-wiki.py`; adds the Markdown subset, exact openers in each page's language, absolute same-wiki links counted as pages, per-unit language rules with no exemption, Usage OSes and source view, Development commands, and no ctrl+o claim | a new wiki rule | 21 mutations in `test-wiki-publish.sh` |
 | `scripts/publish-wiki.sh` + `publish-wiki.yml` | Mirror `wiki/` to the GitHub wiki | `SOURCE WIKI_REPO SHA`; output `changed=` | SonicTerm, verbatim, plus `shell: bash` | none expected | throwaway repos; `publishWikiErrors` |
 | `scripts/test-wiki-publish.sh` | Publisher and checker tests | exit status | SonicTerm's `:1-60` | one `rejects` line per new rule | itself |
 | `scripts/lib/svg.ts` | Styled rows → SVG, one `<text>` per glyph | `glyphCells`, `toSvg`, `misplaced`, `CELL` | — | cell metrics | `svg_test.ts` |
-| `scripts/lib/doc-rules.ts` | README, publish-wiki, image and icon rules, and the shared workflow helpers | `readmeErrors`, `imageErrors`, `assetImages`, `visible`, `NON_DIAGRAM`, `publishWikiErrors`, `iconErrors`, `supportedTypes`, `INSTALL`, `LOCAL`, `CTRL_O`, `common`, `need` | SonicTerm's pin rule | a spec clause | `doc-rules_test.ts` |
+| `scripts/lib/doc-rules.ts` | README, Markdown-subset, publish-wiki, image and icon rules, and the shared workflow helpers | `readmeErrors`, `subsetErrors`, `imageErrors`, `assetImages`, `visible`, `NON_DIAGRAM`, `publishWikiErrors`, `iconErrors`, `supportedTypes`, `INSTALL`, `LOCAL`, `CTRL_O`, `common`, `need` | SonicTerm's pin rule | a spec clause | `doc-rules_test.ts` |
 | `scripts/lib/ci-rules.ts` | CI, release and coverage rules | `ciErrors`, `releaseErrors`, `checkShErrors`, `tagErrors`, `notesErrors`, `checkIds`, `stepIds`, `coverageErrors` | `common`/`need` | a spec clause | `ci-rules_test.ts` |
 | `scripts/lib/images.ts` | README image manifest | `IMAGES`, `THEMES` | — | adding an image | the closed loop in `check-docs.ts` |
 | `scripts/lib/render-image.ts` | Core rows → styled rows → SVG; the reference palette | `styledRows`, `renderImage`, `roleStyle`, `ROOT` | A's `render`, `themes`, `width` | A's theme shape | `render-image_test.ts`; freshness |
@@ -118,13 +119,13 @@ Every check below is a CI step. The only human gates are the judgments, and CI p
 
 ## Sub-plans
 
-Each sub-plan holds its tasks with their code and stands alone. Task numbers are unchanged, so references across sub-plans still hold; T9, T10 and T16 sit in B3 to keep B2 under 500 lines.
+Each sub-plan holds its tasks with their code and stands alone. Task numbers are unchanged, so references across sub-plans still hold; T9, T10 and T16 sit in B3 to keep B2 under 500 lines, and T7 to keep B1 under it.
 
 | Sub-plan | Tasks | Code | Needs | Unblocks |
 |---|---|---|---|---|
-| [B1 infra](2026-10-28-mermaid-tty-v1-B1-infra.md) | T1–T7: Markdown scanner, SVG serializer, README/publish/icon rules, wiki publisher, wiki checker, check-docs runner, icon | C1–C10, P1, P2 | nothing | B2's T8, T17; B3's T11, T12, T13 |
+| [B1 infra](2026-10-28-mermaid-tty-v1-B1-infra.md) | T1–T6: Markdown scanner, SVG serializer, README/publish/subset rules, wiki publisher, wiki checker, check-docs runner | C1–C10 | nothing | B2's T8, T17; B3's T7, T11, T13 |
 | [B2 CI and release](2026-10-28-mermaid-tty-v1-B2-ci-release.md) | T8, T17, T15: CI and release rules and workflows, the version job, `check.sh` wiring and coverage | C11, C12, P3, P4, P13, V1–V4 | B1's T3, T6; T15 also needs B3's T9–T14 | B3's T9, T12, T16 |
-| [B3 content](2026-10-28-mermaid-tty-v1-B3-content.md) | T9–T14, T16: release checks and notes, local install, README images, README, English and Chinese wiki, LF | P5–P12 | B1's T2, T5, T6, T7; T9 needs B2's T8, T12 needs T8 and T17, T16 needs T15 | B2's T15 |
+| [B3 content](2026-10-28-mermaid-tty-v1-B3-content.md) | T7, T9–T14, T16: icon, release checks and notes, local install, README images, README, English and Chinese wiki, LF | P1, P2, P5–P12 | B1's T2, T5, T6; T9 needs B2's T8, T12 needs T8 and T17, T16 needs T15 | B2's T15 |
 
 Tasks in one group touch disjoint files and can run in parallel once the earlier groups are done.
 
@@ -134,8 +135,8 @@ Tasks in one group touch disjoint files and can run in parallel once the earlier
 
 ```mermaid
 flowchart LR
-  B1["B1: T1–T7"] --> B2a["B2: T8, T17"]
-  B1 --> B3a["B3: T10, T11, T13, T14"]
+  B1["B1: T1–T6"] --> B2a["B2: T8, T17"]
+  B1 --> B3a["B3: T7, T10, T11, T13, T14"]
   B2a --> B3b["B3: T9, T12"]
   B3a --> B3b
   B3b --> T15["B2: T15 check.sh and coverage"]
@@ -146,9 +147,9 @@ flowchart LR
 
 | Spec B / acceptance | Requirement | Components | Tasks | Release or review |
 |---|---|---|---|---|
-| 1 / B1 | Hero, install block, content; images: only displayed ones count, each a rendered diagram (fresh render, glyph cells) or allow-listed; beauty | `readmeErrors`, `imageErrors`, `check-docs.ts`, `svg.ts`, `images.ts`, `render-image.ts`, README | T1, T2, T3, T6, T11, T12 | R3 beauty |
+| 1 / B1 | Hero, install block, content, in the Markdown subset; images: only displayed ones count, each a rendered diagram (fresh render, glyph cells) or allow-listed; beauty | `readmeErrors`, `subsetErrors`, `imageErrors`, `check-docs.ts`, `svg.ts`, `images.ts`, `render-image.ts`, README | T1, T2, T3, T6, T11, T12 | R3 beauty |
 | 1 / B1 FAQ (coordinator) | Windows Terminal; macOS Terminal, iTerm2, Ghostty; Linux; 256-color; fonts; `/mermaid-tty source`, `/mermaid-tty diagram`, `/copy`; no ctrl+o claim | `readmeErrors` FAQ rules, `CTRL_O` | T3, T12 | A9's 256-color run (D12) |
-| 2 / B2 | Five pairs; heading levels; exact openers in each page's language; one cross-language link, absolute same-wiki links included; CJK rules on every paragraph, with no exemption; translation | `check-wiki.ts`, `markdown.ts`, `wiki/` | T1, T5, T13, T14 | R3 translation |
+| 2 / B2 | Five pairs in the Markdown subset; heading levels; exact openers in each page's language; one cross-language link, absolute same-wiki links included; CJK rules on every paragraph, with no exemption; translation | `check-wiki.ts`, `subsetErrors`, `markdown.ts`, `wiki/` | T1, T3, T5, T13, T14 | R3 translation |
 | 2 (coordinator) | Usage covers Windows, macOS and Linux, and the source view; no page claims ctrl+o shows the source | `check-wiki.ts` | T5, T13, T14 | — |
 | 3 / B3 | Workflow and script mirror SonicTerm; throwaway-repo tests; triggers, grant, pins; on `v*`, the tag's `publish-wiki` run concluded `success` and the wiki matches | `publish-wiki.sh`/`.yml`, `test-wiki-publish.sh`, `publishWikiErrors`, `releaseErrors` | T3, T4, T5, T8 | R5; `release-wiki-run` and `release-wiki` in R6 |
 | 4 / B4 | Every push and PR, superseded runs cancelled; 3-OS matrix; Node 24; Claude Code from npm; SHA pins; `shell: bash`; `set -euo pipefail`; e2e job; a scheduled A9 run on each new Claude Code version, every result recorded; `release.yml` on `v*` | `ci.yml`, `release.yml`, `claude-code-versions.yml`, `ciErrors`, `releaseErrors`, `checkShErrors`, `versionsErrors` | T3, T8, T15, T17 | R2, R5 |
@@ -192,7 +193,7 @@ Against the blind second design (GPT-6), 2026-10-28.
 | Icon generated from a core fixture | Differ | A hand-drawn SVG: terminal glyphs read poorly at icon sizes and would tie the icon to fonts |
 | Locked resvg-js with pinned fonts | Differ | Not now: no CI gate compares PNG bytes. Adopt it if a byte-exact PNG gate is added |
 | IHDR 512×512, under 2 MB, and `sips` | Agree | `iconErrors` on every OS; `make-icon.sh` uses `sips` on the Mac |
-| Mutation-test Markdown and YAML semantics, not grep | Partly differ | Markdown goes through a fence-aware scanner; YAML through exact-text and regex rules, one mutation per clause, so there's no parser dependency (Ruby's parser checks syntax) |
+| Mutation-test Markdown and YAML semantics, not grep | Partly differ | Markdown pages stay in a strict, checkable subset (D15), and links and images are read only from its allowed forms; YAML goes through exact-text and regex rules, one mutation per clause, so there's no parser dependency (Ruby's parser checks syntax) |
 | Chinese Home opens with `[英文](Home)` | Agree (PM call) | Each opener is in its page's own language: English pages open with `[Chinese (Simplified)](<Page>-zh-CN)`, zh-CN pages with `[英文版](<Page>)`; the checker requires them exactly and applies every language rule to every paragraph, with no exemption |
 | Throwaway-Git publisher tests without Cargo or guidance; a clean clone | Agree | Mirroring, a no-op run, stale and renamed pages, and Git metadata kept |
 | Node 24, Claude Code 2.1.308 from npm, SHA pins, publish-only write, triggers, concurrency, conditional push | Agree | Plus Windows and macOS runners (spec B 4) |
