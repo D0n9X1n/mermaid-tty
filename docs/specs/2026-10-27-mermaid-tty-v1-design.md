@@ -38,7 +38,7 @@
 6. **Source preserved:**
    - Only the drawing changes. ctrl+o shows the source.
    - Unclosed fences are left alone.
-   - The engine draws the prose around each diagram through `next()`. The spike confirmed two engine refs in one reply.
+   - The engine draws the prose around each diagram through `next()`.
 7. **Colors:**
    - By default, the roles node, decision, edge, arrow, label, frame and note map to Claude Code theme keys, so diagrams follow the user's theme.
    - The `theme` option picks a curated palette instead: nord, dracula, gruvbox, solarized or mono.
@@ -75,14 +75,14 @@ flowchart LR
 
 ## Test strategy
 
-- **Acceptance:** every requirement maps to the checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md): unit, golden, mutation, hook, portability, benchmark and visual-review checks.
-- **Corpus gate (local only, never committed):** all 87 of the owner's blocks render and validate at 80 and 120 columns.
-- **Runtime proof:** a CJK flowchart rendered in a tmux-driven Claude Code session, with an ANSI capture showing themed truecolor rows, and ctrl+o showing the source.
+- **Acceptance:** every requirement maps to the checks in the normative [`2026-10-27-mermaid-tty-v1-acceptance.md`](2026-10-27-mermaid-tty-v1-acceptance.md): unit, golden, mutation, hook, portability, benchmark, end-to-end and visual-review checks. CI runs every automatic check.
+- **Corpus gate:** a committed synthetic corpus with the owner's feature mix runs in CI; the owner's 87 blocks also run locally, never committed.
+- **Runtime proof (CI, three OSes):** real Claude Code, driven headlessly against a mock API, draws a CJK flowchart as themed truecolor rows, and ctrl+o shows the source.
 - **Must-pass suite:** `scripts/check.sh`.
 
 ## Decisions (grill, self-answered)
 
-- We own the renderer; no third-party layout code ("you control everything").
+- We own the renderer; no third-party layout code.
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
 - A failed render falls back silently. Version 1.0.0, as the owner asked.
 

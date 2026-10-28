@@ -20,10 +20,12 @@
    - **Tests:** `scripts/test-wiki-publish.sh` runs in throwaway Git repos. It checks mirroring, no-op runs and stale-page removal, and the language rules above.
 4. **CI:** `.github/workflows/ci.yml` runs on pushes and pull requests and executes `scripts/check.sh`.
    - It runs on Linux, macOS and Windows runners, each with Node 24 and Claude Code installed from npm, for `validate` and `test`.
+   - **Everything automatic runs in CI:** `scripts/check.sh`, the end-to-end job (real Claude Code against a mock API), the synthetic corpus gate, a benchmark ceiling, a local-marketplace install, and the objective parts of every review gate. `scripts/check-ci-coverage.ts` fails if an acceptance check has no CI step.
+   - `release.yml` runs the release checks on a `v*` tag. A weekly scheduled run repeats CI with the latest Claude Code, so a mods API change is caught early.
    - Actions are pinned by SHA.
 5. **Release:**
    - Tag `v1.0.0` and publish a GitHub Release whose notes include the install commands.
-   - Verify that installing from the marketplace works, in a scratch session.
+   - `release.yml` verifies the notes and installs the plugin from the marketplace into a fresh config, then renders through the installed copy.
 6. **Icon:** `.claude-plugin/icon.png`, square, 512 px, under 2 MB, converted from a checked-in SVG.
 
 ## Known constraint
