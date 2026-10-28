@@ -54,7 +54,7 @@ const NAMES: readonly (readonly [Shape, readonly string[]])[] = [
 
 // A Map, not an object: an object lookup returns inherited members for names
 // like `constructor`, and those must fall back to rect like any unknown name.
-const ALIASES: ReadonlyMap<string, Shape> =
+export const ALIASES: ReadonlyMap<string, Shape> =
   new Map(NAMES.flatMap(([shape, names]) => names.map(n => [n, shape] as const)))
 
 export const shapeFromName = (n: string): Shape => ALIASES.get(n.trim()) ?? 'rect'
