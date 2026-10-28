@@ -27,6 +27,7 @@
    - **Participants:** `participant` and `actor`, with aliases.
    - **Messages:** solid or dotted; arrow, open, cross or async ends; with labels.
    - **Also:** `+`/`-` activations; notes left of, right of or over; `alt`/`else`, `opt`, `loop`, `par`/`and`, `critical` and `break` frames; `autonumber`.
+   - **Full subsets:** the diagram matrix's `flowchart` and `sequence` sections are normative.
 3. **Flat nodes:** a node takes exactly one row per label line, with no border-only rows. End caps show the shape, so shape doesn't depend on color.
 4. **Width:**
    - One function measures width: East Asian Width `W`/`F` characters count 2 columns; combining marks (Mn/Me) and zero-width characters count 0; everything else counts 1, including box-drawing, arrows and `◇`. Labels containing ZWJ, variation selectors, regional indicators, emoji modifiers or control characters fall back.
@@ -44,7 +45,7 @@
 8. **Zero install:**
    - No runtime dependencies and no build step.
    - `claude plugin validate .` passes.
-   - The 90th-percentile corpus diagram renders in 50 ms or less (cold, 80 columns, development Mac).
+   - p90 corpus render time is at most 50 ms (cold, 80 columns, development Mac).
    - An LRU cache of 64 entries is keyed by text, width and theme.
 
 ## Architecture
@@ -89,8 +90,8 @@ flowchart LR
 
 | Practice | Source | Fit (evidence) |
 |---|---|---|
-| termaid | fasouto/termaid | Correct CJK and subgraphs, but 3-row boxes and a subprocess (bake-off) |
-| merman-cli | Latias94/merman | Fails on subgraph routes (bake-off) |
+| termaid | fasouto/termaid | Correct CJK and subgraphs, but 3-row boxes and a subprocess |
+| merman-cli | Latias94/merman | Fails on subgraph routes |
 | beautiful-mermaid | lukilabs/beautiful-mermaid | Misaligns CJK (owner's screenshot) |
 | Community mods | ngothanhluc, ejklock, BukeLy | Weeks old (research) |
 | `cc-plugin-mermaid` | Claude Code binary | Turned off by its flag |
@@ -98,4 +99,4 @@ flowchart LR
 ## Risks
 
 - **Tangled dense graphs:** if more than 5 corpus diagrams stay tangled after 3 fix cycles, port termaid's placement and routing, keeping flat nodes.
-- **Early-access mods API:** re-run the suite on every Claude Code release.
+- **Early-access mods API:** re-test each Claude Code release.

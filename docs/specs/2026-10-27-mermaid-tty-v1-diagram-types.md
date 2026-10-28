@@ -42,6 +42,8 @@
    - Keys are `1`, `2`, … for points and `a`, `b`, … for fields.
    - If no deterministic placement exists, the whole diagram falls back. Nothing is moved, clipped or dropped silently.
 7. **Order.** Output follows source order. Exceptions are listed in the matrix; for example, pie sorts by value, descending, and ties keep source order.
+8. **Styling is ignored.** `style`, `classDef`, `class`, `:::`, `linkStyle`, `click`, `accTitle` and `accDescr` are parsed and ignored in every type. They never cause a fallback.
+9. **Series colors and caps.** Each theme defines an 8-color series palette. Series-colored items (lanes, branches, sections, columns, fields, series) cycle through it in source order. One global table in the matrix gives every shape its own pair of end caps.
 
 ## Registry
 
