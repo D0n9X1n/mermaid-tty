@@ -10,7 +10,7 @@
   - The Claude Code terminal surface on macOS, Linux and Windows. Mods need 2.1.287 or later; tested on 2.1.308.
   - Flowcharts, including subgraphs, and sequence diagrams. Together they make up all 87 blocks in the corpus from the owner's docs.
 - **Out:**
-  - Copilot CLI comes after v1; a spike showed plain `session.log` keeps truecolor SGR.
+  - Copilot CLI comes after v1.
   - Other diagram types are sub-project C. Desktop, VS Code and images keep the engine's own drawing.
   - `classDef` and `style` colors are not applied.
 
@@ -85,7 +85,6 @@ flowchart LR
 - We own the renderer; no third-party layout code ("you control everything").
 - Nodes are flat pills with end caps; the mono theme drops the backgrounds.
 - A failed render falls back silently. Version 1.0.0, as the owner asked.
-- The owner's docs are used as a corpus only on this machine.
 
 ## Prior art
 
