@@ -1,8 +1,8 @@
-# mermaid-tty v1 B1: independent infrastructure (T1–T6)
+# mermaid-tty v1 B1: independent infrastructure (T1, T3–T6)
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** nothing from B2 or B3. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T2, T6) and T13 (T5). T7 sits in B3 to keep this file under 500 lines.
+**Needs:** nothing from B2 or B3. **Unblocks:** B2's T8 and T17 (T3, T6); B3's T7 (T6), T11 (T6) and T13 (T5). T2 and T7 sit in B3 to keep this file under 500 lines.
 
 ### T1 — Markdown scanner
 - **Files:** create `scripts/lib/markdown.ts` (C1) and `scripts/tests/markdown_test.ts` (C2). **Acceptance:** B1, B2. **Depends on:** none. **Group:** G1.
@@ -31,9 +31,9 @@ export function blocks(text: string): Block[] {
 }
 export const headings = (text: string) => blocks(text).filter((b) => b.kind === 'heading')
   .map((b) => { const m = HEADING.exec(b.lines[0]!)!; return { depth: m[1]!.length, text: m[2]!.trim(), line: b.line }; });
-// Links and images come only from the subset's allowlisted forms (D15); comments are blanked first, keeping line numbers.
+// Links and images come only from D15b's Markdown forms; comments are blanked first, keeping line numbers.
 export type Ref = { line: number; kind: 'link' | 'image'; label: string; target: string };
-const FORMS = /\[!\[([^\]]*)\]\(([^)\s]+)\)\]\(([^)\s]+)\)|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]*)\]\(([^)\s]+)\)|<(img|source)\b[^>]*?\b(?:src|srcset)="([^"]+)"[^>]*>|<a\b[^>]*?\bhref="([^"]+)"[^>]*>/g;
+const FORMS = /\[!\[([^\]]*)\]\(([^)\s]+)\)\]\(([^)\s]+)\)|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]*)\]\(([^)\s]+)\)/g;
 export function refs(text: string): Ref[] {
   const out: Ref[] = [];
   for (const b of blocks(text.replace(/<!--[\s\S]*?-->/g, (c) => c.replace(/[^\n]/g, ' '))).filter((b) => b.kind !== 'code'))
@@ -43,8 +43,6 @@ export function refs(text: string): Ref[] {
         if (m[3]) out.push({ line, kind: 'image', label: m[1]!, target: m[2]! }, { line, kind: 'link', label: m[1]!, target: m[3] });
         else if (m[5]) out.push({ line, kind: 'image', label: m[4]!, target: m[5] });
         else if (m[7]) out.push({ line, kind: 'link', label: m[6]!, target: m[7] });
-        else if (m[9]) out.push({ line, kind: 'image', label: '', target: m[9].split(/[\s,]/)[0]! });
-        else if (m[10]) out.push({ line, kind: 'link', label: '', target: m[10] });
       }
     });
   return out;
@@ -80,83 +78,6 @@ test('section runs to the next h1/h2; an unclosed fence runs to the end', () => 
 });
 ````
 
-### T2 — SVG serializer
-- **Files:** create `scripts/lib/svg.ts` (C3) and `scripts/tests/svg_test.ts` (C4). **Acceptance:** B1 (glyph x = col × cell width). **Depends on:** none. **Group:** G1.
-- **Failing check:** add C4; `node --test scripts/tests/svg_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/svg.ts`.
-- **Implement:** C3. **Done when:** → `ℹ pass 3`. **Commit:** `B: SVG serializer with each glyph at col × CELL`
-````ts C3 — scripts/lib/svg.ts
-// Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so
-// alignment never depends on the viewer's font metrics (spec B, requirement 1, Images).
-export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = '#1e1f26';
-export type Styled = { text: string; fg: string; bg?: string; bold?: boolean };
-export type Glyph = { row: number; col: number; text: string; span: number };
-const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-export function glyphCells(rows: Styled[][], width: (s: string) => number): Glyph[] {
-  const out: Glyph[] = [];
-  rows.forEach((row, r) => {
-    let col = 0;
-    row.forEach((sp, k) => {
-      for (const { segment } of seg.segment(sp.text)) {
-        const w = width(segment);
-        if (w > 0 && segment.trim()) out.push({ row: r, col, text: segment, span: k });
-        col += w;
-      }
-    });
-  });
-  return out;
-}
-export function toSvg(rows: Styled[][], width: (s: string) => number, title: string): string {
-  const cols = Math.max(1, ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)));
-  const W = cols * CELL + 2 * PAD, H = rows.length * ROW + 2 * PAD + BAR, out: string[] = [];
-  out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`,
-    `<rect width="${W}" height="${H}" rx="10" fill="${BG}"/>`,
-    ...['#ff5f57', '#febc2e', '#28c840'].map((c, i) => `<circle cx="${PAD + 6 + i * 18}" cy="14" r="5" fill="${c}"/>`),
-    `<g transform="translate(${PAD} ${PAD + BAR})" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="${FONT}">`);
-  rows.forEach((row, r) => {
-    let col = 0;
-    for (const sp of row) {
-      const w = width(sp.text);
-      if (sp.bg) out.push(`<rect x="${col * CELL}" y="${r * ROW}" width="${w * CELL}" height="${ROW}" fill="${sp.bg}"/>`);
-      col += w;
-    }
-  });
-  for (const g of glyphCells(rows, width)) {
-    const sp = rows[g.row]![g.span]!;
-    out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}>${esc(g.text)}</text>`);
-  }
-  return [...out, '</g>', '</svg>', ''].join('\n');
-}
-// B1 glyph rule: lists every glyph whose <text> is not at x = col × CELL, y = row × ROW + BASE.
-export function misplaced(svg: string, rows: Styled[][], width: (s: string) => number): string[] {
-  const want = glyphCells(rows, width).map((g) => `${g.col * CELL},${g.row * ROW + BASE},${esc(g.text)}`);
-  const got = [...svg.matchAll(/<text x="(\d+)" y="(\d+)"[^>]*>([^<]*)<\/text>/g)].map((m) => `${m[1]},${m[2]},${m[3]}`);
-  return want.length === got.length ? want.filter((w, i) => w !== got[i]) : [`expected ${want.length} glyphs, found ${got.length}`];
-}
-````
-````ts C4 — scripts/tests/svg_test.ts
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { CELL, glyphCells, misplaced, toSvg } from '../lib/svg.ts';
-// Stand-in for core/width.ts with spec A's table: W/F = 2, Mn/Me and ZWSP = 0, else 1.
-const width = (s: string) => [...s].reduce((n, c) => n + (/[ᄀ-ᅟ⺀-꓏가-힣豈-﫿＀-｠]/.test(c) ? 2 : /[̀-ͯ​]/.test(c) ? 0 : 1), 0);
-const rows = [[{ text: '[中]', fg: '#fff', bg: '#333' }, { text: '─►é​<', fg: '#aaa' }]];
-test('each glyph gets its own cell; wide glyphs take two; combining marks join their base', () =>
-  assert.deepEqual(glyphCells(rows, width).map((g) => [g.col, g.text]),
-    [[0, '['], [1, '中'], [3, ']'], [4, '─'], [5, '►'], [6, 'é'], [7, '<']]));
-test('toSvg places every glyph at col × CELL and sizes pill backgrounds by width', () => {
-  const svg = toSvg(rows, width, 'demo');
-  assert.ok(svg.includes(`<text x="${3 * CELL}" y="14" fill="#fff">]</text>`));
-  assert.ok(svg.includes(`<rect x="0" y="0" width="${4 * CELL}" height="18" fill="#333"/>`));
-  assert.ok(svg.includes('>&lt;</text>'));
-  assert.deepEqual(misplaced(svg, rows, width), []);
-});
-test('misplaced reports a glyph moved off its cell', () => {
-  const bad = toSvg(rows, width, 'demo').replace(`<text x="${CELL}" `, `<text x="${CELL + 1}" `);
-  assert.equal(misplaced(bad, rows, width).length, 1);
-});
-````
-
 ### T3 — Acceptance rules
 - **Files:** create `scripts/lib/doc-rules.ts` (C5) and `scripts/tests/doc-rules_test.ts` (C6). **Acceptance:** B1, B3, B6, and the workflow helpers B2 reuses. **Depends on:** T1. **Group:** G2.
 - **Failing check:** add C6; `node --test scripts/tests/doc-rules_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/doc-rules.ts`.
@@ -175,8 +96,7 @@ const BADGES: [string, RegExp][] = [['CI', /\[!\[CI\]\([^)]*\/actions\/workflows
   ['stars', new RegExp(`\\[!\\[Stars\\]\\([^)]*${SHIELDS}\\/stars\\/D0n9X1n\\/mermaid-tty[^)]*\\)\\]`)]];
 const SECTIONS = ['Install', 'Before and after', 'Supported diagrams', 'Themes', 'Configuration', 'FAQ', 'Development'];
 const FAQ = [/falls? ?back/i, /width|columns/i, /CJK/, /Windows Terminal/, /macOS Terminal/, /iTerm2/, /Ghostty/, /Linux/, /256-colou?r/, /fonts?\b/i, /\/mermaid-tty source/, /\/mermaid-tty diagram/, /\/copy\b/];
-export const supportedTypes = (md: string) =>
-  [...(/<!-- types:start -->([\s\S]*?)<!-- types:end -->/.exec(md)?.[1] ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!);
+export const supportedTypes = (md: string) => [...(section(md, 'Supported diagrams') ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!);
 // B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram list.
 export const NON_DIAGRAM = ['assets/icon.svg'];
 export const visible = (md: string) => blocks(md).filter((b) => b.kind !== 'code').map((b) => b.lines.join('\n')).join('\n\n')
@@ -184,28 +104,47 @@ export const visible = (md: string) => blocks(md).filter((b) => b.kind !== 'code
 export const assetImages = (md: string) => refs(md).filter((r) => r.kind === 'image').map((r) => r.target.replace(/^.*?(?=assets\/)/, '')).filter((p) => p.startsWith('assets/'));
 export const imageErrors = (where: string, md: string, diagrams: string[]) => assetImages(md)
   .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p)).map((p) => `${where}: displays ${p}, which is neither a rendered diagram nor allow-listed`);
-// D15: README and wiki pages use a strict, checkable Markdown subset; anything outside it fails, so no link or image can hide.
-const ATTRS = String.raw`(?:\s+[\w-]+="[^"]*")*\s*`;
-const ALLOWED = new RegExp(String.raw`\[!\[[^\]]*\]\([^)\s]+\)\]\([^)\s]+\)|!\[[^\]]*\]\([^)\s]+\)|\[[^\]]*\]\([^)\s]+\)|<(?:img|source)${ATTRS}\/?>|<a${ATTRS}>|<\/a>|<p align="center">|<\/p>|<\/?picture>|<!-- types:(?:start|end) -->`, 'g');
-const OUTSIDE: [RegExp, string][] = [[/<https?:/i, 'autolink'], [/<!--/, 'HTML comment'], [/<(?:img|source|a|p)\b[^>]*=\s*[^"\s>]/i, 'HTML attribute not double-quoted'],
-  [/<\/?[a-z]/i, 'raw HTML tag outside the allowlist'], [/\]\[|^\s*\[[^\]]*\]:/, 'reference-style link, image or definition'], [/https?:\/\/|www\./i, 'bare URL'],
-  [/[[\]]/, 'bracket outside a link or image (reference or wiki link)']];
-export function subsetErrors(where: string, md: string): string[] {
-  const e: string[] = [];
-  let inList = false;
+// D15b: a grammar small enough that every accepted image is displayed and every link target is known (supersedes D15's HTML and URL forms).
+// README: one HTML block, the hero; images are inline or badges; links go to its two wiki URLs, LICENSE or allowlisted https hosts.
+// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. No comments; the support table sits under ## Supported diagrams.
+export const HERO = /^<p align="center"><img src="assets\/icon\.svg" alt="[^"<>]*" width="\d+"><\/p>$/;
+const SRC = /^assets\/[a-z0-9/_-]+\.svg$/, PAGE = /^[A-Za-z0-9-]+$/, MARKER = /^\s*([-*+]|\d+[.)])\s/;
+const BADGE_HOSTS = ['https://img.shields.io/', 'https://github.com/D0n9X1n/mermaid-tty/actions/'], LINK_HOSTS = ['github.com', 'mermaid.js.org', 'docs.anthropic.com'];
+const TOKEN = /\[!\[[^\]]*\]\(([^)\s]+)\)\]\(([^)\s]+)\)|!\[[^\]]*\]\(([^)\s]+)\)|\[[^\]]*\]\(([^)\s]+)\)/g;
+function linkOk(t: string, readme: boolean): boolean {
+  if (readme ? [`${REPO}/wiki`, `${REPO}/wiki/Home-zh-CN`, 'LICENSE'].includes(t) : PAGE.test(t)) return true;
+  const host = /^https:\/\/([^/]+)/.exec(t)?.[1];
+  return !!host && LINK_HOSTS.includes(host) && !/[%&\\]|\/\/|\/wiki/i.test(t.slice(8));
+}
+export function grammarErrors(where: string, md: string, readme: boolean): string[] {
+  const e: string[] = [], bad = (n: number, what: string) => e.push(`${where}:${n}: ${what} (D15b)`);
+  let html = 0, inList = false;
   for (const b of blocks(md).filter((b) => b.kind !== 'code')) b.lines.forEach((l, k) => {
-    const at = `${where}:${b.line + k}`, t = l.replace(/`[^`]*`/g, ' ');
-    if (k === 0 && /^( {4}|\t)/.test(l) && !inList) e.push(`${at}: indented code block outside the Markdown subset`);
-    if (/^\s*([-*+]|\d+[.)])\s/.test(l)) inList = true; else if (!/^\s/.test(l)) inList = false;
-    if (/\\[[\]()!<>]/.test(t)) e.push(`${at}: backslash escape of link or image syntax outside the Markdown subset`);
-    const hit = OUTSIDE.find(([re]) => re.test(t.replace(ALLOWED, ' ')));
-    if (hit) e.push(`${at}: ${hit[1]} outside the Markdown subset`);
+    const n = b.line + k, marker = MARKER.test(l);
+    if (marker) inList = true; else if (k === 0 && !/^\s/.test(l)) inList = false;
+    if (readme && HERO.test(l)) { if (++html > 1) bad(n, 'a second HTML block'); return; }
+    const t = l.replace(/`[^`]*`/g, ' '), rest = t.replace(TOKEN, ' '), shifted = marker || inList || /^\s/.test(l);
+    if (k === 0 && /^( {4}|\t)/.test(l) && !inList) bad(n, 'indented code block');
+    if (/\\[[\]()!<>]/.test(t)) bad(n, 'backslash escape of link or image syntax');
+    if (/<[a-z/!?]/i.test(t)) bad(n, readme ? 'tag-like < outside code; only the hero HTML is allowed' : 'tag-like < outside code; the wiki allows no HTML');
+    for (const [, bImg, bUrl, img, url] of t.matchAll(TOKEN)) {
+      if (bImg && !readme) bad(n, 'badge link outside the README');
+      else if (bImg && !BADGE_HOSTS.some((h) => bImg.startsWith(h))) bad(n, `badge image host not allowed: ${bImg}`);
+      if (img && !readme) bad(n, 'image in a wiki page; draw it with a mermaid fence');
+      else if (img && !SRC.test(img)) bad(n, `image src must match ^assets/[a-z0-9/_-]+.svg$: ${img}`);
+      if ((bImg || img) && shifted) bad(n, 'image in a list item or indented');
+      const to = bUrl ?? url;
+      if (to && !linkOk(to, readme)) bad(n, to.endsWith('.md') ? `link must omit .md: ${to}` : `link target not allowed: ${to}`);
+    }
+    if (/\]\[|^\s*\[[^\]]*\]:/.test(rest)) bad(n, 'reference-style link, image or definition');
+    else if (/https?:\/\/|www\./i.test(rest)) bad(n, 'bare URL');
+    else if (/[[\]]/.test(rest)) bad(n, 'bracket outside a link or image');
   });
   return e;
 }
 export function readmeErrors(md: string, generated: string[]): string[] {
   const e: string[] = [], hero = visible(md.split(/^## /m)[0]!), faq = section(md, 'FAQ') ?? '', dev = section(md, 'Development') ?? '';
-  if (!assetImages(hero).includes('assets/icon.svg')) e.push('hero: logo <img src="assets/icon.svg"> missing');
+  if (!hero.split('\n').some((l) => HERO.test(l))) e.push('hero: logo <img src="assets/icon.svg"> missing');
   if (!hero.includes(TAGLINE)) e.push('hero: tagline missing');
   for (const [name, re] of BADGES) if (!re.test(hero)) e.push(`hero: ${name} badge missing`);
   if (!blocks(md).some((b) => b.kind === 'code' && b.lines.slice(1, -1).join('\n') === INSTALL.join('\n')))
@@ -221,8 +160,8 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   const drawn = /[\u2500-\u25ff]/.exec(md);
   if (drawn) e.push(`README: hand-drawn diagram glyph ${drawn[0]}; show render-svg output instead`);
   if (CTRL_O.test(md)) e.push('README: claims ctrl+o shows the source; document /mermaid-tty source instead');
-  if (!supportedTypes(md).length) e.push('Supported diagrams: table between <!-- types:start/end --> is empty');
-  e.push(...subsetErrors('README', md));
+  if (!supportedTypes(md).length) e.push('Supported diagrams: the table is empty');
+  e.push(...grammarErrors('README', md, true));
   return e;
 }
 const PIN = /^\s*(-\s+)?uses:\s*[\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d/;
@@ -250,13 +189,13 @@ export function iconErrors(png: Uint8Array): string[] {
 ````ts C6 — scripts/tests/doc-rules_test.ts
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, publishWikiErrors, readmeErrors, subsetErrors, supportedTypes } from '../lib/doc-rules.ts';
+import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, publishWikiErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
 const R = 'https://github.com/D0n9X1n/mermaid-tty', S = 'https://img.shields.io/github', SHA = 'a'.repeat(40), IMG = ['assets/readme/after.svg'];
-const README = `<p align="center"><img src="assets/icon.svg" width="120" alt="logo"></p>\n\n**${TAGLINE}**\n\n` +
+const README = `<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>\n\n**${TAGLINE}**\n\n` +
   `[![CI](${R}/actions/workflows/ci.yml/badge.svg)](${R}/actions/workflows/ci.yml) [![Release](${S}/v/release/D0n9X1n/mermaid-tty)](${R}/releases) ` +
   `[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](${S}/stars/D0n9X1n/mermaid-tty)](${R}/stargazers)\n\n` +
   `## Install\n\n\`\`\`sh\n${INSTALL.join('\n')}\n\`\`\`\n\n## Before and after\n\n![after](${IMG[0]})\n\n## Supported diagrams\n\n` +
-  '<!-- types:start -->\n| Type | Header keywords |\n|---|---|\n| `flowchart` | `flowchart`, `graph` |\n<!-- types:end -->\n\n## Themes\n\n## Configuration\n\n' +
+  '| Type | Header keywords |\n|---|---|\n| `flowchart` | `flowchart`, `graph` |\n\n## Themes\n\n## Configuration\n\n' +
   '## FAQ\n\nIt falls back to the source when no layout fits the width; CJK labels count 2 columns. It runs in Windows Terminal, macOS Terminal, ' +
   'iTerm2, Ghostty and Linux terminals; 256-color terminals get the nearest colors; pick a font with box drawing. Run `/mermaid-tty source` or `/mermaid-tty diagram`; `/copy` copies the source.\n\n' +
   `## Development\n\n\`\`\`sh\n${LOCAL.join('\n')}\n\`\`\`\n\n[English](${R}/wiki) · [简体中文](${R}/wiki/Home-zh-CN)\n`;
@@ -278,7 +217,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, '[简体中文]', '[Chinese]', '简体中文'], [rm, README, IMG[0]!, 'assets/rogue.svg', 'displays assets/rogue.svg, which is neither'],
   [rm, README, '![after](assets/readme/after.svg)', '<!-- ![after](assets/readme/after.svg) -->', 'not shown in README'],
   [rm, README, '![after](', '\\![after](', 'backslash escape'], [rm, README, '![after](assets/readme/after.svg)', '\n    ![after](assets/readme/after.svg)', 'indented code block'],
-  [rm, README, '![after](assets/readme/after.svg)', "<img src='assets/rogue.svg'>", 'not double-quoted'], [rm, README, '![after](assets/readme/after.svg)', '![x][ref]\n\n[ref]: assets/rogue.svg', 'reference-style'],
+  [rm, README, '![after](assets/readme/after.svg)', "<img src='assets/rogue.svg'>", 'tag-like'], [rm, README, '![after](assets/readme/after.svg)', '![x][ref]\n\n[ref]: assets/rogue.svg', 'reference-style'],
   [rm, README, '| `flowchart` |', '| flowchart |', 'table'], [rm, README, 'node scripts/e2e/run.ts', 'npm test', 'e2e/run.ts'],
   [rm, README, '## Themes', '──► A\n\n## Themes', 'hand-drawn'],
   [rm, README, '; `/copy` copies', '; it copies', '/copy'], [rm, README, '## Themes', 'ctrl+o shows the source.\n\n## Themes', 'ctrl+o'],
@@ -288,11 +227,22 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
 ];
 for (const [rule, base, from, to, want] of cases)
   test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`));
-test('Markdown subset: allowlisted forms pass; every other form fails', () => {
-  assert.deepEqual(subsetErrors('x.md', '<p align="center"><img src="a.svg" width="9" alt="a"></p>\n\n[![b](c.svg)](d) ![e](f.svg) [g](h) `<i>`\n\n- a\n\n    b\n\n<!-- types:start -->\n| a |\n<!-- types:end -->\n\n```sh\n<b>\n```\n'), []);
-  for (const [md, want] of [['<https://x.dev>', 'autolink'], ['see https://x.dev', 'bare URL'], ['![a][r]', 'reference-style'], ['[r]: x', 'reference-style'],
-    ['\\[a](b)', 'backslash escape'], ['# h\n\n    x', 'indented code'], ["<img src='a'>", 'not double-quoted'], ['<a href=b>', 'not double-quoted'],
-    ['<div align="center">', 'raw HTML'], ['<!-- c -->', 'HTML comment'], ['[[Page]]', 'bracket outside']]) assert.ok(subsetErrors('x.md', md).some((e) => e.includes(want)), want);
+test('D15b grammar: only the hero is HTML, every accepted image is displayed, every link target is known', () => {
+  const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>', G = (md: string, readme = true) => grammarErrors('x.md', md, readme);
+  assert.deepEqual(G(H + '\n\n[![b](https://img.shields.io/b)](https://github.com/D0n9X1n/mermaid-tty/releases) [w](https://github.com/D0n9X1n/mermaid-tty/wiki) [l](LICENSE)\n\n| ![d](assets/readme/a.svg) |\n\nx `<b>` y\n\n```sh\n<b> [[x]]\n```\n'), []);
+  assert.deepEqual(G('[Usage](Usage) [m](https://mermaid.js.org/syntax/flowchart.html)\n\n- a\n\n  b', false), []);
+  for (const [md, want, readme] of [
+    ['<a href="//github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN">x</a>', 'tag-like', false], ['[x](http://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN)', 'link target not allowed', false],
+    ['[x](https://github&#46;com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN)', 'link target not allowed', false], ['[x](//github.com/a)', 'link target not allowed', false],
+    ['<a data-href="Home" href="Usage-zh-CN">x</a>', 'tag-like', false], ['<source srcset="assets/readme/after.svg">', 'tag-like', true],
+    ['<img data-src="x" src="assets/icon.svg">', 'tag-like', true], ['<picture><source srcset="x assets/rogue.svg 2x"></picture>', 'tag-like', true],
+    ['<img src="assets/icon.svg" srcset="assets/rogue.svg 2x">', 'tag-like', true], ['[<img src="assets/rogue.svg">](Home)', 'tag-like', false],
+    ['- item\n\n      ![x](assets/readme/after.svg)', 'list item or indented', true], ['![x](assets/readme/after.svg)', 'image in a wiki page', false],
+    ['![x](https://example.com/a.svg)', 'src must match', true], ['[![b](https://evil.dev/b.svg)](https://github.com/D0n9X1n/mermaid-tty)', 'badge image host', true],
+    ['[x](https://github.com/D0n9X1n/mermaid-tty/blob/a%2Fb)', 'link target not allowed', true], ['[x](Home.md)', 'omit .md', false],
+    [H + '\n\n' + H, 'second HTML block', true], ['see https://x.dev', 'bare URL', false], ['![a][r]', 'reference-style', true], ['[r]: x', 'reference-style', false],
+    ['\\![a](assets/readme/after.svg)', 'backslash escape', true], ['# h\n\n    x', 'indented code', false], ['<!-- c -->', 'tag-like', true], ['[[Page]]', 'bracket outside', false]] as const)
+    assert.ok(G(md, readme).some((e) => e.includes(want)), want);
 });
 test('wiki images: rendered diagrams or allow-listed only', () => {
   assert.deepEqual(imageErrors('wiki/Home.md', '![d](https://raw.githubusercontent.com/D0n9X1n/mermaid-tty/main/assets/readme/after.svg) <img src="../assets/icon.svg">', IMG), []);
@@ -323,21 +273,18 @@ test('icon rule reads the IHDR size', () => {
 ### T5 — Wiki checker
 - **Files:** create `scripts/check-wiki.ts` (C8); append the rest of C7 to `scripts/test-wiki-publish.sh`. **Acceptance:** B2. **Depends on:** T1, T3, T4. **Group:** G3.
 - **Failing check:** append the rest of C7; `bash scripts/test-wiki-publish.sh` → `publisher ok`, then FAIL `wiki publish test: checker is missing`.
-- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 21 mutations fail with their diagnostics), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
+- **Implement:** C8. **Done when:** → `wiki publish test: ok` (a valid fixture wiki passes; 22 mutations fail with their diagnostics), and `node scripts/check-wiki.ts` in the repo lists `wiki/: directory missing` and the 10 required pages until T13–T14. **Commit:** `B: wiki checker with pair, opener and per-unit language rules`
 ````ts C8 — scripts/check-wiki.ts
 // B2 wiki rules, ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity, links) plus
-// B2's exact openers, same-wiki absolute links counted as pages, per-unit language rules with no exemption, and the Markdown subset (D15). Exit 1 lists every failure.
+// B2's exact openers, page-name links only, per-unit language rules with no exemption, and the wiki grammar (D15b). Exit 1 lists every failure.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CTRL_O, LOCAL, subsetErrors } from './lib/doc-rules.ts';
+import { CTRL_O, LOCAL, grammarErrors } from './lib/doc-rules.ts';
 import { CJK, blocks, headings, links, prose } from './lib/markdown.ts';
 const ZH = '-zh-CN', REQUIRED = ['Home', 'Usage', 'Configuration-and-Themes', 'Architecture', 'Development-and-Release'];
 const dir = fileURLToPath(new URL('../wiki/', import.meta.url)), errors: string[] = [], pages = new Map<string, string>();
 const twin = (p: string) => (p.endsWith(ZH) ? p.slice(0, -ZH.length) : p + ZH);
-const local = (t: string) => !/^[a-z][a-z0-9+.-]*:|^#|^\/\//i.test(t);
-const WIKI = /^https:\/\/github\.com\/D0n9X1n\/mermaid-tty\/wiki\/?([^?#]*)/i;
-const pageOf = (t: string) => { const m = WIKI.exec(t); return m ? m[1] || 'Home' : local(t) ? t.split('#')[0]! : null; };
 const units = (lines: string[]) => lines.reduce<string[]>((out, l) =>
   (/^\s*([-*+]|\d+[.)])\s|^\s*\|/.test(l) || !out.length ? out.push(l) : (out[out.length - 1] += ` ${l}`), out), []);
 let names: string[] = [];
@@ -355,18 +302,16 @@ for (const p of ['Development-and-Release', 'Development-and-Release-zh-CN']) fo
 for (const [p, t] of pages) if (CTRL_O.test(t)) errors.push(`wiki/${p}.md: claims ctrl+o shows the source`);
 for (const [page, text] of pages) {
   const f = `wiki/${page}.md`, zh = page.endsWith(ZH);
-  errors.push(...subsetErrors(f, text));
+  errors.push(...grammarErrors(f, text, false));
   if (!pages.has(twin(page))) { errors.push(`${f}: missing language counterpart ${twin(page)}`); continue; }
   const bs = blocks(text), opener = bs[0]?.kind === 'heading' && bs[0].lines[0]!.startsWith('# ') ? bs[1] : bs[0];
   const want = zh ? `[英文版](${twin(page)})` : `[Chinese (Simplified)](${twin(page)})`;
   if (opener?.kind !== 'para' || opener.lines.join('\n').trim() !== want) errors.push(`${f}: must open with exactly ${want}`);
   let crossing = 0, chinese = 0;
   for (const l of links(text)) {
-    const t = pageOf(l.target);
-    if (t === null) continue;
-    if (t.endsWith('.md')) errors.push(`${f}:${l.line}: link must omit .md: ${l.target}`);
-    else if (!pages.has(t)) errors.push(`${f}:${l.line}: link target does not exist: ${l.target}`);
-    else if (t.endsWith(ZH) !== zh) crossing++;
+    if (!/^[A-Za-z0-9-]+$/.test(l.target)) continue; // any other target is checked by grammarErrors (D15b)
+    if (!pages.has(l.target)) errors.push(`${f}:${l.line}: link target does not exist: ${l.target}`);
+    else if (l.target.endsWith(ZH) !== zh) crossing++;
   }
   if (crossing > 1) errors.push(`${f}: ${crossing} cross-language links; only the opening twin link is allowed`);
   for (const b of bs) {
@@ -429,10 +374,11 @@ rejects dev-commands 'does not show node scripts/e2e/run.ts' edit wiki/Developme
 rejects usage-source 'wiki/Usage.md: does not cover /copy' edit wiki/Usage.md '; `/copy` copies the source' ''
 rejects ctrl-o-claim 'claims ctrl+o shows the source' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home). ctrl+o shows the source.'
 rejects old-opener 'untranslated, no CJK: [English](Usage)' edit wiki/Usage-zh-CN.md '[英文版](Usage)' '[English](Usage)'
-rejects absolute-cross-link 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [Chinese page](https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN).'
-rejects autolink 'autolink outside the Markdown subset' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN>.'
+rejects absolute-cross-link 'link target not allowed' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [Chinese page](https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN).'
+rejects autolink 'tag-like' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <https://github.com/D0n9X1n/mermaid-tty/wiki/Usage-zh-CN>.'
 rejects wiki-link 'bracket outside a link or image' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [[Usage-zh-CN]].'
 rejects badge-cross-link 'cross-language links' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and [![zh](../assets/icon.svg)](Usage-zh-CN).'
+rejects html-anchor 'tag-like' edit wiki/Usage.md 'See [Home](Home).' 'See [Home](Home) and <a href="Usage-zh-CN">x</a>.'
 printf 'wiki publish test: ok\n'
 ````
 
@@ -465,7 +411,7 @@ const md = read('README.md'), diagrams = IMAGES.map((i) => i.file);
 const pages = existsSync(at('wiki')) ? readdirSync(at('wiki')).filter((f) => f.endsWith('.md')).map((f) => `wiki/${f}`) : [];
 const errors = [...readmeErrors(md, diagrams), ...publishWikiErrors(read('.github/workflows/publish-wiki.yml')),
   ...pages.flatMap((p) => imageErrors(p, read(p), diagrams))];
-for (const p of new Set([md, ...pages.map((p) => read(p))].flatMap((t) => assetImages(t)))) if (!existsSync(at(p))) errors.push(`${p} is displayed but does not exist`);
+for (const p of new Set(['assets/icon.svg', ...[md, ...pages.map((p) => read(p))].flatMap((t) => assetImages(t))])) if (!existsSync(at(p))) errors.push(`${p} is displayed but does not exist`);
 errors.push(...(existsSync(at('.claude-plugin/icon.png')) ? iconErrors(readFileSync(at('.claude-plugin/icon.png'))) : ['icon.png: missing']));
 const listed = new Set(diagrams);
 for (const f of existsSync(at('assets/readme')) ? readdirSync(at('assets/readme')) : [])

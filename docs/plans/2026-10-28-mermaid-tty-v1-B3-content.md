@@ -1,8 +1,85 @@
-# mermaid-tty v1 B3: icon, release checks, install, content and LF (T7, T9–T14, T16)
+# mermaid-tty v1 B3: SVG serializer, icon, release checks, install, content and LF (T2, T7, T9–T14, T16)
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T2 (`svg.ts`), T5 (`check-wiki.ts`) and T6 (`check-docs.ts`); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. T7 needs `rsvg-convert` and `sips` on the dev Mac. **Unblocks:** B2's T15.
+**Needs:** B1's T5 (`check-wiki.ts`) and T6 (`check-docs.ts`); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. T7 needs `rsvg-convert` and `sips` on the dev Mac. **Unblocks:** B2's T15.
+
+### T2 — SVG serializer
+- **Files:** create `scripts/lib/svg.ts` (C3) and `scripts/tests/svg_test.ts` (C4). **Acceptance:** B1 (glyph x = col × cell width). **Depends on:** none. **Group:** G1.
+- **Failing check:** add C4; `node --test scripts/tests/svg_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/svg.ts`.
+- **Implement:** C3. **Done when:** → `ℹ pass 3`. **Commit:** `B: SVG serializer with each glyph at col × CELL`
+````ts C3 — scripts/lib/svg.ts
+// Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so
+// alignment never depends on the viewer's font metrics (spec B, requirement 1, Images).
+export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = '#1e1f26';
+export type Styled = { text: string; fg: string; bg?: string; bold?: boolean };
+export type Glyph = { row: number; col: number; text: string; span: number };
+const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export function glyphCells(rows: Styled[][], width: (s: string) => number): Glyph[] {
+  const out: Glyph[] = [];
+  rows.forEach((row, r) => {
+    let col = 0;
+    row.forEach((sp, k) => {
+      for (const { segment } of seg.segment(sp.text)) {
+        const w = width(segment);
+        if (w > 0 && segment.trim()) out.push({ row: r, col, text: segment, span: k });
+        col += w;
+      }
+    });
+  });
+  return out;
+}
+export function toSvg(rows: Styled[][], width: (s: string) => number, title: string): string {
+  const cols = Math.max(1, ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)));
+  const W = cols * CELL + 2 * PAD, H = rows.length * ROW + 2 * PAD + BAR, out: string[] = [];
+  out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`,
+    `<rect width="${W}" height="${H}" rx="10" fill="${BG}"/>`,
+    ...['#ff5f57', '#febc2e', '#28c840'].map((c, i) => `<circle cx="${PAD + 6 + i * 18}" cy="14" r="5" fill="${c}"/>`),
+    `<g transform="translate(${PAD} ${PAD + BAR})" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="${FONT}">`);
+  rows.forEach((row, r) => {
+    let col = 0;
+    for (const sp of row) {
+      const w = width(sp.text);
+      if (sp.bg) out.push(`<rect x="${col * CELL}" y="${r * ROW}" width="${w * CELL}" height="${ROW}" fill="${sp.bg}"/>`);
+      col += w;
+    }
+  });
+  for (const g of glyphCells(rows, width)) {
+    const sp = rows[g.row]![g.span]!;
+    out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}>${esc(g.text)}</text>`);
+  }
+  return [...out, '</g>', '</svg>', ''].join('\n');
+}
+// B1 glyph rule: lists every glyph whose <text> is not at x = col × CELL, y = row × ROW + BASE.
+export function misplaced(svg: string, rows: Styled[][], width: (s: string) => number): string[] {
+  const want = glyphCells(rows, width).map((g) => `${g.col * CELL},${g.row * ROW + BASE},${esc(g.text)}`);
+  const got = [...svg.matchAll(/<text x="(\d+)" y="(\d+)"[^>]*>([^<]*)<\/text>/g)].map((m) => `${m[1]},${m[2]},${m[3]}`);
+  return want.length === got.length ? want.filter((w, i) => w !== got[i]) : [`expected ${want.length} glyphs, found ${got.length}`];
+}
+````
+````ts C4 — scripts/tests/svg_test.ts
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { CELL, glyphCells, misplaced, toSvg } from '../lib/svg.ts';
+// Stand-in for core/width.ts with spec A's table: W/F = 2, Mn/Me and ZWSP = 0, else 1.
+const width = (s: string) => [...s].reduce((n, c) => n + (/[ᄀ-ᅟ⺀-꓏가-힣豈-﫿＀-｠]/.test(c) ? 2 : /[̀-ͯ​]/.test(c) ? 0 : 1), 0);
+const rows = [[{ text: '[中]', fg: '#fff', bg: '#333' }, { text: '─►é​<', fg: '#aaa' }]];
+test('each glyph gets its own cell; wide glyphs take two; combining marks join their base', () =>
+  assert.deepEqual(glyphCells(rows, width).map((g) => [g.col, g.text]),
+    [[0, '['], [1, '中'], [3, ']'], [4, '─'], [5, '►'], [6, 'é'], [7, '<']]));
+test('toSvg places every glyph at col × CELL and sizes pill backgrounds by width', () => {
+  const svg = toSvg(rows, width, 'demo');
+  assert.ok(svg.includes(`<text x="${3 * CELL}" y="14" fill="#fff">]</text>`));
+  assert.ok(svg.includes(`<rect x="0" y="0" width="${4 * CELL}" height="18" fill="#333"/>`));
+  assert.ok(svg.includes('>&lt;</text>'));
+  assert.deepEqual(misplaced(svg, rows, width), []);
+});
+test('misplaced reports a glyph moved off its cell', () => {
+  const bad = toSvg(rows, width, 'demo').replace(`<text x="${CELL}" `, `<text x="${CELL + 1}" `);
+  assert.equal(misplaced(bad, rows, width).length, 1);
+});
+````
 
 ### T7 — Plugin icon
 - **Files:** create `assets/icon.svg` (P1), `scripts/make-icon.sh` (P2) and `.claude-plugin/icon.png`. **Acceptance:** B6. **Depends on:** T6. **Group:** G4.
@@ -97,7 +174,7 @@ printf 'local install: ok (mermaid-tty %s)\n' "$version"
 ````
 
 ### T11 — README images from core
-- **Files:** create `scripts/lib/render-image.ts` (P8), `scripts/render-svg.ts` (P9), `scripts/tests/render-image_test.ts` (P10), `assets/readme/src/*.mmd` (P11) and the 10 `assets/readme/*.svg`; add C10's `// T11` lines to `scripts/check-docs.ts`. **Acceptance:** B1 (images and glyph cells). **Depends on:** T2, T6. **Group:** G6. **Waits on A:** `core/render.ts`, `core/themes.ts`, `core/width.ts` (D3).
+- **Files:** create `scripts/lib/render-image.ts` (P8), `scripts/render-svg.ts` (P9), `scripts/tests/render-image_test.ts` (P10), `assets/readme/src/*.mmd` (P11) and the 10 `assets/readme/*.svg`; add C10's `// T11` lines to `scripts/check-docs.ts`. **Acceptance:** B1 (images and glyph cells). **Depends on:** T2, T6. **Group:** G6. **Waits on A:** `core/render.ts` and `core/width.ts`, confirmed at `c3a6b26`; spans arrive with resolved colors, so nothing reads `core/themes.ts` (D3).
 - **Failing check:** add P10; `node --test scripts/tests/render-image_test.ts` → FAIL `ERR_MODULE_NOT_FOUND … scripts/lib/render-image.ts`.
 - **Implement:** P8, P9, P11 and C10's `// T11` lines (the `width` import after the `node:url` import, the `renderImage` and `misplaced` imports after the `images.ts` import, the block after the `icon.png` line); `node scripts/render-svg.ts --readme` → `render-svg: wrote 10 images`.
 - **Done when:** the test → `ℹ pass 2`; `node scripts/check-docs.ts 2>&1 | grep -E 'stale|off its cell|fell back|manifest'` prints nothing. If core falls back for a source, change the source or its width in `images.ts`; never edit an SVG by hand (D4). **Commit:** `B: README images rendered from core`
@@ -106,8 +183,7 @@ printf 'local install: ok (mermaid-tty %s)\n' "$version"
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderMermaid } from '../../core/render.ts';
-import { DEFAULT, PALETTES } from '../../core/themes.ts';
+import { type Span, renderMermaid } from '../../core/render.ts';
 import { width } from '../../core/width.ts';
 import { type Image } from './images.ts';
 import { type Styled, toSvg } from './svg.ts';
@@ -121,15 +197,15 @@ const DARK: Record<string, string> = { claude: '#d77757', permission: '#b1b9f9',
   yellow_FOR_SUBAGENTS_ONLY: '#ca8a04', purple_FOR_SUBAGENTS_ONLY: '#827dbd', orange_FOR_SUBAGENTS_ONLY: '#d97757',
   pink_FOR_SUBAGENTS_ONLY: '#c46686', cyan_FOR_SUBAGENTS_ONLY: '#0891b2' };
 const hex = (c: string) => { const v = c.startsWith('#') ? c : DARK[c]; if (!v) throw new Error(`no reference color for theme key ${c}`); return v; };
-export function roleStyle(role: string, theme: string): Omit<Styled, 'text'> {
-  const c = (theme === 'default' ? DEFAULT : PALETTES[theme as keyof typeof PALETTES])?.[role];
-  if (!c) throw new Error(`theme ${theme} has no color for role ${role}`);
-  return { fg: hex(c.fg), ...(c.bg ? { bg: hex(c.bg) } : {}), ...(c.bold ? { bold: true } : {}) };
+// Plan A's spans carry resolved colors (a CC ThemeKey or #rrggbb; none under mono; dimColor for mono notes); keys resolve through DARK (D2).
+export function spanStyle(sp: Span): Omit<Styled, 'text'> {
+  const fg = sp.dimColor ? DARK.inactive! : sp.color ? hex(sp.color) : DARK.text!;
+  return { fg, ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}), ...(sp.bold ? { bold: true } : {}) };
 }
 export function styledRows(source: string, columns: number, theme: string, raw = false): Styled[][] | null {
   if (raw) return source.trimEnd().split(/\r?\n/).map((text) => [{ text, fg: DARK.text! }]);
   const rows = renderMermaid(source, theme === 'default' ? { columns } : { columns, theme });
-  return rows && rows.map((row) => row.map((sp) => ({ text: sp.text, ...roleStyle(sp.role, theme) })));
+  return rows && rows.map((row) => row.map((sp) => ({ text: sp.text, ...spanStyle(sp) })));
 }
 export function renderImage(img: Image): { svg: string; rows: Styled[][] } {
   const rows = styledRows(readFileSync(join(ROOT, img.source), 'utf8'), img.columns, img.theme, img.raw);
@@ -158,15 +234,13 @@ if (first === '--readme') {
 ````ts P10 — scripts/tests/render-image_test.ts
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT } from '../../core/themes.ts';
 import { IMAGES, THEMES } from '../lib/images.ts';
-import { renderImage, roleStyle } from '../lib/render-image.ts';
+import { renderImage, styledRows } from '../lib/render-image.ts';
 const HEX = /^#[0-9a-f]{6}$/i;
-test('every role resolves to hex colors under every theme', () => {
-  for (const theme of THEMES) for (const role of Object.keys(DEFAULT)) {
-    const s = roleStyle(role, theme);
-    assert.match(s.fg, HEX, `${theme}/${role}`);
-    if (s.bg) assert.match(s.bg, HEX, `${theme}/${role} bg`);
+test('every span resolves to hex colors under every theme', () => {
+  for (const theme of THEMES) for (const row of styledRows('flowchart TD\n  A[a] --> B[b]', 60, theme)!) for (const s of row) {
+    assert.match(s.fg, HEX, `${theme} fg`);
+    if (s.bg) assert.match(s.bg, HEX, `${theme} bg`);
   }
 });
 test('every README image renders through core without falling back', () => {
@@ -219,10 +293,10 @@ for (const img of IMAGES) {
 ### T12 — README
 - **Files:** modify `README.md` (P12). **Acceptance:** B1; the FAQ's platforms entry. **Depends on:** T7, T8, T11, T17. **Group:** G7. **Waits on C:** one support-table row per `ENABLED` id, with its header keywords. **Waits on A:** `plugin.json` `userConfig.theme` values for the Configuration row, and `check.sh`'s header.
 - **Failing check:** `node scripts/check-docs.ts` → `hero:`, `section missing:`, `FAQ:`, `Development:` and wiki-link lines.
-- **Implement:** P12 (in the Markdown subset, D15), then fit the table and the Configuration row. The FAQ documents `/mermaid-tty source`, `/mermaid-tty diagram`, bare `/mermaid-tty` and `/copy`, and makes no ctrl+o claim (D12).
+- **Implement:** P12 (in the README grammar, D15b: the hero is its only HTML), then fit the table and the Configuration row. The FAQ documents `/mermaid-tty source`, `/mermaid-tty diagram`, bare `/mermaid-tty` and `/copy`, and makes no ctrl+o claim (D12).
 - **Done when:** → `check-docs: ok (README, 10 images, 4 workflows, check.sh, icon)`. Beauty review at R3. **Commit:** `B: README`
 ````markdown P12 — README.md
-<p align="center"><img src="assets/icon.svg" width="120" height="120" alt="mermaid-tty logo"></p>
+<p align="center"><img src="assets/icon.svg" alt="mermaid-tty logo" width="120"></p>
 
 # mermaid-tty
 
@@ -254,12 +328,10 @@ Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows.
 
 ## Supported diagrams
 
-<!-- types:start -->
 | Type | Header keywords |
 |---|---|
 | `flowchart` | `flowchart`, `graph` |
 | `sequence` | `sequenceDiagram` |
-<!-- types:end -->
 
 Any other diagram keeps Claude Code's own drawing.
 
@@ -329,13 +401,13 @@ More in the [English](https://github.com/D0n9X1n/mermaid-tty/wiki) and [简体�
 | Architecture | Architecture / 架构 | Pipeline / 流水线; Modules / 模块; Validation and fallback / 校验与回退; Width / 宽度; Hook and cache / 钩子与缓存 | a localized Mermaid flowchart; the `core/` files at HEAD; the validator's invariants; the glyph allow-list (no `Emoji` glyphs; `►`/`◄`); the 64-entry LRU |
 | Development-and-Release | Development and Release / 开发与发布 | Repository / 仓库; Local checks / 本地检查; CI / 持续集成; Images and icon / 图片与图标; Wiki / 百科; Release / 发布 | the five `LOCAL` commands in one `sh` block; `check` and `e2e` on three OSes; the gallery; the scheduled A9 run on each new Claude Code version; `shell: bash` and `set -euo pipefail`; `render-svg.ts --readme` and `make-icon.sh`; `wiki/` is the only source, and edits to the GitHub wiki are overwritten; R1–R8 |
 
-- **Markdown subset (D15):** pages use only inline links and images, badge links, fenced code, tables, headings, lists and the allowlisted HTML; `check-wiki.ts` rejects anything else.
+- **Wiki grammar (D15b):** no HTML and no images (draw diagrams with mermaid fences); links go to page names or allowlisted `https://` hosts; `check-wiki.ts` rejects anything else.
 - **Done when:** `node scripts/check-wiki.ts` lists only five `missing language counterpart …-zh-CN` lines and five `…-zh-CN.md: required page missing` lines. **Commit:** `B: English wiki`
 
 ### T14 — Chinese wiki
 - **Files:** create the five `wiki/*-zh-CN.md`. **Acceptance:** B2. **Depends on:** T13. **Group:** G5.
 - **Failing check:** T13's ten lines.
-- **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, no paragraph is exempt from the language rules, and the page stays in the Markdown subset (D15); every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
+- **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, no paragraph is exempt from the language rules, and the page stays in the wiki grammar (D15b); every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
 - **Done when:** `node scripts/check-wiki.ts` → `check-wiki: ok (10 pages)`. Translation review at R3. **Commit:** `B: Chinese wiki`
 
 ### T16 — LF on every OS
