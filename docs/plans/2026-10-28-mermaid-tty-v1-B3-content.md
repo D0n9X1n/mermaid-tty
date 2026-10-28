@@ -1,8 +1,71 @@
-# mermaid-tty v1 B3: content (T11–T14)
+# mermaid-tty v1 B3: release checks, install, content and LF (T9–T14, T16)
 
 Part of [plan B](2026-10-28-mermaid-tty-v1-B-docs-release.md), which holds the design check, component map, traceability, runbook and reconciliation. Each task adds its failing check, then the code under it, then runs its done-when command. The code ran on 2026-10-28 in a scratch tree against stub `core/` modules. A **Waits on A** interface is an assumption (D3): confirm it against plan A. Commits: one per task on `feat/v1`, each ending with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 
-**Needs:** B1's T2 (`svg.ts`), T5 (`check-wiki.ts`), T6 (`check-docs.ts`) and T7 (icon); T12 also needs B2's T8 and T17. **Unblocks:** B2's T15.
+**Needs:** B1's T2 (`svg.ts`), T5 (`check-wiki.ts`), T6 (`check-docs.ts`) and T7 (icon); from B2, T9 needs T8, T12 needs T8 and T17, and T16 needs T15. **Unblocks:** B2's T15.
+
+### T9 — Release checks and notes
+- **Files:** create `scripts/check-release.ts` (P5) and `docs/release-notes/v1.0.0.md` (P6). **Acceptance:** B5. **Depends on:** T8. **Group:** G5. **Waits on A:** `plugin.json` version `1.0.0`.
+- **Failing check:** `node scripts/check-release.ts tag v1.0.0` → FAIL `Cannot find module …/scripts/check-release.ts`.
+- **Implement:** P5, P6 (hand-written; they name `/mermaid-tty source`, `/mermaid-tty diagram` and `/copy`, and make no ctrl+o claim, per D12).
+- **Done when:** `node scripts/check-release.ts tag v1.0.0 && node scripts/check-release.ts notes docs/release-notes/v1.0.0.md` → `check-release: tag ok (1.0.0)` and `check-release: notes ok (1.0.0)`; `node scripts/check-release.ts tag v1.0.1` exits 1 with `tag v1.0.1 does not match plugin.json version 1.0.0`. **Commit:** `B: release tag and notes checks; v1.0.0 notes`
+````ts P5 — scripts/check-release.ts
+// B5 release checks: `tag vX.Y.Z` must equal plugin.json's version; `notes FILE|-` must hold both install commands.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { notesErrors, tagErrors } from './lib/ci-rules.ts';
+const root = fileURLToPath(new URL('..', import.meta.url)), [mode, arg = ''] = process.argv.slice(2);
+const version = JSON.parse(readFileSync(join(root, '.claude-plugin/plugin.json'), 'utf8')).version as string;
+const errors = mode === 'tag' ? tagErrors(arg, version) : mode === 'notes' ? notesErrors(readFileSync(arg === '-' ? 0 : arg, 'utf8'))
+  : ['usage: node scripts/check-release.ts tag vX.Y.Z | notes FILE|-'];
+for (const e of errors) console.error(`check-release: ${e}`);
+if (errors.length) process.exit(1);
+console.log(`check-release: ${mode} ok (${version})`);
+````
+````markdown P6 — docs/release-notes/v1.0.0.md
+# mermaid-tty v1.0.0
+
+The first release. In Claude Code, each closed mermaid code fence in a reply is drawn as a colored, flat, box-drawing diagram sized to your terminal, on macOS, Linux and Windows. The transcript keeps the source.
+
+## Install
+
+```sh
+claude plugin marketplace add D0n9X1n/mermaid-tty
+claude plugin install mermaid-tty@mermaid-tty
+```
+
+Needs Claude Code 2.1.287 or later.
+
+## What's in it
+
+- Flowcharts with subgraphs, sequence diagrams, and every type in the README's support table.
+- Exact widths for CJK labels. A diagram that can't be drawn falls back to its source.
+- Colors follow your Claude Code theme, or pick nord, dracula, gruvbox, solarized or mono.
+- `/mermaid-tty source` shows every diagram as its Mermaid source, and `/mermaid-tty diagram` draws them again; `/copy` copies the exact source.
+````
+
+### T10 — Local-marketplace install on every PR
+- **Files:** create `scripts/test-local-install.sh` (P7). **Acceptance:** B5 (every PR). **Depends on:** none. **Group:** G1. **Waits on A:** `.claude-plugin/plugin.json` and `marketplace.json` (`source: "./"`).
+- **Failing check:** `bash scripts/test-local-install.sh` → FAIL `No such file or directory`.
+- **Implement:** P7. **Done when:** → `local install: ok (mermaid-tty 1.0.0)`; it writes only to a throwaway `CLAUDE_CONFIG_DIR` (probed offline). **Commit:** `B: install from the local marketplace on every PR`
+````bash P7 — scripts/test-local-install.sh
+#!/usr/bin/env bash
+# B5, every PR: install the plugin from this checkout's marketplace into a throwaway config. Offline; no account.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+config="$(mktemp -d)"
+trap 'rm -rf "$config"' EXIT
+if command -v cygpath >/dev/null 2>&1; then config="$(cygpath -w "$config")"; fi # Git Bash: give claude.exe a Windows path
+export CLAUDE_CONFIG_DIR="$config"
+version="$(node -p 'require("./.claude-plugin/plugin.json").version')"
+claude plugin marketplace add ./
+claude plugin install mermaid-tty@mermaid-tty
+list="$(claude plugin list)"
+grep -Fq 'mermaid-tty@mermaid-tty' <<<"$list" || { printf '%s\n' "$list" >&2; printf 'local install: mermaid-tty is not installed\n' >&2; exit 1; }
+grep -Fq "Version: $version" <<<"$list" || { printf 'local install: installed version is not %s\n' "$version" >&2; exit 1; }
+printf 'local install: ok (mermaid-tty %s)\n' "$version"
+````
 
 ### T11 — README images from core
 - **Files:** create `scripts/lib/render-image.ts` (P8), `scripts/render-svg.ts` (P9), `scripts/tests/render-image_test.ts` (P10), `assets/readme/src/*.mmd` (P11) and the 10 `assets/readme/*.svg`; add C10's `// T11` lines to `scripts/check-docs.ts`. **Acceptance:** B1 (images and glyph cells). **Depends on:** T2, T6. **Group:** G6. **Waits on A:** `core/render.ts`, `core/themes.ts`, `core/width.ts` (D3).
@@ -230,7 +293,7 @@ More in the [English](https://github.com/D0n9X1n/mermaid-tty/wiki) and [简体�
 ### T13 — English wiki
 - **Files:** create `wiki/{Home,Usage,Configuration-and-Themes,Architecture,Development-and-Release}.md`. **Acceptance:** B2; Usage covers three OSes. **Depends on:** T5. **Group:** G4. **Waits on A:** facts, checked against the code at HEAD.
 - **Failing check:** `node scripts/check-wiki.ts` → `wiki/: directory missing` and the 10 required pages.
-- **Implement:** each page opens with `# Title`, a blank line and `[简体中文](<Page>-zh-CN)`, then these `##` sections:
+- **Implement:** each page opens with `# Title`, a blank line and `[Chinese (Simplified)](<Page>-zh-CN)`, then these `##` sections:
 
 | Page | EN / zh-CN title | `##` sections, EN / zh-CN | Must state |
 |---|---|---|---|
@@ -245,5 +308,15 @@ More in the [English](https://github.com/D0n9X1n/mermaid-tty/wiki) and [简体�
 ### T14 — Chinese wiki
 - **Files:** create the five `wiki/*-zh-CN.md`. **Acceptance:** B2. **Depends on:** T13. **Group:** G5.
 - **Failing check:** T13's ten lines.
-- **Implement:** the same heading levels in the same order; each page opens with `[English](<Page>)`; every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
+- **Implement:** the same heading levels in the same order; each page opens with `[英文版](<Page>)`, and no paragraph is exempt from the language rules; every paragraph, list item and table row contains Chinese, with OS, product and command names kept in Latin inside Chinese sentences; Mermaid labels are localized; Usage names Windows, macOS and Linux and the source-view commands; Development shows the five commands.
 - **Done when:** `node scripts/check-wiki.ts` → `check-wiki: ok (10 pages)`. Translation review at R3. **Commit:** `B: Chinese wiki`
+
+### T16 — LF on every OS
+- **Files:** modify `.gitattributes`, only if a check prints anything. **Acceptance:** A8 platforms (B's files), B4. **Depends on:** T15. **Group:** G9.
+- **Failing check** (prints nothing when everything is right):
+  ```bash
+  git ls-files --eol -- '*.ts' '*.sh' '*.md' '*.yml' '*.svg' '*.mmd' '*.json' | grep -v 'eol=lf'
+  git ls-files --eol -- '*.png' | grep -v -e '-text'
+  ```
+- **Implement**, only if either prints: append `*.<ext> text eol=lf` for each listed extension, and `*.png binary`, below A's lines; then `git add --renormalize .`.
+- **Done when:** both print nothing; the Windows `check` job proves it at R2. **Commit:** `B: keep text LF on every OS`
