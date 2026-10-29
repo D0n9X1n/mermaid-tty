@@ -44,7 +44,7 @@ test('A1: frontmatter title is one quoted or plain scalar; other keys, nested on
   assert.deepEqual(
     [`title: 'Flow'`, 'title:   Flow  ', 'title: ""', `title: It's "fine"`, 'title: 50%% off', 'config:\n  title: nested\ndisplayMode: compact\ntitleTopMargin: 5'].map(titleOf),
     ['Flow', 'Flow', null, `It's "fine"`, '50%% off', null])
-  assert.deepEqual(readSource('---\n---\nflowchart TD\nA'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 4, text: 'A' }] })
+  assert.deepEqual(readSource('---\n---\nflowchart TD\nA'), { reason: 'frontmatter' })   // adjacent fences: Mermaid finds no block (fix cycle 1)
 })
 
 test('A5.errors: frontmatter with no closing --- falls back; only an exact --- on line 1 opens it', () => {
@@ -129,7 +129,7 @@ test('A5.errors: a true, numeric or numeric-looking frontmatter title falls back
   const bad = ['true', 'True', 'TRUE', '0', '-1', '2024', '2024 # year', '0x10', '1e3', '.5', '007', '9007199254740993']
   assert.deepEqual(bad.map(v => [v, titled(v)]), bad.map(v => [v, { reason: 'title' }]))
   // A second title still falls back as title, after a null, false or malformed first one.
-  for (const fm of ['title: false\ntitle: B', 'title: ~\ntitle: B', 'title: "open\ntitle: B'])
+  for (const fm of ['title: false\ntitle: B', 'title: ~\ntitle: B', 'title: "a" b\ntitle: B'])
     assert.deepEqual(readSource(`---\n${fm}\n---\nflowchart TD\nA`), { reason: 'title' }, fm)
 })
 
@@ -161,4 +161,9 @@ test('A5.errors: an indented line after the title line continues it in js-yaml, 
 test("A1: a line matching Mermaid's style or classDef colour rewrite loses its last ;, as Mermaid's parser sees it", () => {
   const lines = (readSource('pie\n"style x:#;" : 1\nclassDef hot fill:#f00;\n"a;b" : 2') as { lines: { text: string }[] }).lines.map(l => l.text)
   assert.deepEqual(lines, ['"style x:#" : 1', 'classDef hot fill:#f00', '"a;b" : 2'])
+})
+// Fix cycle 1: Mermaid's `#.*;` is greedy, so a second ; after the # tells it from a lazy `#.*?;`.
+test("A1: (8) the colour rewrite drops a line's last ; after the #, as Mermaid's greedy #.*; does", () => {
+  const lines = (readSource('pie\n"style x:#a; b;" : 1\nclassDef c fill:#f00;x;') as Source).lines.map(l => l.text)
+  assert.deepEqual(lines, ['"style x:#a; b" : 1', 'classDef c fill:#f00;x'])
 })
