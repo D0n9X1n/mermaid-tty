@@ -1,0 +1,42 @@
+@60
+   apple  2017-07-20 · 1w        ███████████████████████▋
+!  banana 2017-07-23 · 1d                  ███▍
+ ▸ cherry after b a · 1d                                ███▍
+   kiwi   2017-07-20 · until b c ██████████▏
+                                 ┬──────────────────────────
+                                 2017-07-20
+@60 roles
+   LLLLL  VVVVVVVVVVVVVVV        111111111111111111111111
+a  LLLLLL VVVVVVVVVVVVVVV                  aaaa
+ d LLLLLL VVVVVVVVVVVVVV                                dddd
+   LLLL   VVVVVVVVVVVVVVVVVVVVVV 11111111111
+                                 fffffffffffffffffffffffffff
+                                 VVVVVVVVVV
+@80
+   apple  2017-07-20 · 1w        █████████████████████████████████████████▏
+!  banana 2017-07-23 · 1d                         █████▉
+ ▸ cherry after b a · 1d                                                  █████▉
+   kiwi   2017-07-20 · until b c █████████████████▋
+                                 ┬──────────┬───────────┬───────────┬───────────
+                                 2017-07-20 2017-07-22  2017-07-24  2017-07-26
+@80 roles
+   LLLLL  VVVVVVVVVVVVVVV        111111111111111111111111111111111111111111
+a  LLLLLL VVVVVVVVVVVVVVV                         aaaaaa
+ d LLLLLL VVVVVVVVVVVVVV                                                  dddddd
+   LLLL   VVVVVVVVVVVVVVVVVVVVVV 111111111111111111
+                                 fffffffffffffffffffffffffffffffffffffffffffffff
+                                 VVVVVVVVVV VVVVVVVVVV  VVVVVVVVVV  VVVVVVVVVV
+@120
+   apple  2017-07-20 · 1w        ████████████████████████████████████████████████████▌
+!  banana 2017-07-23 · 1d                              ███████▌
+ ▸ cherry after b a · 1d                                                             ███████▌
+   kiwi   2017-07-20 · until b c ██████████████████████▌
+                                 ┬──────────────┬──────────────┬──────────────┬──────────────
+                                 2017-07-20     2017-07-22     2017-07-24     2017-07-26
+@120 roles
+   LLLLL  VVVVVVVVVVVVVVV        11111111111111111111111111111111111111111111111111111
+a  LLLLLL VVVVVVVVVVVVVVV                              aaaaaaaa
+ d LLLLLL VVVVVVVVVVVVVV                                                             dddddddd
+   LLLL   VVVVVVVVVVVVVVVVVVVVVV 11111111111111111111111
+                                 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                                 VVVVVVVVVV     VVVVVVVVVV     VVVVVVVVVV     VVVVVVVVVV

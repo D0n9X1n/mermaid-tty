@@ -1,0 +1,42 @@
+@60
+   Load trucks a █████████████████▊
+   Drive       b                  █████████████████▊
+   Unload      c                                    ███████▋
+                 ┬──────────────┬──────────────┬────────────
+                 08:00          11:00          14:00
+a 2024-03-01 08:00 · 2024-03-01 11:30
+b after l · 2024-03-01 15:00
+c after d · 90m
+@60 roles
+   LLLLLLLLLLL l 111111111111111111
+   LLLLL       l                  111111111111111111
+   LLLLLL      l                                    11111111
+                 fffffffffffffffffffffffffffffffffffffffffff
+                 VVVVV          VVVVV          VVVVV
+l VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+l VVVVVVVVVVVVVVVVVVVVVVVVVV
+l VVVVVVVVVVVVV
+@80
+   Load trucks 2024-03-01 08:00 · 2024-03-01 11:30 ████████████
+   Drive       after l · 2024-03-01 15:00                     ████████████
+   Unload      after d · 90m                                              █████▏
+                                                   ┬─────────┬─────────┬────────
+                                                   08:00     11:00     14:00
+@80 roles
+   LLLLLLLLLLL VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV 111111111111
+   LLLLL       VVVVVVVVVVVVVVVVVVVVVVVVVV                     111111111111
+   LLLLLL      VVVVVVVVVVVVV                                              111111
+                                                   fffffffffffffffffffffffffffff
+                                                   VVVVV     VVVVV     VVVVV
+@120
+   Load trucks 2024-03-01 08:00 · 2024-03-01 11:30 ████████████████████████▊
+   Drive       after l · 2024-03-01 15:00                                  ████████████████████████▊
+   Unload      after d · 90m                                                                        ██████████▋
+                                                   ┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────────
+                                                   08:00  09:00  10:00  11:00  12:00  13:00  14:00  15:00
+@120 roles
+   LLLLLLLLLLL VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV 1111111111111111111111111
+   LLLLL       VVVVVVVVVVVVVVVVVVVVVVVVVV                                  1111111111111111111111111
+   LLLLLL      VVVVVVVVVVVVV                                                                        11111111111
+                                                   ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                                                   VVVVV  VVVVV  VVVVV  VVVVV  VVVVV  VVVVV  VVVVV  VVVVV

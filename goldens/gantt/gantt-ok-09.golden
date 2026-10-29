@@ -1,0 +1,34 @@
+@60
+   Plan  a ██████████████████████████▌
+   Build b                           ██████████████████████▌
+           ┬──────────┬──────────┬──────────┬───────────────
+           Mon  1 Jul Tue  2 Jul Wed  3 Jul Thu  4 Jul
+a 1/7/2024 9:0:0 · 3/7/2024 17:30:0
+b after p · 2d
+@60 roles
+   LLLL  l 111111111111111111111111111
+   LLLLL l                           11111111111111111111111
+           fffffffffffffffffffffffffffffffffffffffffffffffff
+           VVVVVVVVVV VVVVVVVVVV VVVVVVVVVV VVVVVVVVVV
+l VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+l VVVVVVVVVVVV
+@80
+   Plan  1/7/2024 9:0:0 · 3/7/2024 17:30:0 ████████████████████
+   Build after p · 2d                                          █████████████████
+                                           ┬───────────────┬────────────────────
+                                           Mon  1 Jul      Wed  3 Jul
+@80 roles
+   LLLL  VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV 11111111111111111111
+   LLLLL VVVVVVVVVVVV                                          11111111111111111
+                                           fffffffffffffffffffffffffffffffffffff
+                                           VVVVVVVVVV      VVVVVVVVVV
+@120
+   Plan  1/7/2024 9:0:0 · 3/7/2024 17:30:0 ████████████████████████████████▌
+   Build after p · 2d                                                      ███████████████████████████▌
+                                           ┬────────────┬─────────────┬─────────────┬──────────────────
+                                           Mon  1 Jul   Tue  2 Jul    Wed  3 Jul    Thu  4 Jul
+@120 roles
+   LLLL  VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV 111111111111111111111111111111111
+   LLLLL VVVVVVVVVVVV                                                      1111111111111111111111111111
+                                           ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                                           VVVVVVVVVV   VVVVVVVVVV    VVVVVVVVVV    VVVVVVVVVV

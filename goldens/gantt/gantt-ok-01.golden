@@ -1,0 +1,60 @@
+@60
+A Gantt Diagram
+Section
+   A task          2014-01-01 · 30d ██████████████▍
+   Another task    after a1 · 20d                 █████████▋
+Another
+   Task in Another 2014-01-12 · 12d      █████▊
+   another task    24d                         ███████████▌
+                                    ┬─────────────┬─────────
+                                    2014-01-01    2014-01-31
+@60 roles
+TTTTTTTTTTTTTTT
+!!!!!!!
+   LLLLLL          VVVVVVVVVVVVVVVV 111111111111111
+   LLLLLLLLLLLL    VVVVVVVVVVVVVV                 1111111111
+@@@@@@@
+   LLLLLLLLLLLLLLL VVVVVVVVVVVVVVVV      222222
+   LLLLLLLLLLLL    VVV                         222222222222
+                                    ffffffffffffffffffffffff
+                                    VVVVVVVVVV    VVVVVVVVVV
+@80
+A Gantt Diagram
+Section
+   A task          2014-01-01 · 30d ██████████████████████████▍
+   Another task    after a1 · 20d                             █████████████████▋
+Another
+   Task in Another 2014-01-12 · 12d          ██████████▌
+   another task    24d                                  █████████████████████▏
+                                    ┬───────────┬───────────┬───────────────────
+                                    2014-01-01  2014-01-15  2014-01-29
+@80 roles
+TTTTTTTTTTTTTTT
+!!!!!!!
+   LLLLLL          VVVVVVVVVVVVVVVV 111111111111111111111111111
+   LLLLLLLLLLLL    VVVVVVVVVVVVVV                             111111111111111111
+@@@@@@@
+   LLLLLLLLLLLLLLL VVVVVVVVVVVVVVVV          22222222222
+   LLLLLLLLLLLL    VVV                                  2222222222222222222222
+                                    ffffffffffffffffffffffffffffffffffffffffffff
+                                    VVVVVVVVVV  VVVVVVVVVV  VVVVVVVVVV
+@120
+A Gantt Diagram
+Section
+   A task          2014-01-01 · 30d ████████████████████████████████████
+   Another task    after a1 · 20d                                       ████████████████████████
+Another
+   Task in Another 2014-01-12 · 12d              ██████████████▍
+   another task    24d                                         ████████████████████████████▊
+                                    ┬───────────────┬────────────────┬────────────────┬─────────
+                                    2014-01-01      2014-01-15       2014-01-29       2014-02-12
+@120 roles
+TTTTTTTTTTTTTTT
+!!!!!!!
+   LLLLLL          VVVVVVVVVVVVVVVV 111111111111111111111111111111111111
+   LLLLLLLLLLLL    VVVVVVVVVVVVVV                                       111111111111111111111111
+@@@@@@@
+   LLLLLLLLLLLLLLL VVVVVVVVVVVVVVVV              222222222222222
+   LLLLLLLLLLLL    VVV                                         22222222222222222222222222222
+                                    ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                                    VVVVVVVVVV      VVVVVVVVVV       VVVVVVVVVV       VVVVVVVVVV
