@@ -63,17 +63,35 @@ test('A8.validation: checkedSite counts lines as V8 does', () => {
   assert.deepEqual([checkedSite(src, 6, 5), checkedSite(src, 7, 1)], ['its function calls no assert', true])
 })
 
-// GPT-6's repro: an assert in a regex after a for header's ). node:test reports its test at line 2, column 1.
-const REPRO = "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})\n"
+// GPT-6's repros, which node:test passes: an assert in a regex after a for header's ), and in one after continue at a line
+// end. node:test reports each test at line 2, column 1.
+const REPROS = [
+  "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})\n",
+  "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['', 'assert', 'assertion']) {\n    if (!word) continue\n    /assert(ion)?/.test(word)\n  }\n})\n",
+]
+test("A8.validation: checkedSite finds no assert call in GPT-6's repros, whose only assert( is in a regex", () =>
+  assert.deepEqual(REPROS.map(src => checkedSite(src, 2, 1)), REPROS.map(() => 'its function calls no assert')))
 // A test at line 1, column 1 whose function holds stmts.
 const holding = (stmts: string) => `test('A1: x', () => {\n  ${stmts}\n})`
-test("A8.validation: checkedSite reads a / after an if, for, for await or while header's ) as a regex, whose text calls no assert", () => {
-  assert.equal(checkedSite(REPRO, 2, 1), 'its function calls no assert')
-  for (const stmt of ['if (x) /assert(y)/.test(s)', 'for await (const w of ws) /assert(w)/.test(s)', 'while (i--) /assert(y)/.test(s)'])
-    assert.equal(checkedSite(holding(stmt), 1, 1), 'its function calls no assert', stmt)
-})
-test("A8.validation: checkedSite reads a / after a block's } as a regex, whose text calls no assert", () =>
-  assert.equal(checkedSite(holding('{ f() }\n  /assert(y)/.test(s)'), 1, 1), 'its function calls no assert'))
+// What a / starts depends on the token before it. After each of these, as ECMAScript reads it, /assert(y)/g is a regex, so its
+// assert( is no call: each keyword in checked-sites.ts's list, at a line end where ASI applies too; a break or continue label;
+// each punctuator, a dividing / too; prefix ++ and --; =>; a control header's ); and a block's }. A \n is a line end.
+const BEFORE_REGEX = [
+  ...'return typeof instanceof in of new delete void throw case do else yield await default extends'.split(' ').map(k => `${k} `),
+  'return\n', 'break\n', 'continue\n', 'debugger\n', 'break outer\n', 'continue outer\n',
+  'f(', '[', '{', 'a, ', 'a; ', 'a ? ', 'a ? b : ', 'a = ', 'a + ', 'a - ', 'a * ', 'a % ', 'a / ', 'a & ', 'a | ', 'a ^ ',
+  'a < ', 'a > ', '!', '~', '...', '++', '--', 'x\n++', 'a => ',
+  'if (x) ', 'for (;;) ', 'for await (const w of ws) ', 'while (i--) ', 'with (o) ', '{ f() } ', '{ f() }\n',
+]
+for (const before of BEFORE_REGEX)
+  test(`A8.validation: after ${JSON.stringify(before)}, checkedSite reads /assert(y)/g as a regex, so no assert is called`, () =>
+    assert.equal(checkedSite(holding(`${before}/assert(y)/g.test(s)`), 1, 1), 'its function calls no assert'))
+// After an operand the same text divides, and JS calls assert(y): an identifier, number, string, template or regex; a call's
+// ); a ]; and a postfix ++ or -- at a line end, which ASI does not end.
+const BEFORE_DIVISION = ['x ', '2 ', "'s' ", '`t` ', '/r/ ', 'f(a) ', 'arr[0] ', 'x++\n', 'x--\n']
+for (const before of BEFORE_DIVISION)
+  test(`A8.validation: after ${JSON.stringify(before)}, checkedSite reads / as a division, so assert(y) is called`, () =>
+    assert.equal(checkedSite(holding(`${before}/assert(y)/g.test(s)`), 1, 1), true))
 test('A8.validation: checkedSite reads a / after any other ) or a ] as a division, so the assert calls beside it count', () => {
   for (const stmt of ['const m = (a + b) / 2; assert.equal(m, 1)', 'assert.equal(arr[0] / 2, 1)', 'assert.ok(f(a) / g(b) > 1)'])
     assert.equal(checkedSite(holding(stmt), 1, 1), true, stmt)
