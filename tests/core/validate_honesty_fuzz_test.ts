@@ -132,9 +132,10 @@ function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number>
 }
 
 // (iv) Lines that join read as one line, so each end drawn with no mark seems to lead to each node a mark on it points at.
-// Two edges join in a cell both own: an arrow, or a line where their own paths use a common side. An edge with no path
-// joins every edge it shares a cell with. Each such seeming pair (t, h) must be a source edge t to h, or one h to t whose
-// tail at t is marked, so that it is drawn from t to h.
+// Two edges join in a cell both own: an arrow; or a line, as its glyph shows, unless the glyph is ┼ and every edge there runs
+// straight through it by the sides its own path uses, when only edges on one axis join. An edge with no path runs no way
+// straight, so it joins every edge it shares a cell with. Each seeming pair of one edge's unmarked end t and another edge's
+// mark at h, h = t included, must be a source edge t to h, or one h to t whose tail at t is marked, so drawn from t to h.
 function falsePairs(src: readonly Src[], cells: ReadonlyMap<string, Spot[]>, paths: ReadonlyMap<string, Map<string, number> | null>): string[] {
   const here = new Map<string, [Src, Spot][]>(), near = new Map(src.map(e => [e.id, new Set<string>()]))
   for (const e of src) for (const p of cells.get(e.id)!) {
@@ -142,19 +143,23 @@ function falsePairs(src: readonly Src[], cells: ReadonlyMap<string, Spot[]>, pat
     if (!here.has(k)) here.set(k, [])
     here.get(k)!.push([e, p])
   }
-  const side = (e: Src, k: string) => paths.get(e.id)?.get(k) ?? -1   // -1 has every bit: an unknown path joins all
-  for (const [k, list] of here) for (const [a, p] of list) for (const [b] of list) {
-    if (a !== b && (p.cell.kind === 'arrow' || (side(a, k) & side(b, k)) !== 0)) near.get(a.id)!.add(b.id)
+  const side = (e: Src, k: string) => paths.get(e.id)?.get(k)
+  for (const [k, list] of here) {
+    const cell = list[0]![1].cell, through = cell.dirs === 15 && list.every(([e]) => side(e, k) === 5 || side(e, k) === 10)
+    for (const [a] of list) for (const [b] of list) {
+      if (a !== b && (cell.kind === 'arrow' || !through || side(a, k) === side(b, k))) near.get(a.id)!.add(b.id)
+    }
   }
   const real = (t: string, h: string) => src.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && e.tail !== 'none'))
+  const ends = (x: Src, marked: boolean) => [[x.from, x.tail], [x.to, x.head]].filter(([, k]) => (k !== 'none') === marked).map(([n]) => n!)
   const seen = new Set<string>(), out: string[] = []
   for (const e of src) {
     if (seen.has(e.id)) continue
     const group = [e]; seen.add(e.id)
     for (const x of group) for (const id of near.get(x.id)!) if (!seen.has(id)) { seen.add(id); group.push(src.find(s => s.id === id)!) }
-    const ends = group.flatMap(x => [[x.from, x.tail], [x.to, x.head]] as const)
-    const heads = new Set(ends.filter(([, k]) => k !== 'none').map(([n]) => n)), tails = new Set(ends.filter(([, k]) => k === 'none').map(([n]) => n))
-    for (const t of tails) for (const h of heads) if (t !== h && !real(t, h)) out.push(`(iv) ${t} seems to lead to ${h} on the line of ${group.map(x => x.id).join(' ')}`)
+    for (const a of group) for (const b of group) if (a !== b) for (const t of ends(a, false)) for (const h of ends(b, true)) {
+      if (!real(t, h)) out.push(`(iv) ${t} seems to lead to ${h} on the line of ${group.map(x => x.id).join(' ')}`)
+    }
   }
   return out
 }

@@ -160,16 +160,36 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 type Edge = Expect['edges'][number]
 // Whether two edges share an endpoint, so that a cell both draw may be a junction of theirs.
 const related = (a: Edge, b: Edge): boolean => [a.from, a.to].some(x => x === b.from || x === b.to)
-// A crossing hides no junction. Where two edges that share no endpoint meet in a line cell, each edge there drew it
-// straight, 5 (│) or 10 (─), by the dirs the cell records for that edge, and each such pair crosses, one │ and one ─: read
-// as a crossing, an edge turning inside would vanish, and read as a junction, the crossing edges would join. A cell where
-// only related edges meet, a fan-out or fan-in, is fine. A cell that records no dirs for an edge there, as a hand-built
-// cell may not, fails closed: its glyph alone cannot tell a crossing from a turn.
+// Which drawn line each edge is on, as a reader joins them: its root id. Edges that own one arrow cell join there. A line
+// cell joins its edges as its glyph shows: its arms meet in one joint, whatever dirs each edge drew there. Only a ┼ whose
+// edges each run straight through it, by the dirs the cell records for each, 5 (│) or 10 (─), is a crossing: there only
+// the edges on one axis join. A line cell that records no dirs for an edge there, as a hand-built cell may not, joins all
+// of its edges, so it fails closed.
+function joined(d: Drawing, all: readonly Spot[]): (id: string) => string {
+  const root = new Map(d.expect.edges.map(e => [e.id, e.id]))
+  const find = (id: string): string => { let r = id; while (root.get(r) !== r) r = root.get(r)!; return r }
+  for (const p of all) {
+    const mine = p.cell.owners.filter(id => root.has(id))
+    const drew = (id: string) => p.cell.segs?.find(s => s.owner === id)?.dirs
+    const crossing = p.cell.dirs === 15 && mine.every(id => drew(id) === 5 || drew(id) === 10)
+    for (const [i, a] of mine.entries()) for (const b of mine.slice(i + 1)) {
+      if (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (!crossing || drew(a) === drew(b)))) root.set(find(a), find(b))
+    }
+  }
+  return find
+}
+
+// A crossing hides no junction. Where two edges that share no endpoint meet in a line cell, on two lines, each edge there
+// drew it straight, 5 (│) or 10 (─), by the dirs the cell records for that edge, and each such pair crosses, one │ and one
+// ─: read as a crossing, an edge turning inside would vanish, and read as a junction, the crossing edges would join. A
+// cell where only related edges meet, a fan-out or fan-in, is fine; so is one whose edges all join, as a trunk's do, for
+// merges to judge.
 function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
-  const edges = new Map(d.expect.edges.map(e => [e.id, e]))
+  const edges = new Map(d.expect.edges.map(e => [e.id, e])), line = joined(d, all)
   for (const p of all) {
     if (p.cell.kind !== 'line') continue
     const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
+    if (new Set(mine.map(e => line(e.id))).size === 1) continue
     const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b)).map(b => [a, b] as const))
     if (pairs.length === 0) continue
     const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
@@ -179,35 +199,22 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// Merged lines imply only real edges. Two edges' lines join in a line cell where the dirs each drew there, by the cell's
-// segs, share an arm: they run together there, where a perpendicular crossing shares none. An arrow cell that several
-// edges own joins them too. Joined lines read as one line, so in each group of joined edges every end drawn with no mark
-// seems to lead to every node a mark in the group points at. Each such pair of a bare end t and a head h, t ≠ h, must be
-// an edge of the drawing, from t to h. A fan-out, a fan-in and a complete bipartite merge pass; any other merge seems to
-// draw an edge that is not there. A line cell that records no dirs for an edge there, as a hand-built cell may not, joins
-// it by the cell's whole dirs, so it fails closed.
+// Merged lines imply only real edges. Edges on one drawn line, as joined reads them, read as one line, so an end of one
+// edge drawn with no mark seems to lead to every node a mark of another edge on that line points at, its own node
+// included. Each such pair of a bare end t and a head h must be an edge of the drawing from t to h, a self-loop when t = h;
+// one edge's own bare end and mark are its own direction. A fan-out, a fan-in and a complete bipartite merge pass; any
+// other merge seems to draw an edge that is not there.
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
-  const ids = new Set(d.expect.edges.map(e => e.id)), root = new Map(d.expect.edges.map(e => [e.id, e.id]))
-  const find = (id: string): string => { let r = id; while (root.get(r) !== r) r = root.get(r)!; return r }
-  for (const p of all) {
-    if (p.cell.kind !== 'line' && p.cell.kind !== 'arrow') continue
-    const mine = p.cell.owners.filter(id => ids.has(id))
-    const drew = (id: string) => p.cell.segs?.find(s => s.owner === id)?.dirs ?? p.cell.dirs
-    for (const [i, a] of mine.entries()) for (const b of mine.slice(i + 1)) {
-      if (p.cell.kind === 'arrow' || (drew(a) & drew(b)) !== 0) root.set(find(a), find(b))
-    }
-  }
-  const groups = new Map<string, Edge[]>()
-  for (const e of d.expect.edges) groups.set(find(e.id), [...(groups.get(find(e.id)) ?? []), e])
+  const line = joined(d, all), groups = new Map<string, Edge[]>()
+  for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
   // How many of e's end marks name n; e's endpoints at a node no mark covers, a self-loop's node counting twice.
   const marks = (e: Edge, n: string) => e.ends.filter(x => x.node === n).length
   const bare = (e: Edge) => [...new Set([e.from, e.to])].filter(n => Number(e.from === n) + Number(e.to === n) > marks(e, n))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
   const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
-  for (const group of groups.values()) {
-    const heads = new Set(group.flatMap(e => e.ends.map(x => x.node))), tails = new Set(group.flatMap(e => bare(e)))
-    for (const t of tails) for (const h of heads) if (t !== h && !real(t, h)) return fail('merge-ambiguous')
+  for (const group of groups.values()) for (const a of group) for (const b of group) {
+    if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
   }
   return null
 }

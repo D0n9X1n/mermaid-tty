@@ -273,8 +273,9 @@ function drawn(gr: Graph): Drawing {
   const routes = routeGraph(p); if ('reason' in routes) throw new Error(routes.reason)
   return drawGraph(p, routes, 80)
 }
-// QA's repro: the ┼ under B holds B→D straight down, E's self-loop straight across, and B→E turning inside it.
-test('A5.mutation-tests: a crossing that hides a third edge turning inside it fails crossing-ambiguous', () => {
+// QA's repro: the ┼ under B holds B→D straight down, E's self-loop straight across, and B→E turning inside it, so the ┼
+// joins all three, and the loop's bare end at E seems to lead to D.
+test('A5.mutation-tests: a crossing that hides a third edge turning inside it joins all three and fails merge-ambiguous', () => {
   const c = createCanvas(8, 8, 80, () => true)
   c.text(0, 3, 'B', 'node', 'B')
   c.text(6, 3, 'D', 'node', 'D')
@@ -305,7 +306,7 @@ test('A5.mutation-tests: a crossing that hides a third edge turning inside it fa
   assert.deepEqual(d.cells[3]![3]!.segs, [
     { owner: 'B>D', dirs: 5 }, { owner: 'E>E', dirs: 10 }, { owner: 'B>E', dirs: 3 },
   ])
-  assert.equal(validate(d)?.reason, 'crossing-ambiguous', text(d).join('\n'))
+  assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 // A hand-drawn grid: nodes [id, row, col, owners?] drawn as their id; marks [edge, row, col, a line's dirs or a head glyph];
 // edges 'id from to head?'. Any two owners may merge a line or arrow cell, so only the validator judges a meeting.
@@ -331,14 +332,15 @@ test('A5.mutation-tests: unrelated edges cross straight and perpendicular, and r
     [...h('e0', 2, 1, 5), ['e0', 2, 6, '►'], ...h('e1', 2, 1, 3), ['e1', 2, 4, 12], ['e1', 3, 4, 5], ['e1', 4, 4, '▼'], ...v('e2', 2, 1, 3), ['e2', 4, 2, '▼']],
     ['e0 A B ►', 'e1 A C ▼', 'e2 X Y ▼'])), null)
 })
-test('A5.mutation-tests: unrelated edges overlapping on one axis, or any turn inside their crossing, fail crossing-ambiguous', () => {
-  // N→B and member row M→K drawn down one column as one line: each runs straight, but on the same axis.
+test('A5.mutation-tests: unrelated edges overlapping on one axis, or any turn inside their crossing, join and fail merge-ambiguous', () => {
+  // N→B and member row M→K drawn down one column as one line: each runs straight, but on the same axis, so N seems to lead to K.
   assert.equal(validate(sketch(7, 1, [['N', 0, 0], ['M', 1, 0, ['M', 'N']], ['K', 5, 0, ['K', 'B']], ['B', 6, 0]],
-    [...v('e0', 0, 2, 3), ['e0', 4, 0, '▼'], ...v('e1', 0, 2, 3), ['e1', 4, 0, '▼']], ['e0 N B ▼', 'e1 M K ▼']))?.reason, 'crossing-ambiguous')
-  // B→D crosses X→Y straight, and B→Y, related to both, turns inside their ┼ onto X→Y's run.
+    [...v('e0', 0, 2, 3), ['e0', 4, 0, '▼'], ...v('e1', 0, 2, 3), ['e1', 4, 0, '▼']], ['e0 N B ▼', 'e1 M K ▼']))?.reason, 'merge-ambiguous')
+  // B→D crosses X→Y straight, and B→Y, related to both, turns inside their ┼ onto X→Y's run, so all three join: X seems to
+  // lead to D.
   assert.equal(validate(sketch(6, 8, [['B', 0, 3], ['D', 5, 3], ['X', 2, 0], ['Y', 2, 7]],
     [...v('e0', 3, 1, 3), ['e0', 4, 3, '▼'], ['e1', 1, 3, 5], ['e1', 2, 3, 3], ...h('e1', 2, 4, 5), ['e1', 2, 6, '►'], ...h('e2', 2, 1, 5), ['e2', 2, 6, '►']],
-    ['e0 B D ▼', 'e1 B Y ►', 'e2 X Y ►']))?.reason, 'crossing-ambiguous')
+    ['e0 B D ▼', 'e1 B Y ►', 'e2 X Y ►']))?.reason, 'merge-ambiguous')
 })
 // C→D's middle cell drawn ─, or ┴ with an arm up at A→B's ►: an arrowhead ends only its own edges, so that arm dangles.
 test("A3: a line arm that points at another edge's arrowhead fails line-dangling", () => {
@@ -354,13 +356,14 @@ test('A5.mutation-tests: an edge crossed twice in adjacent cells, as its U-turn 
     [...v('e0', 2, 1, 3), ['e0', 4, 2, 3], ['e0', 4, 3, 9], ...v('e0', 3, 2, 3), ['e0', 1, 3, '▲'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']],
     ['e0 A B ▲', 'e1 C D ►'])), null)
 })
-// A plain ┼ whose cell does not say which dirs each edge drew there, as a hand-built cell may not, fails closed.
-test('A5.mutation-tests: a crossing cell without per-owner dirs fails crossing-ambiguous', () => {
+// A plain ┼ whose cell does not say which dirs each edge drew there, as a hand-built cell may not, joins its edges, so it
+// fails closed: A seems to lead to D.
+test('A5.mutation-tests: a crossing cell without per-owner dirs joins its edges and fails merge-ambiguous', () => {
   const d = sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
     [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])
   assert.equal(validate(d), null)
   delete d.cells[3]![3]!.segs
-  assert.equal(validate(d)?.reason, 'crossing-ambiguous')
+  assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })
 
 // merge-ambiguous: edges whose drawn lines join read as one line, so each end without a mark seems to lead to each head on
@@ -407,10 +410,67 @@ test('merge-ambiguous: a hand-built merge fails when an unmarked end reaches a h
   assert.equal(validate(sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
     [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])), null)
 })
-// P<-->Q (e0) down column 0, and Q→R (e1) leaving Q's side to run up e0's line from ├ to ├ before it turns off to R: Q's
-// bare end reaches P's ▲, real only as e0 drawn back from Q, and R's ▲, real as e1.
-test('merge-ambiguous: a two-headed edge counts both ways, so a bare end merged into its line may lead to either node', () => {
-  assert.equal(validate(marked(9, 3, [['P', 0, 0], ['R', 0, 2], ['Q', 8, 0]], [['e0', 1, 0, '▲'], ...v('e0', 0, 2, 6), ['e0', 7, 0, '▼'],
-    ['e1', 8, 1, 9], ...v('e1', 1, 6, 7), ['e1', 5, 1, 12], ['e1', 5, 0, 3], ['e1', 4, 0, 5], ['e1', 3, 0, 6], ['e1', 3, 1, 10],
-    ['e1', 3, 2, 9], ['e1', 2, 2, 5], ['e1', 1, 2, '▲']], ['e0 P Q Q▼ P▲', 'e1 Q R R▲'])), null)
+// P→Q (e0) down column 0, and Q→R (e1) leaving Q's side to run up e0's line from ├ to ├ before it turns off to R. With P<-->Q,
+// Q's bare end reaches Q's own ▼: a loop Q→Q that is not there. With e0 drawn reversed, only P's ▲, it reaches P's ▲, real as
+// e0 drawn back, and R's ▲, real as e1.
+const pq = (twoHeaded: boolean) => marked(9, 3, [['P', 0, 0], ['R', 0, 2], ['Q', 8, 0]], [['e0', 1, 0, '▲'], ...v('e0', 0, 2, 6),
+  ['e0', 7, 0, twoHeaded ? '▼' : 5], ['e1', 8, 1, 9], ...v('e1', 1, 6, 7), ['e1', 5, 1, 12], ['e1', 5, 0, 3], ['e1', 4, 0, 5],
+  ['e1', 3, 0, 6], ['e1', 3, 1, 10], ['e1', 3, 2, 9], ['e1', 2, 2, 5], ['e1', 1, 2, '▲']], [`e0 P Q P▲${twoHeaded ? ' Q▼' : ''}`, 'e1 Q R R▲'])
+test('merge-ambiguous: a bare end merged into a line may lead to a node that line marks, but not back to its own node', () => {
+  assert.equal(validate(pq(true))?.reason, 'merge-ambiguous')
+  assert.equal(validate(pq(false)), null)
+})
+
+// QA's fix-cycle repros, hand-built with heads beside their targets.
+// 1: A→B (e0) turns right at the ┼ (3,3) and B→C (e1) turns left there, by segs 3 and 12: no arm in common, but the ┼ shows
+// all four arms joined, so A seems to lead to C. Straight through the same ┼, A→B and C→D cross.
+test('merge-ambiguous: edges that turn inside one ┼ join by its glyph, though their own dirs share no arm', () => {
+  const d = marked(6, 7, [['A', 0, 3], ['B', 3, 6], ['C', 3, 0]], [...v('e0', 3, 1, 2), ['e0', 3, 3, 3], ['e0', 3, 4, 10], ['e0', 3, 5, '►'],
+    ['e1', 4, 6, 5], ['e1', 5, 6, 9], ...h('e1', 5, 4, 5), ['e1', 5, 3, 3], ['e1', 4, 3, 5], ['e1', 3, 3, 12], ['e1', 3, 2, 10],
+    ['e1', 3, 1, '◄']], ['e0 A B B►', 'e1 B C C◄'])
+  assert.deepEqual(d.cells[3]![3]!.segs, [{ owner: 'e0', dirs: 3 }, { owner: 'e1', dirs: 12 }])
+  assert.equal(validate(d)?.reason, 'merge-ambiguous')
+  assert.equal(validate(sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
+    [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])), null)
+})
+// 2: A→B (e0) down column 0, and B→A (e1) up column 1, along e0's trunk from ├ to ├ and round into A's ◄: the trunk seems
+// to lead A to A and B to B, loops that are not there. Up column 2 instead, apart from e0, it implies nothing.
+const shared2: Mark[] = [['e1', 8, 1, 9], ...v('e1', 1, 6, 7), ['e1', 5, 1, 12], ['e1', 5, 0, 3], ['e1', 4, 0, 5], ['e1', 3, 0, 6], ['e1', 3, 1, 10], ['e1', 3, 2, 9]]
+const apart2: Mark[] = [['e1', 8, 1, 10], ['e1', 8, 2, 9], ...v('e1', 2, 3, 7)]
+const twoWay = (route: Mark[]) => marked(9, 3, [['A', 0, 0], ['B', 8, 0]], [...v('e0', 0, 1, 6), ['e0', 7, 0, '▼'], ...route,
+  ...v('e1', 2, 1, 2), ['e1', 0, 2, 12], ['e1', 0, 1, '◄']], ['e0 A B B▼', 'e1 B A A◄'])
+test('merge-ambiguous: a trunk that A→B and B→A share implies the self-loops A→A and B→B', () => {
+  assert.equal(validate(twoWay(shared2))?.reason, 'merge-ambiguous')
+  assert.equal(validate(twoWay(apart2)), null)
+})
+// 3: A, B over C, D: each edge runs down from its source, along row 3 into the trunk down column 3, along row 7 and down into
+// its target's ▼, which it shares. Every pair the trunk implies is an edge, though two pairs of edges share no endpoint; with
+// B→C gone, B seems to lead to C.
+const trunk = (ids: string[]) => marked(11, 7, [['A', 0, 0], ['B', 0, 6], ['C', 10, 0], ['D', 10, 6]], ids.flatMap((id): Mark[] => {
+  const s = id[0] === 'A' ? 0 : 6, t = id[1] === 'C' ? 0 : 6
+  return [...v(id, s, 1, 2), [id, 3, s, s ? 9 : 3], ...h(id, 3, Math.min(s, 3) + 1, Math.max(s, 3) - 1), [id, 3, 3, s ? 6 : 12],
+    ...v(id, 3, 4, 6), [id, 7, 3, t ? 3 : 9], ...h(id, 7, Math.min(t, 3) + 1, Math.max(t, 3) - 1), [id, 7, t, t ? 12 : 6], [id, 8, t, 5], [id, 9, t, '▼']]
+}), ids.map(id => `${id} ${id[0]} ${id[1]} ${id[1]}▼`))
+test('merge-ambiguous: a complete bipartite trunk passes, as crossings leave a cell whose edges all join to merges', () => {
+  assert.equal(validate(trunk(['AC', 'AD', 'BC', 'BD'])), null)
+  assert.equal(validate(trunk(['AC', 'AD', 'BD']))?.reason, 'merge-ambiguous')
+})
+// 4: A→C (e0) from the left and B's edge e1 from the right meet only in C's ▼. As B<-->C, A seems to lead to B; as B→C, the
+// two make a fan-in.
+const arrowOnly = (twoHeaded: boolean) => marked(4, 5, [['A', 0, 0], ['B', 0, 4], ['C', 3, 2]], [['e0', 1, 0, 5], ['e0', 2, 0, 3],
+  ['e0', 2, 1, 10], ['e0', 2, 2, '▼'], ['e1', 1, 4, twoHeaded ? '▲' : 5], ['e1', 2, 4, 9], ['e1', 2, 3, 10], ['e1', 2, 2, '▼']],
+  ['e0 A C C▼', `e1 B C C▼${twoHeaded ? ' B▲' : ''}`])
+test('merge-ambiguous: edges that share only an arrowhead join there', () => {
+  assert.equal(validate(arrowOnly(true))?.reason, 'merge-ambiguous')
+  assert.equal(validate(arrowOnly(false)), null)
+})
+// A self-loop A→A (e1) leaves A down the stem of A→B (e0), turns right at ├ and up into A's ◄: A's bare ends reach B's ▼,
+// real as A→B, and the loop's ◄, real as the loop.
+const loopFan = (ids: string[]) => marked(6, 2, [['A', 0, 0], ['B', 5, 0]], ([...v('e0', 0, 1, 3), ['e0', 4, 0, '▼'], ['e1', 1, 0, 5],
+  ['e1', 2, 0, 3], ['e1', 2, 1, 9], ['e1', 1, 1, 5], ['e1', 0, 1, '◄']] as Mark[]).filter(m => ids.includes(m[0])),
+  ['e0 A B B▼', 'e1 A A A◄'].filter(s => ids.includes(s.slice(0, 2))))
+test('merge-ambiguous: an honest self-loop, alone or on a stem it shares, and a lone A<-->B pass', () => {
+  assert.equal(validate(loopFan(['e1'])), null)
+  assert.equal(validate(loopFan(['e0', 'e1'])), null)
+  assert.equal(validate(path(['▲', 5, '▼'], ['A▲', 'B▼'])), null)
 })
