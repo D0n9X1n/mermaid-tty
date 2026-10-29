@@ -6,7 +6,7 @@
 // it, and a summary line; exits 1 on any FAIL. --keep keeps each run's temp dir, with screen.ansi in it, and under tmux
 // leaves the last run's session up to attach to.
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { THEMES, type ThemeName } from '../../core/themes.ts'
+import { removeSandbox } from './cleanup.ts'
 import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCheck } from './assert.ts'
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
@@ -107,8 +108,10 @@ async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenar
     if (s && keep) writeFileSync(join(base, 'screen.ansi'), await s.ansi().catch(e => String(e)))
     if (s && !keepUp) await s.stop()
     await mock.stop()
-    if (!keep) rmSync(base, { recursive: true, force: true })
-    else console.log(`kept ${base}${keepUp ? `; attach with: tmux -L ${TMUX_SOCKET} attach -t mtty-e2e` : ''}`)
+    // A sandbox left behind is a warning, not a problem of the run's, and ends no later run.
+    const left = keep ? undefined : removeSandbox(base)
+    if (left) console.log(left)
+    if (keep) console.log(`kept ${base}${keepUp ? `; attach with: tmux -L ${TMUX_SOCKET} attach -t mtty-e2e` : ''}`)
   }
 }
 

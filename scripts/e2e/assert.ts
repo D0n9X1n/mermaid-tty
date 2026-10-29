@@ -51,13 +51,18 @@ const plain = (c: Color) => c.mode === 'default'
 export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] {
   const problems: string[] = []
   let from = 0
+  // The rows the diagrams were found on: a label is looked for there first, so other text that holds it, like Claude
+  // Code's cwd line (C:\Users\... on Windows), is not taken for it.
+  const drawn = new Set<number>()
   spec.diagrams.forEach((rows, n) => {
     const at = findRows(cells, rows, from)
     if (at < 0) problems.push(`diagram ${n + 1}: not drawn; expected its rows:\n${rows.join('\n')}`)
-    else from = at + rows.length
+    else { from = at + rows.length; rows.forEach((_, k) => drawn.add(at + k)) }
   })
+  const all = cells.map((row, y) => ({ row, y, ...joined(row) }))
   for (const [label, role] of Object.entries(spec.labels)) {
-    const found = cells.map(row => ({ row, ...joined(row) })).find(r => r.text.includes(label))
+    const holds = (r: typeof all[number]) => r.text.includes(label)
+    const found = all.find(r => drawn.has(r.y) && holds(r)) ?? all.find(holds)
     if (!found) { problems.push(`${label}: not drawn`); continue }
     if (spec.color === 'none') {
       const bad = found.row.find(c => !plain(c.fg) || !plain(c.bg))

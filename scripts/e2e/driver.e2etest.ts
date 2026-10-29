@@ -174,6 +174,28 @@ for (const early of [false, true]) for (const driver of ['pty', 'tmux'] as const
   }
 })
 
+// On Windows, closing the console ends the program and what shares its console, but not a process detached from it, as
+// a program's background work may be; stop() must kill the tree while the program still roots it.
+writeFileSync(join(dir, 'detach.mjs'), [
+  "import { spawn } from 'node:child_process'",
+  "const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore', detached: true })",
+  "console.log('parent ' + process.pid + ' child ' + child.pid)",
+  'setInterval(() => {}, 1000)',
+].join('\n'))
+test('A9.harness: on Windows the pty driver\'s stop() kills a child detached from the program\'s console, with the program', { skip: process.platform !== 'win32' }, async () => {
+  const s = await startSession({ driver: 'pty', argv: [process.execPath, join(dir, 'detach.mjs')], cwd: dir, env: envFor('pty') })
+  let pids: number[] = []
+  try {
+    const m = /parent (\d+) child (\d+)/.exec(await s.waitFor(/parent \d+ child \d+/, 10000))
+    pids = [Number(m?.[1]), Number(m?.[2])]
+    await s.stop()
+    assert.deepEqual([await gone(pids[0]!), await gone(pids[1]!)], [true, true])
+  } finally {
+    for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
+    await s.stop()
+  }
+})
+
 // What holds the session goes first: under tmux its server, whose end hangs the program up; under the pty driver the
 // program, killed outright. With the program gone, stop() must still reach its process group. Windows, without process
 // groups, is skipped as above.

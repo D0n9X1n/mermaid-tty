@@ -45,3 +45,9 @@ test('A9.lead: a drawn diagram\'s node or edge source lines on screen are proble
   assert.deepEqual(sourceShown('⏺ flowchart TD\n  S[开始] --> E[结束]\n  After the diagram.', src), ['S[开始] --> E[结束]: drawn diagram shown as source'])
   assert.deepEqual(sourceShown('⏺ [ 开始 ]\n     │\n     ▼\n  [ 结束 ]\n  After the diagram.', src), [])
 })
+
+test('A9.harness: a label is checked where its diagram is drawn, not in other text that holds it, like a Windows cwd', () => {
+  const cells = [row('  C:\\Users\\runneradmin\\AppData\\Local\\Temp\\mtty-x\\cwd'), row(''), row('  [ User ]', D, rgb(0x88c0d0))]
+  const spec = { labels: { User: 'node' }, prose: [], diagrams: [['[ User ]']], color: 'truecolor', hex: { node: 0x88c0d0 } } as const
+  assert.deepEqual(checkDiagramScreen(cells as never, spec), [])
+})

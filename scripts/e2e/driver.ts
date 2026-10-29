@@ -60,6 +60,8 @@ export async function waitForText(read: (signal: AbortSignal) => Promise<string>
 
 // How long stop() waits for a program to exit after its hangup, then after it is killed.
 const HUP_MS = 2000, KILL_MS = 1000
+// How long taskkill may take over a live tree on Windows, before the console closes.
+const TREE_MS = 3000
 // p's value, or LATE if it has not settled within ms.
 const LATE = Symbol('late')
 async function within<T>(p: Promise<T>, ms: number): Promise<T | typeof LATE> {
@@ -87,8 +89,8 @@ async function end(hangUp: () => void, exited: (ms: number) => Promise<boolean>,
 }
 // Kills pid and every process under it: on Windows its tree, with taskkill /T /F; elsewhere its process group, which
 // node-pty and tmux each make it lead, and which lasts after pid has exited while any process in it runs.
-function killTree(pid: number): void {
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: KILL_MS })
+function killTree(pid: number, ms = KILL_MS): void {
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: ms })
   else process.kill(-pid, 'SIGKILL')
 }
 
@@ -117,7 +119,10 @@ async function ptySession(o: SessionOptions): Promise<Session> {
     text,
     ansi: async () => stream,
     clipboard: () => read(screen.clipboard),
-    stop: () => (stopping ??= end(() => { if (!exited) p.kill() }, ms => within(exit, ms).then(r => r !== LATE), () => killTree(pgid))),
+    // On Windows the tree is killed first, while the program still roots it: closing the console ends the program, and
+    // taskkill /T then finds no tree, so a process detached from the console (and holding the cwd) would outlive it.
+    stop: () => (stopping ??= end(() => { if (process.platform === 'win32' && !exited) killTree(pgid, TREE_MS); if (!exited) p.kill() },
+      ms => within(exit, ms).then(r => r !== LATE), () => killTree(pgid))),
   }
 }
 
