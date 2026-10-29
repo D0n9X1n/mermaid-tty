@@ -32,8 +32,9 @@ const PLAN: Readonly<Record<GraphStep, { row: Row; wraps: readonly (number | nul
 const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
 
-// What a diagram builds for a direction: its graph, keyed or not, the legend rows of its keys and the items it may key.
-export type Build = (o: { dir: Dir; keyed: boolean }) => { graph: Graph; legend: readonly LegendRow[]; keyable: NonNullable<Expect['keyable']> }
+// What a diagram builds for a direction and a try's wrapAt: its graph, keyed or not, the legend rows of its keys and the items
+// it may key. A Fail (a member word wider than wrapAt) ends the try.
+export type Build = (o: { dir: Dir; keyed: boolean; wrapAt: number | null }) => { graph: Graph; legend: readonly LegendRow[]; keyable: NonNullable<Expect['keyable']> } | Fail
 
 // natural, tight and wrap, plus lrToTd for LR and RL, plus keyed when the diagram has items to key.
 export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
@@ -47,7 +48,8 @@ function attempt(build: Build, dir: Dir, keyed: boolean, gaps: Gaps, wrapAt: num
   title: string | null): Drawing | Fail {
   let last: Fail = fail('route-conflict')
   for (const extra of [0, 2, 4]) {
-    const b = build({ dir, keyed })
+    const b = build({ dir, keyed, wrapAt })
+    if (isFail(b)) return b
     if (keyed && b.keyable.length === 0) return fail('step')
     const placed = layoutGraph(withNotes(b.graph), { rankGap: gaps.rankGap + extra, nodeGap: gaps.nodeGap + extra, wrapAt })
     if (isFail(placed)) return placed
