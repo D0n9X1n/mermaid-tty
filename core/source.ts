@@ -54,7 +54,10 @@ export function readSource(text: string): Source | Fail {
   }
   const [head, ...lines] = kept
   if (!head || lines.length === 0) return fail('empty')
-  return { header: head.text.trim().replace(/;$/, ''), title, config, lines }
+  // A's grammars end a statement at ;, so their headers lose a trailing one. Any other type keeps it: Mermaid's TITLE
+  // terminal reads `pie title Fruit;` as "Fruit;", and a header that takes no ; then fails its own parser.
+  const h = head.text.trim(), header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
+  return { header, title, config, lines }
 }
 
 // The unindented `title:` line's scalar, read as a config value is, then printed

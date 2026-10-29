@@ -26,6 +26,13 @@ test('A1: the header is the first kept line, trimmed, with only a trailing ; rem
   assert.deepEqual(readSource('\n%% c\n  graph LR;  \nA-->B'), { header: 'graph LR', title: null, config: {}, lines: [{ n: 4, text: 'A-->B' }] })
   assert.deepEqual(readSource('graph LR; A-->B\nC'), { header: 'graph LR; A-->B', title: null, config: {}, lines: [{ n: 2, text: 'C' }] })
 })
+// F1 (pie QA): Mermaid's TITLE terminal keeps a trailing ;, so `pie title Fruit;` is titled "Fruit;". Only A's headers, whose
+// grammars take a ; as a statement end, lose it; every other header keeps it, so its own parser reads or rejects it.
+test('A1: a trailing ; is removed only from a flowchart, graph or sequenceDiagram header', () => {
+  for (const [h, want] of [['flowchart TD;', 'flowchart TD'], ['graph LR;', 'graph LR'], ['sequenceDiagram;', 'sequenceDiagram'],
+    ['pie title Fruit;', 'pie title Fruit;'], ['xychart-beta;', 'xychart-beta;'], ['stateDiagram-v2;', 'stateDiagram-v2;']] as const)
+    assert.equal((readSource(`${h}\nA`) as { header: string }).header, want, h)
+})
 
 test('A1: indented %% comments and whitespace-only lines are skipped; kept lines keep their indentation', () => {
   assert.deepEqual(readSource('flowchart TD\n    %% note\n \t \n    A --> B'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 4, text: '    A --> B' }] })
