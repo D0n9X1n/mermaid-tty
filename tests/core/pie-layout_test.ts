@@ -31,7 +31,7 @@ test('A4: ties keep source order; ink and owners follow the source index; expect
   assert.deepEqual(d.cells.map((row: any[]) => [...new Set(row.flatMap(c => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]),
     rank.map(k => [`text label s${k}`, `cap s${k % 8 + 1} s${k}`, `text value s${k}.v`, `text value s${k}.p`]))
   const byOwner = (x: any, y: any) => x.owner.localeCompare(y.owner)
-  assert.deepEqual(d.expect.bars.toSorted(byOwner), vs.map((v, k) => ({ owner: `s${k}`, eighths: E[v], axis: 'h' })))
+  assert.deepEqual(d.expect.bars.toSorted(byOwner).map(({ at: _, ...b }: any) => b), vs.map((v, k) => ({ owner: `s${k}`, eighths: E[v], axis: 'h' })))
   assert.deepEqual(d.expect.labels.map((l: any) => l.owner).sort(), vs.flatMap((_, k) => [`s${k}`, `s${k}.p`, `s${k}.v`]).sort())
   assert.deepEqual([d.expect.edges, d.expect.edgeLabels, d.expect.frames], [[], [], []])
 })

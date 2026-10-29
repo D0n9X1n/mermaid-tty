@@ -7,7 +7,7 @@ import { hbar } from '../../charts/bars.ts'
 import { add, dec, div, sub, type Dec } from '../../charts/decimal.ts'
 import { fieldKey, withLegend, type LegendRow } from '../../charts/legend.ts'
 import { cellOf, eighths } from '../../charts/scale.ts'
-import { heading, stack } from '../../charts/sheet.ts'
+import { heading, placed, stack } from '../../charts/sheet.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
 import { register, type DiagramModule } from '../../registry.ts'
@@ -82,36 +82,39 @@ function header(name: string, columns: number): Piece[] | null {
 // have no header and take s1, so the sections take s2, s3, …; with none, the first section takes s1. Task i's row: its
 // status caps, its name pieces from cell 3 (t<i>), its timing (t<i>.t) or key from N + 4, then from the field's cell
 // left = N + F + 5 its bar, or a milestone's ◆ at min(W − 1, the cell of start + duration/2). The status, bar and ◆ are
-// caps owned by t<i>; its key and bar sit on its name's first row.
-function body(g: Gantt, p: Plan, s: Scale, columns: number): Drawing | Fail {
+// caps owned by t<i>; its key and bar sit on its name's first row, which tops[i] gets. Every text, bar, status and ◆ states
+// its cell, so none can leave its task's row.
+function body(g: Gantt, p: Plan, s: Scale, columns: number, tops: number[]): Drawing | Fail {
   const heads: Piece[][] = []
   for (const name of g.sections) { const h = header(name, columns); if (!h) return fail('too-wide'); heads.push(h) }
   const shift = g.tasks.some(t => t.section < 0) ? 1 : 0, series = (k: number) => `s${(k + shift) % 8 + 1}` as SeriesKey
   const left = p.N + p.F + 5, height = [...heads, ...p.names].reduce((n, ps) => n + ps.length, 0), t0 = dec(s.t0)
   const cell = (v: Dec) => cellOf(sub(v, t0), s.M, p.W)              // the field cell of time v, ms
   const cv = createCanvas(height, Math.max(left + p.W, widest(heads.flat().map(x => x.text))), columns)
-  const labels: Expect['labels'][number][] = [], bars: NonNullable<Expect['bars']>[number][] = []
+  const labels: Expect['labels'][number][] = [], bars: NonNullable<Expect['bars']>[number][] = [], glyphs: NonNullable<Expect['glyphs']>[number][] = []
   let r = 0, shown = -1                                             // shown: the last section whose header is drawn
   const section = (k: number) => {
     heads[k]!.forEach((x, j) => cv.text(r + j, 0, x.text, series(k), `sec${k}`, j > 0 ? x.join : undefined))
-    labels.push({ owner: `sec${k}`, text: labelLines(g.sections[k]!).join('\n') }); r += heads[k]!.length
+    labels.push(placed(`sec${k}`, labelLines(g.sections[k]!).join('\n'), heads[k]!, r, 0)); r += heads[k]!.length
   }
   g.tasks.forEach((t, i) => {
     while (shown < t.section) section(++shown)
     const id = `t${i}`, ink = inkOf(t, series(t.section)), milestone = t.tags.includes('milestone')
-    ;[...statusOf(t)].forEach((ch, c) => { if (ch !== ' ') cv.cap(r, c, ch, ink, id) })
+    tops[i] = r
+    ;[...statusOf(t)].forEach((ch, c) => { if (ch !== ' ') { cv.cap(r, c, ch, ink, id); glyphs.push({ owner: id, ch, at: { r, c } }) } })
     p.names[i]!.forEach((x, j) => cv.text(r + j, 3, x.text, 'label', id, j > 0 ? x.join : undefined))
     if (p.keyed) cv.key(r, p.N + 4, fieldKey(i), 'label', `${id}.t`, false)
     else cv.text(r, p.N + 4, t.timing, 'value', `${id}.t`)
     const e = milestone ? 0 : eighths(sub(dec(t.end), dec(t.start)), s.M, p.W), mid = div(add(dec(t.start), dec(t.end)), dec(2))!
-    if (milestone) cv.cap(r, left + Math.min(p.W - 1, cell(mid)), '◆', ink, id)
-    else cv.cap(r, left + cell(dec(t.start)), hbar(e), ink, id)
-    labels.push({ owner: id, text: t.name }, ...(p.keyed ? [] : [{ owner: `${id}.t`, text: t.timing }]))
-    bars.push({ owner: id, eighths: e, axis: 'h' })
+    const at = { r, c: left + (milestone ? Math.min(p.W - 1, cell(mid)) : cell(dec(t.start))) }
+    if (milestone) { cv.cap(at.r, at.c, '◆', ink, id); glyphs.push({ owner: id, ch: '◆', at }) }
+    else cv.cap(at.r, at.c, hbar(e), ink, id)
+    labels.push(placed(id, t.name, p.names[i]!, r, 3), ...(p.keyed ? [] : [{ owner: `${id}.t`, text: t.timing, at: { r, c: p.N + 4 } }]))
+    bars.push({ owner: id, eighths: e, axis: 'h', at })
     r += p.names[i]!.length
   })
   while (shown < g.sections.length - 1) section(++shown)
-  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], bars })
+  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], bars, glyphs })
 }
 
 // The tick rule under the field, from cell left: L the width of t0's label, step = tickStep(M, W, L), and a tick at each
@@ -127,9 +130,9 @@ function axis(g: Gantt, s: Scale, left: number, W: number, columns: number): Dra
   return axisRows(left, W, ticks, columns, 'axis')
 }
 
-// Task i's legend row at the keyed steps: its key, then its timing, owned by t<i>.t.
-const legendRow = (t: GanttTask, i: number): LegendRow =>
-  ({ key: fieldKey(i), keyInk: 'label', item: `t${i}.t`, cls: 'timing', parts: [{ text: t.timing, ink: 'value', owner: `t${i}.t` }] })
+// Task i's legend row at the keyed steps: its key, then its timing, owned by t<i>.t; at, its in-place key's cell.
+const legendRow = (t: GanttTask, i: number, at: { r: number; c: number }): LegendRow =>
+  ({ key: fieldKey(i), keyInk: 'label', item: `t${i}.t`, cls: 'timing', parts: [{ text: t.timing, ink: 'value', owner: `t${i}.t` }], at })
 
 // The title's heading, the body and the tick rule on one sheet, then at the keyed steps the legend under it. Every task's
 // timing is keyable. 'step' off the ladder; 'domain' for M = 0 or no task.
@@ -141,13 +144,14 @@ function layout(g: Gantt, step: Step, columns: number): Drawing | Fail {
   if (!s) return fail('domain')
   const p = plan(g.tasks, step, columns)
   if (isFail(p)) return p
-  const b = body(g, p, s, columns)
+  const tops: number[] = [], b = body(g, p, s, columns, tops)
   if (isFail(b)) return b
   const head = g.title === null ? null : heading(g.title, 'title', 'title', columns)
   if (isFail(head)) return head
+  const dr = head ? head.cells.length : 0                           // the body's first row in the sheet
   const sheet = stack([...(head ? [head] : []), b, axis(g, s, p.N + p.F + 5, p.W, columns)], columns)
   const keyable = g.tasks.map((_, i) => ({ item: `t${i}.t`, cls: 'timing' }))
-  return withLegend(sheet, p.keyed ? g.tasks.map(legendRow) : [], columns, keyable)
+  return withLegend(sheet, p.keyed ? g.tasks.map((t, i) => legendRow(t, i, { r: dr + tops[i]!, c: p.N + 4 })) : [], columns, keyable)
 }
 
 export const gantt: DiagramModule<Gantt> = { type: 'gantt', parse: parseGantt, steps: () => STEPS, layout }

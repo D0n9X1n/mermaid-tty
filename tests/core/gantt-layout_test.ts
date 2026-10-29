@@ -39,7 +39,7 @@ test('A4: gantt-ok-04: milestones at start + duration/2 list 0 eighths; bars sta
   assert.deepEqual(rows.slice(0, 4).map(t => [t.slice(0, left), t.slice(left)]), [
     ['   Initial milestone 17:49 · 2m ', ' '.repeat(2) + '◆'], ['   Task A            10m        ', ' '.repeat(5) + '█'.repeat(26) + '▏'],
     ['   Task B            5m         ', ' '.repeat(31) + '█'.repeat(13)], ['   Final milestone   18:08 · 4m ', ' '.repeat(54) + '◆']])
-  assert.deepEqual(r.drawing.expect.bars, [{ owner: 't0', eighths: 0, axis: 'h' }, { owner: 't1', eighths: 209, axis: 'h' },
+  assert.deepEqual(r.drawing.expect.bars.map(({ at: _, ...b }: any) => b), [{ owner: 't0', eighths: 0, axis: 'h' }, { owner: 't1', eighths: 209, axis: 'h' },
     { owner: 't2', eighths: 104, axis: 'h' }, { owner: 't3', eighths: 0, axis: 'h' }])
   assert.deepEqual(rows.slice(4), [rule(left, 60, [0, 13, 26, 39, 52]), ' '.repeat(left) + '17:49        17:54        17:59        18:04        18:09'])
 })
@@ -50,7 +50,7 @@ test('A4.fit-ladder: natural, keyed, then keyedWrap with wrapped names, then fal
   const r = X(LONG, 40); assert.equal(r.step, 'keyedWrap')
   assert.deepEqual(text(r.drawing), ['Build', '   Write the  a ' + '█'.repeat(9) + '▍', '   first spec', '   Ship it    b ' + ' '.repeat(9) + '█'.repeat(10) + '▋',
     rule(16, 20, [0]), ' '.repeat(16) + '2024-01-01', 'a 2024-01-01 · 7d', 'b after a · 8d'])
-  assert.deepEqual(r.drawing.expect.keys, [{ key: 'a', item: 't0.t', cls: 'timing' }, { key: 'b', item: 't1.t', cls: 'timing' }])
+  assert.deepEqual(r.drawing.expect.keys, [{ key: 'a', item: 't0.t', cls: 'timing', at: { r: 1, c: 14 } }, { key: 'b', item: 't1.t', cls: 'timing', at: { r: 3, c: 14 } }])
   assert.deepEqual(r.drawing.expect.keyable, [{ item: 't0.t', cls: 'timing' }, { item: 't1.t', cls: 'timing' }])
   assert.deepEqual(r.drawing.expect.frames, [])
   assert.ok(Object.values(r.drawing.expect).every(v => v !== undefined))
@@ -67,7 +67,7 @@ test('A5.errors: a repeated section name, an empty chart and the entity markers 
 test('A4: a section splits at every <br> spelling; a task name draws <br>, tags and & as written', () => {
   const d = X('section One<br>two<BR>three<br/>four<br />five\nQ&A <b>x</b> a<br>b :2024-01-01, 2d', 80).drawing
   assert.deepEqual(text(d).slice(0, 6), ['One', 'two', 'three', 'four', 'five', '   Q&A <b>x</b> a<br>b 2024-01-01 · 2d ' + '█'.repeat(41)])
-  assert.deepEqual(d.expect.labels.slice(0, 2), [{ owner: 'sec0', text: 'One\ntwo\nthree\nfour\nfive' }, { owner: 't0', text: 'Q&A <b>x</b> a<br>b' }])
+  assert.deepEqual(d.expect.labels.slice(0, 2), [{ owner: 'sec0', text: 'One\ntwo\nthree\nfour\nfive', at: { r: 0, c: 0 } }, { owner: 't0', text: 'Q&A <b>x</b> a<br>b', at: { r: 5, c: 3 } }])
 })
 // X2: Mermaid 12.2.0 draws no header for a section with no task, so one falls back wherever it stands.
 test('A5.errors: a section with no task falls back', () => {

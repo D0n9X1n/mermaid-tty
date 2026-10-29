@@ -4,7 +4,7 @@
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { dec, floor, mul } from '../../charts/decimal.ts'
 import { fieldKey, legendRows, pointKey, type LegendRow } from '../../charts/legend.ts'
-import { heading, stack } from '../../charts/sheet.ts'
+import { heading, placed, stack } from '../../charts/sheet.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
 import { junction } from '../../glyphs.ts'
@@ -69,13 +69,14 @@ function plot(m: Quadrant, cells: readonly Spot[], keys: readonly Key[], q: numb
   cv.frame(0, 0, BOX - 1, right, 'frame', 'plot')
   for (let c = 0; c <= right; c++) cv.line(7, c, c === 0 ? 7 : c === right ? 13 : 10, 'light', 'frame', 'plot.1')
   for (let r = 1; r < BOX - 1; r++) cv.line(r, mid, 5, 'light', 'frame', 'plot.2')
-  const labels: { owner: string; text: string }[] = []
-  // A field's text, or its key: drawn at column c of row r, or centered in the half from column c when centered.
+  const labels: { owner: string; text: string; at?: Spot }[] = [], keyAt = new Map<string, Spot>()
+  // A field's text, or its key: drawn at column c of row r, or centered in the half from column c when centered. Either
+  // states its cell, so a quadrant's text stays in its quadrant and an axis text at its end.
   const field = (owner: string, s: string, r: number, c: number, centered: boolean) => {
     const i = m.fields.findIndex(f => f.owner === owner), key = keyed ? fieldKey(i) : null, w = width(key ?? s)
     const at = centered ? c + Math.floor((q - w) / 2) : c
-    if (key === null) { cv.text(r, at, s, 'label', owner); labels.push({ owner, text: s }) }
-    else cv.key(r, at, key, 'label', owner, false)
+    if (key === null) { cv.text(r, at, s, 'label', owner); labels.push({ owner, text: s, at: { r, c: at } }) }
+    else { cv.key(r, at, key, 'label', owner, false); keyAt.set(owner, { r, c: at }) }
   }
   // quadrant-1 top right, 2 top left, 3 bottom left, 4 bottom right.
   const places: readonly Spot[] = [{ r: 1, c: mid + 1 }, { r: 1, c: 1 }, { r: 8, c: 1 }, { r: 8, c: mid + 1 }]
@@ -85,7 +86,7 @@ function plot(m: Quadrant, cells: readonly Spot[], keys: readonly Key[], q: numb
     if (m.x[1] !== null) field('x1', m.x[1], BOX, mid + 1, false)
   }
   for (const k of keys) cv.key(k.at.r, k.at.c, k.text, 's1', k.points.map(i => `p${i}`), false)
-  const of = owned(keys), fieldKeys = keyed ? m.fields.map((f, i) => ({ key: fieldKey(i), item: f.owner, cls: 'field' })) : []
+  const of = owned(keys), fieldKeys = keyed ? m.fields.map((f, i) => ({ key: fieldKey(i), item: f.owner, cls: 'field', at: keyAt.get(f.owner)! })) : []
   const pointKeys = cells.map((at, i) => ({ key: of[i]!, item: `p${i}`, cls: 'point', at }))
   const keyable = [...m.points.map((_, i) => ({ item: `p${i}`, cls: 'point' })), ...m.fields.map(f => ({ item: f.owner, cls: 'field' }))]
   const d = cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: ['plot'], keys: [...fieldKeys, ...pointKeys], keyable })
@@ -104,7 +105,8 @@ function legend(m: Quadrant, keys: readonly Key[], keyed: boolean): LegendRow[] 
   return [...fields, ...points].sort((a, b) => a.n - b.n).map(x => x.row)
 }
 
-// glyph, then text wrapped at columns − 2 under it, owned by owner: a y-axis text's rows, which wrap like header rows.
+// glyph, then text wrapped at columns − 2 under it, owned by owner: a y-axis text's rows, which wrap like header rows. The
+// glyph and text state their cells.
 // 'word-too-wide' if a word is wider than its field.
 function arrowed(glyph: string, text: string, owner: string, columns: number): Drawing | Fail {
   const ps = wrap(text, columns - 2)
@@ -112,7 +114,7 @@ function arrowed(glyph: string, text: string, owner: string, columns: number): D
   const cv = createCanvas(ps.length, 2 + Math.max(0, ...ps.map(p => width(p.text))), columns)
   cv.cap(0, 0, glyph, 'label', owner)
   ps.forEach((p, r) => cv.text(r, 2, p.text, 'label', owner, r > 0 ? p.join : undefined))
-  return cv.toDrawing({ labels: [{ owner, text }], edges: [], edgeLabels: [], frames: [] })
+  return cv.toDrawing({ labels: [placed(owner, text, ps, 0, 2)], edges: [], edgeLabels: [], frames: [], glyphs: [{ owner, ch: glyph, at: { r: 0, c: 0 } }] })
 }
 
 // natural: every quadrant and x-axis text in place, and 'too-wide' if one is wider than q. keyed: each is its field key. q

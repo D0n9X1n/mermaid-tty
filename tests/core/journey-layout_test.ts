@@ -30,7 +30,7 @@ test('A4: tasks before the first section take s1 and shift each section ink by o
   assert.deepEqual(d.cells.map(kinds), [['text label t0', 'cap s1 t0', 'text value t0.v', 'text label t0.a0'], ['text s2 sec0'],
     ['text label t1', 'cap s2 t1', 'text value t1.v', 'text label t1.a0', 'cap label t1.a0', 'text label t1.a1'], ['text s3 sec1'],
     ['text label t2', 'cap s3 t2', 'text value t2.v', 'text label t2.a0']])
-  assert.deepEqual(d.expect.bars, [{ owner: 't0', eighths: 80, axis: 'h' }, { owner: 't1', eighths: 48, axis: 'h' }, { owner: 't2', eighths: 16, axis: 'h' }])
+  assert.deepEqual(d.expect.bars.map(({ at: _, ...b }: any) => b), [{ owner: 't0', eighths: 80, axis: 'h' }, { owner: 't1', eighths: 48, axis: 'h' }, { owner: 't2', eighths: 16, axis: 'h' }])
   assert.deepEqual([d.expect.edges, d.expect.edgeLabels, d.expect.frames], [[], [], []])
   assert.deepEqual(X('journey\nsection S\nA: 5: Me', 80).drawing.cells.map(kinds), [['text s1 sec0'], ['text label t0', 'cap s1 t0', 'text value t0.v', 'text label t0.a0']])
 })
@@ -89,5 +89,5 @@ test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are s
 // T65 QA: the bar rounds half up at its boundary: 16 × 1.03125 is 16.5, so 17 eighths, not a truncated 16.
 test('A4: a score on a half-eighth boundary rounds half up: 1.03125 draws 17 eighths', () => {
   const d = X('journey\nsection S\nA: 1.03125: Me', 80).drawing
-  assert.deepEqual(d.expect.bars, [{ owner: 't0', eighths: 17, axis: 'h' }])
+  assert.deepEqual(d.expect.bars.map(({ at: _, ...b }: any) => b), [{ owner: 't0', eighths: 17, axis: 'h' }])
 })

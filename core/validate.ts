@@ -7,17 +7,17 @@ import { lineGlyph } from './canvas.ts'
 import { width } from './width.ts'
 
 export type Expect = {
-  labels: readonly { owner: string; text: string }[]                                     // every label instance, keyed by owner id
+  labels: readonly { owner: string; text: string; at?: { r: number; c: number } }[]    // every label instance, keyed by owner id; C: at, its first cell
   edges: readonly { id: string; from: string; to: string; ends: readonly End[]           // drawn edges; ~~~ is not listed
     endLabels?: readonly { node: string; owner: string }[] }[]   // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
-  bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]  // C: each bar; lanes: its width across the axis, default 1
+  bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]  // C: each bar; lanes: its width across the axis, default 1; at: its base cell
   members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
   keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
   order?: readonly { ids: readonly string[]; column: boolean }[]                         // C: owners drawn in this row order
-  glyphs?: readonly { owner: string; ch: string }[]                                      // C: marks drawn as exactly this glyph
+  glyphs?: readonly { owner: string; ch: string; at?: { r: number; c: number } }[]       // C: marks drawn as exactly this glyph; at: drawn exactly there
   rows?: readonly { mark: string; owners: readonly string[] }[]                          // C: each mark, in row order, and its labels
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
@@ -41,7 +41,7 @@ export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? rowLabels(d, all) ?? lifelines(all) ?? inPills(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -415,14 +415,18 @@ function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
 // or a ◆ its owner draws is none; a bar's runs are the maximal runs of the bar cells whose owners[0] is its owner. A bar of 0
 // has no cell. A positive bar has exactly lanes ?? 1 runs, one in each of that many adjacent rows (h) or columns (v), all on
 // one baseline, each its full cells then at most one partial, summing to eighths, so each ⌈eighths / 8⌉ cells long. Else
-// bar. A bar cell whose owners[0] is no listed bar's owner is bar-stray.
+// bar. A bar with at has its first run's base cell there, its left cell (h) or its bottom cell (v), else bar-misplaced, so
+// a bar cannot leave the row or column of its category, slice or task. A bar cell whose owners[0] is no listed bar's owner
+// is bar-stray.
 function bars(d: Drawing, all: readonly Spot[]): Fail | null {
   const cells = all.filter(p => p.cell.kind === 'cap' && BAR.has(p.cell.ch)), listed = d.expect.bars ?? []
-  for (const { owner, eighths, axis, lanes } of listed) {
+  for (const { owner, eighths, axis, lanes, at: pos } of listed) {
     const rs = runs(cells.filter(p => p.cell.owners[0] === owner), axis), n = lanes ?? 1
     const ok = eighths === 0 ? rs.length === 0 : n >= 1 && rs.length === n &&
       rs.every((x, i) => x.lane === rs[0]!.lane + i && x.base === rs[0]!.base && eighthsOf(x.glyphs, axis) === eighths)
     if (!ok) return fail('bar')
+    const base = rs[0] && (axis === 'h' ? { r: rs[0].lane, c: rs[0].base } : { r: -rs[0].base, c: rs[0].lane })
+    if (pos && base && (base.r !== pos.r || base.c !== pos.c)) return fail('bar-misplaced')
   }
   const owners = new Set(listed.map(b => b.owner))
   return cells.some(p => !owners.has(p.cell.owners[0]!)) ? fail('bar-stray') : null
@@ -519,12 +523,37 @@ function order(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// C: each listed owner draws exactly one cell as owners[0], and it shows exactly its glyph, so a mark whose glyph is its
-// meaning (a gitGraph commit's type) cannot show another's.
+// C: each listed owner with no at draws exactly one cell as owners[0], and it shows exactly its glyph, so a mark whose glyph
+// is its meaning (a gitGraph commit's type) cannot show another's. An owner's entries with at state where it draws a glyph:
+// the non-text cells it draws as owners[0] in that glyph are exactly those cells, else glyph-misplaced, so a tick mark or a
+// point cannot move, and none can be added.
 function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
-  for (const { owner, ch } of d.expect.glyphs ?? []) {
+  const placed = new Map<string, Set<string>>()
+  for (const { owner, ch, at: pos } of d.expect.glyphs ?? []) {
     const mine = all.filter(p => p.cell.owners[0] === owner)
-    if (mine.length !== 1 || mine[0]!.cell.ch !== ch) return fail('glyph-wrong')
+    if (pos) placed.set(`${owner}|${ch}`, (placed.get(`${owner}|${ch}`) ?? new Set()).add(`${pos.r},${pos.c}`))
+    else if (mine.length !== 1 || mine[0]!.cell.ch !== ch) return fail('glyph-wrong')
+  }
+  for (const [k, want] of placed) {
+    const got = all.filter(p => `${p.cell.owners[0]}|${p.cell.ch}` === k && p.cell.kind !== 'text' && p.cell.kind !== 'cont')
+    if (got.length !== want.size || got.some(p => !want.has(`${p.r},${p.c}`))) return fail('glyph-misplaced')
+  }
+  return null
+}
+
+// C: each label stated at a cell is drawn there: the first text cell its owner draws as owners[0], in reading order, is
+// that cell. So text that only its place gives meaning (an axis tick, a category, a header, a legend part) cannot move or
+// swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its title
+// first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
+function places(d: Drawing, all: readonly Spot[]): Fail | null {
+  const first = new Map<string, Spot>()
+  for (const p of all) if (p.cell.kind === 'text' && !first.has(p.cell.owners[0]!)) first.set(p.cell.owners[0]!, p)
+  const title = first.get('title')
+  if (title && title.cell.role === 'title' && (title.r !== 0 || title.c !== 0)) return fail('label-misplaced')
+  for (const { owner, text, at: pos } of d.expect.labels) {
+    if (!pos || norm(text) === '') continue
+    const p = first.get(owner)
+    if (!p || p.r !== pos.r || p.c !== pos.c) return fail('label-misplaced')
   }
   return null
 }
@@ -564,9 +593,10 @@ function lifelines(all: readonly Spot[]): Fail | null {
 // A node's label reads as the node only inside its own pill: each text or cont cell a node draws as owners[0] lies in the
 // box of the cap, fill and frame cells it draws so. Moved off it, the pill is left empty and the label floats beside a line
 // it does not end. A node that draws no such cell (a gitGraph commit's labels are its row's) has no pill to leave; a keyed
-// node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead.
+// node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead. A node is an edge's end,
+// or any owner that draws a fill cell, as a pill no edge reaches and a sequence note do.
 function inPills(d: Drawing, all: readonly Spot[]): Fail | null {
-  const nodes = new Set(d.expect.edges.flatMap(e => [e.from, e.to])), box = new Map<string, [number, number, number, number]>()
+  const nodes = new Set([...d.expect.edges.flatMap(e => [e.from, e.to]), ...all.flatMap(p => (p.cell.kind === 'fill' ? [p.cell.owners[0]!] : []))]), box = new Map<string, [number, number, number, number]>()
   for (const p of all) if ((p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && nodes.has(p.cell.owners[0]!)) {
     const id = p.cell.owners[0]!, b = box.get(id) ?? [p.r, p.r, p.c, p.c]
     box.set(id, [Math.min(b[0], p.r), Math.max(b[1], p.r), Math.min(b[2], p.c), Math.max(b[3], p.c)])

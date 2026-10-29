@@ -3,7 +3,7 @@
 // step, draw a left axis: ● and the period on one row, then │ and each indented event, a section name on its own row.
 // It registers itself on import, as flowchart's does.
 import { createCanvas, type Canvas, type Drawing } from '../../canvas.ts'
-import { heading, stack } from '../../charts/sheet.ts'
+import { heading, placed, stack } from '../../charts/sheet.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
 import { register, type DiagramModule } from '../../registry.ts'
@@ -29,9 +29,12 @@ function pieces(t: string, max: number): Piece[] | null {
   }
   return out
 }
-// ps drawn down from row r at column c in ink, owned by owner; its row count.
-function put(cv: Canvas, ps: readonly Piece[], r: number, c: number, i: SeriesKey, owner: string): number {
+// ps drawn down from row r at column c in ink, owned by owner, and listed in labels as text, placed at its first cell; its
+// row count. So a section, period or event cannot leave its span.
+type Labels = Expect['labels'][number][]
+function put(cv: Canvas, labels: Labels, text: string, ps: readonly Piece[], r: number, c: number, i: SeriesKey, owner: string): number {
   ps.forEach((p, j) => cv.text(r + j, c, p.text, i, owner, j > 0 ? p.join : undefined))
+  labels.push(placed(owner, label(text), ps, r, c))
   return ps.length
 }
 const label = (t: string): string => t.split('<br>').join('\n')
@@ -72,21 +75,13 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   const x = cw.map((_, i) => cw.slice(0, i).reduce((t, c) => t + c + gap, 0))
   const S = Math.max(0, ...names.map(ps => ps?.length ?? 0)), P = Math.max(0, ...heads.map(h => h!.length))
   const E = Math.max(0, ...evs.map(es => es.reduce((t, e) => t + e!.length, 0)))
-  const cv = createCanvas(S + P + 1 + E, total, columns), labels: Expect['labels'][number][] = []
-  tl.sections.forEach((sec, s) => {
-    if (sec.name === null) return
-    put(cv, names[s]!, 0, x[spans[s]![0]!]! + 1, ink(s), `sec${s}`)
-    labels.push({ owner: `sec${s}`, text: label(sec.name) })
-  })
+  const cv = createCanvas(S + P + 1 + E, total, columns), labels: Labels = []
+  tl.sections.forEach((sec, s) => { if (sec.name !== null) put(cv, labels, sec.name, names[s]!, 0, x[spans[s]![0]!]! + 1, ink(s), `sec${s}`) })
   for (const p of its) {
     const at = x[p.k]! + 1
-    put(cv, heads[p.k]!, S, at, p.ink, `p${p.k}`)
-    labels.push({ owner: `p${p.k}`, text: label(p.text) })
+    put(cv, labels, p.text, heads[p.k]!, S, at, p.ink, `p${p.k}`)
     let r = S + P + 1
-    p.events.forEach((e, j) => {
-      r += put(cv, evs[p.k]![j]!, r, at, p.ink, `p${p.k}.e${j}`)
-      labels.push({ owner: `p${p.k}.e${j}`, text: label(e) })
-    })
+    p.events.forEach((e, j) => { r += put(cv, labels, e, evs[p.k]![j]!, r, at, p.ink, `p${p.k}.e${j}`) })
   }
   const dots = new Map(its.map(p => [x[p.k]!, p]))
   for (let c = 0; c < total; c++) {
@@ -94,7 +89,8 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
     if (p) cv.cap(S + P, c, '●', p.ink, `p${p.k}:mark`)
     else cv.cap(S + P, c, '─', 'edge', 'axis')
   }
-  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [] })
+  const glyphs = its.map(p => ({ owner: `p${p.k}:mark`, ch: '●', at: { r: S + P, c: x[p.k]! } }))
+  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], glyphs })
 }
 
 // TD, unwrapped, or with wrapped true: section names wrap to columns, periods to columns − 2 and events to columns − 4. A
@@ -110,26 +106,19 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
   if (wide > columns) return fail('too-wide')
   const height = names.reduce((t, x) => t + x!.length, 0) + heads.reduce((t, h) => t + h!.length, 0) +
     evs.flat().reduce((t, e) => t + e!.length, 0)
-  const cv = createCanvas(height, wide, columns), labels: Expect['labels'][number][] = []
+  const cv = createCanvas(height, wide, columns), labels: Labels = [], glyphs: NonNullable<Expect['glyphs']>[number][] = []
   let r = 0
   tl.sections.forEach((sec, s) => {
-    if (sec.name !== null) {
-      r += put(cv, names[s]!, r, 0, ink(s), `sec${s}`)
-      labels.push({ owner: `sec${s}`, text: label(sec.name) })
-    }
+    if (sec.name !== null) r += put(cv, labels, sec.name, names[s]!, r, 0, ink(s), `sec${s}`)
     for (const p of its.filter(q => q.s === s)) {
       const top = r
-      cv.cap(r, 0, '●', p.ink, `p${p.k}:mark`)
-      r += put(cv, heads[p.k]!, r, 2, p.ink, `p${p.k}`)
-      labels.push({ owner: `p${p.k}`, text: label(p.text) })
-      p.events.forEach((e, j) => {
-        r += put(cv, evs[p.k]![j]!, r, 4, p.ink, `p${p.k}.e${j}`)
-        labels.push({ owner: `p${p.k}.e${j}`, text: label(e) })
-      })
+      cv.cap(r, 0, '●', p.ink, `p${p.k}:mark`); glyphs.push({ owner: `p${p.k}:mark`, ch: '●', at: { r, c: 0 } })
+      r += put(cv, labels, p.text, heads[p.k]!, r, 2, p.ink, `p${p.k}`)
+      p.events.forEach((e, j) => { r += put(cv, labels, e, evs[p.k]![j]!, r, 4, p.ink, `p${p.k}.e${j}`) })
       for (let y = top + 1; y < r; y++) cv.cap(y, 0, '│', 'edge', 'axis')
     }
   })
-  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [] })
+  return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], glyphs })
 }
 
 // LR, and a bare header: natural, tight, wrap, then lrToTd, which draws TD wrapped. TD: natural, unwrapped, then wrap.

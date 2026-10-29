@@ -6,7 +6,8 @@ import { width } from '../width.ts'
 export type Tick = { cell: number; label: string; align: 'left' | 'right' }
 
 // Row 0 is the field's w cells from column left: ─ caps with ┬ at each kept tick, in the frame role, owned by owner. Row 1
-// draws each kept label in the value role, owned by `${owner}.t<i>`, i the tick's input index. Ticks are taken in order: one
+// draws each kept label in the value role, owned by `${owner}.t<i>`, i the tick's input index. expect places each label and
+// each ┬, so a label stays under its tick and no tick moves. Ticks are taken in order: one
 // stays when its label's columns lie in the field and start at least 2 after the last kept label's end, and any other drops
 // with its label, so no label leaves the field or meets another (spec C rule 6). The drawing is columns wide.
 export function axisRows(left: number, w: number, ticks: readonly Tick[], columns: number, owner: string): Drawing {
@@ -20,5 +21,6 @@ export function axisRows(left: number, w: number, ticks: readonly Tick[], column
   const c = createCanvas(2, Math.max(0, left + w), columns), marked = new Set(kept.map(k => k.t.cell))
   c.cap(0, left, Array.from({ length: w }, (_, x) => (marked.has(x) ? '┬' : '─')).join(''), 'frame', owner)
   for (const { i, t, start } of kept) c.text(1, left + start, t.label, 'value', `${owner}.t${i}`)
-  return c.toDrawing({ labels: kept.map(({ i, t }) => ({ owner: `${owner}.t${i}`, text: t.label })), edges: [], edgeLabels: [], frames: [] })
+  return c.toDrawing({ labels: kept.map(({ i, t, start }) => ({ owner: `${owner}.t${i}`, text: t.label, at: { r: 1, c: left + start } })),
+    edges: [], edgeLabels: [], frames: [], glyphs: kept.map(({ t }) => ({ owner, ch: '┬', at: { r: 0, c: left + t.cell } })) })
 }

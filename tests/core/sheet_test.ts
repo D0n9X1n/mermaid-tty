@@ -31,7 +31,7 @@ test('A4: a heading draws one row per piece in its ink, owned by owner, joined a
   const h = heading('ab cd ef<br/>gh', 'value', 'sec0', 5) as Drawing
   assert.deepEqual(text(h), ['ab cd', 'ef', 'gh']); assert.equal(h.columns, 5); assert.equal(validate(h), null)
   assert.deepEqual(h.cells.map(r => r[0]!.join), [undefined, ' ', '\n'])
-  assert.deepEqual(h.expect, { labels: [{ owner: 'sec0', text: 'ab cd ef\ngh' }], edges: [], edgeLabels: [], frames: [] })
+  assert.deepEqual(h.expect, { labels: [{ owner: 'sec0', text: 'ab cd ef\ngh', at: { r: 0, c: 0 } }], edges: [], edgeLabels: [], frames: [] })
   const drawn = h.cells.flat().filter(x => x !== null)
   assert.ok(drawn.length === 9 && drawn.every(x => x.role === 'value' && x.kind === 'text' && x.owners.join() === 'sec0'))
   const cjk = heading('漢字漢字', 'title', 'title', 4) as Drawing
@@ -41,7 +41,7 @@ test('A4: a heading draws one row per piece in its ink, owned by owner, joined a
 test('A4: a <br/> heading expects its text as drawn, and a word too wide on any line fails', () => {
   for (const t of ['one<br/>two', 'one<br>two', 'one<BR />two']) {
     const br = heading(t, 'title', 'title', 10) as Drawing
-    assert.deepEqual(text(br), ['one', 'two'], t); assert.deepEqual(br.expect.labels, [{ owner: 'title', text: 'one\ntwo' }], t)
+    assert.deepEqual(text(br), ['one', 'two'], t); assert.deepEqual(br.expect.labels, [{ owner: 'title', text: 'one\ntwo', at: { r: 0, c: 0 } }], t)
     assert.equal(validate(br), null, t)
   }
   assert.deepEqual(heading('ok<br/>Supercalifragilistic', 'title', 'title', 10), { reason: 'word-too-wide' })

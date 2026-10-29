@@ -15,7 +15,8 @@ const cellsOf = (g: Drawing, r: number) => g.cells[r]!.flatMap((x, c) => (x ? [`
 test("A4: the rule is frame caps owned by owner, each kept label value text owned by its tick's input index, columns wide", () => {
   const ticks = [L(0, '08:00'), L(3, '09:00'), L(6, '10:00')], g = axisRows(2, 20, ticks, 24, 'ax')
   assert.equal(g.columns, 24); assert.equal(validate(g), null)
-  assert.deepEqual(g.expect, { labels: [{ owner: 'ax.t0', text: '08:00' }, { owner: 'ax.t2', text: '10:00' }], edges: [], edgeLabels: [], frames: [] })
+  assert.deepEqual(g.expect, { labels: [{ owner: 'ax.t0', text: '08:00', at: { r: 1, c: 2 } }, { owner: 'ax.t2', text: '10:00', at: { r: 1, c: 8 } }],
+    edges: [], edgeLabels: [], frames: [], glyphs: [{ owner: 'ax', ch: '┬', at: { r: 0, c: 2 } }, { owner: 'ax', ch: '┬', at: { r: 0, c: 8 } }] })
   assert.deepEqual(cellsOf(g, 0), [...Array(20)].map((_, i) => `${i + 2} cap frame ax`))
   assert.deepEqual(cellsOf(g, 1), [2, 3, 4, 5, 6].map(c => `${c} text value ax.t0`).concat([8, 9, 10, 11, 12].map(c => `${c} text value ax.t2`)))
   assert.deepEqual(validate(axisRows(2, 20, ticks, 21, 'ax')), { reason: 'row-too-wide' })   // a field past the budget fails
@@ -43,5 +44,5 @@ test('A4: a dropped label moves nothing: the next one still measures from the la
 // Helpers QA: ticks are taken in input order, never re-sorted: after x at 6, y at 0 starts before x's end and drops.
 test('A4: ticks are taken in input order: a later tick to the left of a kept label drops', () => {
   const d = axisRows(0, 8, [L(6, 'x'), L(0, 'y')], 8, 'ax')
-  assert.deepEqual(d.expect.labels, [{ owner: 'ax.t0', text: 'x' }]); assert.deepEqual(text(d), [rule(0, 8, [6]), '      x'])
+  assert.deepEqual(d.expect.labels, [{ owner: 'ax.t0', text: 'x', at: { r: 1, c: 6 } }]); assert.deepEqual(text(d), [rule(0, 8, [6]), '      x'])
 })

@@ -12,11 +12,14 @@ const files = (dir: string, keep: (f: string, i: number) => boolean) =>
   readdirSync(new URL(`${dir}/`, ROOT)).sort().filter(keep).map(f => `${dir}/${f}`)
 const SOURCES = [...readdirSync(ROOT).filter(x => x !== 'corpus').sort().flatMap(x => files(x, f => /-ok-\d+\.mmd$/.test(f))),
   ...files('corpus', (f, i) => f.endsWith('.mmd') && i % 4 === 0)]
-type Case = { name: string; d: Drawing }
-const CASES: Case[] = SOURCES.flatMap(f => [60, 80].flatMap(columns => {
-  const r = explain(readFileSync(new URL(f, ROOT), 'utf8'), { columns, theme: 'mono' })
-  return 'drawing' in r && r.drawing ? [{ name: `${f} @${columns}`, d: r.drawing as Drawing }] : []
-}))
+// A case is a drawing, and whether it is a chart's: a pie, gantt, journey, quadrant, timeline or xychart.
+type Case = { name: string; d: Drawing; chart: boolean }
+const CHART = /^\s*(pie|gantt|journey|quadrantChart|timeline|xychart(-beta)?)\b/m
+const draw = (name: string, src: string): Case[] => [60, 80].flatMap(columns => {
+  const r = explain(src, { columns, theme: 'mono' })
+  return 'drawing' in r && r.drawing ? [{ name: `${name} @${columns}`, d: r.drawing as Drawing, chart: CHART.test(src) }] : []
+})
+const CASES: Case[] = SOURCES.flatMap(f => draw(f, readFileSync(new URL(f, ROOT), 'utf8')))
 
 // A patch sets cells; run applies it, asks validate, and restores. null if the patch leaves every cell identical.
 type Patch = [number, number, Cell | null][]
@@ -31,11 +34,12 @@ function run(d: Drawing, patch: Patch): boolean | null {
 }
 type Tally = { mutants: number; survivors: string[] }
 // Runs every patch each case yields and tallies it; a survivor is named by its case and the patch's own note.
-function tally(t: { diagnostic(s: string): void }, label: string, gen: (d: Drawing) => Iterable<[string, Patch]>): Tally {
+function tally(t: { diagnostic(s: string): void }, label: string, gen: (d: Drawing, k: Case) => Iterable<[string, Patch]>, cases = CASES): Tally {
   const out: Tally = { mutants: 0, survivors: [] }
-  for (const { name, d } of CASES) {
+  for (const k of cases) {
+    const { name, d } = k
     assert.equal(validate(d), null, name)
-    for (const [note, patch] of gen(d)) {
+    for (const [note, patch] of gen(d, k)) {
       const failed = run(d, patch)
       if (failed === null) continue
       out.mutants++
@@ -176,6 +180,108 @@ test('A5.mutation-tests: fuzz: a label moved one cell into free cells outside it
         if (to.some(([r, c]) => r < 0 || r >= d.cells.length || c < 0 || (d.cells[r]![c] && !held.has(`${r},${c}`))) || inSpan(to)) continue
         const patch: Patch = [...mine.map((p): Patch[number] => [p.r, p.c, null]), ...mine.map((p, k): Patch[number] => [to[k]![0], to[k]![1], p.x])]
         yield [`${owner} by (${dr},${dc})`, patch]
+      }
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// A placed text: the text, cont and key cells an owner draws as owners[0], legend keys apart, and its first cell.
+type Unit = { owner: string; cells: { r: number; c: number; x: Cell }[]; text: string }
+const PLACED = new Set(['text', 'cont', 'key'])
+function units(d: Drawing): Unit[] {
+  const by = new Map<string, Unit>()
+  for (const { r, c, x } of spots(d)) if (PLACED.has(x.kind) && !x.legend) {
+    const o = x.owners[0]!, u = by.get(o) ?? { owner: o, cells: [], text: '' }
+    u.cells.push({ r, c, x }); u.text += x.ch; by.set(o, u)
+  }
+  return [...by.values()]
+}
+// u's cells moved so its first cell is at (r, c), and v's to u's, as one patch; null if a target is off the grid or holds
+// a cell neither draws.
+function relocate(d: Drawing, us: readonly Unit[], to: readonly [number, number][]): Patch | null {
+  const held = new Set(us.flatMap(u => u.cells.map(p => `${p.r},${p.c}`))), writes: Patch = []
+  for (const [i, u] of us.entries()) for (const p of u.cells) {
+    const r = p.r + to[i]![0] - u.cells[0]!.r, c = p.c + to[i]![1] - u.cells[0]!.c
+    if (r < 0 || c < 0 || r >= d.cells.length || (d.cells[r]![c] && !held.has(`${r},${c}`))) return null
+    writes.push([r, c, p.x])
+  }
+  if (new Set(writes.map(([r, c]) => `${r},${c}`)).size < writes.length) return null
+  return [...us.flatMap(u => u.cells.map((p): Patch[number] => [p.r, p.c, null])), ...writes]
+}
+
+test('A5.mutation-tests: fuzz: two placed chart texts swapped fail', t => {
+  const { mutants, survivors } = tally(t, 'swap', function* (d, k) {
+    if (!k.chart) return
+    const us = units(d)
+    for (const [i, u] of us.entries()) for (const v of us.slice(i + 1)) {
+      if (u.text === v.text) continue
+      const patch = relocate(d, [u, v], [[v.cells[0]!.r, v.cells[0]!.c], [u.cells[0]!.r, u.cells[0]!.c]])
+      if (patch) yield [`${u.owner} '${u.text}' <-> ${v.owner} '${v.text}'`, patch]
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+test('A5.mutation-tests: fuzz: a title, axis title, frame title, header or legend row moved one cell fails', t => {
+  const { mutants, survivors } = tally(t, 'move', function* (d, k) {
+    for (const u of units(d)) {
+      const inSpan = k.chart ? null : spanOf(d, u.owner)
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const to: [number, number] = [u.cells[0]!.r + dr, u.cells[0]!.c + dc]
+        if (inSpan?.(u.cells.map(p => [p.r + dr, p.c + dc]))) continue
+        const patch = relocate(d, [u], [to])
+        if (patch) yield [`${u.owner} '${u.text}' by (${dr},${dc})`, patch]
+      }
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// C graphs no fixture draws: class heads △▽◆◇, ER and class end labels, state heads. Each at 60 and 80.
+const C_GRAPHS: Case[] = [['class heads', 'classDiagram\nAnimal <|-- Duck\nDuck *-- Egg\nLake o-- Duck\nDuck ..|> Swimmer'],
+  ['class ends', 'classDiagram\nA "1" --> "0..*" B : owns\nB "many" o-- "1" C'], ['er', 'erDiagram\nCAR ||--o{ DRIVER : drives\nCAR }|..|{ PART : has'],
+  ['state', 'stateDiagram-v2\n[*] --> A\nA --> B\nB --> A\nB --> [*]']].flatMap(([name, src]) => draw(name!, src!))
+// Every head glyph a drawing shows: directional, hollow, diamond, dot and sequence ends.
+const HEADS = [...'►◄▲▼△▽▷◁◆◇●◉ox)']
+
+test('A5.mutation-tests: fuzz: an arrowhead redrawn as another head glyph fails', t => {
+  const { mutants, survivors } = tally(t, 'head', function* (d) {
+    for (const { r, c, x } of spots(d)) if (x.kind === 'arrow') for (const g of HEADS) if (g !== x.ch) yield [`(${r},${c}) ${x.ch} as ${g}`, [[r, c, { ...x, ch: g }]]]
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+test('A5.mutation-tests: fuzz: an edge\'s two end labels swapped fail', t => {
+  const { mutants, survivors } = tally(t, 'ends', function* (d) {
+    const us = new Map(units(d).map(u => [u.owner, u]))
+    for (const e of d.expect.edges) {
+      const a = us.get(`${e.id}:tail`), b = us.get(`${e.id}:head`)
+      if (!a || !b || a.text === b.text) continue
+      const patch = relocate(d, [a, b], [[b.cells[0]!.r, b.cells[0]!.c], [a.cells[0]!.r, a.cells[0]!.c]])
+      if (patch) yield [`${e.id} '${a.text}' <-> '${b.text}'`, patch]
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// Bar glyphs by axis, and a bar's own cells: the caps in a bar glyph its owner draws. Each run's base and tip are redrawn,
+// since every inner cell is a full █ that the same rule reads; the tip is also cut, and grown by one cell.
+const BAR_GLYPHS = { h: [...'█▏▎▍▌▋▊▉'], v: [...'█▁▂▃▄▅▆▇'] } as const
+test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cell redrawn another length fails', t => {
+  const { mutants, survivors } = tally(t, 'bar', function* (d) {
+    for (const b of d.expect.bars ?? []) {
+      const mine = spots(d).filter(p => p.x.kind === 'cap' && p.x.owners[0] === b.owner && BAR_GLYPHS[b.axis].includes(p.x.ch as never))
+      const has = (r: number, c: number) => mine.some(p => p.r === r && p.c === c)
+      for (const { r, c, x } of mine) {
+        const [nr, nc] = b.axis === 'h' ? [r, c + 1] : [r - 1, c], [pr, pc] = b.axis === 'h' ? [r, c - 1] : [r + 1, c]
+        const tip = !has(nr, nc)
+        if (!tip && has(pr, pc)) continue
+        for (const g of BAR_GLYPHS[b.axis]) if (g !== x.ch) yield [`${b.owner} (${r},${c}) ${x.ch} as ${g}`, [[r, c, { ...x, ch: g }]]]
+        if (tip) {
+          yield [`${b.owner} (${r},${c}) cut`, [[r, c, null]]]
+          if (nr >= 0 && !d.cells[nr]![nc]) yield [`${b.owner} (${r},${c}) grown`, [[nr, nc, { ...x, ch: '█' }]]]
+        }
       }
     }
   })
