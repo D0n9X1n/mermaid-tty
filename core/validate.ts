@@ -13,7 +13,7 @@ export type Expect = {
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]  // C: each bar; lanes: its width across the axis, default 1
   members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
-  keys?: readonly { key: string; item: string; cls: string }[]                           // C: each keyed item, its key and its class
+  keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
@@ -369,8 +369,8 @@ function members(d: Drawing): Fail | null {
 }
 
 // C: a key run is a maximal row run of key cells with one owners[0], its owner, and one legend flag. Its owners are those of
-// all its cells, so a point key that several points own is a run of each. end is the column after it.
-type KeyRun = { owner: string; legend: boolean; owners: Set<string>; text: string; r: number; end: number }
+// all its cells, so a point key that several points own is a run of each. c is its first column, and end the column after it.
+type KeyRun = { owner: string; legend: boolean; owners: Set<string>; text: string; r: number; c: number; end: number }
 function keyRuns(all: readonly Spot[]): KeyRun[] {
   const out: KeyRun[] = []
   for (const { r, c, cell } of all) {                             // spots come row by row, left to right
@@ -378,7 +378,7 @@ function keyRuns(all: readonly Spot[]): KeyRun[] {
     const run = out.at(-1), legend = cell.legend === true
     if (run?.r === r && run.end === c && run.owner === cell.owners[0] && run.legend === legend) {
       run.text += cell.ch; run.end++; for (const o of cell.owners) run.owners.add(o)
-    } else out.push({ owner: cell.owners[0]!, legend, owners: new Set(cell.owners), text: cell.ch, r, end: c + 1 })
+    } else out.push({ owner: cell.owners[0]!, legend, owners: new Set(cell.owners), text: cell.ch, r, c, end: c + 1 })
   }
   return out
 }
@@ -387,20 +387,33 @@ function keyRuns(all: readonly Spot[]): KeyRun[] {
 // whose owners include an entry's item, exactly one is in place and one in the legend, else key-missing (fewer) or key-dup
 // (more), and both read its key, else key-mismatch. The legend run is bound to its row: one empty cell, then a text cell
 // whose owners[0] is the item, its legend text's start, else key-unbound; so the key at an item is the key in its own
-// legend row. Then a run whose owner is no entry's item is key-stray, and a keyable class with an entry for some of its
-// items but not all is key-partial. labels checks the legend text, which the item itself owns.
+// legend row. An entry's at, its own cell (a quadrant point's), is in its in-place run or beside it on its row, and a run
+// the items of two or more entries own needs at on each, else key-unplaced. No key run touches a key cell on its row, which
+// would read as one key with it, else key-adjacent: runs are maximal, so that cell is another run's. Each legend key row
+// starts a block that runs to the row before the next one, and every text cell whose owners[0] is an entry's item, its
+// wrapped rows included, is in its own legend row's block, else key-unbound; parts other owners draw, such as a value or a
+// separator, are not checked. Then a run whose owner is no entry's item is key-stray; an entry that no keyable item matches
+// by item and class is key-class; and a keyable class with an entry for some of its items but not all is key-partial.
+// labels checks the legend text, which the item itself owns.
 function keys(d: Drawing, all: readonly Spot[]): Fail | null {
-  const runs = keyRuns(all), listed = d.expect.keys ?? [], items = new Set(listed.map(k => k.item))
-  for (const { key, item } of listed) {
+  const runs = keyRuns(all), listed = d.expect.keys ?? [], items = new Set(listed.map(k => k.item)), home = new Map<string, number>()
+  for (const { key, item, at: pos } of listed) {
     const mine = runs.filter(x => x.owners.has(item)), here = mine.filter(x => !x.legend), there = mine.filter(x => x.legend)
     if (here.length === 0 || there.length === 0) return fail('key-missing')
     if (here.length > 1 || there.length > 1) return fail('key-dup')
     if (here[0]!.text !== key || there[0]!.text !== key) return fail('key-mismatch')
     const { r, end } = there[0]!, x = at(d, r, end + 1)
     if (at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) return fail('key-unbound')
+    const h = here[0]!, shared = [...h.owners].filter(o => items.has(o)).length > 1
+    if (pos ? pos.r !== h.r || pos.c < h.c - 1 || pos.c > h.end : shared) return fail('key-unplaced')
+    home.set(item, r)
   }
+  if (runs.some(x => at(d, x.r, x.end)?.kind === 'key')) return fail('key-adjacent')
+  const starts = runs.filter(x => x.legend).map(x => x.r), block = (r: number) => starts.findLast(s => s <= r)
+  if (all.some(({ r, cell: x }) => x.kind === 'text' && home.has(x.owners[0]!) && block(r) !== home.get(x.owners[0]!))) return fail('key-unbound')
   if (runs.some(x => !items.has(x.owner))) return fail('key-stray')
   const keyable = d.expect.keyable ?? []
+  if (listed.some(k => !keyable.some(a => a.item === k.item && a.cls === k.cls))) return fail('key-class')
   const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && items.has(a.item) !== items.has(b.item)))
   return partial ? fail('key-partial') : null
 }

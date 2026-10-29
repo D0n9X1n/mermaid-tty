@@ -98,12 +98,13 @@ test('A5.mutation-tests: a second run fails key-dup; a legend key not one blank 
   for (const gap of [0, 2]) assert.deepEqual(validate(board(undefined, gap)), { reason: 'key-unbound' }, `gap ${gap}`)
   assert.deepEqual(validate(board(c => c.key(0, 1, 'b', 'note', 'n1', false))), { reason: 'key-mismatch' })   // its in-place run reads ab
 })
-// One in-place key a owned by both points p1 and p2, then each point's own legend row.
+// One in-place key a owned by both points p1 and p2, at (0, 0) and (0, 1), then each point's own legend row.
 test('A5.mutation-tests: a point key owned by several points is one in-place run for each, and each still needs its legend row', () => {
   const draw = (owners: string[]): Drawing => { const c = createCanvas(3, 6, 6); c.key(0, 0, 'a', 'note', owners, false)
     c.key(1, 0, 'a', 'note', 'p1', true); c.text(1, 2, 'x', 'note', 'p1'); c.key(2, 0, 'a', 'note', 'p2', true); c.text(2, 2, 'y', 'note', 'p2')
     return c.toDrawing({ labels: [{ owner: 'p1', text: 'x' }, { owner: 'p2', text: 'y' }], edges: [], edgeLabels: [], frames: [],
-      keys: [{ key: 'a', item: 'p1', cls: 'note' }, { key: 'a', item: 'p2', cls: 'note' }], keyable: [{ item: 'p1', cls: 'note' }, { item: 'p2', cls: 'note' }] }) }
+      keys: [{ key: 'a', item: 'p1', cls: 'note', at: { r: 0, c: 0 } }, { key: 'a', item: 'p2', cls: 'note', at: { r: 0, c: 1 } }],
+      keyable: [{ item: 'p1', cls: 'note' }, { item: 'p2', cls: 'note' }] }) }
   assert.equal(validate(draw(['p1', 'p2'])), null); assert.deepEqual(validate(draw(['p1'])), { reason: 'key-missing' })
 })
 // Each part draws its item's in-place key over its legend row; stack merges their expects, keys and keyable included.
@@ -115,3 +116,68 @@ test('A5.mutation-tests: stacked keyed parts validate on their merged expect, an
   assert.deepEqual(d.expect.keys, K); assert.equal(validate(d), null)
   for (const i of [0, 1]) assert.deepEqual(validate({ ...d, expect: { ...d.expect, keys: d.expect.keys!.filter((_, j) => j !== i) } }), { reason: 'key-stray' }, `${i}`)
 })
+// n1's in-place key a at (0, 0) and n2's b at (0, k), then each one's legend row.
+function apart(k: number): Drawing {
+  const c = createCanvas(3, 12, 12); c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, k, 'b', 'note', 'n2', false)
+  c.key(1, 0, 'a', 'note', 'n1', true); c.text(1, 2, 'memo', 'note', 'n1'); c.key(2, 0, 'b', 'note', 'n2', true); c.text(2, 2, 'other', 'note', 'n2')
+  return c.toDrawing({ labels: [{ owner: 'n1', text: 'memo' }, { owner: 'n2', text: 'other' }], edges: [], edgeLabels: [], frames: [], keys: K,
+    keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
+}
+test('A5.mutation-tests: an in-place key touching another key on its row reads as one key and fails key-adjacent; a gap passes', () => {
+  assert.deepEqual(validate(apart(1)), { reason: 'key-adjacent' }); assert.equal(validate(apart(2)), null)   // ab, then a b
+})
+// Two points as ● caps at (0, 0) and (0, c2), one key 1 at (0, 1) owned by both, then each point's own legend row; placed:
+// each entry gives its point's cell as at.
+function points(c2: number, placed = true): Drawing {
+  const c = createCanvas(3, 24, 24); c.cap(0, 0, '●', 's1', 'p0.pt'); c.cap(0, c2, '●', 's1', 'p1.pt'); c.key(0, 1, '1', 'note', ['p0', 'p1'], false)
+  c.key(1, 0, '1', 'note', 'p0', true); c.text(1, 2, 'Alpha', 'note', 'p0'); c.key(2, 0, '1', 'note', 'p1', true); c.text(2, 2, 'Beta', 'note', 'p1')
+  const pos = (col: number) => (placed ? { at: { r: 0, c: col } } : {})
+  return c.toDrawing({ labels: [{ owner: 'p0', text: 'Alpha' }, { owner: 'p1', text: 'Beta' }], edges: [], edgeLabels: [], frames: [],
+    keys: [{ key: '1', item: 'p0', cls: 'point', ...pos(0) }, { key: '1', item: 'p1', cls: 'point', ...pos(c2) }],
+    keyable: [{ item: 'p0', cls: 'point' }, { item: 'p1', cls: 'point' }] })
+}
+// n1's in-place key a at (0, 2), its entry's at (r, c), then its legend row.
+function lone(r: number, c: number): Drawing {
+  const d = createCanvas(2, 8, 8); d.key(0, 2, 'a', 'note', 'n1', false); d.key(1, 0, 'a', 'note', 'n1', true); d.text(1, 2, 'memo', 'note', 'n1')
+  return d.toDrawing({ labels: [{ owner: 'n1', text: 'memo' }], edges: [], edgeLabels: [], frames: [], keys: [{ ...K[0]!, at: { r, c } }],
+    keyable: [{ item: 'n1', cls: 'note' }] })
+}
+test("A5.mutation-tests: an entry's at is in its in-place key or beside it on its row, and a key several items own needs at on each", () => {
+  assert.deepEqual(validate(points(20)), { reason: 'key-unplaced' }); assert.equal(validate(points(2)), null)   // the second point far off; then beside the key
+  assert.deepEqual(validate(points(2, false)), { reason: 'key-unplaced' })                                    // a shared key, and no at
+  for (const c of [1, 2, 3]) assert.equal(validate(lone(0, c)), null, `${c}`)                                 // beside it on the left, in it, beside it on the right
+  for (const [r, c] of [[0, 0], [0, 4], [1, 2]] as const) assert.deepEqual(validate(lone(r, c)), { reason: 'key-unplaced' }, `${r},${c}`)
+})
+// In-place keys a and b at (0, 0) and (0, 2), then the legend: a alpha · 0.3, its separator and value owned by others, then
+// n1's wrapped tail and b beta in the given order.
+function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
+  const c = createCanvas(4, 16, 16); c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, 2, 'b', 'note', 'n2', false)
+  c.key(1, 0, 'a', 'note', 'n1', true); c.text(1, 2, 'alpha', 'note', 'n1'); c.text(1, 7, ' · ', 'note', 'sep'); c.text(1, 10, '0.3', 'value', 'n1.xy')
+  order.forEach((x, i) => { if (x === 'tail') c.text(2 + i, 2, 'tail', 'note', 'n1', ' '); else { c.key(2 + i, 0, 'b', 'note', 'n2', true); c.text(2 + i, 2, 'beta', 'note', 'n2') } })
+  return c.toDrawing({ labels: [{ owner: 'n1', text: 'alpha tail' }, { owner: 'sep', text: '·' }, { owner: 'n1.xy', text: '0.3' }, { owner: 'n2', text: 'beta' }],
+    edges: [], edgeLabels: [], frames: [], keys: K, keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
+}
+// A legend beside the diagram: a alpha in row 0 and its wrapped tail in row 1, b beta in row 2; the in-place keys at column 10,
+// b's in row 0 and a's in row 1, tail's row.
+function beside(): Drawing {
+  const c = createCanvas(3, 16, 16); c.key(0, 0, 'a', 'note', 'n1', true); c.text(0, 2, 'alpha', 'note', 'n1'); c.key(0, 10, 'b', 'note', 'n2', false)
+  c.text(1, 2, 'tail', 'note', 'n1', ' '); c.key(1, 10, 'a', 'note', 'n1', false); c.key(2, 0, 'b', 'note', 'n2', true); c.text(2, 2, 'beta', 'note', 'n2')
+  return c.toDrawing({ labels: [{ owner: 'n1', text: 'alpha tail' }, { owner: 'n2', text: 'beta' }], edges: [], edgeLabels: [], frames: [], keys: K,
+    keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
+}
+test("A5.mutation-tests: an item's legend text, wrapped rows included, stays in its own block, which runs to the next legend key row", () => {
+  assert.equal(validate(legendRows(['tail', 'b'])), null); assert.deepEqual(validate(legendRows(['b', 'tail'])), { reason: 'key-unbound' })   // tail reads as b's
+  assert.equal(validate(beside()), null)   // an in-place key's row starts no block
+})
+// apart(2)'s drawing, its keys and keyable replaced.
+const classed = (keys: Expect['keys'], keyable: Expect['keyable']): Drawing => { const d = apart(2); return { ...d, expect: { ...d.expect, keys, keyable } } }
+test('A5.mutation-tests: each entry matches a keyable item by item and class, else key-class; a class is still keyed all or none', () => {
+  const kn = [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }]
+  assert.equal(validate(classed(K, kn)), null)
+  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-class' })   // n2 keyed as a label, its class a note
+  assert.deepEqual(validate(classed([{ ...K[0]!, cls: 'label' }, K[1]!], [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'label' }])), { reason: 'key-class' })   // label is n2's class, not n1's
+  assert.deepEqual(validate(classed(K, [])), { reason: 'key-class' })   // entries for items no class keys
+})
+// n1's in-place key reads its entry's a, but its legend key reads b, as n2's does: only the legend key's read catches it.
+test("A5.mutation-tests: a legend key reads its entry's key even where the in-place key does, else key-mismatch", () =>
+  assert.deepEqual(validate(keyed([['n1', 'a', 'b'], ['n2', 'b', 'b']], K)), { reason: 'key-mismatch' }))   // a / b; b memo, b other
