@@ -4,9 +4,10 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { claude } from './lib/claude.ts'
 import { isMain } from './lib/is-main.ts'
-import { scanPlaceholders } from './lib/placeholder-scan.ts'
+import { checkedSite } from './lib/checked-sites.ts'
 
 // A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID;
 // ['@kit'] runs `claude plugin test .`; an '@tmp' argument becomes a fresh temp
@@ -61,8 +62,8 @@ export const CHECKS: Check[] = [
   { id: 'VR.in-ci', steps: [GALLERY, TANGLE, node('scripts/check-palettes.ts')] },
 ]
 
-// The steps of `all`: the Node tests once, unfiltered, then every other distinct
-// step of the in-all rows, in table order. check.sh runs the kit and validate itself.
+// The steps of `all`: the Node tests once, unfiltered, proving every @nt row's ID, then every other
+// distinct step of the in-all rows, in table order. check.sh runs the kit and validate itself.
 export function allSteps(checks: Check[]): string[][] {
   const seen = new Set([NT, KIT, VALIDATE].map(s => JSON.stringify(s)))
   const rest = checks.filter(c => c.inAll !== false).flatMap(c => c.steps).filter(s => {
@@ -73,7 +74,7 @@ export function allSteps(checks: Check[]): string[][] {
   return [NT, ...rest]
 }
 
-// Runs one step and returns its exit code. id filters @nt; `all` passes none.
+// Runs one step and returns its exit code. id filters @nt and is the ID it proves; `all` passes none, and @nt proves every row's.
 export function run(step: string[], id?: string): number {
   const [cmd = '', ...args] = step
   if (cmd === '@nt') return nodeTests(id)
@@ -89,36 +90,45 @@ export function run(step: string[], id?: string): number {
   }
 }
 
-// node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob),
-// filtered to titles that start with id. It fails unless a real test ran and none failed.
-// TAP's `ok` lines cannot tell: they count suites, and a file whose tests the filter all
-// skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that
-// passed; one ran when its name, or a suite's or parent test's name, starts with id.
+// A test that passed, as lib/passed-tests-reporter.ts lists it, and why its site is unchecked: '' when it is checked.
+type Passed = { names: string[]; file: string; line: number; column: number; why: string }
+
+// node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob), filtered
+// to titles that start with id. It fails unless none failed and the run proves id or, given no
+// id, each @nt row's ID. TAP's `ok` lines cannot tell: they count suites, and a file whose tests
+// the filter all skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that passed.
 function nodeTests(id?: string): number {
-  // node:test passes a test with no function or an empty one, and a filtered run drops the guard test that names it
-  // (tests/scripts/no-placeholder-tests_test.ts), so a filtered run first fails on any placeholder in any test file.
-  const placeholders = id ? scanPlaceholders('.') : []
-  for (const p of placeholders) console.error(p)
-  if (placeholders.length > 0) return 1
   const files = readdirSync('tests', { recursive: true, encoding: 'utf8' })
     .filter(f => f.endsWith('_test.ts')).map(f => join('tests', f)).sort()
-  // The ID, then no word character and no '-': A1 does not match A10, nor A8.no-build A8.no-build-x.
-  const pattern = id ? `^${id.replaceAll('.', '\\.')}(?![\\w-])` : ''
   const tmp = mkdtempSync(join(tmpdir(), 'mtty-'))
   try {
     const passed = join(tmp, 'passed.jsonl')
     const reporter = new URL('./lib/passed-tests-reporter.ts', import.meta.url).href
     const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-reporter-destination=stdout',
       `--test-reporter=${reporter}`, `--test-reporter-destination=${passed}`,
-      ...(id ? [`--test-name-pattern=${pattern}`] : []), ...files], { stdio: 'inherit' })
+      ...(id ? [`--test-name-pattern=${idPattern(id)}`] : []), ...files], { stdio: 'inherit' })
     if (r.status !== 0) return r.status ?? 1
-    const match = new RegExp(pattern)
-    const lines = readFileSync(passed, 'utf8').split('\n').filter(Boolean)
-    const ran = lines.filter(line => (JSON.parse(line) as string[]).some(name => match.test(name))).length
-    if (ran > 0) return 0
-    console.error(`no tests ran for ${id ?? 'all'}`)
-    return 1
+    const tests = readFileSync(passed, 'utf8').split('\n').filter(Boolean).map(line => sited(JSON.parse(line)))
+    const ids = id ? [id] : CHECKS.filter(c => c.steps.some(s => s[0] === '@nt')).map(c => c.id)
+    const problems = [...new Set(ids.flatMap(i => unproven(i, tests)))]
+    for (const p of problems) console.error(p)
+    return problems.length > 0 ? 1 : 0
   } finally { rmSync(tmp, { recursive: true, force: true }) }
+}
+// The ID, then no word character and no '-': A1 does not match A10, nor A8.no-build A8.no-build-x.
+const idPattern = (id: string) => `^${id.replaceAll('.', '\\.')}(?![\\w-])`
+// t, judged at its site in the file node reported, a path or a file: URL.
+function sited(t: Omit<Passed, 'why'>): Passed {
+  const file = t.file.startsWith('file:') ? fileURLToPath(t.file) : t.file
+  const site = checkedSite(readFileSync(file, 'utf8'), t.line, t.column)
+  return { ...t, file, why: site === true ? '' : site }
+}
+// Why tests do not prove id, empty when they do: no test passed whose own, a suite's or a parent test's name matches id, or
+// one did at an unchecked site, as file:line:col: names: why. Every one must be at a checked site.
+function unproven(id: string, tests: Passed[]): string[] {
+  const match = new RegExp(idPattern(id)), mine = tests.filter(t => t.names.some(n => match.test(n)))
+  if (mine.length === 0) return [`no tests ran for ${id}`]
+  return mine.filter(t => t.why).map(t => `${t.file}:${t.line}:${t.column}: ${t.names.join(' > ')}: ${t.why}`)
 }
 
 function main(): number {
