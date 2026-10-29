@@ -506,3 +506,41 @@ test('merge-ambiguous: marked and unmarked edges on one line are one network, an
   assert.equal(validate(hub(['AB', 'AH', 'BH'])), null)                                        // a fan-in to H that A---B shares
   assert.equal(validate(hub(['AB', 'AH', 'BH', 'DH']))?.reason, 'merge-ambiguous')             // D seems linked to A and B
 })
+// QA: A <--> B (e0) and A <--> C (e1) share A's ▲ and one trunk along row 3 to B's and C's ▼, and an open self-loop A --- A
+// (e2) runs round it. Every end is a head or bare, and a two-headed edge's heads may start a link, so B and C seem linked.
+const twoHeads = (ids: string[]) => marked(8, 9, [['A', 0, 4], ['B', 7, 0], ['C', 7, 8]], ([
+  ['e0', 1, 4, '▲'], ['e0', 2, 4, 5], ['e0', 3, 4, 9], ...h('e0', 3, 1, 3), ['e0', 3, 0, 6], ...v('e0', 0, 4, 5), ['e0', 6, 0, '▼'],
+  ['e1', 1, 4, '▲'], ['e1', 2, 4, 5], ['e1', 3, 4, 3], ...h('e1', 3, 5, 7), ['e1', 3, 8, 12], ...v('e1', 8, 4, 5), ['e1', 6, 8, '▼'],
+  ['e2', 0, 3, 6], ...v('e2', 3, 1, 2), ['e2', 3, 3, 3], ['e2', 3, 4, 10], ['e2', 3, 5, 9], ...v('e2', 5, 1, 2), ['e2', 0, 5, 12],
+] as Mark[]).filter(m => ids.includes(m[0])), ['e0 A B A▲ B▼', 'e1 A C A▲ C▼', 'e2 A A'].filter(s => ids.includes(s.slice(0, 2))))
+test('merge-ambiguous: heads of two-headed edges on one line imply a link between their nodes, with or without a bare end', () => {
+  assert.deepEqual(text(twoHeads(['e0', 'e1', 'e2'])), ['   ┌A┐', '   │▲│', '   │││', '┌──┴┴┴──┐', '│       │', '│       │', '▼       ▼', 'B       C'])
+  assert.equal(validate(twoHeads(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous')  // QA: B seems linked to C
+  assert.equal(validate(twoHeads(['e0', 'e1']))?.reason, 'merge-ambiguous')        // so without the loop
+  assert.equal(validate(twoHeads(['e0', 'e2'])), null)                             // A <--> B with a loop at A is true
+})
+// A lifeline is read as the participant whose pill heads it, so each lifeline cell lies in its own pill's columns: header
+// pills of one width swapped over their lifelines reverse every message.
+test('lifeline-unbound: a lifeline under another participant\'s pill fails', () => {
+  const r = explain('sequenceDiagram\nparticipant A\nparticipant B\nA->>B: hi', { columns: 80, theme: 'mono' }) as { drawing: Drawing }
+  const d = structuredClone(r.drawing)
+  assert.equal(validate(d), null)
+  assert.deepEqual(text(d)[0], '[ A ] [ B ]')
+  const row = d.cells[0]!, a = row.slice(0, 5), b = row.slice(6, 11)
+  row.splice(0, 5, ...b); row.splice(6, 5, ...a)
+  assert.deepEqual(text(d)[0], '[ B ] [ A ]')
+  assert.equal(validate(d)?.reason, 'lifeline-unbound')
+})
+// A node's label reads as the node only inside its own pill: the box of the cap, fill and frame cells it draws. Moved a
+// row off it, the pill is left empty and the label floats beside a line it does not end.
+test('label-unbound: a node label moved off its pill fails', () => {
+  for (const [src, id, dr] of [['mindmap\nRoot\n  A\n  B', 'm0', 1], ['flowchart TD\nA & B --> C & D', 'D', -1]] as const) {
+    const r = explain(src, { columns: 80, theme: 'mono' }) as { drawing: Drawing }
+    const d = structuredClone(r.drawing)
+    assert.equal(validate(d), null, src)
+    const mine = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'text' && x.owners[0] === id ? [[y, c] as const] : [])))
+    for (const [y, c] of mine) assert.equal(d.cells[y + dr]?.[c] ?? null, null, src)
+    for (const [y, c] of mine) { d.cells[y + dr]![c] = d.cells[y]![c]!; d.cells[y]![c] = null }
+    assert.equal(validate(d)?.reason, 'label-unbound', src)
+  }
+})

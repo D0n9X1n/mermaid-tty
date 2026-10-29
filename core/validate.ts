@@ -3,7 +3,7 @@
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
-import { BOX } from './box-table.ts'
+import { lineGlyph } from './canvas.ts'
 import { width } from './width.ts'
 
 export type Expect = {
@@ -36,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys, order, glyphs and row labels. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys, order, glyphs and row labels, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(all) ?? merges(d, all) ??
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? rowLabels(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? rowLabels(d, all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -164,15 +164,21 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// The dirs each glyph a line cell may show draws: every Box Drawing glyph by its arms, the dotted runs, the round corners.
-const DRAWS: ReadonlyMap<string, number> = new Map([...Object.entries(BOX).map(([arms, g]) => [g, [1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0)] as const),
-  ['┄', 10], ['┆', 5], ['╭', 6], ['╮', 12], ['╯', 9], ['╰', 3]])
-// A line cell shows exactly the arms it records: its glyph draws its dirs, and its dirs are the union of the dirs each owner
-// drew there. So a glyph cannot show an arm no owner drew, which dangling and crossings would never check, or hide one.
-function lineGlyphs(all: readonly Spot[]): Fail | null {
+// A line cell shows exactly the arms and style it records: its glyph is the one the canvas draws for them (lineGlyph:
+// light and heavy arms by weight, a mixed crossing in its mixed glyph, a dotted cell ┄ ┆ or its light bend), its arms are
+// its dirs, and its dirs are the union of the dirs each owner drew there. So a glyph cannot show an arm no owner drew, hide
+// one, or show another line style: ┆ for │ reads a dependency as an association. The one other glyph is a row mark's
+// corner (C, gitGraph's fork), which draws round. A cell that records no arms or style, as a hand-built one may not, is
+// read as light, as canvas.line records a light line.
+const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
+function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
+  const marks = new Set((d.expect.rows ?? []).map(x => x.mark))
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
-    if (DRAWS.get(x.ch) !== x.dirs || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
+    const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
+    if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
+    const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
+    if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
   return null
 }
@@ -219,27 +225,35 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// Merged lines imply only real edges. Edges on one drawn line, as joined reads them, read as one line, so an end of one
-// edge drawn with no mark seems to lead to every node a mark of another edge on that line points at, its own node
-// included. Each such pair of a bare end t and a head h must be an edge of the drawing from t to h, a self-loop when t = h;
-// one edge's own bare end and mark are its own direction. A fan-out, a fan-in and a complete bipartite merge pass; any
-// other merge seems to draw an edge that is not there. Edges with no marks at all on one line must fan (fans). An edge with no
-// marks on a line with marked edges shows no direction, so each bare end of a marked edge seems linked to both its
-// endpoints: each such pair must be one node, where the two fan, or two that some edge joins, either way.
+// Merged lines imply only real links. Edges on one drawn line, as joined reads them, read as one line, so each end that may
+// start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark), or if it
+// is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such start t and:
+// - each mark h of another edge must be an edge of the drawing from t to h (real); for a bare t, a self-loop when t = h,
+//   while a head t and a head h at one node are one shared head;
+// - each endpoint of another edge with no marks, which shows no direction, must be t's own node or one some edge joins to
+//   t, either way (linked);
+// and edges with no marks at all on one line must fan (fans). A fan-out, a fan-in and a complete bipartite merge pass; any
+// other merge seems to draw a link that is not there, as two two-headed edges A <--> B and A <--> C on one line seem to link
+// B and C.
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const line = joined(d, all), groups = new Map<string, Edge[]>()
   for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
   // How many of e's end marks name n; e's endpoints at a node no mark covers, a self-loop's node counting twice.
   const marks = (e: Edge, n: string) => e.ends.filter(x => x.node === n).length
   const bare = (e: Edge) => [...new Set([e.from, e.to])].filter(n => Number(e.from === n) + Number(e.to === n) > marks(e, n))
+  // The ends of e that may start a link: its bare ends, or the marks of an edge marked at every end.
+  const starts = (e: Edge) => (bare(e).length > 0 || e.ends.length === 0 ? bare(e).map(n => ({ n, head: false })) : e.ends.map(x => ({ n: x.node, head: true })))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
   const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
   const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
   for (const group of groups.values()) {
     for (const a of group) for (const b of group) {
-      if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
-      if (a.ends.length > 0 && b.ends.length === 0 && bare(a).some(t => !linked(t, b.from) || !linked(t, b.to))) return fail('merge-ambiguous')
+      if (a === b) continue
+      for (const t of starts(a)) {
+        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node))) return fail('merge-ambiguous')
+        if (a.ends.length > 0 && b.ends.length === 0 && (!linked(t.n, b.from) || !linked(t.n, b.to))) return fail('merge-ambiguous')
+      }
     }
     if (!fans(group.filter(e => e.ends.length === 0))) return fail('merge-ambiguous')
   }
@@ -528,6 +542,39 @@ function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
     const m = at[i]!, next = at[i + 1]?.r ?? d.cells.length, ps = owners.flatMap(text)   // spots run in reading order
     if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) return fail('label-unbound')
     if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) return fail('label-unbound')
+  }
+  return null
+}
+
+// A lifeline reads as the participant whose pill heads it, so each lifeline cell lies within its own pill's columns, the
+// cap cells its owner draws: pills of one width swapped over their lifelines would reverse every message.
+function lifelines(all: readonly Spot[]): Fail | null {
+  const span = new Map<string, [number, number]>()
+  for (const p of all) if (p.cell.kind === 'cap') {
+    const id = p.cell.owners[0]!, [lo, hi] = span.get(id) ?? [p.c, p.c]
+    span.set(id, [Math.min(lo, p.c), Math.max(hi, p.c)])
+  }
+  for (const p of all) if (p.cell.kind === 'lifeline') {
+    const s = span.get(p.cell.owners[0]!)
+    if (!s || p.c < s[0] || p.c > s[1]) return fail('lifeline-unbound')
+  }
+  return null
+}
+
+// A node's label reads as the node only inside its own pill: each text or cont cell a node draws as owners[0] lies in the
+// box of the cap, fill and frame cells it draws so. Moved off it, the pill is left empty and the label floats beside a line
+// it does not end. A node that draws no such cell (a gitGraph commit's labels are its row's) has no pill to leave; a keyed
+// node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead.
+function inPills(d: Drawing, all: readonly Spot[]): Fail | null {
+  const nodes = new Set(d.expect.edges.flatMap(e => [e.from, e.to])), box = new Map<string, [number, number, number, number]>()
+  for (const p of all) if ((p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && nodes.has(p.cell.owners[0]!)) {
+    const id = p.cell.owners[0]!, b = box.get(id) ?? [p.r, p.r, p.c, p.c]
+    box.set(id, [Math.min(b[0], p.r), Math.max(b[1], p.r), Math.min(b[2], p.c), Math.max(b[3], p.c)])
+  }
+  for (const p of all) if (p.cell.kind === 'key') box.delete(p.cell.owners[0]!)
+  for (const p of all) if (p.cell.kind === 'text' || p.cell.kind === 'cont') {
+    const b = box.get(p.cell.owners[0]!)
+    if (b && (p.r < b[0] || p.r > b[1] || p.c < b[2] || p.c > b[3])) return fail('label-unbound')
   }
   return null
 }

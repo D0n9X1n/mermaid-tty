@@ -1,0 +1,183 @@
+// A convergence fuzz over real drawings. Each ok fixture, and every fourth corpus block, is drawn at 60 and 80 columns;
+// each mutation keeps expect unchanged and changes what the cells show, so validate must fail it. A mutation that leaves
+// the cells identical, or that only relabels an automorphism of the source, is skipped. Each class counts its mutants and
+// fails on any survivor.
+import test from 'node:test'; import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
+import type { Cell, Drawing } from '../../core/canvas.ts'; import { BOX } from '../../core/box-table.ts'
+import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
+
+const ROOT = new URL('../../fixtures/', import.meta.url)
+const files = (dir: string, keep: (f: string, i: number) => boolean) =>
+  readdirSync(new URL(`${dir}/`, ROOT)).sort().filter(keep).map(f => `${dir}/${f}`)
+const SOURCES = [...readdirSync(ROOT).filter(x => x !== 'corpus').sort().flatMap(x => files(x, f => /-ok-\d+\.mmd$/.test(f))),
+  ...files('corpus', (f, i) => f.endsWith('.mmd') && i % 4 === 0)]
+type Case = { name: string; d: Drawing }
+const CASES: Case[] = SOURCES.flatMap(f => [60, 80].flatMap(columns => {
+  const r = explain(readFileSync(new URL(f, ROOT), 'utf8'), { columns, theme: 'mono' })
+  return 'drawing' in r && r.drawing ? [{ name: `${f} @${columns}`, d: r.drawing as Drawing }] : []
+}))
+
+// A patch sets cells; run applies it, asks validate, and restores. null if the patch leaves every cell identical.
+type Patch = [number, number, Cell | null][]
+const same = (a: Cell | null, b: Cell | null) => JSON.stringify(a) === JSON.stringify(b)
+function run(d: Drawing, patch: Patch): boolean | null {
+  const old = patch.map(([r, c]) => d.cells[r]![c] ?? null)
+  if (patch.every(([, , x], i) => same(x, old[i]!))) return null
+  for (const [r, c, x] of patch) d.cells[r]![c] = x
+  const failed = validate(d) !== null
+  patch.forEach(([r, c], i) => { d.cells[r]![c] = old[i]! })
+  return failed
+}
+type Tally = { mutants: number; survivors: string[] }
+// Runs every patch each case yields and tallies it; a survivor is named by its case and the patch's own note.
+function tally(t: { diagnostic(s: string): void }, label: string, gen: (d: Drawing) => Iterable<[string, Patch]>): Tally {
+  const out: Tally = { mutants: 0, survivors: [] }
+  for (const { name, d } of CASES) {
+    assert.equal(validate(d), null, name)
+    for (const [note, patch] of gen(d)) {
+      const failed = run(d, patch)
+      if (failed === null) continue
+      out.mutants++
+      if (!failed) out.survivors.push(`${name}: ${note}`)
+    }
+  }
+  t.diagnostic(`${label}: ${out.mutants} mutants, ${out.survivors.length} survivors${out.survivors.length ? `, e.g. ${out.survivors.slice(0, Number(process.env.SHOW ?? 5)).join('; ')}` : ''}`)
+  return out
+}
+const spots = (d: Drawing) => d.cells.flatMap((row, r) => row.flatMap((x, c) => (x ? [{ r, c, x }] : [])))
+// A drawing's line cells, at most two of each context: glyph, style and how many owners drew there. Cells of one context
+// meet the validator's rules alike, and a big drawing has thousands of them.
+function lineCells(d: Drawing) {
+  const seen = new Map<string, number>()
+  return spots(d).filter(({ x }) => {
+    if (x.kind !== 'line') return false
+    const k = `${x.ch}|${x.style}|${x.segs?.length ?? 0}`, n = seen.get(k) ?? 0
+    seen.set(k, n + 1)
+    return n < 2
+  })
+}
+
+// Every line glyph by the dirs it draws: the Box Drawing table's light and heavy mixes, the dashed runs, the doubles and
+// their single mixes, and the round corners.
+const bits = (arms: string) => [1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0)
+const DIRS = new Map<string, number>([...Object.entries(BOX).map(([a, g]) => [g, bits(a)] as const),
+  ...([['┄┅┈┉╌╍═', 10], ['┆┇┊┋╎╏║', 5], ['╒╓╔╭', 6], ['╕╖╗╮', 12], ['╘╙╚╰', 3], ['╛╜╝╯', 9], ['╞╟╠', 7], ['╡╢╣', 13],
+    ['╤╥╦', 14], ['╧╨╩', 11], ['╪╫╬', 15]] as const).flatMap(([gs, n]) => [...gs].map(g => [g, n] as const))])
+const SAME_ARMS = (dirs: number) => [...DIRS].filter(([, n]) => n === dirs).map(([g]) => g)
+
+test('A5.mutation-tests: fuzz: every line cell redrawn in another style of the same arms fails', t => {
+  const { mutants, survivors } = tally(t, 'style', function* (d) {
+    for (const { r, c, x } of lineCells(d)) for (const g of SAME_ARMS(x.dirs)) yield [`(${r},${c}) ${x.ch} as ${g}`, [[r, c, { ...x, ch: g }]]]
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// The edges of d grouped into joined networks: edges that share a line or arrow cell are on one network.
+function networks(d: Drawing): (id: string) => string {
+  const root = new Map(d.expect.edges.map(e => [e.id, e.id]))
+  const find = (id: string): string => { let r = id; while (root.get(r) !== r) r = root.get(r)!; return r }
+  for (const { x } of spots(d)) {
+    const ids = x.kind === 'line' || x.kind === 'arrow' ? x.owners.filter(o => root.has(o)) : []
+    for (const id of ids.slice(1)) root.set(find(id), find(ids[0]!))
+  }
+  return id => (root.has(id) ? find(id) : '')
+}
+// x with owner o's part given to e instead: its owners and its segs, e's dirs there OR-merged with o's.
+function reassign(x: Cell, o: string, e: string): Cell {
+  const owners = [...new Set(x.owners.map(y => (y === o ? e : y)))]
+  const segs = x.segs?.reduce<{ owner: string; dirs: number }[]>((out, s) => {
+    const owner = s.owner === o ? e : s.owner, had = out.find(y => y.owner === owner)
+    if (had) had.dirs |= s.dirs; else out.push({ owner, dirs: s.dirs })
+    return out
+  }, [])
+  return { ...x, owners, ...(segs ? { segs } : {}) }
+}
+
+test('A5.mutation-tests: fuzz: a line cell given to another edge of its joined network fails', t => {
+  const { mutants, survivors } = tally(t, 'owner', function* (d) {
+    const net = networks(d)
+    for (const { r, c, x } of spots(d).filter(p => p.x.kind === 'line')) for (const o of x.owners) {
+      if (!net(o)) continue
+      for (const e of d.expect.edges) if (e.id !== o && net(e.id) === net(o)) yield [`(${r},${c}) ${o} as ${e.id}`, [[r, c, reassign(x, o, e.id)]]]
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// Each node's pill: the box of the cap, fill, text, cont and frame cells it draws as owners[0], if that box holds no other
+// cell; and the pill's shape, its empty, border and inner cells, so pills of one shape and size can swap.
+const PILL = new Set(['cap', 'fill', 'text', 'cont', 'frame'])
+function pills(d: Drawing) {
+  const nodes = new Set(d.expect.edges.flatMap(e => [e.from, e.to])), out: { id: string; r: number; c: number; rows: (Cell | null)[][]; shape: string }[] = []
+  for (const id of nodes) {
+    const mine = spots(d).filter(p => p.x.owners[0] === id && PILL.has(p.x.kind))
+    if (mine.length === 0) continue
+    const [r0, r1, c0, c1] = [Math.min(...mine.map(p => p.r)), Math.max(...mine.map(p => p.r)), Math.min(...mine.map(p => p.c)), Math.max(...mine.map(p => p.c))]
+    const rows = d.cells.slice(r0, r1 + 1).map(row => row.slice(c0, c1 + 1).map(x => x ?? null))
+    if (rows.flat().some(x => x && (x.owners[0] !== id || !PILL.has(x.kind)))) continue
+    out.push({ id, r: r0, c: c0, rows, shape: rows.map(row => row.map(x => (!x ? '.' : x.kind === 'cap' || x.kind === 'frame' ? x.ch : 'i')).join('')).join('/') })
+  }
+  return out
+}
+// Whether swapping nodes a and b maps the source onto itself: each edge, its ends and its label, read with a and b
+// swapped, is an edge of the source. An edge with no marks shows no direction, so its endpoints are unordered.
+function automorphic(d: Drawing, a: string, b: string): boolean {
+  const sw = (n: string) => (n === a ? b : n === b ? a : n)
+  const text = new Map(d.expect.labels.map(l => [l.owner, l.text]))
+  const label = (id: string) => d.expect.edgeLabels.filter(l => l.edge === id).map(l => text.get(l.owner)).join('|')
+  const key = (e: Drawing['expect']['edges'][number], f = (n: string) => n) =>
+    `${(e.ends.length > 0 ? [f(e.from), f(e.to)] : [f(e.from), f(e.to)].sort()).join('>')}|${e.ends.map(x => `${f(x.node)}${x.glyph}`).sort().join()}|${label(e.id)}`
+  const was = d.expect.edges.map(e => key(e)).sort(), now = d.expect.edges.map(e => key(e, sw)).sort()
+  return was.join('\n') === now.join('\n')
+}
+
+test('A5.mutation-tests: fuzz: two node pills of one shape and size swapped fail', t => {
+  const { mutants, survivors } = tally(t, 'pill', function* (d) {
+    const ps = pills(d)
+    for (const [i, p] of ps.entries()) for (const q of ps.slice(i + 1)) {
+      if (p.shape !== q.shape || automorphic(d, p.id, q.id)) continue
+      const patch: Patch = p.rows.flatMap((row, y) => row.flatMap((x, k): Patch => [[p.r + y, p.c + k, q.rows[y]![k]!], [q.r + y, q.c + k, x]]))
+      yield [`${p.id} <-> ${q.id}`, patch]
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// Where each label may lie, by its owner: an edge label within one cell of its edge's line or arrow cells (at least one of
+// its cells), a node's label inside its pill's box (every cell), a row's label in its mark's block right of the mark (every
+// cell). Other text (titles, axes, legends) has no span to leave, so it is not moved.
+function spanOf(d: Drawing, owner: string): ((cells: [number, number][]) => boolean) | null {
+  const all = spots(d), edge = d.expect.edgeLabels.find(l => l.owner === owner)?.edge
+  if (edge) {
+    const route = all.filter(p => (p.x.kind === 'line' || p.x.kind === 'arrow') && p.x.owners.includes(edge))
+    return cells => cells.some(([r, c]) => route.some(q => Math.max(Math.abs(r - q.r), Math.abs(c - q.c)) <= 1))
+  }
+  const box = pills(d).find(p => p.id === owner)
+  if (box) return cells => cells.every(([r, c]) => r >= box.r && r < box.r + box.rows.length && c >= box.c && c < box.c + box.rows[0]!.length)
+  const rows = d.expect.rows ?? [], i = rows.findIndex(x => x.owners.includes(owner))
+  if (i < 0) return null
+  const markAt = (k: number) => all.find(p => p.x.owners.includes(rows[k]!.mark))!
+  const m = markAt(i), next = i + 1 < rows.length ? markAt(i + 1).r : d.cells.length
+  return cells => cells.every(([r, c]) => r >= m.r && r < next && c > m.c)
+}
+
+test('A5.mutation-tests: fuzz: a label moved one cell into free cells outside its owner\'s span fails', t => {
+  const { mutants, survivors } = tally(t, 'label', function* (d) {
+    const owners = new Set(d.expect.labels.map(l => l.owner))
+    for (const owner of owners) {
+      const inSpan = spanOf(d, owner)
+      if (!inSpan) continue
+      const mine = spots(d).filter(p => (p.x.kind === 'text' || p.x.kind === 'cont') && p.x.owners[0] === owner)
+      if (mine.length === 0) continue
+      const held = new Set(mine.map(p => `${p.r},${p.c}`))
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const to = mine.map(p => [p.r + dr, p.c + dc] as [number, number])
+        if (to.some(([r, c]) => r < 0 || r >= d.cells.length || c < 0 || (d.cells[r]![c] && !held.has(`${r},${c}`))) || inSpan(to)) continue
+        const patch: Patch = [...mine.map((p): Patch[number] => [p.r, p.c, null]), ...mine.map((p, k): Patch[number] => [to[k]![0], to[k]![1], p.x])]
+        yield [`${owner} by (${dr},${dc})`, patch]
+      }
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})

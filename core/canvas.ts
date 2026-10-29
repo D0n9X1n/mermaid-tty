@@ -25,7 +25,7 @@ export type Canvas = {
 
 // A dotted cell's arms are all light, since a solid line makes it solid (see line): a straight run draws ┄ or ┆, and a bend or
 // branch the light glyph (rule 12). Any other line draws the glyph of its arms, light and heavy arms meeting in their mixed glyph.
-const glyph = (dirs: number, arms: string, style: NonNullable<Cell['style']>): string => (style === 'dotted' ? junction(dirs, 'dotted') : boxGlyph(arms))
+export const lineGlyph = (dirs: number, arms: string, style: NonNullable<Cell['style']>): string => (style === 'dotted' ? junction(dirs, 'dotted') : boxGlyph(arms))
 
 // Frames and lifelines are background: a text, cap, key, fill, arrow or line write replaces them.
 const BACKGROUND: ReadonlySet<Kind> = new Set<Kind>(['frame', 'lifeline'])
@@ -112,7 +112,7 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       const arms = [1, 2, 4, 8].map(b => (dirs & b ? k : '0')).join('')
       const old = cells[r]![c]
       if (!old || BACKGROUND.has(old.kind)) {
-        cells[r]![c] = { ch: glyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight, segs: [{ owner, dirs }] }
+        cells[r]![c] = { ch: lineGlyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight, segs: [{ owner, dirs }] }
         return
       }
       // Any other kind is exclusive: a Conflict at once, so line asks shares only about a line cell's owners.
@@ -126,7 +126,7 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       const owners = old.owners.includes(owner) ? old.owners : [...old.owners, owner]
       const had = old.segs ?? [], seg = had.find(s => s.owner === owner)
       const segs = seg ? had.map(s => (s === seg ? { owner, dirs: s.dirs | dirs } : s)) : [...had, { owner, dirs }]
-      cells[r]![c] = { ...old, ch: glyph(all, merged, style), owners, dirs: all, arms: merged, style, segs }
+      cells[r]![c] = { ...old, ch: lineGlyph(all, merged, style), owners, dirs: all, arms: merged, style, segs }
     },
     lifeline(r, c, heavy, owner) { under(r, c, { ch: junction(5, heavy ? 'heavy' : 'light'), role: 'note', kind: 'lifeline', owners: [owner], dirs: 5 }) },
     frame(top, left, bottom, right, role, owner, title) {
