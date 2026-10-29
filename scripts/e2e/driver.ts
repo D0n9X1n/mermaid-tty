@@ -25,8 +25,8 @@ export type Session = {
   clipboard(): Promise<string | undefined>
   // Hangs the program up and, once it has exited or after 2 s, kills its process group (on Windows, its tree), so that no
   // child that ignores hangups outlives it. Resolves once it has exited (on Windows, once cmd.exe has), and at the latest
-  // 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for each of its two server commands. Never throws,
-  // even if the program or the server is gone already. Called again, resolves at once.
+  // 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for kill-server. Never throws, even if the program
+  // or the server is gone already. Called again, resolves at once.
   stop(): Promise<void>
 }
 // env is the session's whole env, as sessionEnv builds it.
@@ -71,14 +71,17 @@ async function gone(pid: number, ms: number): Promise<boolean> {
   for (const until = Date.now() + ms; alive(pid); await sleep(50)) if (Date.now() >= until) return false
   return true
 }
+// Runs step, ignoring what it throws, so that a failed cleanup step skips none after it.
+const attempt = (step: () => void) => { try { step() } catch {} }
 // Ends a program as closing its terminal would: hangUp, and wait up to HUP_MS for it to exit. Then kill its process group
-// or tree whether or not it has, as a child that ignores the hangup outlives it there, and if it had not, wait up to
-// KILL_MS more. No step throws for a program or a group already gone.
-async function end(hangUp: () => void, exited: (ms: number) => Promise<boolean>, kill: () => void): Promise<void> {
-  try { hangUp() } catch {}
-  const done = await exited(HUP_MS)
-  try { kill() } catch {}
-  if (!done) await exited(KILL_MS)
+// or tree whether or not it has, as a child that ignores the hangup outlives it there; run each of after; and if it had
+// not exited, wait up to KILL_MS more. Each step runs whatever the ones before it threw.
+async function end(hangUp: () => void, exited: (ms: number) => Promise<boolean>, kill: () => void, ...after: (() => void)[]): Promise<void> {
+  attempt(hangUp)
+  const done = await exited(HUP_MS).catch(() => false)
+  attempt(kill)
+  for (const step of after) attempt(step)
+  if (!done) await exited(KILL_MS).catch(() => false)
 }
 // Kills pid and every process under it: on Windows its tree, with taskkill /T /F; elsewhere its process group, which
 // node-pty and tmux each make it lead, and which lasts after pid has exited while any process in it runs.
@@ -95,6 +98,9 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   const { file, args } = ptyCommand(o.argv, process.platform, o.env)
   const screen = createScreen(COLS, ROWS)
   const p = spawn(file, args, { name: 'xterm-256color', cols: COLS, rows: ROWS, cwd: o.cwd, env: o.env })
+  // The program's process group, recorded now: node-pty makes the program lead a session of its own (on Windows, p.pid is
+  // the root of its tree).
+  const pgid = p.pid
   // parsed resolves once the screen has parsed the output received so far: the screen parses writes in order.
   let parsed = Promise.resolve(), exited = false, stopping: Promise<void> | undefined
   p.onData(d => { parsed = screen.write(d) })
@@ -108,7 +114,7 @@ async function ptySession(o: SessionOptions): Promise<Session> {
     cells: () => read(screen.cells),
     text,
     clipboard: () => read(screen.clipboard),
-    stop: () => (stopping ??= end(() => { if (!exited) p.kill() }, ms => within(exit, ms).then(r => r !== LATE), () => killTree(p.pid))),
+    stop: () => (stopping ??= end(() => { if (!exited) p.kill() }, ms => within(exit, ms).then(r => r !== LATE), () => killTree(pgid))),
   }
 }
 
@@ -175,7 +181,13 @@ function tmuxSession(o: SessionOptions): Session {
     'set', '-g', 'remain-on-exit', 'on', ';',
     'new-session', '-d', '-P', '-F', '#{pid} #{pane_pid} #{socket_path}', '-s', 'mtty-e2e', '-x', String(COLS), '-y', String(ROWS),
     '-c', o.cwd, '--', ...o.argv, ';', 'set', '-g', 'window-size', 'manual').trim().split(' ')
+  // pane, the program's pid, is also its process group's: tmux makes the program lead a session of its own. stop() uses
+  // these, recorded now, and looks up nothing.
   const server = Number(started[0]), pane = Number(started[1]), socket = started.slice(2).join(' ')
+  // kill-server; a server that does not answer can neither end nor reap the program, so it is killed instead.
+  const killServer = () => {
+    try { run('kill-server') } catch (e) { if (e instanceof TmuxTimeout && server > 0) process.kill(server, 'SIGKILL') }
+  }
   // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
   const capture = async (signal?: AbortSignal) => {
     const screen = createScreen(COLS, ROWS)
@@ -196,25 +208,17 @@ function tmuxSession(o: SessionOptions): Session {
         throw e
       }
     },
-    // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to the process group
-    // new-session made it lead, which a child of it may outlive it in; a dead pane has no pid, but its group may remain.
-    // Only then does it end the server, and remove the socket tmux leaves behind: on macOS a Node program whose tty closes
-    // under it may stall rather than exit. It never throws, as the server may be gone already.
+    // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to its process group,
+    // which a child of it may outlive it in. Only then does it end the server, and remove the socket tmux leaves behind: on
+    // macOS a Node program whose tty closes under it may stall rather than exit. Each step runs whatever the ones before it
+    // threw: the program, its group or the server may be gone already.
     stop: async () => {
       if (stopped) return
       stopped = true
-      try {
-        const live = Number(run('display', '-p', '-t', 'mtty-e2e', '#{pane_pid}')) > 0
-        if (pane > 0) await end(() => { if (live) process.kill(pane, 'SIGHUP') }, ms => (live ? gone(pane, ms) : Promise.resolve(true)), () => killTree(pane))
-        run('kill-server')
-      } catch (e) {
-        // A server that does not answer can neither end nor reap the program, so stop() kills both.
-        if (e instanceof TmuxTimeout) {
-          if (server > 0) try { process.kill(server, 'SIGKILL') } catch {}
-          if (pane > 0) try { killTree(pane) } catch {}
-        }
-      }
-      rmSync(socket, { force: true })
+      const cleanup = [killServer, () => rmSync(socket, { force: true })]
+      // A pid of 0 would signal this process's own group.
+      if (pane > 0) await end(() => process.kill(pane, 'SIGHUP'), ms => gone(pane, ms), () => killTree(pane), ...cleanup)
+      else cleanup.forEach(attempt)
     },
   }
 }
