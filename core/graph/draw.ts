@@ -7,7 +7,7 @@ import type { Piece } from '../text.ts'
 import type { Role } from '../themes.ts'
 import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
-import { compact } from './compact.ts'
+import { compactIfValid } from './compact.ts'
 import type { Box, Placed } from './layered.ts'
 import type { Route } from './route.ts'
 
@@ -42,8 +42,9 @@ function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, 
   }
 }
 
-// The drawing, finished by compact unless finish says otherwise: a test that reads cells at layout coordinates passes d => d.
-export function drawGraph(p: Placed, routes: readonly Route[], columns: number, finish: (d: Drawing) => Drawing = compact): Drawing {
+// The drawing, finished by compactIfValid unless finish says otherwise: a test that reads cells at layout coordinates
+// passes d => d.
+export function drawGraph(p: Placed, routes: readonly Route[], columns: number, finish: (d: Drawing) => Drawing = compactIfValid): Drawing {
   // Two edges merge their line cells when they share an endpoint, whatever their styles; other owners share nothing.
   const ends = new Map(p.graph.edges.map(e => [e.id, [e.from, e.to]] as const))
   const shares = (a: string, b: string) => ends.get(a)?.some(x => ends.get(b)?.includes(x) ?? false) ?? false
