@@ -39,7 +39,9 @@ test('B1: support-table.ts --check exits 0 on the committed file; an unknown arg
 // Beyond the plan's tests: the stub module is gone, and no source names it.
 test('A4: core/diagrams/stub.ts is deleted and no .ts file imports it', () => {
   assert.ok(!existsSync('core/diagrams/stub.ts'))
+  // The repo's own files: a node_modules, or a local worktree under .claude/, is not the repo. No git call, so the test
+  // runs in A8's fresh copy, which is not a repository.
   const ts = readdirSync('.', { recursive: true, withFileTypes: true })
-    .filter(e => e.isFile() && e.name.endsWith('.ts') && !e.parentPath.includes('node_modules')).map(e => join(e.parentPath, e.name))
+    .filter(e => e.isFile() && e.name.endsWith('.ts') && !/(^|[\\/])(node_modules|\.claude)([\\/]|$)/.test(e.parentPath)).map(e => join(e.parentPath, e.name))
   assert.deepEqual(ts.filter(f => /from '[^']*diagrams\/stub(\.ts)?'/.test(readFileSync(f, 'utf8'))), [])
 })
