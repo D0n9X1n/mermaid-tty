@@ -32,7 +32,7 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   if (g.edges.some(e => [e.from, e.to].some(x => t.byId.has(x) && !t.sealed.has(x)))) return fail('cluster-edge')
   const units: Unit[] = [], subs = new Map<string, Placed>(), last = Math.max(-1, ...g.nodes.map(n => n.order))
   for (const n of g.nodes.filter(n => top(n.id))) {
-    const z = nodeSize(n, s.wrapAt)
+    const z = nodeSize(n, s.wrapAt, across)
     if (isFail(z)) return z
     units.push({ id: n.id, kind: 'node', owner: t.parent.get(n.id) ?? null, key: n.order, ...ext(z) })
   }
@@ -53,7 +53,11 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
     if (z) labels.set(e.id, ext(z))
   }
   const outer = new Map(g.clusters.filter(c => !t.sealed.has(c.id) && top(c.id)).map(c => [c.id, t.parent.get(c.id) ?? null] as const))
-  const p = place(units, free, labels, outer, s, fit, across)
+  // An end label lies along a horizontal run, above it, and beside a vertical one: so the gap it lies in, between ranks when
+  // they go across, else between the nodes of a rank, widens by the widest end label + 1 cells. Compaction drops what is unused.
+  const room = (e: GEdge) => Math.max(-1, ...[e.tailLabel, e.headLabel].flatMap(t => (t === undefined ? [] : [width(t)]))) + 1
+  const extra = Math.max(0, ...free.map(room))
+  const p = place(units, free, labels, outer, across ? { ...s, rankGap: s.rankGap + extra } : { ...s, nodeGap: s.nodeGap + extra }, fit, across)
   // LR swaps the axes; BT and RL mirror the main one.
   const at = (main: number, long: number) => (g.dir === 'BT' || g.dir === 'RL' ? p.long - main - long : main)
   const box = (r: Rect): Box => {
@@ -114,8 +118,10 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
       if (!overlap && !crossesFrame) boxes.set(id, candidate)
     }
   }
+  // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further out.
   let outside = Math.max(...[...boxes, ...frames].map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
   for (const e of graph.edges.filter(e => e.reversed)) {
+    outside += room(e)
     const label = boxes.get(`${e.id}:label`)
     const lane = outside + (label ? (across ? label.rows : label.cols) >> 1 : 0)
     for (const [id, b] of boxes) if (id.startsWith(`${e.id}#`)) {

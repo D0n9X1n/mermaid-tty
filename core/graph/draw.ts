@@ -5,10 +5,12 @@ import type { Canvas, Drawing } from '../canvas.ts'
 import { labelLines, wrap } from '../text.ts'
 import type { Piece } from '../text.ts'
 import type { Role } from '../themes.ts'
+import { validate } from '../validate.ts'
 import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
 import { compactIfValid } from './compact.ts'
 import type { Box, Placed } from './layered.ts'
+import type { GEdge, GNode, NodeRow } from './model.ts'
 import type { Route } from './route.ts'
 
 // One row of a box: capL, a pad, the piece centred, a pad, capR. Caps and fill are owned by owner, the text by owners.
@@ -22,16 +24,45 @@ function row(cv: Canvas, b: Box, r: number, caps: readonly [string, string], pie
   cv.cap(r, b.col + b.cols - width(rt), rt, role, owner)
 }
 
+// A mark node draws its glyph alone, as a cap its node owns: start ●, end ◉, choice ◇ in the decision role, and a bar a run of
+// ━ across a 1-row box or ┃ down a 1-column box; a 1×1 bar runs across the flow, ━ when the ranks go down.
+const MARK = { start: '●', end: '◉', choice: '◇' } as const
+function mark(cv: Canvas, b: Box, n: GNode, across: boolean): void {
+  if (n.mark !== 'bar') { cv.cap(b.row, b.col, MARK[n.mark!], n.mark === 'choice' ? 'decision' : 'node', n.id); return }
+  const down = b.rows > 1 || (b.cols === 1 && across)
+  for (let i = 0; i < (down ? b.rows : b.cols); i++) cv.cap(b.row + (down ? i : 0), b.col + (down ? 0 : i), down ? '┃' : '━', 'node', n.id)
+}
+
 // A route's line weight: thick draws heavy, dotted ┄/┆ with light bends, and solid light (the canvas merges mixed arms).
 const WEIGHT = { solid: 'light', thick: 'heavy', dotted: 'dotted' } as const
 
+// A fixed row, never re-wrapped (members.ts): capL, a pad cell and its indent, then its text left-aligned, or each of its
+// cols at its offset, the widths before it plus a gap cell each, owned by [col.id, node]; then fill to capR. Its fill takes
+// the row's role, its caps the node's; a blank part draws no cell. A part joins as given, else below the first row with '\n'.
+function fixedRow(cv: Canvas, b: Box, r: number, caps: readonly [string, string], role: Role, node: string, x: NodeRow,
+  owners: readonly string[], below: boolean): void {
+  const [l, rt] = caps, start = b.col + width(l) + 1 + (x.indent ?? 0), end = b.col + b.cols - width(rt)
+  const parts = x.cols ? x.cols.map((c, j) => ({ ...c, owners: [c.id, node], at: x.cols!.slice(0, j).reduce((s, p) => s + p.width + 1, 0) }))
+    : [{ text: x.text, role: x.role, owners, join: x.join, at: 0 }]
+  cv.cap(r, b.col, l, role, node)
+  let c = b.col + width(l)
+  for (const part of parts.filter(p => p.text.trim() !== '')) {
+    cv.fill(r, c, start + part.at - c, x.role, node)
+    c = start + part.at + cv.text(r, start + part.at, part.text, part.role, part.owners, part.join ?? (below ? '\n' : undefined))
+  }
+  cv.fill(r, c, end - c, x.role, node)
+  cv.cap(r, end, rt, role, node)
+}
+
 // A box's lines, each wrapped at the box's content width: the layout sized the box to its widest piece wrapped at wrapAt,
-// and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'.
-type Line = { text: string; role: Role; owners: readonly string[] }
+// and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'. A fixed row,
+// or a row of columns, draws as fixedRow.
+type Line = { text: string; role: Role; owners: readonly string[]; row?: NodeRow }
 function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, owner: string, rows: readonly Line[], textOnly = false): void {
   const max = b.cols - width(caps[0]) - width(caps[1]) - 2
   let r = b.row
   for (const [k, line] of rows.entries()) {
+    if (line.row?.fixed || line.row?.cols) { fixedRow(cv, b, r++, caps, role, owner, line.row, line.owners, k > 0); continue }
     const pieces: Piece[] = wrap(line.text, max) ?? [{ text: line.text, join: '' }]
     for (const [i, piece] of pieces.entries()) {
       const joined: Piece = i === 0 && k > 0 ? { ...piece, join: '\n' } : piece
@@ -42,16 +73,40 @@ function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, 
   }
 }
 
+// An end label (a cardinality) of true end t, owned by `${edge}:${t}`, at node, its true end's node: on a reversed edge the
+// drawn tail is the true head. It sits beside its end's second cell out from its node, the cell past its mark or past the
+// line cell that touches its node: right of that cell when its node is above or below it, else above it, running away from
+// its node. So it clears its node's own rows and columns, and a neighbouring port there. at, its first cell at layout
+// coordinates, is null with no route; a blank label is none.
+type EndLabel = { owner: string; node: string; text: string; at: { r: number; c: number } | null }
+function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'head'): EndLabel | null {
+  const drawn = e.reversed ? (t === 'tail' ? 'head' : 'tail') : t
+  const text = drawn === 'tail' ? e.tailLabel : e.headLabel, node = drawn === 'tail' ? e.from : e.to, owner = `${e.id}:${t}`
+  if (text === undefined || text.trim() === '') return null
+  const marks = route?.ends ?? [], tail = e.tail === 'none' ? [] : marks.slice(0, 1), head = e.head === 'none' ? [] : marks.slice(-1)
+  const path = drawn === 'tail' ? [...tail, ...(route?.cells ?? [])] : [...head, ...(route?.cells ?? []).toReversed()]
+  const a = path[1], b = p.boxes.get(node) ?? p.frames.get(node)
+  if (!a || !b) return { owner, node, text, at: null }
+  if (a.c >= b.col && a.c < b.col + b.cols) return { owner, node, text, at: { r: a.r, c: a.c + 1 } }
+  return { owner, node, text, at: { r: a.r - 1, c: b.col < a.c ? a.c : a.c - width(text) + 1 } }
+}
+
 // The drawing, finished by compactIfValid unless finish says otherwise: a test that reads cells at layout coordinates
 // passes d => d.
 export function drawGraph(p: Placed, routes: readonly Route[], columns: number, finish: (d: Drawing) => Drawing = compactIfValid): Drawing {
   // Two edges merge their line cells when they share an endpoint, whatever their styles; other owners share nothing.
   const ends = new Map(p.graph.edges.map(e => [e.id, [e.from, e.to]] as const))
   const shares = (a: string, b: string) => ends.get(a)?.some(x => ends.get(b)?.includes(x) ?? false) ?? false
-  // A title takes row 0, so the graph is drawn a row down, on a grid at least as wide as the title.
-  const title = p.graph.title, y = title === null ? 0 : 1
-  const at = (b: Box | undefined): Box | undefined => b && { ...b, row: b.row + y }
-  const cv = createCanvas(p.rows + y, Math.max(p.cols, width(title ?? '')), columns, shares)
+  // Each end label beside its terminal, from the routes. The grid grows on any side one overruns: a top or left overrun
+  // shifts the whole graph down or right, as a title, which takes row 0, shifts it a row down; the grid is as wide as the title.
+  const live = p.graph.edges.filter(e => e.style !== 'invisible')
+  const tags = new Map(live.map(e => [e.id, (['tail', 'head'] as const).flatMap(t =>
+    endLabel(p, e, routes.find(r => r.edge === e.id), t) ?? [])] as const))
+  const boxes = [...tags.values()].flat().flatMap(l => (l.at ? [{ ...l.at, w: width(l.text) }] : []))
+  const title = p.graph.title, dy = (title === null ? 0 : 1) + Math.max(0, ...boxes.map(l => -l.r)), dx = Math.max(0, ...boxes.map(l => -l.c))
+  const at = (b: Box | undefined): Box | undefined => b && { ...b, row: b.row + dy, col: b.col + dx }
+  const height = Math.max(p.rows, ...boxes.map(l => l.r + 1)) + dy, wide = Math.max(p.cols, ...boxes.map(l => l.c + l.w)) + dx
+  const cv = createCanvas(height, Math.max(wide, width(title ?? '')), columns, shares)
   const labels: Expect['labels'][number][] = [], edges: Expect['edges'][number][] = []
   const edgeLabels: Expect['edgeLabels'][number][] = [], frames: string[] = []
   if (title !== null) {
@@ -66,31 +121,61 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
     frames.push(c.id)
     if (c.title !== null) labels.push({ owner: c.id, text: c.title })
   }
-  // A row's text is owned by [row id ?? node id, node id], deduplicated; each owner's rows, joined by '\n', are one label.
+  // A row's text is owned by [row id ?? node id, node id], deduplicated, and a column's by [col id, node id]. Each owner's
+  // pieces, each joined by its join, else '\n', are one label. A blank column or fixed row draws no cell and is not listed.
+  // Each column, and each row with its own id, that draws a cell is a member, in drawing order.
+  const across = p.graph.dir === 'LR' || p.graph.dir === 'RL', members = new Map<string, string>()
+  const shown = (s: string) => s.trim() !== ''
   for (const n of p.graph.nodes) {
     const b = at(p.boxes.get(n.id))
-    const rows = n.rows.map(x => ({ text: x.text, role: x.role, owners: [...new Set([x.id ?? n.id, n.id])] }))
+    if (n.mark) { if (b) mark(cv, b, n, across); continue }
+    const rows = n.rows.map(x => ({ text: x.text, role: x.role, owners: [...new Set([x.id ?? n.id, n.id])], row: x }))
     if (b) lines(cv, b, CAPS[n.shape], n.role, n.id, rows)
-    for (const owner of new Set(rows.map(x => x.owners[0]!))) {
-      labels.push({ owner, text: rows.filter(x => x.owners[0] === owner).map(x => x.text).join('\n') })
+    const texts = new Map<string, string>()
+    const add = (owner: string, text: string, join?: string) => texts.set(owner, texts.has(owner) ? texts.get(owner)! + (join ?? '\n') + text : text)
+    for (const { row: x, owners } of rows) {
+      if (x.cols) for (const c of x.cols.filter(c => shown(c.text))) { add(c.id, c.text, c.join); members.set(c.id, n.id) }
+      else if (!x.fixed || shown(x.text)) {
+        add(owners[0]!, x.text, x.fixed ? x.join : undefined)
+        if (owners.length > 1 && shown(x.text)) members.set(owners[0]!, n.id)
+      }
     }
+    for (const [owner, text] of texts) labels.push({ owner, text })
   }
   for (const route of routes) {
-    for (const c of route.cells) cv.line(c.r + y, c.c, c.dirs, WEIGHT[route.style], 'edge', route.edge)
-    for (const end of route.ends) cv.arrow(end.r + y, end.c, end.ch, route.edge)
+    for (const c of route.cells) cv.line(c.r + dy, c.c + dx, c.dirs, WEIGHT[route.style], 'edge', route.edge)
+    for (const end of route.ends) cv.arrow(end.r + dy, end.c + dx, end.ch, route.edge)
   }
-  for (const e of p.graph.edges.filter(x => x.style !== 'invisible')) {
+  for (const e of live) {
     // The layout marks a back edge it drew reversed, its from, to, tail and head swapped, so from and to swap back. Its
     // route's end marks are the drawn tail's, at the drawn from, then the drawn head's, at the drawn to: whichever way it was
     // drawn, each sits at the node named here.
     const route = routes.find(x => x.edge === e.id), nodes = [...(e.tail === 'none' ? [] : [e.from]), ...(e.head === 'none' ? [] : [e.to])]
+    // Each end label is listed by its true end, in endLabels, labels and edgeLabels, and drawn in endRole ?? 'label', owned by
+    // [its owner, the edge]; one that needs a drawn cell is a Conflict.
+    const tagged = tags.get(e.id)!
     edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to,
-      ends: (route?.ends ?? []).map((x, i) => ({ node: nodes[i] ?? '', glyph: x.ch })) })
+      ends: (route?.ends ?? []).map((m, i) => ({ node: nodes[i] ?? '', glyph: m.ch })),
+      ...(tagged.length > 0 ? { endLabels: tagged.map(l => ({ node: l.node, owner: l.owner })) } : {}) })
+    for (const l of tagged) {
+      labels.push({ owner: l.owner, text: l.text }); edgeLabels.push({ owner: l.owner, edge: e.id })
+      if (l.at) cv.text(l.at.r + dy, l.at.c + dx, l.text, e.endRole ?? 'label', [l.owner, e.id])
+    }
     if (e.label === null) continue
     const owner = `${e.id}:label`, b = at(p.boxes.get(owner)), text = labelLines(e.label)
     labels.push({ owner, text: text.join('\n') })
     edgeLabels.push({ owner, edge: e.id })
     if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
-  return finish(cv.toDrawing({ labels, edges, edgeLabels, frames }))
+  const made = cv.toDrawing({ labels, edges, edgeLabels, frames,
+    ...(members.size > 0 ? { members: [...members].map(([id, parent]) => ({ id, parent })) } : {}) })
+  // An end label that meets other text on its row, end to end, would read as one with it: a Conflict, as an overlap is.
+  const meets = [...tags.values()].flat().flatMap(l => (l.at ? [-1, width(l.text)].flatMap(k => {
+    const r = l.at!.r + dy, c = l.at!.c + dx + k, had = made.cells[r]?.[c]
+    return had && (had.kind === 'text' || had.kind === 'cont') && had.owners[0] !== l.owner ? [{ row: r, col: c, had: had.owners[0]!, by: l.owner }] : []
+  }) : []))
+  const drawn = meets.length > 0 ? { ...made, conflicts: [...made.conflicts, ...meets] } : made, out = finish(drawn)
+  // Compaction keeps one row of a run of │ rows, so it can bring an end label's far terminal as near as its own: a drawing
+  // with end labels that compacts to an invalid one keeps its drawn size.
+  return out !== drawn && boxes.length > 0 && validate({ ...out, columns: Infinity }) !== null ? drawn : out
 }
