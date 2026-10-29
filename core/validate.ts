@@ -190,11 +190,16 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// Each frame stays closed. Its own frame cells span a box, and each cell on the box's border is a frame cell of its own or,
-// off the corners, one of: its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its
-// own dividers `${id}.${k}`, ├ on its left side or ┤ on its right; or a line only edges cross straight through, each by the
-// dirs it drew there: │ (5) through the top or bottom, ─ (10) through a side. A lifeline needs no exception: a frame draws
-// first, and a lifeline only fills empty cells. Text over a border, a run along it, or a frame with no cells is broken.
+// A frame's corner glyphs, top-left, top-right, bottom-left, bottom-right, each in every light and heavy mix of its two arms.
+const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓', '└┕┖┗', '┘┙┚┛'].map(s => new Set(s))
+
+// Each frame stays closed. Its own frame cells span a real box, at least two rows and two columns, whose four corners are
+// its own frame cells drawing its corner glyphs: text that erases a border and its corners leaves cells that span a smaller
+// box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own or one of:
+// its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its own dividers `${id}.${k}`,
+// ├ on its left side or ┤ on its right; or a line only edges cross straight through, each by the dirs it drew there: │ (5)
+// through the top or bottom, ─ (10) through a side. A lifeline needs no exception: a frame draws first, and a lifeline only
+// fills empty cells. Text over a border, a run along it, or a frame with no cells is broken.
 function frames(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Set(d.expect.edges.map(e => e.id))
   for (const id of d.expect.frames) {
@@ -202,6 +207,13 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     if (mine.length === 0) return fail('frame-broken')
     const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
     const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
+    if (top >= bottom || left >= right) return fail('frame-broken')
+    // Corner i, in CORNERS order, is its own frame cell drawing that corner's glyph.
+    const corner = ([r, c]: readonly [number, number], i: number) => {
+      const x = at(d, r, c)
+      return x?.kind === 'frame' && x.owners[0] === id && CORNERS[i]!.has(x.ch)
+    }
+    if (!([[top, left], [top, right], [bottom, left], [bottom, right]] as const).every(corner)) return fail('frame-broken')
     const divider = (o: string) => o.startsWith(`${id}.`) && /^\d+$/.test(o.slice(id.length + 1))
     const kept = (r: number, c: number): boolean => {
       const x = at(d, r, c), across = r === top || r === bottom, side = c === left || c === right

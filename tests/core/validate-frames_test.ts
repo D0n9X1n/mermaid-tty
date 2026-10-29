@@ -50,3 +50,24 @@ test('A5.mutation-tests: a frame passes with its title and a straight crossing; 
   assert.equal(validate(framed(c => { straight(c); c.text(3, 6, 'L', 'label', 'L1') }, ['F'], [{ owner: 'L1', text: 'L' }]))?.reason, 'frame-broken')
   assert.equal(validate(framed(straight, ['F', 'G']))?.reason, 'frame-broken')
 })
+
+// Frame F, rows 0–2 and columns 0 to w - 1, with ink drawn over it; label is the text ink draws, as one label of owner L.
+function box(w: number, ink: (c: Canvas) => void = () => {}, label?: string): Drawing {
+  const c = createCanvas(3, w, w); c.frame(0, 0, 2, w - 1, 'frame', 'F'); ink(c)
+  return c.toDrawing({ labels: label === undefined ? [] : [{ owner: 'L', text: label }], edges: [], edgeLabels: [], frames: ['F'] })
+}
+// QA's repro: a two-row label erases the top border and both sides, so the bottom border alone spans a one-row box. With
+// the top row erased at width 2, the │ sides over └┘ span a box with no ┌┐.
+test('A5.mutation-tests: a frame whose top border or sides text erased fails frame-broken, though the cells left span a box', () => {
+  const repro = box(7, c => { c.text(0, 0, 'two row', 'label', 'L'); c.text(1, 0, 'message', 'label', 'L', '\n') }, 'two row\nmessage')
+  assert.equal(repro.conflicts.length, 0)
+  assert.equal(validate(repro)?.reason, 'frame-broken')
+  for (const w of [2, 7]) assert.equal(validate(box(w, c => c.text(0, 0, 'x'.repeat(w), 'label', 'L'), 'x'.repeat(w)))?.reason, 'frame-broken', `${w}`)
+})
+// framed(straight) above is the intact, crossed and titled case. A corner may be light or heavy, but not text or a ─.
+test('A5.mutation-tests: a frame needs its four corners: one overwritten, by text or by its own ─, fails frame-broken', () => {
+  assert.equal(validate(box(7)), null)
+  const heavy = box(7); heavy.cells[0]![0] = { ...heavy.cells[0]![0]!, ch: '┏' }; assert.equal(validate(heavy), null)
+  assert.equal(validate(box(7, c => c.text(0, 6, 'x', 'label', 'L'), 'x'))?.reason, 'frame-broken')
+  const run = box(7); run.cells[2]![6] = { ...run.cells[2]![5]! }; assert.equal(validate(run)?.reason, 'frame-broken')
+})
