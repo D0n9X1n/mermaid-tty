@@ -1,0 +1,24 @@
+@60
+[ «interface» ]  [ «service» ]  [ «entity» ]
+[    Shape    ]  [   Bank    ]  [   Duck   ]
+                                [ +swim()  ]
+@60 roles
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNnn
+nnnnnNNNNNnnnnn  nnnnNNNNnnnnn  nnnnNNNNnnnn
+                                nlLLLLLLLlln
+@80
+[ «interface» ]  [ «service» ]  [ «entity» ]
+[    Shape    ]  [   Bank    ]  [   Duck   ]
+                                [ +swim()  ]
+@80 roles
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNnn
+nnnnnNNNNNnnnnn  nnnnNNNNnnnnn  nnnnNNNNnnnn
+                                nlLLLLLLLlln
+@120
+[ «interface» ]  [ «service» ]  [ «entity» ]
+[    Shape    ]  [   Bank    ]  [   Duck   ]
+                                [ +swim()  ]
+@120 roles
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNnn
+nnnnnNNNNNnnnnn  nnnnNNNNnnnnn  nnnnNNNNnnnn
+                                nlLLLLLLLlln

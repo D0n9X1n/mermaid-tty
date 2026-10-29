@@ -1,0 +1,72 @@
+@60
+[ Customer ]   [ Student ]
+     │              │
+     │1             │1
+     └┐             │
+      │            ┌┘
+     ┌┘            │
+     │             └┐
+     │              │
+     │              │1..*
+     ▼              ▼
+ [ Ticket ]   [ Course ]
+@60 roles
+nnNNNNNNNNnn   nnNNNNNNNnn
+     e              e
+     eL             eL
+     ee             e
+      e            ee
+     ee            e
+     e             ee
+     e              e
+     e              eLLLL
+     a              a
+ nnNNNNNNnn   nnNNNNNNnn
+@80
+[ Customer ]   [ Student ]
+     │              │
+     │1             │1
+     └┐             │
+      │            ┌┘
+     ┌┘            │
+     │             └┐
+     │              │
+     │              │1..*
+     ▼              ▼
+ [ Ticket ]   [ Course ]
+@80 roles
+nnNNNNNNNNnn   nnNNNNNNNnn
+     e              e
+     eL             eL
+     ee             e
+      e            ee
+     ee            e
+     e             ee
+     e              e
+     e              eLLLL
+     a              a
+ nnNNNNNNnn   nnNNNNNNnn
+@120
+[ Customer ]   [ Student ]
+     │              │
+     │1             │1
+     └┐             │
+      │            ┌┘
+     ┌┘            │
+     │             └┐
+     │              │
+     │              │1..*
+     ▼              ▼
+ [ Ticket ]   [ Course ]
+@120 roles
+nnNNNNNNNNnn   nnNNNNNNNnn
+     e              e
+     eL             eL
+     ee             e
+      e            ee
+     ee            e
+     e             ee
+     e              e
+     e              eLLLL
+     a              a
+ nnNNNNNNnn   nnNNNNNNnn

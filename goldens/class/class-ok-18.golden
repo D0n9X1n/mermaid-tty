@@ -1,0 +1,42 @@
+@60
+ [ A ]   [ C ]
+   │       ┆
+ uses   depends
+   │       ┆
+   ▼       ▼
+[ B ]    [ D ]
+@60 roles
+ nnNnn   nnNnn
+   e       e
+ LLLL   LLLLLLL
+   e       e
+   a       a
+nnNnn    nnNnn
+@80
+ [ A ]   [ C ]
+   │       ┆
+ uses   depends
+   │       ┆
+   ▼       ▼
+[ B ]    [ D ]
+@80 roles
+ nnNnn   nnNnn
+   e       e
+ LLLL   LLLLLLL
+   e       e
+   a       a
+nnNnn    nnNnn
+@120
+ [ A ]   [ C ]
+   │       ┆
+ uses   depends
+   │       ┆
+   ▼       ▼
+[ B ]    [ D ]
+@120 roles
+ nnNnn   nnNnn
+   e       e
+ LLLL   LLLLLLL
+   e       e
+   a       a
+nnNnn    nnNnn

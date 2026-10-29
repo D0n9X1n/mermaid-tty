@@ -1,0 +1,8 @@
+classDiagram
+%% expect 60 lrToTd
+direction LR
+Received --> Accepted
+Accepted --> Prepared
+Prepared --> Shipping
+Shipping --> Delivered
+Delivered --> Archived

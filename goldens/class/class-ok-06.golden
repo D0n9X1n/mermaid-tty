@@ -1,0 +1,24 @@
+@60
+[        Square<Shape>         ]
+[ -List<List<int>> position    ]
+[ +setPoints(List<int> points) ]
+@60 roles
+nnnnnnnnnNNNNNNNNNNNNNnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLLLLLlllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+@80
+[        Square<Shape>         ]
+[ -List<List<int>> position    ]
+[ +setPoints(List<int> points) ]
+@80 roles
+nnnnnnnnnNNNNNNNNNNNNNnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLLLLLlllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+@120
+[        Square<Shape>         ]
+[ -List<List<int>> position    ]
+[ +setPoints(List<int> points) ]
+@120 roles
+nnnnnnnnnNNNNNNNNNNNNNnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLLLLLlllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLLln

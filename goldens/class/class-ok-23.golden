@@ -1,0 +1,54 @@
+@60
+[     用户     ]
+[ +String 名字 ]
+[ +登录()      ]
+       │
+     下单
+       │
+       ▼
+    [ 订单 ]
+@60 roles
+nnnnnnN~N~nnnnnn
+nlLLLLLLLLL~L~ln
+nlLL~L~LLlllllln
+       e
+     L~L~
+       e
+       a
+    nnN~N~nn
+@80
+[     用户     ]
+[ +String 名字 ]
+[ +登录()      ]
+       │
+     下单
+       │
+       ▼
+    [ 订单 ]
+@80 roles
+nnnnnnN~N~nnnnnn
+nlLLLLLLLLL~L~ln
+nlLL~L~LLlllllln
+       e
+     L~L~
+       e
+       a
+    nnN~N~nn
+@120
+[     用户     ]
+[ +String 名字 ]
+[ +登录()      ]
+       │
+     下单
+       │
+       ▼
+    [ 订单 ]
+@120 roles
+nnnnnnN~N~nnnnnn
+nlLLLLLLLLL~L~ln
+nlLL~L~LLlllllln
+       e
+     L~L~
+       e
+       a
+    nnN~N~nn

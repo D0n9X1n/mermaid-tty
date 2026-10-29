@@ -1,0 +1,36 @@
+@60
+[    Person    ]
+[ +String name ]
+[ +int age     ]
+[ +run()       ]
+[ +eat()       ]
+@60 roles
+nnnnnNNNNNNnnnnn
+nlLLLLLLLLLLLLln
+nlLLLLLLLLllllln
+nlLLLLLLllllllln
+nlLLLLLLllllllln
+@80
+[    Person    ]
+[ +String name ]
+[ +int age     ]
+[ +run()       ]
+[ +eat()       ]
+@80 roles
+nnnnnNNNNNNnnnnn
+nlLLLLLLLLLLLLln
+nlLLLLLLLLllllln
+nlLLLLLLllllllln
+nlLLLLLLllllllln
+@120
+[    Person    ]
+[ +String name ]
+[ +int age     ]
+[ +run()       ]
+[ +eat()       ]
+@120 roles
+nnnnnNNNNNNnnnnn
+nlLLLLLLLLLLLLln
+nlLLLLLLLLllllln
+nlLLLLLLllllllln
+nlLLLLLLllllllln
