@@ -127,38 +127,51 @@ function assertNoRun(r: ReturnType<typeof check>, id: string): void {
   assert.equal(r.status, 1, id); assert.deepEqual(r.steps, ['> @nt'], id)
   assert.match(r.stderr, new RegExp(`^no tests ran for ${id.replaceAll('.', '\\.')}$`, 'm'), id)
 }
-// The unchecked sites check.ts printed, file:line:col: names: why, each path cut to tests/…. node reports a file's real path,
-// on macOS under /private/var, not the /var symlink tmpdir() gives, and check.ts reads the file at the path node reports.
-const unchecked = (stderr: string) => stderr.split(/\r?\n/).filter(l => /: (no test or it call here|no inline function|its function calls no assert)$/.test(l))
-  .map(l => l.replace(/^.*[\\/]tests[\\/]/, 'tests/').replaceAll('\\', '/')).sort()
-// GPT-6's repros: node:test passes a test named by a variable with no function, and a parent whose t.test child has none.
-test("A8.validation: @nt fails, naming each unchecked site, when an ID's tests have no inline function or one that calls no assert", () =>
-  scratch({ 'tests/a_test.ts': nodeTest("const name = 'A2: placeholder'; test(name)"),
-    'tests/b_test.ts': nodeTest("test('A3: parent', async t => { await t.test('placeholder') })") }, dir => {
-    const a2 = check(dir, 'A2'), a3 = check(dir, 'A3')
-    assert.equal(a2.status, 1); assert.deepEqual(a2.steps, ['> @nt'])
-    assert.deepEqual(unchecked(a2.stderr), ['tests/a_test.ts:3:33: A2: placeholder: no inline function'])
-    assert.equal(a3.status, 1)
-    assert.deepEqual(unchecked(a3.stderr), ['tests/b_test.ts:3:1: A3: parent: its function calls no assert', 'tests/b_test.ts:3:41: A3: parent > placeholder: no inline function'])
-  }))
-// GPT-6's regex repro: node:test passes it, and the assert in the regex after the for header's ) is no call.
-test("A8.validation: @nt fails when a test's only assert is in a regex after a control header's )", () =>
-  scratch({ 'tests/a_test.ts': "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})\n" }, dir => {
-    const r = check(dir, 'A1')
-    assert.equal(r.status, 1); assert.deepEqual(unchecked(r.stderr), ['tests/a_test.ts:2:1: A1: assertion keywords: its function calls no assert'])
-  }))
-test('A8.validation: @nt fails when a checked parent has a t.test child with no inline function, and passes when the child is checked', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("test('A2: parent', async t => { assert.ok(t); await t.test('child') })",
-    "test('A3: parent', async t => { assert.ok(t); await t.test('child', () => { assert.ok(t) }) })") }, dir => {
-    const a2 = check(dir, 'A2'), a3 = check(dir, 'A3')
-    assert.equal(a2.status, 1); assert.deepEqual(unchecked(a2.stderr), ['tests/a_test.ts:3:55: A2: parent > child: no inline function'])
-    assert.equal(a3.status, 0, a3.stderr); assert.deepEqual(unchecked(a3.stderr), [])
-  }))
-test('A8.validation: @nt passes each test a loop registers at one checked site', () =>
-  scratch({ 'tests/a_test.ts': nodeTest("for (const n of [1, 2]) test(`A1: loop ${n}`, () => { assert.ok(n) })") }, dir => {
-    const r = check(dir, 'A1')
-    assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /^ok \d+ - A1: loop 1$/m); assert.match(r.stdout, /^ok \d+ - A1: loop 2$/m)
-  }))
+// Tests node:test passes that execute no assertion: GPT-6's repros of the static scan, and each placeholder form. Under
+// check.ts's preload each fails, so @nt fails. [what, the tests in tests/a_test.ts]
+const UNASSERTING: [string, string][] = [
+  ['an assert only in a regex after a for (…) header', "test('A1: x', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})"],
+  ['an assert only in a regex after continue', "test('A1: x', () => {\n  for (const word of ['', 'assert']) {\n    if (!word) continue\n    /assert(ion)?/.test(word)\n  }\n})"],
+  ['an assert only in a regex after let word', "test('A1: x', () => {\n  let word\n  /assert(ion)?/g.test(String(word))\n})"],
+  ['an assert only in a string', "test('A1: x', () => { void 'assert.ok(1)' })"],
+  ['an assert only in a comment', "test('A1: x', () => { /* assert.ok(1) */ })"],
+  ['an assert only in a template', "test('A1: x', () => { void `assert.ok(${1})` })"],
+  ['an assert only in a dead branch', "test('A1: x', () => { if (false) assert.ok(1) })"],
+  ['no function', "test('A1: x')"],
+  ['an empty function', "test('A1: x', () => {})"],
+  ['{ skip: false } and no function', "test('A1: x', { skip: false })"],
+  ['a name in a variable and no function', "const name = 'A1: x'; test(name)"],
+  ["a t.test('x') placeholder child", "test('A1: x', async t => { assert.ok(1); await t.test('x') })"],
+  ['an it placeholder in describe', "describe('A1: x', () => { it('placeholder') })"],
+]
+for (const [what, tests] of UNASSERTING)
+  test(`A8.validation: @nt fails on a test that executes no assertion: ${what}`, () =>
+    scratch({ 'tests/a_test.ts': nodeTest(tests) }, dir => {
+      const r = check(dir, 'A1')
+      assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.match(r.stdout, /error: 'no assertion executed'/)
+    }))
+// Tests that execute an assertion where a static scan sees none, or in a child only. Each passes. [what, other files, the tests]
+const ASSERTING: [string, Record<string, string>, string][] = [
+  ['an assert in a helper module', { 'tests/helpers.ts': "import assert from 'node:assert/strict'\nexport const same = (a: unknown, b: unknown) => assert.deepEqual(a, b)\n" },
+    "import { same } from './helpers.ts'\ntest('A1: x', () => { same([1], [1]) })"],
+  ['an assert after await', {}, "test('A1: x', async () => { await new Promise(r => setTimeout(r, 1)); assert.ok(1) })"],
+  ['an assert in a loop', {}, "test('A1: x', () => { for (const n of [1, 2]) assert.ok(n) })"],
+  ['an assert in a done-callback test', {}, "test('A1: x', (t, done) => { setTimeout(() => { assert.ok(1); done() }, 1) })"],
+  ['t.assert.ok', {}, "test('A1: x', t => { t.assert.ok(1) })"],
+  ['describe and it', {}, "describe('A1: x', () => { it('works', () => { assert.ok(1) }) })"],
+  ['a parent whose only asserts are in its children', {}, "test('A1: x', async t => { await t.test('child', () => { assert.ok(1) }) })"],
+  ['the tests a loop registers', {}, "for (const n of [1, 2]) test(`A1: loop ${n}`, () => { assert.ok(n) })"],
+]
+for (const [what, files, tests] of ASSERTING)
+  test(`A8.validation: @nt passes a test that executes an assertion: ${what}`, () =>
+    scratch({ ...files, 'tests/a_test.ts': nodeTest(tests) }, dir => {
+      const r = check(dir, 'A1')
+      assert.equal(r.status, 0, r.stdout); assert.doesNotMatch(r.stdout, /^not ok/m)
+    }))
+// test.expectFailure passes a test whose function throws, though it asserts nothing, so such a test proves no ID.
+test('A8.validation: @nt fails when the only matching test is an expected failure', { skip: typeof test.expectFailure !== 'function' && 'no test.expectFailure in this Node' }, () =>
+  scratch({ 'tests/a_test.ts': nodeTest("test.expectFailure('A1: x', () => { throw new Error('x') })") }, dir =>
+    assertNoRun(check(dir, 'A1'), 'A1')))
 // A suite is no test, though its function calls an assertion.
 test('A8.validation: @nt fails and stops the row when only an empty suite matches', () =>
   scratch({ 'tests/a_test.ts': nodeTest("describe('A1: empty suite', () => { assert.ok(true) })", "describe('A1: outer', () => { describe('inner', () => { assert.ok(true) }) })") }, dir =>
@@ -197,14 +210,20 @@ test('A8.validation: all fails, naming each @nt row, when no real test ran: a fi
     assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt'])
     assert.deepEqual(r.stderr.split(/\r?\n/).filter(l => l.startsWith('no tests ran')), NT_IDS.map(id => `no tests ran for ${id}`))
   }))
-test('A8.validation: all fails before any later step, naming each @nt row its run does not prove: one with no test, one with an unchecked test', () =>
-  scratch({ 'tests/a_test.ts': nodeTest(...NT_IDS.filter(id => id !== 'A2').map(id => `test('${id}: checked', () => { assert.ok(1) })`),
-    "test('A7: unchecked', () => {})"), 'scripts/check-portable.ts': "console.log('portable ran')\n" }, dir => {
+test('A8.validation: all fails before any later step on an @nt row its run does not prove, and on a test that executes no assertion', () => {
+  const asserting = NT_IDS.filter(id => id !== 'A2').map(id => `test('${id}: asserts', () => { assert.ok(1) })`)
+  const portable = { 'scripts/check-portable.ts': "console.log('portable ran')\n" }
+  scratch({ ...portable, 'tests/a_test.ts': nodeTest(...asserting) }, dir => {
     const r = check(dir, 'all')
     assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.doesNotMatch(r.stdout, /portable ran/)
     assert.deepEqual(r.stderr.split(/\r?\n/).filter(l => l.startsWith('no tests ran')), ['no tests ran for A2'])
-    assert.deepEqual(unchecked(r.stderr), ['tests/a_test.ts:19:1: A7: unchecked: its function calls no assert'])
-  }))
+  })
+  scratch({ ...portable, 'tests/a_test.ts': nodeTest(...asserting, "test('A2: asserts nothing', () => {})") }, dir => {
+    const r = check(dir, 'all')
+    assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.doesNotMatch(r.stdout, /portable ran/)
+    assert.match(r.stdout, /^not ok \d+ - A2: asserts nothing$/m)
+  })
+})
 test('A8.validation: @nt fails when a matching test fails, though another passed', () =>
   scratch({ 'tests/a_test.ts': nodeTest("test('A2: passes', () => { assert.ok(true) })", "test('A2: fails', () => { throw new Error('boom') })") }, dir => {
     const r = check(dir, 'A2')
@@ -221,10 +240,10 @@ test('A8.validation: a row runs its steps in order; @tmp is a fresh mtty- dir, r
     const bad = check(dir, 'VR.in-ci', { TANGLE_EXIT: '5' })
     assert.equal(bad.status, 5); assert.deepEqual(bad.steps, ok.steps.slice(0, 2)); assert.doesNotMatch(bad.stdout, /palettes ran/)
   }))
-// B2 has no row: its unchecked test proves nothing and blocks nothing.
+// B2 has no row: its test proves no ID, though like every test it must assert to pass.
 test('A8.validation: all runs every Node test once, unfiltered, proves each @nt row, then runs the in-all steps in table order, and stops at the first failure', () =>
   scratch({ ...DECOYS, 'tests/a_test.ts': nodeTest(...NT_IDS.map(id => `test('${id}: one row', () => { assert.ok(1) })`)),
-    'tests/deep/b_test.ts': nodeTest("test('B2: another', () => {})"),
+    'tests/deep/b_test.ts': nodeTest("test('B2: another', () => { assert.ok(1) })"),
     'scripts/check-portable.ts': "console.log('portable ran')\n", 'scripts/bench.ts': 'process.exit(4)\n' }, dir => {
     const r = check(dir, 'all')
     assert.equal(r.status, 4); assert.deepEqual(r.steps, ['> @nt', '> node scripts/check-portable.ts', '> node scripts/bench.ts fixtures'])

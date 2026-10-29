@@ -4,10 +4,8 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { claude } from './lib/claude.ts'
 import { isMain } from './lib/is-main.ts'
-import { checkedSite } from './lib/checked-sites.ts'
 
 // A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID;
 // ['@kit'] runs `claude plugin test .`; an '@tmp' argument becomes a fresh temp
@@ -90,13 +88,12 @@ export function run(step: string[], id?: string): number {
   }
 }
 
-// A test that passed, as lib/passed-tests-reporter.ts lists it, and why its site is unchecked: '' when it is checked.
-type Passed = { names: string[]; file: string; line: number; column: number; why: string }
-
 // node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob), filtered
-// to titles that start with id. It fails unless none failed and the run proves id or, given no
-// id, each @nt row's ID. TAP's `ok` lines cannot tell: they count suites, and a file whose tests
-// the filter all skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that passed.
+// to titles that start with id, with lib/assert-count/hooks.ts preloaded into each file's process:
+// a test whose function executes no assertion fails. It fails unless none failed and a real test
+// passed for id or, given no id, for each @nt row's ID: one whose own name, or a suite's or parent
+// test's, matches it. TAP's `ok` lines cannot tell: they count suites, and a file whose tests the
+// filter all skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that passed.
 function nodeTests(id?: string): number {
   const files = readdirSync('tests', { recursive: true, encoding: 'utf8' })
     .filter(f => f.endsWith('_test.ts')).map(f => join('tests', f)).sort()
@@ -104,32 +101,20 @@ function nodeTests(id?: string): number {
   try {
     const passed = join(tmp, 'passed.jsonl')
     const reporter = new URL('./lib/passed-tests-reporter.ts', import.meta.url).href
-    const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-reporter-destination=stdout',
+    const hooks = new URL('./lib/assert-count/hooks.ts', import.meta.url).href
+    const r = spawnSync(process.execPath, [`--import=${hooks}`, '--test', '--test-reporter=tap', '--test-reporter-destination=stdout',
       `--test-reporter=${reporter}`, `--test-reporter-destination=${passed}`,
       ...(id ? [`--test-name-pattern=${idPattern(id)}`] : []), ...files], { stdio: 'inherit' })
     if (r.status !== 0) return r.status ?? 1
-    const tests = readFileSync(passed, 'utf8').split('\n').filter(Boolean).map(line => sited(JSON.parse(line)))
+    const tests = readFileSync(passed, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line) as string[])
     const ids = id ? [id] : CHECKS.filter(c => c.steps.some(s => s[0] === '@nt')).map(c => c.id)
-    const problems = [...new Set(ids.flatMap(i => unproven(i, tests)))]
-    for (const p of problems) console.error(p)
-    return problems.length > 0 ? 1 : 0
+    const unproven = ids.filter(i => { const match = new RegExp(idPattern(i)); return !tests.some(names => names.some(n => match.test(n))) })
+    for (const i of unproven) console.error(`no tests ran for ${i}`)
+    return unproven.length > 0 ? 1 : 0
   } finally { rmSync(tmp, { recursive: true, force: true }) }
 }
 // The ID, then no word character and no '-': A1 does not match A10, nor A8.no-build A8.no-build-x.
 const idPattern = (id: string) => `^${id.replaceAll('.', '\\.')}(?![\\w-])`
-// t, judged at its site in the file node reported, a path or a file: URL.
-function sited(t: Omit<Passed, 'why'>): Passed {
-  const file = t.file.startsWith('file:') ? fileURLToPath(t.file) : t.file
-  const site = checkedSite(readFileSync(file, 'utf8'), t.line, t.column)
-  return { ...t, file, why: site === true ? '' : site }
-}
-// Why tests do not prove id, empty when they do: no test passed whose own, a suite's or a parent test's name matches id, or
-// one did at an unchecked site, as file:line:col: names: why. Every one must be at a checked site.
-function unproven(id: string, tests: Passed[]): string[] {
-  const match = new RegExp(idPattern(id)), mine = tests.filter(t => t.names.some(n => match.test(n)))
-  if (mine.length === 0) return [`no tests ran for ${id}`]
-  return mine.filter(t => t.why).map(t => `${t.file}:${t.line}:${t.column}: ${t.names.join(' > ')}: ${t.why}`)
-}
 
 function main(): number {
   const id = process.argv[2]
