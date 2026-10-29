@@ -1,15 +1,15 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
-//   [--color truecolor|256] [--driver pty|tmux] [--scenario harness|source-view|lead|all] [--keep]
+//   [--color truecolor|256] [--driver pty|tmux] [--scenario harness|source-view|stored|lead|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
 // scenario in a session of its own. Prints PASS|FAIL <os> <theme> <color> <scenario> per run, each run's problems under
 // it, and a summary line; exits 1 on any FAIL. --keep keeps each run's temp dir, with screen.ansi in it, and under tmux
 // leaves the last run's session up to attach to.
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -21,10 +21,11 @@ import { startMock } from './mock.ts'
 import { REPLY } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
+import { clipboardStubs, fenceBody, findReply } from './stored.ts'
 
 const here = dirname(fileURLToPath(import.meta.url)), repoRoot = join(here, '..', '..'), win = process.platform === 'win32'
 const THEME_NAMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const
-const SCENARIOS = ['harness', 'source-view', 'lead'] as const
+const SCENARIOS = ['harness', 'source-view', 'stored', 'lead'] as const
 type Scenario = typeof SCENARIOS[number]
 type Run = { theme: ThemeName; color: Color }
 
@@ -58,7 +59,7 @@ function installClaude(v: string): string {
 }
 
 // What a scenario gets: its session, its run, and its sandbox's config dir and temp dir.
-type Ctx = { s: Session; run: Run; config: string; base: string }
+type Ctx = { s: Session; run: Run; config: string; base: string; copied: string }
 const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 // The prompt line showing text. Claude Code follows ❯ with a no-break space, which \s matches, where a plain space would not.
 const promptLine = (text: string) => new RegExp(`❯\\s${escape(text)}`)
@@ -80,17 +81,23 @@ async function showDiagrams(s: Session): Promise<void> {
 // a tmux session up.
 async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenario, keep: boolean, keepUp: boolean): Promise<string[]> {
   const base = await realpath(mkdtempSync(join(tmpdir(), 'mtty-')))
-  const [home, config, cwd] = ['home', 'config', 'cwd'].map(d => join(base, d)) as [string, string, string]
-  for (const d of [home, config, cwd]) mkdirSync(d)
+  const [home, config, cwd, bin] = ['home', 'config', 'cwd', 'bin'].map(d => join(base, d)) as [string, string, string, string]
+  for (const d of [home, config, cwd, bin]) mkdirSync(d)
+  // The clipboard stubs, first on PATH: the stored scenario's /copy writes to copied.
+  const copied = join(base, 'copied.txt')
+  for (const [name, script] of Object.entries(clipboardStubs(process.platform, copied))) {
+    writeFileSync(join(bin, name), script)
+    chmodSync(join(bin, name), 0o755)
+  }
   const mock = await startMock()
   let s: Session | undefined
   try {
     writeFileSync(join(config, '.claude.json'), seedConfig(cwd, 'dummy', process.platform))
     writeFileSync(join(config, 'settings.json'), seedSettings(run.theme))
-    const env = sessionEnv({ home, config, mockUrl: mock.url, platform: process.platform, color: run.color, driver, path: process.env.PATH ?? '' })
+    const env = sessionEnv({ home, config, mockUrl: mock.url, platform: process.platform, color: run.color, driver, path: [bin, process.env.PATH ?? ''].join(delimiter) })
     s = await startSession({ driver, argv: [claude, '--plugin-dir', repoRoot], cwd, env })
     await s.waitFor(/❯/, 15000)
-    return await SCENARIO_RUN[scenario]({ s, run, config, base })
+    return await SCENARIO_RUN[scenario]({ s, run, config, base, copied })
   } catch (e) {
     return [e instanceof Error ? e.message : String(e)]
   } finally {
@@ -164,7 +171,55 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
   return problems
 }
 
-const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = { harness, 'source-view': sourceView, lead }
+// The *.jsonl files under dir, at any depth; none when it does not exist.
+function jsonlFiles(dir: string): string[] {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir, { withFileTypes: true }).flatMap(e => (e.isDirectory() ? jsonlFiles(join(dir, e.name))
+    : e.name.endsWith('.jsonl') ? [join(dir, e.name)] : []))
+}
+
+// Polls check every 100 ms for up to ms; resolves to its first truthy answer, or to undefined.
+async function poll<T>(check: () => T | undefined | Promise<T | undefined>, ms: number): Promise<T | undefined> {
+  for (const end = Date.now() + ms; ; await sleep(100)) {
+    const v = await check()
+    if (v || Date.now() >= end) return v || undefined
+  }
+}
+
+// stored (R6, E5, E6): the stored transcript holds REPLY byte for byte, and /copy copies the first diagram's exact
+// source, through the stubbed clipboard command or OSC 52.
+async function stored({ s, config, copied }: Ctx): Promise<string[]> {
+  const os = process.platform, want = fenceBody(REPLY), problems: string[] = []
+  await showDiagrams(s)
+  const files = () => jsonlFiles(join(config, 'projects'))
+  if (!await poll(() => files().some(f => findReply(readFileSync(f, 'utf8'), REPLY)), 5000)) {
+    problems.push(`stored: no transcript holds the reply byte for byte (${files().length} .jsonl files)`)
+  }
+  if (Object.keys(clipboardStubs(os, copied)).length === 0) {
+    console.log(`stored: not run on ${os}: no clipboard command to stub`)
+    return problems
+  }
+  await submit(s, '/copy')
+  // E6: Claude Code 2.1.308 opens a picker, Full response first, then one entry per code block; choose flowchart LR's.
+  const screen = await s.waitFor(/Select content to copy|Copied/, 5000).catch(() => '')
+  if (screen.includes('Select content to copy')) {
+    const chosen = /❯\s+flowchart LR\b/
+    for (let i = 0; i < 10 && !chosen.test(await s.text()); i++) {
+      await s.key('down')
+      await sleep(150)
+    }
+    if (!chosen.test(await s.text())) problems.push(`stored: the /copy picker has no flowchart LR entry; the screen:\n${await s.text()}`)
+    await s.key('enter')
+  }
+  const exact = (t: string | undefined) => t === want || t === `${want}\n`
+  const stub = () => (existsSync(copied) ? readFileSync(copied, 'utf8') : undefined)
+  const via = await poll(async () => (exact(stub()) ? 'stub' : exact(await s.clipboard()) ? 'osc52' : undefined), 5000)
+  if (via) console.log(`stored: ran on ${os} via ${via}`)
+  else problems.push(`stored: /copy copied ${JSON.stringify(stub() ?? await s.clipboard())}, not the fence body; the screen:\n${await s.text()}`)
+  return problems
+}
+
+const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = { harness, 'source-view': sourceView, stored, lead }
 
 async function main(): Promise<number> {
   const { values: o } = parseArgs({ options: {
