@@ -94,16 +94,67 @@ const RULES: [string, [string, string[]][]][] = [
     ['const e = eval, r = require', ['1 eval', '1 require']],
     ["const s = 'eval require' /* eval(s) require(x) */", []],
     ['evaluate(required, myeval, requireX)', []]]],
-  ['Function is flagged as a value, but not in a type position: after :, as, satisfies or <, and neither called nor read from', [
+  // Code here uses specific function types, so Function is flagged in every use, a type too: in
+  // { make: Function } it is a value after a :.
+  ['Function is flagged in every use, a type position too', [
     ['const F = Function', ['1 Function']],
     ["Function('return this')()", ['1 Function']],
     ['if (f instanceof Function) g()', ['1 Function']],
     ["const t = { k: Function('x'), p: Function.prototype }", ['1 Function', '1 Function']],
-    ['function run(cb: Function, xs: Array<Function>): Function { return cb as Function }', []],
-    ["const s = 'Function' // new Function(s)", []]]],
+    ['const factory = { make: Function }', ['1 Function']],
+    ['const f = { make: Function }.make', ['1 Function']],
+    ['function run(cb: Function, xs: Array<Function>): Function { return cb as Function }', ['1 Function', '1 Function', '1 Function', '1 Function']],
+    ['const g = f satisfies Function, h = <Function>f', ['1 Function', '1 Function']],
+    ["const s = 'Function' // new Function(s)", []],
+    ['const isFunction = (x: unknown): x is Functional => typeof x === "function"', []]]],
+  // After a < a / starts a regex literal, as in a < /x/.test(s), unless it is right after the < and right
+  // before a name or a >: then it is the </ of a JSX closing tag, as in </Text> or </>, and divides.
+  ['a / after a < starts a regex literal, unless right after it and right before a name or >, as in </Text>', [
+    ['if (offset < /"/.exec(line)!.index) process.cwd();', ['1 process']],
+    ['a < /x/.source.length; process.cwd()', ['1 process']],
+    ["const n = a < /'/.exec(s)!.index ? 1 : 2; process.cwd()", ['1 process']],
+    ['ok = i < /`/.exec(s)?.index; process.cwd()', ['1 process']],
+    ["if (a < /x'/.test(s)) process.cwd()", ['1 process']],
+    ["if (a </'/.test(s)) process.cwd()", ['1 process']],
+    ['const r = a < /process/.source.length', []],
+    ['<Ink.Text>a</Ink.Text><Ink.Text>{process.cwd()}</Ink.Text>', ['1 process']],
+    ['<>a</><Text>{process.cwd()}</Text>', ['1 process']],
+    ['if (a < b / c) process.cwd(); d = e / f', ['1 process']]]],
 ]
 for (const [rule, cases] of RULES)
   test(`A8.portability: ${rule}`, () => { for (const [s, want] of cases) assert.deepEqual(scanSource(s), want, s) })
+
+// Ordinary code that mixes regex literals, comparisons, generic calls, arrows, TSX, ?. and templates. Each
+// FLAGGED case ends with process.cwd(), which the scan finds on its last line, and finds nothing else;
+// each CLEAN case names a global only inside a literal or a comment, and the scan finds nothing.
+const FLAGGED = [
+  "const n = parse<Node>(src).items.filter(x => x.size < /'/.source.length).length; process.cwd()",
+  `const Badge = ({ s }: Props) => <Text color={s.length < /"/.source.length ? 'red' : 'green'}>{s}</Text>; process.cwd()`,
+  "const tag = (n: number) => `${n < /`/.exec(s)!.index ? 'lo' : 'hi'}`; process.cwd()",
+  `while (i < /["']/.exec(rest)!.index) i++; const w = width<string>(rest)?.cols; process.cwd()`,
+  "const keys = Object.keys(o).map(k => k.replace(/^\"|\"$/g, '')).sort((a, b) => a < b ? -1 : 1)\nconst msg = `${keys.length} keys / ${(n / total * 100).toFixed(1)}%`\nprocess.cwd()",
+  "const List = ({ items }: { items?: string[] }) => {\n  const [sel] = useState<number>(0)\n  return <Box>{items?.filter(s => sel < /'/.exec(s)!.index).map(s => <Text key={s}>{s}</Text>)}</Box>\n}\nprocess.cwd()",
+  "const at = `${(m?.index ?? 0) < /'/.exec(s)!.index ? 'in' : 'out'}`; process.cwd()",
+  'const isShort = <T,>(xs: T[]) => xs.length < 3 && /^\\w+$/.test(String(xs[0])); process.cwd()',
+  "if ((re?.lastIndex ?? 0) < /'/.exec(src)!.index) skip(); process.cwd()",
+  "const Head = ({ t }: { t: string }) => <>\n  <Text>{`${t.replace(/[<>]/g, '')}`}</Text>\n  {t.length < /'/.source.length ? null : <Text dimColor>{t}</Text>}\n</>\nprocess.cwd()",
+]
+const CLEAN = [
+  'const n = rows.filter(r => r.at < /window/.exec(src)!.index).length',
+  "const Title = ({ t }: { t?: string }) => {\n  const [w] = useState<number>(80)\n  return <Text>{`${t?.slice(0, w) ?? 'process.cwd()'}`}</Text>\n}",
+  `const quoted = (s: string) => (/["']/.exec(s)?.index ?? -1) < s.length / 2 ? 'document' : "window"`,
+  "const msg = parse<Doc>(src).nodes.length < /Buffer/.source.length ? `few ${n}` : `many globalThis`",
+  "const Hint = () => <><Text>{n < /process|window/.lastIndex ? 'a' : 'b'}</Text></>",
+  "const clean = (s?: string) => s?.replace(/\\/\\*[^]*?\\*\\//g, '') // strip /* require() */ comments",
+  "const pct = (done / total * 100).toFixed(0) + '% of process'; const r = /require\\(/.test(src)",
+  `<Text color="gray">{items.length < /eval/.source.length ? 'none' : "eval me"}</Text>`,
+  'const avg = total / Math.max(1, list?.filter(x => /window/.test(x)).length ?? 0)',
+  "const out = `${xs.map(x => `${x < 0 ? '-' : ''}${x.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}`).join(' ')} process`",
+]
+test('A8.portability: ordinary code mixing regexes, comparisons, generics, arrows, TSX, ?. and templates hides no process.cwd()', () =>
+  assert.deepEqual(FLAGGED.map(s => scanSource(s)), FLAGGED.map(s => [`${s.split('\n').length} process`])))
+test('A8.portability: ordinary code that names a global only in a literal or a comment is not flagged', () =>
+  assert.deepEqual(CLEAN.map(s => scanSource(s)), CLEAN.map(() => [])))
 
 // A scratch repo: core/ and hooks/ files with one problem each, decoys outside them, and a dependency.
 const REPO: Record<string, string> = {

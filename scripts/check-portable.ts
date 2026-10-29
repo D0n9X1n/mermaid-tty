@@ -1,6 +1,6 @@
 // node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
 // which has no Node and no DOM. In each .ts and .tsx file it flags process, Buffer, document, window,
-// globalThis, Reflect, require, eval, Function outside a type position, import( and a \u escape outside
+// globalThis, Reflect, require, eval, Function (a type too), import( and a \u escape outside
 // literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
 // path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
 // package.json, since nothing is installed. Prints each problem as `file:line token` and exits 1 when
@@ -9,14 +9,14 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isMain } from './lib/is-main.ts'
 
-// Each forbidden token, and the pattern that finds it in lexed code. eval and require are bare words, so
-// (0, eval)(s) and const r = require are found. Function is found as a value: called, read from, or not
-// after :, as, satisfies or <, where it is a type. No name in our code needs a \u escape, which can spell
-// any of them.
+// Each forbidden token, and the pattern that finds it in lexed code. eval, require and Function are bare
+// words, so (0, eval)(s), const r = require and { make: Function } are found. Function is found in a type
+// position too: code here uses specific function types, and after a : it can be a value. No name in our
+// code needs a \u escape, which can spell any of them.
 const TOKENS: [string, RegExp][] = [
   ['process', /\bprocess\b/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g], ['window', /\bwindow\b/g],
   ['globalThis', /\bglobalThis\b/g], ['Reflect', /\bReflect\b/g], ['require', /\brequire\b/g], ['eval', /\beval\b/g],
-  ['Function', /\bFunction(?=\s*[(.])|(?<!(?::|\bas|\bsatisfies|<)\s*)\bFunction\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
+  ['Function', /\bFunction\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
 ]
 // The words after which a / starts a regex literal rather than a division.
 const BEFORE_REGEX = new Set(['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw', 'case', 'do', 'else', 'yield', 'await'])
@@ -35,14 +35,17 @@ function before(out: string[]): { char: string; word: string } {
   return { char: out[i] ?? '', word }
 }
 
-// Whether a / after out starts a regex literal. It divides after a value: a name or number that is not a
-// keyword such as return; a ) unless it closes the head of if, for or while (headClosed); a ]; or the < of
-// a JSX closing tag. Anywhere else, after }, an operator, punctuation, a keyword or nothing, it starts one.
-function regexStarts(out: string[], headClosed: boolean): boolean {
+// Whether a / after out, with next after it, starts a regex literal. It divides after a value: a name or
+// number that is not a keyword such as return; a ) unless it closes the head of if, for or while
+// (headClosed); or a ]. It divides too as the / of a JSX closing tag: right after the < and right before
+// a name or a >, as in </Text> or </>. After any other <, a comparison, it starts one, as in
+// a < /x/.test(s); and anywhere else, after }, an operator, punctuation, a keyword or nothing.
+function regexStarts(out: string[], next: string, headClosed: boolean): boolean {
   const { char, word } = before(out)
   if (word) return BEFORE_REGEX.has(word)
   if (char === ')') return headClosed
-  return !/[\]<]/.test(char)
+  if (char === '<') return !(out.at(-1) === '<' && /[\w$>]/.test(next))
+  return char !== ']'
 }
 
 // The index of the quote that closes the string literal opened at i, or of the line break or end of code
@@ -101,7 +104,7 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
       take(i + 1, true); take(end, false)
       if (code[end] === c) take(end + 1, true)
     } else if (c === '`') template()
-    else if (c === '/' && regexStarts(out, headClosed)) {
+    else if (c === '/' && regexStarts(out, next ?? '', headClosed)) {
       const end = closeRegex(code, i)
       take(i + 1, true)
       if (end >= 0) { take(end, false); take(end + 1, true) }
