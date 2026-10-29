@@ -6,6 +6,7 @@ import type { Cell, Drawing } from '../../core/canvas.ts'
 import type { Step } from '../../core/fit.ts'
 import { TIER1, TIER2_PASSED } from '../../core/registry.ts'
 import type { Rows, Span } from '../../core/render.ts'
+import { drawnGlyphs } from './golden-lib.ts'
 
 // The fixture folders the harness gates, in the registry's order: each Tier 1 type, then each passed Tier 2 type. Each
 // folder is named for its type, as are the type's Coverage rows.
@@ -48,13 +49,14 @@ export const fx = (id: string): string => readFileSync(join('fixtures', id.repla
 const cells = (row: string): string[] => row.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim())
 
 // What is wrong with matrix's | <type> | <feature> | <ids> | rows after ## Coverage, given the ids of type's fixtures: each
-// row that cites none of type's ids ('empty: <feature>'), each cited id with no fixture ('missing <id>') and each ok fixture
-// no row cites ('uncited <id>'), each group sorted; or only 'no rows: <type>' when no row names type.
+// row that cites none ('empty: <feature>'), each cited id with no fixture ('missing <id>') and each ok fixture no row cites
+// ('uncited <id>'), each group sorted; or only 'no rows: <type>' when no row names type. A row cites each token of its ids
+// cell, split at commas and whitespace, as a whole id: pie-ok-01-typo cites no pie-ok-01.
 export function coverageOf(matrix: string, type: string, ids: readonly string[]): string[] {
   const start = matrix.indexOf('## Coverage'), lines = start < 0 ? [] : matrix.slice(start).split('\n')
   const rows = lines.filter(l => l.startsWith('|')).map(cells).filter(r => r.length >= 3 && r[0] === type)
   if (!rows.length) return [`no rows: ${type}`]
-  const cite = (r: string[]): string[] => r.at(-1)!.match(new RegExp(`(?<![\\w-])${type}-(ok|reject)-\\d+`, 'g')) ?? []
+  const cite = (r: string[]): string[] => r.at(-1)!.split(/[\s,]+/).filter(Boolean)
   const cited = new Set(rows.flatMap(cite))
   return [...rows.filter(r => !cite(r).length).map(r => `empty: ${r[1]}`).sort(),
     ...[...cited].filter(id => !ids.includes(id)).map(id => `missing ${id}`).sort(),
@@ -82,6 +84,11 @@ export function unlistedFrames(d: Drawing): string[] {
   const listed = new Set(d.expect.frames)
   return [...ownersOf(d, ['frame'])].filter(o => !listed.has(o)).sort()
 }
+
+// Every fault A4 checks on each drawing beyond render and validate: its border-only rows, its unlisted frames, and each drawn
+// cell that is not one allow-listed glyph. A golden reads a drawn cell whose whole ch is zero-width as a mark joined to the
+// cell before it, which the glyph scan skips after source text, so drawn cells are checked on the drawing (drawnGlyphs).
+export const drawingFaults = (d: Drawing): string[] => [...borderRows(d), ...unlistedFrames(d), ...drawnGlyphs(d)]
 
 // The first span of rows, in reading order, whose text matches re (search ignores re's lastIndex).
 export const spanOf = (rows: Rows, re: RegExp): Span | undefined => rows.flat().find(s => s.text.search(re) >= 0)
