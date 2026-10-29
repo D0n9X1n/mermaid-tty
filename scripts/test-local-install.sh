@@ -2,7 +2,7 @@
 # B5, every PR: install the plugin from this checkout's marketplace into a throwaway config. Offline; no account.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-tmp="$(mktemp -d)"
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")" # an explicit template, as macOS's bare mktemp -d ignores TMPDIR
 trap 'rm -rf "$tmp"' EXIT # the mktemp path itself, never the cygpath -w form handed to claude
 config="$tmp"
 if command -v cygpath >/dev/null 2>&1; then config="$(cygpath -w "$tmp")"; fi # Git Bash: give claude.exe a Windows path
