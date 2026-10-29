@@ -94,7 +94,7 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 // CJK one a cell early. A self-check that shared glyphCells would agree with that renderer and pass it.
 test('VR.gallery: the self-check measures columns on its own: a renderer that advances a W/F glyph one cell fails it, by file', t => {
   const root = scratch(t)
-  for (const p of ['package.json', 'core', 'fixtures/flowchart', 'fixtures/sequence', 'scripts/render-gallery.ts', 'scripts/render-svg.ts', 'scripts/lib/svg.ts', 'scripts/lib/is-main.ts'])
+  for (const p of ['package.json', 'core', 'fixtures/flowchart', 'fixtures/sequence', 'scripts/render-gallery.ts', 'scripts/render-svg.ts', 'scripts/lib/svg.ts', 'scripts/lib/palette.ts', 'scripts/lib/is-main.ts'])
     cpSync(join(ROOT, p), join(root, p), { recursive: true })
   const svgTs = join(root, 'scripts/lib/svg.ts'), src = readFileSync(svgTs, 'utf8'), mutated = src.replace('col += w;', 'col += Math.min(w, 1);')
   assert.notEqual(mutated, src, "glyphCells's column advance, col += w;, is gone from scripts/lib/svg.ts")
