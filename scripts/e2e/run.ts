@@ -14,11 +14,11 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { THEMES, type ThemeName } from '../../core/themes.ts'
-import { checkDiagramScreen, drawnRows, type ColorCheck } from './assert.ts'
+import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCheck } from './assert.ts'
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
 import { startMock } from './mock.ts'
-import { REPLY } from './reply.ts'
+import { REPLY, REPLY_LEAD } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
@@ -115,7 +115,11 @@ async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenar
 // REPLY's labels by role, its prose lines, and every line of its two drawn diagrams' source, which holds those labels too.
 const LABELS = { '读取配置文件': 'node', '完成?': 'decision', '结束': 'node', User: 'node', ping: 'label' }
 const PROSE = ['Here is the config flow:', 'And the handshake:', 'This one stays source:', 'Unclosed:']
+const LEAD_SOURCE = fenceBody(REPLY_LEAD).split('\n')
 const SOURCE = splitFences(REPLY).filter(f => f.kind === 'mermaid').slice(0, 2).flatMap(f => (f.kind === 'mermaid' ? f.body.split('\n') : []))
+// The width the expected rows are drawn at: the session's (driver.ts's COLS). The replies' diagrams draw the same at any
+// width from it down to well under it, so Claude Code's margins do not change them.
+const DRAW_COLUMNS = 100
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
 const colorOf = (r: Run): ColorCheck => (r.theme === 'mono' ? 'none' : r.color)
 // A curated palette's role colors, as 0xRRGGBB; none for default, which follows the user's Claude Code theme, and mono.
@@ -123,13 +127,14 @@ function hexOf(r: Run): Record<string, number> | undefined {
   if (r.theme === 'default' || r.theme === 'mono') return undefined
   return Object.fromEntries(Object.entries(THEMES[r.theme].roles).map(([role, c]) => [role, parseInt(c!.slice(1), 16)]))
 }
-// The drawn screen's problems: each label in its role's color, the prose once, and the fences left as source shown so.
+// The drawn screen's problems: REPLY's drawn diagrams' rows as the renderer draws them, in order, each label in its
+// role's color, the prose once, and the fences left as source shown so.
 async function drawnScreen({ s, run }: Ctx): Promise<string[]> {
-  const problems = checkDiagramScreen(await s.cells(), { labels: LABELS, prose: PROSE, color: colorOf(run), hex: hexOf(run) })
+  const diagrams = drawnDiagrams(REPLY, DRAW_COLUMNS, run.theme)
+  const problems = checkDiagramScreen(await s.cells(), { labels: LABELS, prose: PROSE, diagrams, color: colorOf(run), hex: hexOf(run) })
   const text = await s.text()
   for (const line of ['flowchart-elk TD', 'X --> Y', 'A --> B']) if (!text.includes(line)) problems.push(`${line}: expected as source`)
-  for (const line of SOURCE.filter(l => /[[(>]/.test(l))) if (text.includes(line)) problems.push(`${line}: drawn diagram shown as source`)
-  return problems
+  return [...problems, ...sourceShown(text, SOURCE)]
 }
 
 // harness: REPLY's diagrams drawn in the run's colors, the prose intact, the other fences as source.
@@ -160,14 +165,16 @@ async function sourceView(c: Ctx): Promise<string[]> {
   return [...problems, ...await drawnScreen(c)]
 }
 
-// lead (D5): a reply that opens on its diagram draws its bullet on no row of its own: no row between the prompt line
-// and the diagram's first row holds only the bullet.
+// lead (D5): a reply that opens on its diagram draws it, not its source, and draws its bullet on no row of its own: no
+// row between the prompt line and the diagram's first row holds only the bullet.
 async function lead({ s, run }: Ctx): Promise<string[]> {
   await submit(s, 'lead')
   await s.waitFor(/After the diagram\./, 30000)
   await sleep(500)
-  const cells = await s.cells(), rows = (await s.text()).split('\n')
-  const problems = checkDiagramScreen(cells, { labels: { '开始': 'node', '结束': 'node' }, prose: ['After the diagram.'], color: colorOf(run), hex: hexOf(run) })
+  const cells = await s.cells(), text = await s.text(), rows = text.split('\n')
+  const diagrams = drawnDiagrams(REPLY_LEAD, DRAW_COLUMNS, run.theme)
+  const problems = checkDiagramScreen(cells, { labels: { '开始': 'node', '结束': 'node' }, prose: ['After the diagram.'], diagrams, color: colorOf(run), hex: hexOf(run) })
+  problems.push(...sourceShown(text, LEAD_SOURCE))
   const from = rows.findIndex(r => promptLine('lead').test(r)), to = rows.findIndex(r => r.includes('开始'))
   if (from < 0 || to < from) return [...problems, 'lead: prompt line or diagram not found']
   for (const r of rows.slice(from + 1, to)) if (r.trim() === '⏺') problems.push('lead: a row holds only the reply bullet (D5)')
