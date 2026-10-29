@@ -48,3 +48,16 @@ export function seedSettings(theme: string): string {
   const keys = ['mermaid-tty', 'mermaid-tty@inline', 'mermaid-tty@mermaid-tty']
   return JSON.stringify({ pluginConfigs: Object.fromEntries(keys.map(k => [k, { options: { theme } }])) }, null, 2)
 }
+
+// An installed config's file with seed merged in (A9.release): objects merge key by key, seed wins on any other clash,
+// arrays included, and no existing key is dropped.
+export function mergeJson(existing: string, seed: string): string {
+  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+  const merge = (a: unknown, b: unknown): unknown => {
+    if (!isObject(a) || !isObject(b)) return b
+    const out: Record<string, unknown> = { ...a }
+    for (const [k, v] of Object.entries(b)) out[k] = k in a ? merge(a[k], v) : v
+    return out
+  }
+  return JSON.stringify(merge(JSON.parse(existing), JSON.parse(seed)), null, 2)
+}

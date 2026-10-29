@@ -1,12 +1,12 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
-//   [--color truecolor|256] [--driver pty|tmux] [--scenario harness|source-view|stored|lead|all] [--keep]
+//   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario harness|source-view|stored|lead|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
 // scenario in a session of its own. Prints PASS|FAIL <os> <theme> <color> <scenario> per run, each run's problems under
 // it, and a summary line; exits 1 on any FAIL. --keep keeps each run's temp dir, with screen.ansi in it, and under tmux
 // leaves the last run's session up to attach to.
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { THEMES, type ThemeName } from '../../core/themes.ts'
 import { checkDiagramScreen, drawnRows, type ColorCheck } from './assert.ts'
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
-import { sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
+import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
 import { startMock } from './mock.ts'
 import { REPLY } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
@@ -78,11 +78,13 @@ async function showDiagrams(s: Session): Promise<void> {
 
 // One run of one scenario, in a sandbox of its own: a temp HOME, config dir and cwd, the mock, and the seeded config.
 // Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp leaves
-// a tmux session up.
-async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenario, keep: boolean, keepUp: boolean): Promise<string[]> {
+// a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the session's: the
+// seeds are merged into its files, and the session starts without --plugin-dir.
+async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenario, keep: boolean, keepUp: boolean, installed?: string): Promise<string[]> {
   const base = await realpath(mkdtempSync(join(tmpdir(), 'mtty-')))
-  const [home, config, cwd, bin] = ['home', 'config', 'cwd', 'bin'].map(d => join(base, d)) as [string, string, string, string]
-  for (const d of [home, config, cwd, bin]) mkdirSync(d)
+  const [home, cwd, bin] = ['home', 'cwd', 'bin'].map(d => join(base, d)) as [string, string, string]
+  const config = installed ?? join(base, 'config')
+  for (const d of [home, cwd, bin, ...(installed ? [] : [config])]) mkdirSync(d)
   // The clipboard stubs, first on PATH: the stored scenario's /copy writes to copied.
   const copied = join(base, 'copied.txt')
   for (const [name, script] of Object.entries(clipboardStubs(process.platform, copied))) {
@@ -92,10 +94,11 @@ async function runOne(claude: string, run: Run, driver: Driver, scenario: Scenar
   const mock = await startMock()
   let s: Session | undefined
   try {
-    writeFileSync(join(config, '.claude.json'), seedConfig(cwd, 'dummy', process.platform))
-    writeFileSync(join(config, 'settings.json'), seedSettings(run.theme))
+    const seed = (file: string, json: string) => writeFileSync(join(config, file), existsSync(join(config, file)) ? mergeJson(readFileSync(join(config, file), 'utf8'), json) : json)
+    seed('.claude.json', seedConfig(cwd, 'dummy', process.platform))
+    seed('settings.json', seedSettings(run.theme))
     const env = sessionEnv({ home, config, mockUrl: mock.url, platform: process.platform, color: run.color, driver, path: [bin, process.env.PATH ?? ''].join(delimiter) })
-    s = await startSession({ driver, argv: [claude, '--plugin-dir', repoRoot], cwd, env })
+    s = await startSession({ driver, argv: installed ? [claude] : [claude, '--plugin-dir', repoRoot], cwd, env })
     await s.waitFor(/❯/, 15000)
     return await SCENARIO_RUN[scenario]({ s, run, config, base, copied })
   } catch (e) {
@@ -189,9 +192,10 @@ async function poll<T>(check: () => T | undefined | Promise<T | undefined>, ms: 
 // stored (R6, E5, E6): the stored transcript holds REPLY byte for byte, and /copy copies the first diagram's exact
 // source, through the stubbed clipboard command or OSC 52.
 async function stored({ s, config, copied }: Ctx): Promise<string[]> {
-  const os = process.platform, want = fenceBody(REPLY), problems: string[] = []
+  const os = process.platform, want = fenceBody(REPLY), problems: string[] = [], since = Date.now() - 1000
   await showDiagrams(s)
-  const files = () => jsonlFiles(join(config, 'projects'))
+  // Only this run's transcripts: an installed config dir keeps earlier runs'.
+  const files = () => jsonlFiles(join(config, 'projects')).filter(f => statSync(f).mtimeMs >= since)
   if (!await poll(() => files().some(f => findReply(readFileSync(f, 'utf8'), REPLY)), 5000)) {
     problems.push(`stored: no transcript holds the reply byte for byte (${files().length} .jsonl files)`)
   }
@@ -223,7 +227,7 @@ const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = { harness,
 
 async function main(): Promise<number> {
   const { values: o } = parseArgs({ options: {
-    'claude-version': { type: 'string' }, theme: { type: 'string', default: 'all' }, color: { type: 'string' },
+    'claude-version': { type: 'string' }, installed: { type: 'string' }, theme: { type: 'string', default: 'all' }, color: { type: 'string' },
     driver: { type: 'string', default: 'pty' }, scenario: { type: 'string', default: 'all' }, keep: { type: 'boolean', default: false },
   } })
   const version = o['claude-version'] ?? readFileSync(join(here, 'CLAUDE_VERSION'), 'utf8').trim()
@@ -232,7 +236,7 @@ async function main(): Promise<number> {
   const claude = installClaude(version), os = process.platform, total = runs.length * scenarios.length
   let failed = 0, n = 0
   for (const run of runs) for (const scenario of scenarios) {
-    const last = ++n === total, problems = await runOne(claude, run, driver, scenario, o.keep, o.keep && driver === 'tmux' && last)
+    const last = ++n === total, problems = await runOne(claude, run, driver, scenario, o.keep, o.keep && driver === 'tmux' && last, o.installed)
     if (problems.length) failed++
     console.log(`${problems.length ? 'FAIL' : 'PASS'} ${os} ${run.theme} ${run.color} ${scenario}`)
     for (const p of problems) console.log(`  ${p.replaceAll('\n', '\n  ')}`)
