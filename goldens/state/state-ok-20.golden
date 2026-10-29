@@ -1,0 +1,38 @@
+@60
+                        ●
+       ┌────────────────┼─────────────────┐
+       │                │                 │
+       ▼                ▼                 ▼
+( Waiting for )  ( Shipping the )  ( Closing the )
+(   payment   )  (    order     )  (   account   )
+@60 roles
+                        n
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e                e                 e
+       a                a                 a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNNNNnn  nnNNNNNNNNNNNnn
+nnnnNNNNNNNnnnn  nnnnnNNNNNnnnnnn  nnnnNNNNNNNnnnn
+@80
+                                   ●
+           ┌───────────────────────┼────────────────────────┐
+           │                       │                        │
+           ▼                       ▼                        ▼
+( Waiting for payment )  ( Shipping the order )  ( Closing the account )
+@80 roles
+                                   n
+           eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+           e                       e                        e
+           a                       a                        a
+nnNNNNNNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNNNNnn
+@120
+                                   ●
+           ┌───────────────────────┼────────────────────────┐
+           │                       │                        │
+           ▼                       ▼                        ▼
+( Waiting for payment )  ( Shipping the order )  ( Closing the account )
+@120 roles
+                                   n
+           eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+           e                       e                        e
+           a                       a                        a
+nnNNNNNNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNNNNnn

@@ -1,0 +1,24 @@
+@60
+           ┌─►( Bravo )──┬─►( Delta )──►( CompletedQuietly )
+( Alpha )─┬┘             │
+          └─►( Charlie )─┘
+@60 roles
+           eeannNNNNNnneeeeannNNNNNnneeannNNNNNNNNNNNNNNNNnn
+nnNNNNNnneee             e
+          eeannNNNNNNNnnee
+@80
+           ┌───►( Bravo )─┬──►( Delta )──►( CompletedQuietly )
+( Alpha )──┤              │
+           └──►( Charlie )┘
+@80 roles
+           eeeeannNNNNNnneeeeannNNNNNnneeannNNNNNNNNNNNNNNNNnn
+nnNNNNNnneee              e
+           eeeannNNNNNNNnne
+@120
+           ┌───►( Bravo )─┬──►( Delta )──►( CompletedQuietly )
+( Alpha )──┤              │
+           └──►( Charlie )┘
+@120 roles
+           eeeeannNNNNNnneeeeannNNNNNnneeannNNNNNNNNNNNNNNNNnn
+nnNNNNNnneee              e
+           eeeannNNNNNNNnne

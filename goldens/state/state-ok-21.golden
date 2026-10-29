@@ -1,0 +1,72 @@
+@60
+  ( Received )
+       │
+       ▼
+  ( Accepted )
+       │
+       ▼
+  ( Prepared )
+       │
+       ▼
+ ( Shipping )
+      │
+      ▼
+( Delivered )
+      │
+      ▼
+( Archived )
+@60 roles
+  nnNNNNNNNNnn
+       e
+       a
+  nnNNNNNNNNnn
+       e
+       a
+  nnNNNNNNNNnn
+       e
+       a
+ nnNNNNNNNNnn
+      e
+      a
+nnNNNNNNNNNnn
+      e
+      a
+nnNNNNNNNNnn
+@80
+  ( Received )
+       │
+       ▼
+  ( Accepted )
+       │
+       ▼
+  ( Prepared )
+       │
+       ▼
+ ( Shipping )
+      │
+      ▼
+( Delivered )
+      │
+      ▼
+( Archived )
+@80 roles
+  nnNNNNNNNNnn
+       e
+       a
+  nnNNNNNNNNnn
+       e
+       a
+  nnNNNNNNNNnn
+       e
+       a
+ nnNNNNNNNNnn
+      e
+      a
+nnNNNNNNNNNnn
+      e
+      a
+nnNNNNNNNNnn
+@120
+( Received )──►( Accepted )──►( Prepared )──►( Shipping )──►( Delivered )──►( Archived )
+@120 roles
+nnNNNNNNNNnneeannNNNNNNNNnneeannNNNNNNNNnneeannNNNNNNNNnneeannNNNNNNNNNnneeannNNNNNNNNnn

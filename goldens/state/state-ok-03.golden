@@ -1,0 +1,48 @@
+@60
+      ( s1 )
+        │
+        ▼
+   ( Second )
+       │
+       ▼
+( Third state )
+@60 roles
+      nnNNnn
+        e
+        a
+   nnNNNNNNnn
+       e
+       a
+nnNNNNNNNNNNNnn
+@80
+      ( s1 )
+        │
+        ▼
+   ( Second )
+       │
+       ▼
+( Third state )
+@80 roles
+      nnNNnn
+        e
+        a
+   nnNNNNNNnn
+       e
+       a
+nnNNNNNNNNNNNnn
+@120
+      ( s1 )
+        │
+        ▼
+   ( Second )
+       │
+       ▼
+( Third state )
+@120 roles
+      nnNNnn
+        e
+        a
+   nnNNNNNNnn
+       e
+       a
+nnNNNNNNNNNNNnn

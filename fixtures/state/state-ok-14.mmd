@@ -1,0 +1,16 @@
+stateDiagram-v2
+    [*] --> Active
+
+    state Active {
+        [*] --> NumLockOff
+        NumLockOff --> NumLockOn : Ev NumLock Pressed
+        NumLockOn --> NumLockOff : Ev NumLock Pressed
+        --
+        [*] --> CapsLockOff
+        CapsLockOff --> CapsLockOn : Ev CapsLock Pressed
+        CapsLockOn --> CapsLockOff : Ev CapsLock Pressed
+        --
+        [*] --> ScrollLockOff
+        ScrollLockOff --> ScrollLockOn : Ev ScrollLock Pressed
+        ScrollLockOn --> ScrollLockOff : Ev ScrollLock Pressed
+    }

@@ -1,0 +1,90 @@
+@60
+      ●
+      │
+      ▼
+( IsPositive )
+      └┐
+       │
+       ▼
+       ◇
+      ┌┴────────────┐
+      │             │
+  if n < 0      if n >= 0
+      │             │
+      ▼             ▼
+  ( False )      ( True )
+@60 roles
+      n
+      e
+      a
+nnNNNNNNNNNNnn
+      ee
+       e
+       a
+       d
+      eeeeeeeeeeeeeee
+      e             e
+  LLLLLLLL      LLLLLLLLL
+      e             e
+      a             a
+  nnNNNNNnn      nnNNNNnn
+@80
+      ●
+      │
+      ▼
+( IsPositive )
+      └┐
+       │
+       ▼
+       ◇
+      ┌┴────────────┐
+      │             │
+  if n < 0      if n >= 0
+      │             │
+      ▼             ▼
+  ( False )      ( True )
+@80 roles
+      n
+      e
+      a
+nnNNNNNNNNNNnn
+      ee
+       e
+       a
+       d
+      eeeeeeeeeeeeeee
+      e             e
+  LLLLLLLL      LLLLLLLLL
+      e             e
+      a             a
+  nnNNNNNnn      nnNNNNnn
+@120
+      ●
+      │
+      ▼
+( IsPositive )
+      └┐
+       │
+       ▼
+       ◇
+      ┌┴────────────┐
+      │             │
+  if n < 0      if n >= 0
+      │             │
+      ▼             ▼
+  ( False )      ( True )
+@120 roles
+      n
+      e
+      a
+nnNNNNNNNNNNnn
+      ee
+       e
+       a
+       d
+      eeeeeeeeeeeeeee
+      e             e
+  LLLLLLLL      LLLLLLLLL
+      e             e
+      a             a
+  nnNNNNNnn      nnNNNNnn
