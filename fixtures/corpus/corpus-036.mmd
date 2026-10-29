@@ -1,0 +1,12 @@
+sequenceDiagram
+    title Webhook 重试
+    participant S as 我方服务
+    participant E as 客户回调地址
+    S->>E: POST /webhook
+    loop 最多重试 5 次
+        E-->>S: 503
+        S->>S: 退避 2^n 秒
+        S->>E: POST /webhook
+    end
+    E-->>S: 200
+    Note left of S: 5 次后放弃

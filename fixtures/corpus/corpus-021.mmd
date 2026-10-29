@@ -1,0 +1,21 @@
+flowchart LR
+    subgraph backend ["Backend"]
+        bff["BFF"]
+        subgraph svc ["Services"]
+            account["Account service"]
+            report[["Report service"]]
+            export["Export worker"]
+        end
+    end
+    subgraph data ["Storage"]
+        postgresql[("PostgreSQL")]
+        s3[("S3")]
+    end
+    admin["Admin dashboard"] -->|HTTPS| bff
+    bff --> account
+    bff --> report
+    bff --> export
+    account --> postgresql
+    report --> postgresql
+    export --> s3
+    export -.->|send report| email["Email service"]

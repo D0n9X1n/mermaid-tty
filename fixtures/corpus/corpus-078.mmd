@@ -1,0 +1,21 @@
+graph TD
+    subgraph backend [后端]
+        nginx{{Nginx<br/>负载均衡}}
+        subgraph svc [服务层]
+            auth[认证服务]
+            feed[动态服务]
+            push[推送服务]
+        end
+    end
+    subgraph data [存储层]
+        postgresql[(PostgreSQL)]
+        s3[(S3 对象存储)]
+    end
+    mobile([移动 App]) -->|HTTPS| nginx
+    nginx --> auth
+    nginx --> feed
+    nginx --> push
+    auth --> postgresql
+    feed --> s3
+    push --> postgresql
+    push -.->|推送| apns[APNs 和 FCM]

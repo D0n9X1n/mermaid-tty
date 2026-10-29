@@ -1,0 +1,14 @@
+sequenceDiagram
+    actor U as 用户
+    participant F as 前端
+    participant B as 后端
+    participant M as 模型
+    U->>F: 提问
+    F->>B: POST /chat
+    B->>M: 带上下文的提示词
+    loop 每个 token
+        M-->>B: token
+        B-->>F: SSE 事件
+    end
+    F-->>U: 展示回答
+    Note over B,M: 流式输出直到结束

@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant C as Client
+    participant S as API
+    participant R as Redis
+    participant D as MySQL
+    C->>S: GET /items/42
+    S->>R: GET item:42
+    opt cache miss
+        R-->>S: nil
+        S->>D: SELECT * FROM items WHERE id = 42
+        D-->>S: row
+        S->>R: SET item:42 EX 600
+    end
+    S-->>C: 200 OK
+    Note over S,R: Cache-aside read

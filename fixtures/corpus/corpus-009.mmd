@@ -1,0 +1,9 @@
+flowchart TD
+A(("Start")) --> B["Download file"]
+B --> C{"Checksum OK?"}
+C -->|Yes| D["Save to disk"]
+C -->|No| E{"Retries left?"}
+E -->|Yes| F["Wait 10s"]
+F -.-> B
+E -->|No| G["Report error"]
+D --> H(["End"])

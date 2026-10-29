@@ -1,0 +1,8 @@
+graph LR
+  A(["Start"]) --> B["Enter password"]
+  B --> C{"Password correct?"}
+  C -- Yes --> D["Issue token"]
+  D --> E["Go to home page"]
+  C -- No --> F["Show error"]
+  F --> B
+  E --> G(["End"])

@@ -1,0 +1,7 @@
+---
+title: CSV import
+---
+flowchart LR
+A["Read CSV<br/>UTF-8"] --> B["Normalize fields"]
+B --> C["Write to database<br/>batches of 500"]
+C --> D["Email a summary"]

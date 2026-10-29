@@ -1,0 +1,18 @@
+sequenceDiagram
+  title Checkout
+  actor C as Customer
+  participant O as Order service
+  participant I as Inventory
+  participant P as Payment
+  C->>O: Place order
+  O->>I: Reserve stock
+  alt in stock
+      I-->>O: Reserved
+      O->>P: Charge card
+      P-->>O: Paid
+      O-->>C: Order confirmed
+  else out of stock
+      I-->>O: Not enough stock
+      O-->>C: Sold out
+  end
+  Note right of I: Reservation lasts 15 min

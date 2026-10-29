@@ -1,0 +1,8 @@
+flowchart TD
+A["Pull message"] --> B{"Handled?"}
+B -->|Y| C["Commit offset"]
+B -->|N| D{"Retries left?"}
+D -->|Y| E["Requeue with delay"]
+E -.->|retry| A
+D -->|N| F["Send to DLQ"]
+C --> G("End")

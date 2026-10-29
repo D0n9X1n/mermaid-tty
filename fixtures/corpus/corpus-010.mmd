@@ -1,0 +1,20 @@
+graph LR
+    subgraph backend ["Backend"]
+        nginx["Nginx"]
+        subgraph svc ["Services"]
+            auth["Auth service"]
+            feed["Feed service"]
+            push["Push service"]
+        end
+    end
+    subgraph data ["Storage"]
+        postgresql[("PostgreSQL")]
+    end
+    mobile["Mobile app"] -- HTTPS --> nginx
+    nginx --> auth
+    nginx --> feed
+    nginx --> push
+    auth --> postgresql
+    feed --> postgresql
+    push --> postgresql
+    push -.->|push| apns["APNs and FCM"]

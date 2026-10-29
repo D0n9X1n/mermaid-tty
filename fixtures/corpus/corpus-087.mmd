@@ -1,0 +1,9 @@
+flowchart LR
+    A([Start]) --> B[[Switch traffic<br/>10% canary]]
+    B --> C{Healthy?}
+    C -->|yes| D[Full rollout]
+    C -->|no| E{Retries left?<br/>max 3}
+    E -->|yes| F[Wait 1 min]
+    F -.-> B
+    E -->|no| G[Roll back]
+    D --> H((End))

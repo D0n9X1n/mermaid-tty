@@ -1,0 +1,14 @@
+sequenceDiagram
+    title CI run
+    actor D as Developer
+    participant G as GitHub
+    participant R as CI runner
+    D->>G: git push
+    G->>R: Trigger workflow
+    R->>R: Install and build
+    break tests fail
+        R-->>G: Status: failed
+        G-->>D: Email
+    end
+    R-->>G: Status: passed
+    Note over R: Runs on ubuntu-latest

@@ -1,0 +1,24 @@
+---
+title: SaaS 控制台
+---
+graph LR
+    subgraph backend ["后端"]
+        bff{{"BFF 层<br/>GraphQL"}}
+        subgraph svc ["服务层"]
+            account["账号服务"]
+            report[["报表服务"]]
+            export["导出任务"]
+        end
+    end
+    subgraph data ["存储层"]
+        postgresql[("PostgreSQL")]
+        s3[("S3 对象存储")]
+    end
+    admin("管理后台") -- HTTPS --> bff
+    bff --> account
+    bff --> report
+    bff --> export
+    account --> postgresql
+    report --> postgresql
+    export --> s3
+    export -.->|发送报表| email["邮件服务"]

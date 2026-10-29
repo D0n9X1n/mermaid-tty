@@ -1,0 +1,5 @@
+flowchart LR
+    A(["Upload<br/>up to 2 GB"]) --> B["Transcode<br/>H.264"]
+    B --> C["Thumbnails"]
+    C --> D["Publish to CDN"]
+    D -.-> E["Notify uploader"]

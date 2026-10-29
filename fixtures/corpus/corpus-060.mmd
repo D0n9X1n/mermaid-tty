@@ -1,0 +1,4 @@
+flowchart LR
+    A(["Load documents"]) --> B["Embed"]
+    B --> C["Write index"]
+    C -->|eval passes| D["Serve queries"]

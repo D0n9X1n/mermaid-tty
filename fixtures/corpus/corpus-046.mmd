@@ -1,0 +1,8 @@
+flowchart LR
+    A["Switch traffic"] --> B{"Healthy?"}
+    B -->|Y| C["Full rollout"]
+    B -->|N| D{"Retries left?"}
+    D -->|Y| E["Wait 1 min"]
+    E --> A
+    D -->|N| F["Roll back"]
+    C --> G("End")

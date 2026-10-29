@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant U as 用户
+    participant A as 应用
+    participant G as Google
+    participant B as 后端
+    U->>A: 点击 Google 登录
+    A->>G: 跳转到授权页
+    opt 首次登录
+        G->>U: 请求授权
+        U->>G: 同意
+    end
+    G-->>A: 授权码
+    A->>B: 用授权码换令牌
+    B-->>A: 会话 Cookie
+    Note over A,G: OAuth 2.0 + PKCE

@@ -1,0 +1,6 @@
+flowchart LR
+  A["抽取数据<br/>MySQL binlog"] --> B["清洗"]
+  B --> C["转换<br/>dbt"]
+  C --> D["加载<br/>BigQuery"]
+  D --> E["刷新看板"]
+  E -.-> F["数据质量报告"]

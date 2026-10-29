@@ -1,0 +1,7 @@
+flowchart TD
+  A(("Start")) --> B["Refund request"]
+  B --> C{{"Within 7 days?"}}
+  C -->|yes| D["Full refund"]
+  C -->|no| E["Manual review"]
+  E --> F(("End"))
+  D --> F

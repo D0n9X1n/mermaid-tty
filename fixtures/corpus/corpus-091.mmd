@@ -1,0 +1,9 @@
+flowchart LR
+  A(["Start"]) --> B["Send webhook"]
+  B --> C{"Got 2xx?"}
+  C -- Yes --> D["Mark delivered"]
+  C -- No --> E{"Retries left?"}
+  E -- Yes --> F["Exponential backoff"]
+  F --> B
+  E -- No --> G["Disable endpoint"]
+  D --> H(("End"))

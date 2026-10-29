@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant C as 客户端
+  participant U as 上传服务
+  participant S as 对象存储
+  participant Q as 消息队列
+  C->>U: 上传文件
+  par 存储
+      U->>S: PUT object
+  and 通知
+      U->>Q: 发布上传事件
+  end
+  S-->>U: ETag
+  U-->>C: 201 Created
+  Note right of C: 超过 100 MB 分片上传

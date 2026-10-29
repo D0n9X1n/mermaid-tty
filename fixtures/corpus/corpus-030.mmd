@@ -1,0 +1,8 @@
+graph TD
+  A(["Start"]) --> B["Call payment API<br/>timeout 5s"]
+  B --> C{"Paid?"}
+  C -- yes --> D["Mark order paid"]
+  C -- no --> E{"Retries left?<br/>max 3"}
+  E -- yes --> F["Back off<br/>1s, 2s, 4s"]
+  F -.-> B
+  E -- no --> G["Alert finance"]
