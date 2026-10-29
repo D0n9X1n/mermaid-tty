@@ -1,6 +1,6 @@
 // Pure acceptance rules on the GFM tree (D15c): B1 README, B3 publish-wiki.yml, B6 icon. The workflow helpers live in ci-rules.ts.
 import { type Node, all, lineOf, parse, section, text, within } from '../docs/markdown.ts';
-import { INSTALL, common, need } from './workflow.ts';
+import { INSTALL, canonical, common, need } from './workflow.ts';
 export { INSTALL };
 export const TAGLINE = 'Yet, just another Mermaid renderer for your terminal';
 export const LOCAL = ['bash scripts/check.sh', 'npm ci --prefix scripts/e2e', 'node scripts/e2e/run.ts', 'node scripts/render-gallery.ts', 'node scripts/check-ci-coverage.ts'];
@@ -91,7 +91,7 @@ export const publishWikiErrors = (yml: string) => [...common('publish-wiki.yml',
   ['read-only workflow token', '\npermissions:\n  contents: read\n'], ['job-scoped contents: write', '\n    permissions:\n      contents: write\n'],
   ['ubuntu runner', '    runs-on: ubuntu-latest\n'], ['publisher call', 'scripts/publish-wiki.sh wiki wiki-repo "$GITHUB_SHA"'],
   ['push-if-changed', "if: steps.mirror.outputs.changed == 'true'"]]),
-  ...(/^\s*paths(-ignore)?:/m.test(yml) ? ['publish-wiki.yml: paths filter would skip merges; publish on every push to main'] : [])];
+  ...(/^\s*paths(-ignore)?:/m.test(canonical(yml).text) ? ['publish-wiki.yml: paths filter would skip merges; publish on every push to main'] : [])];
 export function iconErrors(png: Uint8Array): string[] {
   const sig = [137, 80, 78, 71, 13, 10, 26, 10];
   if (png.length < 24 || sig.some((b, i) => png[i] !== b) || String.fromCharCode(...png.subarray(12, 16)) !== 'IHDR') return ['icon.png: not a PNG'];
