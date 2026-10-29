@@ -1,13 +1,14 @@
 // node scripts/render-svg.ts FILE COLS THEME OUT.svg: writes the rows core draws of FILE at COLS columns under THEME
 // as an SVG, for review outside a terminal. Every glyph is its own <text> at x = col × cellW, a W/F glyph taking two
 // cells, so the columns line up whatever font the viewer picks. Exits 1 when core falls back, 2 on bad arguments.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import type { Rows } from '../core/render.ts'
 import { renderMermaid } from '../core/render.ts'
 import { THEMES } from '../core/themes.ts'
 import { width } from '../core/width.ts'
 import { isMain } from './lib/is-main.ts'
-import { BG, PAD, esc, glyphCells } from './lib/svg.ts'
+import { BG, PAD, esc, glyphCells, toSvg } from './lib/svg.ts'
 
 // A fixed hex preview of Claude Code's dark theme, for the ThemeKeys the default theme draws with. It is a preview,
 // not the real theme: CC resolves each key at render time from the user's own theme, whose colors may differ.
@@ -101,5 +102,23 @@ function main(): number {
   return 0
 }
 
-// main() runs only when node runs this file, not when another module imports it.
-if (isMain(import.meta)) process.exitCode = main()
+// B: --readme rewrites the manifest; --stdout FILE [COLUMNS] [THEME] prints SVG (fallback exits 3).
+// Load B's adapter only for these modes: A's standalone review gallery needs no README files.
+if (isMain(import.meta) && process.argv[2] === '--readme') {
+  const { IMAGES } = await import('./lib/images.ts')
+  const { ROOT, renderImage } = await import('./lib/render-image.ts')
+  for (const img of IMAGES) {
+    mkdirSync(dirname(join(ROOT, img.file)), { recursive: true })
+    writeFileSync(join(ROOT, img.file), renderImage(img).svg)
+  }
+  console.log(`render-svg: wrote ${IMAGES.length} images`)
+} else if (isMain(import.meta) && process.argv[2] === '--stdout') {
+  const [file, cols = '80', theme = 'default'] = process.argv.slice(3)
+  if (!file) { console.error('usage: node scripts/render-svg.ts --stdout FILE [COLUMNS] [THEME]'); process.exitCode = 2 }
+  else {
+    const { styledRows } = await import('./lib/render-image.ts')
+    const rows = styledRows(readFileSync(file, 'utf8'), Number(cols), theme)
+    if (!rows) { console.error(`render-svg: core fell back for ${file} at ${cols} columns`); process.exitCode = 3 }
+    else process.stdout.write(toSvg(rows, width, basename(file)))
+  }
+} else if (isMain(import.meta)) process.exitCode = main()

@@ -1,0 +1,8 @@
+sequenceDiagram
+  actor You
+  participant C as Claude Code
+  participant M as mermaid-tty
+  You->>C: Ask for a diagram
+  C->>M: Reply with a mermaid fence
+  M-->>C: Colored rows
+  C-->>You: Diagram in the terminal
