@@ -91,15 +91,21 @@ function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   return [...reached]
 }
 
-// Each edge is connected: a walk over its cells, from its line or arrow cells next to from (a line there must point at
-// from), reaches a cell next to to. Each head is its own arrow cell of the edge at an end node, and none sits on a junction.
+// Whether x is a cell edge id's walk may step through: a line or arrow cell of the edge, or a text or cont cell of its own
+// label, owner `${id}:label`. A fill, cap or other text cell never is, even one the edge owns.
+const connects = (x: Cell, id: string): boolean =>
+  ((x.kind === 'line' || x.kind === 'arrow') && owns(x, id)) || ((x.kind === 'text' || x.kind === 'cont') && x.owners[0] === `${id}:label`)
+
+// Each edge is connected: a walk over the cells that connect it, from its line or arrow cells next to from (a line there
+// must point at from), reaches a cell next to to. Each head is its own arrow cell of the edge at an end node, and none
+// sits on a junction.
 function edges(d: Drawing, all: readonly Spot[]): Fail | null {
   // The first of sides on which p touches a cell of any of ids.
   const toward = (p: Spot, ids: readonly string[], sides = SIDES) => sides.find(s => ids.some(id => owns(beside(d, p, s), id)))
   // The side a head meets an end node on: the side its glyph points at, or any side for a head with no point.
   const aim = (p: Spot, ids: readonly string[]) => { const s = POINT.get(p.cell.ch); return toward(p, ids, s ? [s] : SIDES) }
   for (const e of d.expect.edges) {
-    const mine = all.filter(p => owns(p.cell, e.id))
+    const mine = all.filter(p => connects(p.cell, e.id))
     const starts = mine.filter(p => SIDES.some(s => owns(beside(d, p, s), e.from) &&
       (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (p.cell.dirs & s.bit) !== 0))))
     if (!walk(mine, starts).some(p => toward(p, [e.to]))) return fail('edge-disconnected')

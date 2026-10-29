@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { createCanvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
+import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
 import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
@@ -101,11 +101,42 @@ test('A5.mutation-tests: an edge passes through a junction cell it shares with a
   assert.equal(validate(fork()), null)
   assert.equal(validate(cut(fork(), 2, 0))?.reason, 'edge-disconnected')
 })
-// An edge label drawn on the path: its cells list the label id, then the edge id.
-test('A5.mutation-tests: an edge label cell joins any adjacent cell of its edge but starts nothing; text of another owner breaks the edge', () => {
-  assert.equal(validate(path([5, { text: 'L', owners: ['L1', 'A>B'] }, 5, '▼'], ['▼'])), null)
+// An edge label drawn on the path: its cells list the label id A>B:label, then the edge id. Text under any other owner is not
+// the edge's label, even when its cells list A>B too.
+test("A5.mutation-tests: an edge's own label cell joins any adjacent cell of its edge but starts nothing; text of another owner breaks the edge, even text the edge owns", () => {
+  assert.equal(validate(path([5, { text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['▼'])), null)
   assert.equal(validate(path([5, { text: 'L', owners: ['L1'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path([{ text: 'L', owners: ['L1', 'A>B'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, { text: 'L', owners: ['L1', 'A>B'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([{ text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+})
+// a, then ─, 成功 (each W character a text cell, then a cont cell), ─, ► and b along row 0: the route enters 成 and leaves
+// from 功's cont cell. The label's cells list owners: A>B:label alone, or with A>B.
+function through(owners: string[]): Drawing {
+  const c = createCanvas(1, 9, 9); c.text(0, 0, 'a', 'node', 'A'); c.line(0, 1, 10, 'light', 'edge', 'A>B'); c.text(0, 2, '成功', 'label', owners)
+  c.line(0, 6, 10, 'light', 'edge', 'A>B'); c.arrow(0, 7, '►', 'A>B'); c.text(0, 8, 'b', 'node', 'B')
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: owners[0]!, text: '成功' }],
+    edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['►'] }], edgeLabels: [{ owner: owners[0]!, edge: 'A>B' }] })
+}
+test("A5.mutation-tests: an edge's own label bridges its route through its cont cells too, whether its cells list the edge or not", () => {
+  assert.equal(validate(through(['A>B:label', 'A>B'])), null)
+  assert.equal(validate(through(['A>B:label'])), null)
+})
+// QA's repro: A, then down column 0 an edge e's line, a cell `cell` draws, ▼ and B, on a grid cols wide.
+function gap(cell: (c: Canvas) => void, cols = 1): Drawing {
+  const c = createCanvas(5, cols, cols); c.text(0, 0, 'A', 'node', 'A'); c.line(1, 0, 5, 'light', 'edge', 'e'); cell(c); c.arrow(3, 0, '▼', 'e'); c.text(4, 0, 'B', 'node', 'B')
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }], edges: [{ id: 'e', from: 'A', to: 'B', heads: ['▼'] }], edgeLabels: [] })
+}
+test('A5.mutation-tests: a blank fill or a cap never connects an edge, even one the edge owns', () => {
+  assert.equal(validate(gap(c => c.line(2, 0, 5, 'light', 'edge', 'e'))), null)
+  assert.equal(validate(gap(() => {}))?.reason, 'edge-disconnected')
+  assert.equal(validate(gap(c => c.fill(2, 0, 1, 'edge', 'e')))?.reason, 'edge-disconnected')
+  assert.equal(validate(gap(c => c.cap(2, 0, '(', 'edge', 'e')))?.reason, 'edge-disconnected')
+})
+// Padding e owns in column 1, beside its whole route in column 0.
+test('A5.mutation-tests: a fill the edge owns beside its connected line changes nothing', () => {
+  const route = (c: Canvas) => c.line(2, 0, 5, 'light', 'edge', 'e')
+  assert.equal(validate(gap(route, 2)), null)
+  assert.equal(validate(gap(c => { route(c); for (let r = 1; r < 4; r++) c.fill(r, 1, 1, 'edge', 'e') }, 2)), null)
 })
 // <--> draws ▲ next to A and ▼ next to B; o--o draws ● at each end.
 test('A5.mutation-tests: each head of a two-headed edge is its own arrow cell next to an end node, and neither sits on a junction', () => {
