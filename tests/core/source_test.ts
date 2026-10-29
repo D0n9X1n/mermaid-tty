@@ -156,3 +156,9 @@ test('A5.errors: an indented line after the title line continues it in js-yaml, 
   const ok = [['title: Hello', 'config:', '  a: 1'], ['title: Hello', '', 'config:', '  a: 1'], ['title: Hello', '  # note', 'config:', '  a: 1']]
   assert.deepEqual(ok.map(ls => { const s = front(...ls) as Source; return [s.title, s.config] }), ok.map(() => ['Hello', { a: 1 }]))
 })
+// F2 (pie QA): before parsing, Mermaid's encodeEntities drops the last ; of any line that matches style…:…#…; or
+// classDef…:…#…;, wherever it sits, so a body line is read as Mermaid's parser reads it.
+test("A1: a line matching Mermaid's style or classDef colour rewrite loses its last ;, as Mermaid's parser sees it", () => {
+  const lines = (readSource('pie\n"style x:#;" : 1\nclassDef hot fill:#f00;\n"a;b" : 2') as { lines: { text: string }[] }).lines.map(l => l.text)
+  assert.deepEqual(lines, ['"style x:#" : 1', 'classDef hot fill:#f00', '"a;b" : 2'])
+})

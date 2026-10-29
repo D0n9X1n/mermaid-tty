@@ -18,6 +18,11 @@ export type Source = { header: string; title: string | null; config: Readonly<Re
 // U+XXXX' (a title character no terminal draws reliably, checked here for every
 // diagram type), 'config:<dotted key>' (a numeric-looking plain config scalar
 // that is not a safe integer) or 'empty' (no header, or nothing after it).
+// Mermaid's encodeEntities (utils.ts), before any diagram parses, drops the last ; of whatever matches style…:…#…; or
+// classDef…:…#…; on a line, wherever it sits, label text included. Each kept line is read as Mermaid's parser reads it.
+const encodeColours = (t: string): string =>
+  t.replace(/style.*:\S*#.*;/g, s => s.slice(0, -1)).replace(/classDef.*:\S*#.*;/g, s => s.slice(0, -1))
+
 export function readSource(text: string): Source | Fail {
   // The only line-ending normalization in the pipeline.
   const all = text.replace(/\r\n?/g, '\n').split('\n')
@@ -50,7 +55,7 @@ export function readSource(text: string): Source | Fail {
     if (t.startsWith('%%{')) return fail('directive')
     if (t === '' || t.startsWith('%%')) continue
     if (t.replace(/"[^"]*"/g, '').includes('%%')) return fail('directive')
-    kept.push({ n: i + 1, text: line })
+    kept.push({ n: i + 1, text: encodeColours(line) })
   }
   const [head, ...lines] = kept
   if (!head || lines.length === 0) return fail('empty')
