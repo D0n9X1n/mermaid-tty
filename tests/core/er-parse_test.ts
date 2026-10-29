@@ -70,3 +70,7 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
     assert.deepEqual(P(body), { reason: why }, body)
   assert.deepEqual(P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id), ['12', 'B', 'TOTAL'])
 })
+test('X2: a ~…~ pair in an alias or comment falls back, since erBox shows it as <…>; one ~ draws', () => {
+  assert.deepEqual(P('A["List~T~"]'), { reason: 'generic' }); assert.deepEqual(P('A {\n  string id "a~b~c"\n}'), { reason: 'generic' })
+  assert.ok(!('reason' in P('A["about ~5"]')))
+})

@@ -28,7 +28,8 @@ function walk(src: Source): Mindmap {
   for (const { n, text } of src.lines) {
     const t = text.trim(), indent = text.length - text.trimStart().length
     // The lexer reads ::icon( in any case at a token's start; mindmapDb draws the icon.
-    if (/^::icon\(/i.test(t)) stop(`syntax:${n}`)
+    // U+2028 and U+2029 end no line for us but break Mermaid's lexer anywhere, a :::class line too.
+    if (/^::icon\(/i.test(t) || /[\u2028\u2029]/.test(t)) stop(`syntax:${n}`)
     // A :::class line decorates the last node and is not drawn. Before any node Mermaid throws; with no name the
     // lexer's CLASS state swallows the line break.
     if (t.startsWith(':::')) {

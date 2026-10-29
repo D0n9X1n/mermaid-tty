@@ -27,11 +27,11 @@ const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
 }
 
 // Why text, in a field of mode and br, would draw other text than Mermaid shows: 'entity' or 'html'; null if it draws as
-// written, each <br> that splits removed first.
+// written. Each <br> that splits becomes a line break first, so the text on either side is checked on its own.
 export function drawable(text: string, mode: Mode, br: Br): Fail | null {
   if (ENTITY.test(text)) return fail('entity')
   if (br === 'none' && /<\/?br/i.test(text)) return fail('html')
-  const t = br === 'any' ? text.replace(BR_ANY, '') : br === 'lower' ? text.replaceAll('<br>', '') : text
+  const t = br === 'any' ? text.replace(BR_ANY, '\n') : br === 'lower' ? text.replaceAll('<br>', '\n') : text
   if (br === 'any' && BR_MERMAID.test(t)) return fail('html')
   const hit = RULES[mode].find(([re]) => re.test(t))
   return hit ? fail(hit[1]) : null

@@ -270,6 +270,8 @@ function text(s: string, n: number, br: Br = 'none'): string {
 function drawn(s: string, br: Br = 'none'): string {
   const f = drawable(s, 'html', br)
   if (f) throw f
+  // erBox draws a label through parseGenericTypes, which turns a ~…~ pair into <…>.
+  if ((s.match(/~/g) ?? []).length > 1) stop('generic')
   const bad = unsupported(s)
   if (bad) stop(`unsupported-char ${bad}`)
   const lines = labelLines(s)

@@ -47,3 +47,6 @@ test('A5.errors: lines mindmap.jison reads otherwise or rejects fall back as syn
     'R\n  a))x)', 'R\n  fa:fa-book', 'R\n  $$x$$', 'R\n  a\u2028b'])
     assert.deepEqual(P(`mindmap\n${body}`), { reason: `syntax:${body.split('\n').length + 1}` }, body)
 })
+test('A5.errors: U+2028 or U+2029 on any line falls back, a :::class line too (Mermaid throws there)', () => {
+  for (const sep of [' ', ' ']) for (const line of [`:::x${sep}y`, `  A${sep}B`]) assert.deepEqual(P(`mindmap\nR\n${line}`), { reason: 'syntax:3' }, JSON.stringify(line))
+})

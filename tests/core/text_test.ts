@@ -119,3 +119,7 @@ test('A5.errors: drawable: br any and lower remove every <br>, not only the firs
   assert.deepEqual(['a<br>b<br/>c', 'a<BR><br />'].map(t => D(t, 'sanitized', 'any')), [null, null])
   assert.equal(D('a<br>b<BR>c', 'sanitized', 'lower'), 'html')
 })
+test('X2: a removed <br> joins nothing, so text on either side is checked on its own', () => {
+  assert.equal(drawable('Q&A<br>x', 'html', 'any'), null); assert.equal(drawable('Q&A<br>x', 'html', 'lower'), null)
+  assert.deepEqual(drawable('a&<br>amp;', 'html', 'any'), null); assert.deepEqual(drawable('&am<br>p', 'html', 'any'), { reason: 'entity' })
+})
