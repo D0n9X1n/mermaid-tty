@@ -5,17 +5,19 @@ export type Styled = { text: string; fg: string; bg?: string; bold?: boolean };
 export type Glyph = { row: number; col: number; text: string; span: number };
 const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// Segments each row's text whole, so a mark that begins a span joins the base before it. A grapheme belongs to the span
+// that holds its first code point, whose fg and bold it takes; col advances by its width.
 export function glyphCells(rows: Styled[][], width: (s: string) => number): Glyph[] {
   const out: Glyph[] = [];
   rows.forEach((row, r) => {
-    let col = 0;
-    row.forEach((sp, k) => {
-      for (const { segment } of seg.segment(sp.text)) {
-        const w = width(segment);
-        if (w > 0 && segment.trim()) out.push({ row: r, col, text: segment, span: k });
-        col += w;
-      }
-    });
+    const ends: number[] = [];
+    let len = 0, col = 0;
+    for (const sp of row) ends.push((len += sp.text.length));
+    for (const { segment, index } of seg.segment(row.map((sp) => sp.text).join(''))) {
+      const w = width(segment);
+      if (w > 0 && segment.trim()) out.push({ row: r, col, text: segment, span: ends.findIndex((e) => index < e) });
+      col += w;
+    }
   });
   return out;
 }
