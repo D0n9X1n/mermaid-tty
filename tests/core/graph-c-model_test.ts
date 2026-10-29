@@ -43,3 +43,8 @@ test('A3: a note on either side leaves its node sized by its rows alone', () => 
   }
   assert.deepEqual(nodeSize(plain, 8), { rows: 1, cols: 10 })
 })
+// T40/T49 QA: a fixed row is sized by its terminal width, so a wide (CJK) member takes two cells a character.
+test('A3: a fixed member row is as wide as its text in terminal cells: 字段 is 4, not 2', () => {
+  assert.deepEqual(nodeSize(N([{ text: '字段', role: 'label', align: 'left', id: 'n.m0', fixed: true }]), null), { rows: 1, cols: 8 })
+  assert.deepEqual(nodeSize(N([P, { text: '字段', role: 'label', align: 'left', id: 'n.m0', fixed: true, indent: 1, join: ' ' }]), 2), { rows: 2, cols: 9 })
+})
