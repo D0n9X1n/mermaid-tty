@@ -92,3 +92,12 @@ test('VR.tangled label-detached: a label 2 cells from its edge fires; one diagon
   assert.deepEqual(tangles(grid(['yes  ', '     ', 'A──►B'], ['LLL..', '.....', 'AeeeB'], own, expect)), ['label-detached'])
   assert.deepEqual(tangles(grid(['yes    ', '  A──►B'], ['LLL....', '..AeeeB'], own, expect)), [])
 })
+
+test('VR.tangled shared-segment: a gitGraph lane run and fork corner meet their commits; an edge meeting neither still fires', () => {
+  // main's lane from c1 forks ├─┐ to b, whose corner is b's start mark s2; main's tail runs on, open, to c3's row.
+  const fork = (r3: object) => grid(['[  ', '├─┐', '│ ['], ['A..', 'TeS', 'm.B'],
+    { A: ['c1', 'lane:m'], T: ['r3', 'lane:m'], e: ['r3'], S: ['r3', 's2'], m: ['lane:m'], B: ['c3', 'lane:b'] },
+    { labels: named('c1', 'c3'), edges: [r3], rows: ['c1', 's2', 'c3'].map(mark => ({ mark, owners: [] })) })
+  assert.deepEqual(tangles(fork(edge('r3', 'c1', 'c3'))), [])
+  assert.deepEqual(tangles(fork(edge('r3', 'c4', 'c5'))), ['shared-segment'])
+})
