@@ -2,14 +2,14 @@
 // node-pty and @xterm/headless, so only the e2e job, which installs scripts/e2e's packages, runs this.
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { ensureSpawnHelper, ptyCommand, startSession, type Driver } from './driver.ts'
+import { ensureSpawnHelper, ptyCommand, startSession, waitForText, type Driver } from './driver.ts'
 import { sessionEnv } from './env.ts'
 
 // The program each session runs. It writes its pid to dir/pid; draws its size and env and a colored row; then shows on one
@@ -41,10 +41,24 @@ after(() => rmSync(dir, { recursive: true, force: true }))
 // A variable of this process's that no session may inherit.
 process.env.MTTY_PARENT = 'leak'
 
-const start = (driver: Driver) => startSession({
-  driver, argv: [process.execPath, join(dir, 'prog.mjs'), dir], cwd: dir,
-  env: sessionEnv({ home: dir, config: join(dir, 'cfg'), mockUrl: 'http://127.0.0.1:9', platform: process.platform, color: 'truecolor', driver, path: process.env.PATH ?? '' }),
-})
+// The env of a session under driver, as the e2e scenarios build it.
+const envFor = (driver: Driver) => sessionEnv({ home: dir, config: join(dir, 'cfg'), mockUrl: 'http://127.0.0.1:9', platform: process.platform, color: 'truecolor', driver, path: process.env.PATH ?? '' })
+const start = (driver: Driver) => startSession({ driver, argv: [process.execPath, join(dir, 'prog.mjs'), dir], cwd: dir, env: envFor(driver) })
+// The tmux driver's socket, in tmux's default directory: the driver runs tmux without TMUX_TMPDIR.
+const socketPath = () => join('/tmp', `tmux-${process.getuid!()}`, `mtty-${process.pid}`)
+// A program that ignores hangups and starts a child that does too: it writes its pid and the child's to dir/pids, then
+// ready. On Windows, a Node program does what sh does elsewhere.
+writeFileSync(join(dir, 'hup.mjs'), [
+  "import { spawn } from 'node:child_process'",
+  "import { writeFileSync } from 'node:fs'",
+  "process.on('SIGHUP', () => {})",
+  "const child = spawn(process.execPath, ['-e', \"process.on('SIGHUP', () => {}); setInterval(() => {}, 1000)\"], { stdio: 'ignore' })",
+  "writeFileSync(process.argv[2] + '/pids', process.pid + ' ' + child.pid)",
+  "console.log('ready')",
+  'setInterval(() => {}, 1000)',
+].join('\n'))
+const HUP = process.platform === 'win32' ? [process.execPath, join(dir, 'hup.mjs'), dir]
+  : ['/bin/sh', '-c', `trap '' HUP; sleep 1000 & echo "$$ $!" > pids; echo ready; wait`]
 // The program's first row under driver: the size, TERM and env it was given; tmux sets TMUX itself.
 const first = (driver: Driver) => `100x40 TERM=xterm-256color USER=e2e TMUX=${driver === 'tmux' ? 'set' : 'unset'} PARENT=unset`
 const pid = () => Number(readFileSync(join(dir, 'pid'), 'utf8'))
@@ -101,13 +115,63 @@ for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${dri
 })
 
 test('A9.harness: the tmux driver runs a server of its own, on a socket named for this process, and stop() removes the socket', { skip: SKIP.tmux }, async () => {
-  const socket = join('/tmp', `tmux-${process.getuid!()}`, `mtty-${process.pid}`)
   const s = await start('tmux')
   try {
     await s.waitFor(/ready/, 10000)
-    assert.equal(existsSync(socket), true)
+    assert.equal(existsSync(socketPath()), true)
   } finally { await s.stop() }
-  assert.equal(existsSync(socket), false)
+  assert.equal(existsSync(socketPath()), false)
+})
+
+for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver stop() ends a program that ignores hangups, and its child, within 5 s, and leaves no socket`, { skip: SKIP[driver] }, async () => {
+  const s = await startSession({ driver, argv: HUP, cwd: dir, env: envFor(driver) })
+  let pids: number[] = []
+  try {
+    await s.waitFor(/ready/, 10000)
+    pids = readFileSync(join(dir, 'pids'), 'utf8').trim().split(' ').map(Number)
+    assert.ok(pids.length === 2 && pids.every(p => p > 0), `pids ${pids}`)
+    const t0 = Date.now()
+    assert.equal(await Promise.race([s.stop().then(() => 'stopped'), sleep(6000, 'still stopping', { ref: false })]), 'stopped')
+    assert.ok(Date.now() - t0 < 5000, `stop() took ${Date.now() - t0} ms`)
+    for (const p of pids) assert.equal(await gone(p), true, `pid ${p}`)
+    if (driver === 'tmux') assert.equal(existsSync(socketPath()), false)
+  } finally { for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {} }
+})
+
+test('A9.harness: waitFor checks its deadline before each read, and abandons a read that outlasts it', async () => {
+  const t0 = Date.now()
+  await assert.rejects(waitForText(() => sleep(2000, ''), /never/, 100), { message: 'waitFor /never/ timed out after 100 ms; the screen:\n' })
+  assert.ok(Date.now() - t0 < 300, `waitFor took ${Date.now() - t0} ms`)
+})
+
+test('A9.harness: with its tmux server suspended, waitFor still times out on time, type() fails within 2 s, and stop() ends the server, the program and the socket', { skip: SKIP.tmux }, async () => {
+  const s = await start('tmux')
+  let server = 0, prog = 0, resume: ReturnType<typeof spawn> | undefined
+  try {
+    await s.waitFor(/ready/, 10000)
+    prog = pid()
+    server = Number(spawnSync('tmux', ['-L', `mtty-${process.pid}`, 'display', '-p', '#{pid}'], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '' }, timeout: 5000 }).stdout)
+    assert.ok(server > 0 && prog > 0, `server ${server}, program ${prog}`)
+    process.kill(server, 'SIGSTOP')
+    // Resumes the server 5 s on, so that a read or write without a bound blocks only that long.
+    resume = spawn(process.execPath, ['-e', `setTimeout(() => process.kill(${server}, 'SIGCONT'), 5000)`], { stdio: 'ignore' })
+    let t0 = Date.now()
+    await assert.rejects(s.waitFor(/never/, 100), { message: 'waitFor /never/ timed out after 100 ms; the screen:\n' })
+    assert.ok(Date.now() - t0 < 300, `waitFor took ${Date.now() - t0} ms`)
+    t0 = Date.now()
+    await assert.rejects(s.type('x'), { message: 'tmux send-keys -t mtty-e2e -l -- x failed: no answer in 2000 ms' })
+    assert.ok(Date.now() - t0 < 3000, `type() took ${Date.now() - t0} ms`)
+    resume.kill()
+    t0 = Date.now()
+    await s.stop()
+    assert.ok(Date.now() - t0 < 5000, `stop() took ${Date.now() - t0} ms`)
+    assert.deepEqual([await gone(server), await gone(prog), existsSync(socketPath())], [true, true, false])
+  } finally {
+    resume?.kill()
+    if (server > 0) try { process.kill(server, 'SIGCONT') } catch {}
+    if (prog > 0) try { process.kill(prog, 'SIGKILL') } catch {}
+    await s.stop()
+  }
 })
 
 test('A9.harness: a PTY session starts even when npm left the prebuilt spawn-helper without its execute bit', { skip: process.platform !== 'darwin' }, async () => {
@@ -148,6 +212,16 @@ test('A9.harness: the PTY driver runs argv as given on Linux and macOS, and on W
   assert.deepEqual(ptyCommand(['claude', '--debug'], 'win32', { ComSpec: 'C:\\Windows\\system32\\cmd.exe' }), { file: 'C:\\Windows\\system32\\cmd.exe', args: '/d /s /c "claude --debug"' })
   // Without ComSpec, cmd.exe; an argument with a space is quoted inside the outer quotes, which /s strips.
   assert.deepEqual(ptyCommand(['C:\\Program Files\\nodejs\\node.exe', 'p.mjs'], 'win32', {}), { file: 'cmd.exe', args: '/d /s /c ""C:\\Program Files\\nodejs\\node.exe" p.mjs"' })
+})
+
+test('A9.harness: on Windows the PTY driver runs a real .cmd shim, which cmd.exe /d /s /c finds on PATH as it finds claude.cmd (E2)', { skip: process.platform !== 'win32' }, async () => {
+  const bin = join(dir, 'bin')
+  mkdirSync(bin, { recursive: true })
+  writeFileSync(join(bin, 'echo-hi.cmd'), '@echo off\r\necho hi\r\n')
+  const s = await startSession({ driver: 'pty', argv: ['echo-hi'], cwd: dir, env: { ...envFor('pty'), PATH: bin + delimiter + (process.env.PATH ?? '') } })
+  try {
+    assert.deepEqual((await s.waitFor(/^hi$/m, 10000)).split('\n').filter(Boolean), ['hi'])
+  } finally { await s.stop() }
 })
 
 test('A9.harness: driver.ts loads where node-pty cannot, so the tmux driver stays usable without it (E1)', () => {
