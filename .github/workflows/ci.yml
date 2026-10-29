@@ -24,6 +24,7 @@ jobs:
       - run: git config --global user.name ci && git config --global user.email ci@users.noreply.github.com
       - run: npm install -g @anthropic-ai/claude-code@2.1.308
       - run: node --test
+      - run: node scripts/typecheck.ts
       - run: npm ci --prefix scripts/docs && node --test 'scripts/tests/*.docs-spec.ts'
       - run: claude plugin validate .
       - run: claude plugin test .
