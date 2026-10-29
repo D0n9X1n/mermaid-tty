@@ -86,6 +86,9 @@ function read(src: Source): { stmts: Stmt[]; composites: Map<string, string> } |
         stmts.push({ ...note.stmt, text: d }); note = null
         continue
       }
+      // Mermaid's lexer reads an opener and a first line that starts with : as a one-line note, and the lines after it as
+      // statements, up to an end note it then cannot read.
+      if (note.lines.length === 0 && t.startsWith(':')) return fail(`syntax:${note.stmt.n}`)
       // A line skipped between two of the note's lines (blank, or a %% comment) would be a blank line in it.
       if (note.lines.length > 0 && n !== note.last + 1) return fail('label-blank-line')
       note.lines.push(t); note.last = n
@@ -203,18 +206,22 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   const nodes = new Map<string, Decl>(), descrs = new Map<string, string>(), notes = new Map<string, NoteStmt>()
   // The body each id belongs to (a start or end mark's is its own id), and the composites whose block has opened.
   const home = new Map<string, string>(), opened = new Set<string>()
+  // The scope each id was first mentioned in ('' the root), which places it.
+  const where = new Map<string, string>()
   const clusters: GCluster[] = [], edges: GEdge[] = [], open: Frame[] = []
   // The root's direction, and the count of transitions so far, which names the next.
   let dir: Dir = 'TB', t = 0
   const body = () => open.at(-1)?.cluster.id ?? ''
   const scope = (): GCluster | null => { const f = open.at(-1); return f ? f.region ?? f.cluster : null }
+  const here = () => scope()?.id ?? ''
   const place = (id: string, member: 'nodes' | 'clusters') => scope()?.[member].push(id)
-  // Declares id at its first mention; false for an id another body has.
+  // Declares id at its first mention; false for an id another body has, or another region of its body (Mermaid moves a
+  // state to the region of its last mention, which this parser would not follow).
   const mention = (id: string): boolean => {
     const h = home.get(id) ?? composites.get(id) ?? body()
     if (h !== body()) return false
-    if (home.has(id)) return true
-    home.set(id, h)
+    if (home.has(id)) return where.get(id) === here()
+    home.set(id, h); where.set(id, here())
     if (composites.has(id)) place(id, 'clusters')
     else { nodes.set(id, { id }); place(id, 'nodes') }
     return true
@@ -280,7 +287,14 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
         edge(`t${t++}`, from, to, s.text, 'solid')
         return null
       }
-      case 'note': { if (notes.has(s.id)) return 'repeat'; notes.set(s.id, s); return null }
+      case 'note': {
+        if (notes.has(s.id)) return 'repeat'
+        // A note mentions its state in source order, as Mermaid reads it: its first mention declares it here. On a state
+        // mentioned before, it may stand at the root, where Mermaid leaves the state in place, or in the state's own scope.
+        if (!home.has(s.id) ? !mention(s.id) : here() !== '' && where.get(s.id) !== here()) return 'scope'
+        notes.set(s.id, s)
+        return null
+      }
     }
   }
   for (const s of stmts) {

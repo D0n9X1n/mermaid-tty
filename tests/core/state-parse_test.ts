@@ -77,7 +77,7 @@ test('A5.errors: root-only lines in a body, an empty region, a late or repeated 
     ['state A {\n  click a href "x"\n}', 'syntax:3'], ['state A {\n  accTitle: x\n}', 'syntax:3'], ['state A {\n  accDescr {\n  x\n  }\n}', 'syntax:3'],
     ['state A {\n  --\n  a\n}', 'syntax:3'], ['state A {\n  a\n  --\n}', 'syntax:5'], ['state A {\n  a\n  --\n  --\n  b\n}', 'syntax:5'],
     ['a --> c\nstate c <<choice>>', 'syntax:3'], ['state c <<choice>>\nstate c <<fork>>', 'syntax:3'], ['state A {\n}\nstate A <<choice>>', 'syntax:4'],
-    ['note left of s9 : x', 'syntax:2'], ['state A {\n}\nnote left of A : x', 'syntax:4'], ['state A {\n}\nstate A {\n}', 'repeat:4']] as const)
+    ['state A {\n}\nnote left of A : x', 'syntax:4'], ['state A {\n}\nstate A {\n}', 'repeat:4']] as const)
     assert.deepEqual(P(body), { reason: why }, body)
 })
 test('A5.errors: a note or accDescr block with no end, an end note in another form, an empty note or a blank line in one falls back', () => {
@@ -96,4 +96,27 @@ test('A5.errors: an id Mermaid drops or shares, a styling or click line it reads
     assert.deepEqual(P(body), { reason: why }, body)
   const g = P('s1 : at 10:30\ns1 --> long-name : a:b\nclick s1 "https://x" "tip"').graph
   assert.deepEqual([g.nodes[0].rows[0].text, g.nodes[1].id, g.edges[0].label], ['at 10:30', 'long-name', 'a:b'])
+})
+test('A5.errors: a state or composite mentioned in two regions of one composite falls back, as Mermaid moves it to the last', () => {
+  for (const [body, why] of [['state C {\na\n--\na --> b\n}', 'scope:5'], ['state C {\nb --> a\n--\nc\nnote left of a\n  x\nend note\n}', 'scope:6'],
+    ['state C {\nstate B {\n}\n--\nB --> c\n}', 'scope:6']] as const) assert.deepEqual(P(body), { reason: why }, body)
+  assert.deepEqual(P('state C {\n[*] --> a\n--\n[*] --> b\n}\nnote left of a : x').graph.nodes.find((n: any) => n.id === 'a').note.text, 'x')
+})
+test('A5: a note is a mention, in source order: its first mention declares a plain state in its scope', () => {
+  for (const [body, why] of [['note right of a : text\nstate a <<choice>>', 'syntax:3'], ['state A {\nnote left of a : x\n}\na --> b', 'scope:5']] as const)
+    assert.deepEqual(P(body), { reason: why }, body)
+  const g = P('note left of s9 : x').graph
+  assert.deepEqual(g.nodes, [{ id: 's9', shape: 'round', role: 'node', rows: [{ text: 's9', role: 'node', align: 'center' }], order: 0,
+    note: { id: 's9:note', text: 'x', side: 'left' } }])
+})
+test('A5.errors: a multi-line note whose first line starts with : falls back at its opener, as Mermaid reads a one-line note there', () => {
+  for (const [body, why] of [['a\nnote right of a\n: text\nb\nend note', 'syntax:3'], ['a\nnote right of a\n  :text\nend note', 'syntax:3']] as const)
+    assert.deepEqual(P(body), { reason: why }, body)
+  assert.equal(P('a\nnote right of a\n  x : y\nend note').graph.nodes[0].note.text, 'x : y')
+})
+test('A5: a transition and a region chain are whole edges: solid with an arrow head, or invisible with none', () => {
+  assert.deepEqual(P('state C {\n[*] --> a : go\n--\n[*] --> b\n}').graph.edges, [
+    { id: 't0', from: 'start:C:r0', to: 'a', style: 'solid', tail: 'none', head: 'arrow', label: 'go', minlen: 1, order: 0 },
+    { id: 'C:chain0', from: 'C:r0', to: 'C:r1', style: 'invisible', tail: 'none', head: 'none', label: null, minlen: 1, order: 1 },
+    { id: 't1', from: 'start:C:r1', to: 'b', style: 'solid', tail: 'none', head: 'arrow', label: null, minlen: 1, order: 2 }])
 })
