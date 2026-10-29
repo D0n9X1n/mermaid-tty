@@ -5,6 +5,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import type { Cell, Drawing } from '../../core/canvas.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
+import { compact } from '../../core/graph/compact.ts'
 import type { End, Graph } from '../../core/graph/model.ts'
 import { validate } from '../../core/validate.ts'
 import { g } from './graph-fixture.ts'
@@ -45,12 +46,13 @@ function graphFor(i: number, next: (n: number) => number): Graph {
 }
 
 // The pipeline at explain's natural step, rankGap 3, nodeGap 4 and no wrap, on a grid wide enough that no row fails; null
-// if it cannot draw. Retrying a route conflict wider, as A1 does, would cost more time than it adds drawings.
-function drawn(graph: Graph): Drawing | null {
+// if it cannot draw. Retrying a route conflict wider, as A1 does, would cost more time than it adds drawings. finish is
+// drawGraph's, compact unless given.
+function drawn(graph: Graph, finish?: (d: Drawing) => Drawing): Drawing | null {
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
   if ('reason' in p) return null
   const routes = routeGraph(p)
-  return Array.isArray(routes) ? drawGraph(p, routes, 10000) : null
+  return Array.isArray(routes) ? drawGraph(p, routes, 10000, finish) : null
 }
 
 // An edge as the source graph declares it, before the layout reverses a back edge.
@@ -175,4 +177,24 @@ test('A1: every seeded drawing the validator passes reads honestly from its cell
   t.diagnostic(`graphs 1500, drawn ${routed}, validated ${validated}, violations ${bad.length}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} violations`)
   assert.ok(validated >= 1000, `only ${validated} of 1500 validated`)
+})
+
+// Compaction (Q2a) changes no verdict but width. On a grid wide enough that no row fails, each seeded drawing validates
+// compacted exactly when it validates at layout coordinates, for the same reason. At 40 columns, where many are too wide,
+// compaction may fit one that failed only for width, and never breaks or passes any other.
+test('A1: Q2a compaction keeps every seeded drawing\'s verdict but width', t => {
+  const next = random(0xc0a1a), bad: string[] = [], verdict = (d: Drawing) => validate(d)?.reason ?? 'valid'
+  let count = 0, fitted = 0
+  for (let i = 0; i < 1500; i++) {
+    const raw = drawn(graphFor(i, next), d => d)
+    if (!raw) continue
+    count++
+    const wide = [verdict(raw), verdict(compact(raw))], narrow = [verdict({ ...raw, columns: 40 }), verdict(compact({ ...raw, columns: 40 }))]
+    if (wide[0] !== wide[1]) bad.push(`graph ${i}: ${wide.join(' -> ')}`)
+    if (narrow[0] === 'row-too-wide' && narrow[1] === 'valid') fitted++
+    else if (narrow[0] !== narrow[1]) bad.push(`graph ${i} at 40 columns: ${narrow.join(' -> ')}`)
+  }
+  t.diagnostic(`drawn ${count}, fitted at 40 columns by compaction ${fitted}, other verdicts changed ${bad.length}`)
+  assert.deepEqual(bad.slice(0, 5), [], `${bad.length} verdicts changed`)
+  assert.ok(count >= 1000 && fitted > 0, `drawn ${count}, fitted ${fitted}`)
 })

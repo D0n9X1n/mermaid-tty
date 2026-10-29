@@ -87,19 +87,19 @@ test('A1: R2 fan-in meets near its target rather than beside another source', ()
   assert.ok(!/[├┤]/.test(rows[1]!), rows.join('\n'))
   assert.ok(!rows.some(row => /\[ C \]◄/.test(row)), rows.join('\n'))
   assert.equal(rows.join('\n'), [
-    '[ A ]      [ B ]', ' ┌┴─────┐    │', ' ├──────┼────┴┐', ' │      └─────┤',
-    ' │            │', ' ▼            ▼', '[ C ]      [ D ]',
+    '[ A ]     [ B ]', ' ┌┴────┐    │', ' ├─────┼────┴┐', ' │     └─────┤', ' │           │', ' ▼           ▼',
+    '[ C ]     [ D ]',
   ].join('\n'))
 })
 
 test('A1: R2 even-width one-to-one ports are centered without a one-column jog', () => {
   const cylinder = explain('flowchart TD\nA@{ shape: cyl, label: "DB" } --> B', { columns: 80 })
   assert.ok(!isFail(cylinder))
-  assert.equal(text(cylinder.drawing).join('\n'), ['[( DB )]', '   │', '   │', '   ▼', ' [ B ]'].join('\n'))
+  assert.equal(text(cylinder.drawing).join('\n'), ['[( DB )]', '   │', '   ▼', ' [ B ]'].join('\n'))
   const wide = explain('flowchart TD\nA["Hello, world: (1/2)!"] --> B', { columns: 80 })
   assert.ok(!isFail(wide))
   assert.equal(text(wide.drawing).join('\n'), [
-    '[ Hello, world: (1/2)! ]', '           │', '           │', '           ▼', '         [ B ]',
+    '[ Hello, world: (1/2)! ]', '           │', '           ▼', '         [ B ]',
   ].join('\n'))
 })
 
@@ -107,8 +107,7 @@ test('A1: R2 multi-row LR chains leave the top middle row and stay straight', ()
   const result = explain('flowchart LR\nA["撰写初稿<br/>Markdown"] --> B["审阅"]\nB --> C["翻译"]\nC --> D["构建站点<br/>Hugo"]\nD --> E["发布"]', { columns: 80 })
   assert.ok(!isFail(result))
   assert.equal(text(result.drawing).join('\n'), [
-    '[ 撰写初稿 ]─────►[ 审阅 ]─────►[ 翻译 ]─────►[ 构建站点 ]─────►[ 发布 ]',
-    '[ Markdown ]                                  [   Hugo   ]',
+    '[ 撰写初稿 ]──►[ 审阅 ]──►[ 翻译 ]──►[ 构建站点 ]──►[ 发布 ]', '[ Markdown ]                         [   Hugo   ]',
   ].join('\n'))
   assert.equal(validate(result.drawing), null)
 })
@@ -129,16 +128,15 @@ test('A1: R2 label exits keep a one-column-compatible target port on their axis'
   const result = explain(source, { columns: 80 })
   assert.ok(!isFail(result))
   assert.equal(text(result.drawing).join('\n'), [
-    '    [[ 发送 Webhook ]]◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐', '            │                          ┆',
-    '            │                          ┆', '            ▼                          ┆', '  { 返回 2xx? }                        ┆',
-    '      ┌─┴───────────────┐              ┆', '      │                 │              ┆', '      │                 │              ┆',
-    '      │                 │              ┆', '     是                否              ┆', '      │                 │              ┆',
-    '      │                 │              ┆', '      │                 │              ┆', '      │                 │              ┆',
-    '      ▼                 ▼              ┆', '[ 标记已送达 ]    { 还能重试? }        ┆', '                        │              ┆',
-    '      ┌────────────────┬┘              ┆', '      │                │               ┆', '      │                │               ┆',
-    '     是               否               ┆', '      │                │               ┆', '      │                │               ┆',
-    '      │      ┌┄┄┄┄┄┄┄┄┄┼┐              ┆', '      │      ┆         │└┄┄┄┄┄┄┄┐      ┆', '      ▼      ┆         ▼        ┆      ┆',
-    ' [ 指数退避 ]┘   [ 停用该地址 ] └┄┄┄┄┄┄┘',
+    '    [[ 发送 Webhook ]]◄┄┄┄┄┄┄┄┄┄┄┄┄┐', '            │                      ┆',
+    '            ▼                      ┆', '  { 返回 2xx? }                    ┆',
+    '      ┌─┴───────────────┐          ┆', '      │                 │          ┆',
+    '     是                否          ┆', '      │                 │          ┆',
+    '      ▼                 ▼          ┆', '[ 标记已送达 ]    { 还能重试? }    ┆', '                        │          ┆',
+    '      ┌────────────────┬┘          ┆', '      │                │           ┆',
+    '     是               否           ┆', '      │                │           ┆',
+    '      │      ┌┄┄┄┄┄┄┄┄┄┼┐          ┆', '      │      ┆         │└┄┄┄┄┄┄┄┐  ┆',
+    '      ▼      ┆         ▼        ┆  ┆', ' [ 指数退避 ]┘   [ 停用该地址 ] └┄┄┘',
   ].join('\n'))
   assert.equal(validate(result.drawing), null)
 })
@@ -154,12 +152,10 @@ test('A1: R2 long labelled edges keep dummy and label axes aligned', () => {
   assert.ok(!isFail(result))
   assert.equal(validate(result.drawing), null)
   assert.equal(text(result.drawing).join('\n'), [
-    '[ Receive request ]', '         │', '         │', '         ▼', '  { Cache hit? }',
-    '    ┌───┴─────────┐', '    │             │', '    │             │', '    │            No',
-    '    │             │', '    │             │', '    │             │', '    │             ▼',
-    '   Yes     [ Query MySQL ]', '    │             │', '    │             │', '    │             │', '    │             ▼',
-    '    │    [ Write back to cache ]', '    │               │', '    └───┬───────────┘', '        │', '        ▼',
-    ' [ Return data ]', '        │', '        │', '        ▼', '    ([ End ])',
+    '[ Receive request ]', '         │', '         ▼', '  { Cache hit? }', '    ┌───┴─────────┐', '    │             │',
+    '    │            No', '    │             │', '    │             ▼', '   Yes     [ Query MySQL ]',
+    '    │             │', '    │             ▼', '    │    [ Write back to cache ]', '    │               │',
+    '    └───┬───────────┘', '        │', '        ▼', ' [ Return data ]', '        │', '        ▼', '    ([ End ])',
   ].join('\n'))
 })
 
@@ -179,8 +175,7 @@ test('A1: Q1 smoke labels interrupt a straight centered line', () => {
   assert.ok(!isFail(result))
   assert.equal(validate(result.drawing), null)
   assert.equal(text(result.drawing).join('\n'), [
-    ' [ Start ]', '     │', '     │', '     ▼', ' { Ready? }',
-    '     │', '     │', '     │', '    yes', '     │', '     │', '     ▼', '([ Done ])',
+    ' [ Start ]', '     │', '     ▼', ' { Ready? }', '     │', '    yes', '     │', '     ▼', '([ Done ])',
   ].join('\n'))
 })
 
@@ -189,21 +184,20 @@ test('A1: Q1 LR labels interrupt a straight line with no padding gaps', () => {
   assert.ok(!isFail(result))
   assert.equal(result.step, 'natural')
   assert.equal(validate(result.drawing), null)
-  assert.equal(text(result.drawing).join('\n'), '[ A ]───────yes──────►[ B ]')
+  assert.equal(text(result.drawing).join('\n'), '[ A ]──yes──►[ B ]')
 })
 
 test('A1: Q1 labelled decision branches keep labels on their straight stems', () => {
   const vertical = explain('flowchart TB\nB{检查} -->|通过| C[部署]\nB -->|失败| D[回滚]', { columns: 80 })
   assert.ok(!isFail(vertical))
   assert.equal(text(vertical.drawing).join('\n'), [
-    '     { 检查 }', '   ┌────┴──────┐', '   │           │', '   │           │', ' 通过        失败',
-    '   │           │', '   │           │', '   │           │', '   ▼           ▼', '[ 部署 ]    [ 回滚 ]',
+    '     { 检查 }', '   ┌────┴──────┐', '   │           │', ' 通过        失败', '   │           │', '   ▼           ▼',
+    '[ 部署 ]    [ 回滚 ]',
   ].join('\n'))
   const horizontal = explain('flowchart LR\nA[读取配置] --> B{有效?}\nB -->|是| C[启动]\nB -->|否| D[报错]', { columns: 80 })
   assert.ok(!isFail(horizontal))
   assert.equal(text(horizontal.drawing).join('\n'), [
-    '[ 读取配置 ]─────►{ 有效? }──┬────是──────►[ 启动 ]',
-    '                             │', '                             └────否──────►[ 报错 ]',
+    '[ 读取配置 ]──►{ 有效? }──┬──是──►[ 启动 ]', '                          │', '                          └──否──►[ 报错 ]',
   ].join('\n'))
   assert.equal(validate(vertical.drawing), null)
   assert.equal(validate(horizontal.drawing), null)
@@ -218,17 +212,16 @@ test('A1: Q1 retry edges run outside and enter a side port', () => {
   assert.ok(!rows.some(row => /[┼╂┿╋]/.test(row)), rows.join('\n'))
   assert.deepEqual(result.drawing.expect.edges.find(e => e.from === 'D' && e.to === 'A')!.ends, [{ node: 'A', glyph: '◄' }])
   assert.equal(rows.join('\n'), [
-    '     [ 开始 ]◄──────────┐', '        │               │', '        │               │', '        ▼               │',
-    '  { 检查 }              │', '   ┌─┴──────────┐       │', '   │            │       │', '   │            │       │',
-    '   │            │       │', ' 通过         失败      │', '   │            │       │', '   │            │       │',
-    '   │            │       │', '   │            │       │', '   ▼            ▼       │', '[ 部署 ]     [ 回滚 ]───┘',
+    '     [ 开始 ]◄─────────┐', '        │              │', '        ▼              │', '  { 检查 }             │',
+    '   ┌─┴──────────┐      │', '   │            │      │', ' 通过         失败     │', '   │            │      │',
+    '   ▼            ▼      │', '[ 部署 ]     [ 回滚 ]──┘',
   ].join('\n'))
   const horizontal = explain('flowchart LR\nA-->B\nB-->C\nC-->A', { columns: 80 })
   assert.ok(!isFail(horizontal))
   assert.equal(validate(horizontal.drawing), null)
   assert.equal(text(horizontal.drawing).join('\n'), [
-    '     ┌────►[ B ]┐', '[ A ]┘          └────►[ C ]', '  ▲                     │',
-    '  │                     │', '  │                     │', '  └─────────────────────┘',
+    '     ┌──►[ B ]┐', '[ A ]┘        └──►[ C ]', '  ▲                 │', '  │                 │',
+    '  └─────────────────┘',
   ].join('\n'))
 })
 
@@ -237,8 +230,8 @@ test('A1: Q1 diamond junctions are centered under and over their nodes', () => {
   assert.ok(!isFail(result))
   assert.equal(validate(result.drawing), null)
   assert.equal(text(result.drawing).join('\n'), [
-    '    [ A ]', '  ┌───┴────┐', '  │        │', '  ▼        ▼', '[ B ]    [ C ]',
-    '  └───┬────┘', '      │', '      │', '      ▼', '    [ D ]',
+    '    [ A ]', '  ┌───┴────┐', '  │        │', '  ▼        ▼', '[ B ]    [ C ]', '  └───┬────┘', '      │', '      ▼',
+    '    [ D ]',
   ].join('\n'))
 })
 

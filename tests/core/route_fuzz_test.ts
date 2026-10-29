@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { layoutGraph } from '../../core/graph/layered.ts'
 import { routeGraph } from '../../core/graph/route.ts'
 import { drawGraph } from '../../core/graph/draw.ts'
+import { compact } from '../../core/graph/compact.ts'
 import { validate } from '../../core/validate.ts'
 import { g } from './graph-fixture.ts'
 
@@ -56,7 +57,8 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         p = placed; rs = routeGraph(p)
       }
       if (!Array.isArray(rs)) { conflicts++; continue }
-      const drawing = drawGraph(p, rs, 10000), error = validate(drawing)
+      // At layout coordinates, where the routes' cells are; compacted, as shown, it must validate too.
+      const drawing = drawGraph(p, rs, 10000, x => x), error = validate(drawing) ?? validate(compact(drawing))
       if (error) failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`)
       for (const r of rs) {
         for (const other of rs.slice(rs.indexOf(r) + 1)) {

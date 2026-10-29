@@ -298,7 +298,7 @@ test('A1: labelled edges join through their label without overwriting its text',
     const distance = (c: { r: number; c: number }) => Math.max(
       b.row - c.r, c.r - b.row - b.rows + 1, b.col - c.c, c.c - b.col - b.cols + 1, 0)
     assert.ok(r.cells.some(c => distance(c) === 1))
-    const d = drawGraph(p, rs, 120)
+    const d = drawGraph(p, rs, 120, x => x)                // at layout coordinates, where the route's cells are
     assert.ok(r.cells.every(c => !['text', 'cont'].includes(d.cells[c.r]![c.c]!.kind)))
     assert.ok(linked(r, p))
     assert.equal(validate(d), null)

@@ -1,36 +1,36 @@
 @60
                           [ Order ]
-       ┌───────────────┬──────┴──────┬─────────────┐
-       │               │             │             │
-       ▼               ▼             ▼             ▼
-[ Check stock ]  [ Bill card ]  [ Pack box ]  [ Ship it ]
+       ┌───────────────┬──────┴───────┬──────────────┐
+       │               │              │              │
+       ▼               ▼              ▼              ▼
+[ Check stock ]  [ Bill card ]  [ Pack boxes ]  [ Ship it ]
 @60 roles
                           nnNNNNNnn
-       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-       e               e             e             e
-       a               a             a             a
-nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNnn  nnNNNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e              e              e
+       a               a              a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNNNnn  nnNNNNNNNnn
 @80
-                             [ Order ]
-       ┌─────────────────┬───────┴───────┬───────────────┐
-       │                 │               │               │
-       ▼                 ▼               ▼               ▼
-[ Check stock ]    [ Bill card ]    [ Pack box ]    [ Ship it ]
+                           [ Order ]
+       ┌───────────────┬───────┴────────┬──────────────┐
+       │               │                │              │
+       ▼               ▼                ▼              ▼
+[ Check stock ]  [ Bill card ]    [ Pack boxes ]  [ Ship it ]
 @80 roles
-                             nnNNNNNnn
-       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-       e                 e               e               e
-       a                 a               a               a
-nnNNNNNNNNNNNnn    nnNNNNNNNNNnn    nnNNNNNNNNnn    nnNNNNNNNnn
+                           nnNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e                e              e
+       a               a                a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn    nnNNNNNNNNNNnn  nnNNNNNNNnn
 @120
-                             [ Order ]
-       ┌─────────────────┬───────┴───────┬───────────────┐
-       │                 │               │               │
-       ▼                 ▼               ▼               ▼
-[ Check stock ]    [ Bill card ]    [ Pack box ]    [ Ship it ]
+                           [ Order ]
+       ┌───────────────┬───────┴────────┬──────────────┐
+       │               │                │              │
+       ▼               ▼                ▼              ▼
+[ Check stock ]  [ Bill card ]    [ Pack boxes ]  [ Ship it ]
 @120 roles
-                             nnNNNNNnn
-       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-       e                 e               e               e
-       a                 a               a               a
-nnNNNNNNNNNNNnn    nnNNNNNNNNNnn    nnNNNNNNNNnn    nnNNNNNNNnn
+                           nnNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e                e              e
+       a               a                a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn    nnNNNNNNNNNNnn  nnNNNNNNNnn

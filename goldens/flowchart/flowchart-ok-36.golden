@@ -1,14 +1,12 @@
 @60
     [ Start ]
         │
-        │
         ▼
 ┌─Inner─────────┐
 │ [ X ]──►[ Y ] │
 └───────────────┘
 @60 roles
     nnNNNNNnn
-        e
         e
         a
 ffFFFFFffffffffff
@@ -17,14 +15,12 @@ fffffffffffffffff
 @80
     [ Start ]
         │
-        │
         ▼
 ┌─Inner─────────┐
 │ [ X ]──►[ Y ] │
 └───────────────┘
 @80 roles
     nnNNNNNnn
-        e
         e
         a
 ffFFFFFffffffffff
@@ -33,14 +29,12 @@ fffffffffffffffff
 @120
     [ Start ]
         │
-        │
         ▼
 ┌─Inner─────────┐
 │ [ X ]──►[ Y ] │
 └───────────────┘
 @120 roles
     nnNNNNNnn
-        e
         e
         a
 ffFFFFFffffffffff

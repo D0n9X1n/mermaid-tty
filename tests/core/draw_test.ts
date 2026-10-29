@@ -11,14 +11,15 @@ import type { Route } from '../../core/graph/route.ts'
 import { validate } from '../../core/validate.ts'
 import { g, text } from './graph-fixture.ts'
 
+// The drawing at layout coordinates, uncompacted, so a test may read a box's cells at its row and column.
 const D = (gr: ReturnType<typeof g>, wrapAt: number | null = null) => {
   const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt }) as Placed
-  return { p, d: drawGraph(p, routeGraph(p) as Route[], 80) }
+  return { p, d: drawGraph(p, routeGraph(p) as Route[], 80, x => x) }
 }
 
 test('A3: edge labels draw centered text without fill while nodes keep their fill', () => {
   const p = layoutGraph(g('LR', ['A>B|成功']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
-  const d = drawGraph(p, [], 80), label = p.boxes.get('e0:label')!, a = p.boxes.get('A')!
+  const d = drawGraph(p, [], 80, x => x), label = p.boxes.get('e0:label')!, a = p.boxes.get('A')!
   assert.equal(d.cells[label.row]![label.col], null)
   assert.equal(d.cells[label.row]![label.col + label.cols - 1], null)
   assert.deepEqual(d.cells[label.row]![label.col + 1]!.owners, ['e0:label', 'e0'])
