@@ -72,7 +72,7 @@ type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; o
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
 // whole), 'unclosed-subgraph', 'id-collision' (an edge id that a node, a cluster or an earlier edge also has),
-// or a label's 'markdown-string', 'entity' or 'unsupported-char U+XXXX'.
+// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string', 'entity' or 'unsupported-char U+XXXX'.
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
@@ -274,7 +274,8 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
 }
 
 // The link at `at`: a basic form, or else a text form. null if none starts there, or if its tail mark has no partner head
-// (<…>, o…o, x…x): Mermaid draws only the head of <--o, o--> or <---. Its label's Fail if that fails.
+// (<…>, o…o, x…x): Mermaid draws only the head of <--o, o--> or <---. Its label's Fail if that fails, and 'invisible-label'
+// for a label on ~~~, as how Mermaid draws one is unknown (only the basic form makes ~~~).
 function link(text: string, at: number): Link | Fail | null {
   LINK.lastIndex = at
   const b = LINK.exec(text)
@@ -285,6 +286,7 @@ function link(text: string, at: number): Link | Fail | null {
     if (s.minlen > 0) {
       const lbl = raw === undefined ? null : edgeLabel(raw)
       if (isFail(lbl)) return lbl
+      if (s.style === 'invisible' && lbl !== null) return fail('invisible-label')
       return { id, end: LINK.lastIndex, ...s, tail: endOf(tail), head: endOf(head), label: lbl }
     }
   }

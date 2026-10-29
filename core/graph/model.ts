@@ -7,7 +7,8 @@ export type Dir = 'TB' | 'BT' | 'LR' | 'RL'
 export type NodeRow = { text: string; role: Role; align: 'center' | 'left'; id?: string }
 export type GNode = { id: string; shape: Shape; role: Role; rows: NodeRow[]; order: number }
 export type End = 'arrow' | 'circle' | 'cross' | 'none'
+// reversed: set only by the layout, on a back edge it drew from `to` to `from` with its ends swapped.
 export type GEdge = { id: string; from: string; to: string; style: 'solid' | 'dotted' | 'thick' | 'invisible'
-  tail: End; head: End; label: string | null; minlen: number; order: number }
+  tail: End; head: End; label: string | null; minlen: number; order: number; reversed?: true }
 export type GCluster = { id: string; title: string | null; dir: Dir | null; nodes: string[]; clusters: string[] }
 export type Graph = { dir: Dir; title: string | null; nodes: GNode[]; edges: GEdge[]; clusters: GCluster[] }

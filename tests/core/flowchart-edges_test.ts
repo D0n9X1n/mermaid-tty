@@ -144,3 +144,9 @@ test('A1: a label that one "…" encloses whole still loses those quotes and kee
   assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges.map((e: any) => e.label), g.clusters[0].title],
     [['a, b: (c)', 'x [y]', 'C'], ['a|b', 'a -- b'], 'T: 1, 2'])
 })
+
+// How Mermaid draws a label on ~~~ is unknown, so such a diagram falls back to its source; an unlabelled ~~~ parses (-46).
+test('A5.errors: a label on an invisible link fails invisible-label; an unlabelled ~~~ still parses', () => {
+  for (const s of ['A ~~~|secret| B', 'A ~~~~ |secret| B']) assert.deepEqual(P(`flowchart TD\n${s}`), { reason: 'invisible-label' }, s)
+  assert.deepEqual(P('flowchart TD\nA ~~~ B').edges.map((e: { style: string }) => e.style), ['invisible'])
+})

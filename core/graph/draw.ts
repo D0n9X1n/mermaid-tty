@@ -72,10 +72,9 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number):
     for (const end of route.ends) cv.arrow(end.r + y, end.c, end.ch, route.edge)
   }
   for (const e of p.graph.edges.filter(x => x.style !== 'invisible')) {
-    // A back edge is drawn reversed, its original head its drawn tail: a drawn tail end with no head end (Mermaid has no
-    // tail-only link) marks one, so its ends swap back. Its heads are its route's end glyphs.
-    const back = e.tail !== 'none' && e.head === 'none', route = routes.find(x => x.edge === e.id)
-    edges.push({ id: e.id, from: back ? e.to : e.from, to: back ? e.from : e.to, heads: route?.ends.map(x => x.ch) ?? [] })
+    // The layout marks a back edge it drew reversed, so its ends swap back. Its heads are its route's end glyphs.
+    const route = routes.find(x => x.edge === e.id)
+    edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to, heads: route?.ends.map(x => x.ch) ?? [] })
     if (e.label === null) continue
     const owner = `${e.id}:label`, b = at(p.boxes.get(owner)), text = labelLines(e.label)
     labels.push({ owner, text: text.join('\n') })

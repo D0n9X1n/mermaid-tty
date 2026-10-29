@@ -116,6 +116,8 @@ function edges(d: Drawing, all: readonly Spot[]): Fail | null {
       if (i < 0) return fail('edge-disconnected')
       heads.push(...pool.splice(i, 1))
     }
+    // Any arrow cell of the edge no head claimed is an extra head, as when the canvas merged it into another edge's head.
+    if (pool.length > 0) return fail('head-extra')
     for (const head of heads) {
       const s = aim(head, [e.from, e.to])!
       if (degree(at(d, head.r - s.dr, head.c - s.dc)) >= JUNCTION) return fail('head-on-junction')

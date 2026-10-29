@@ -108,14 +108,26 @@ test('the graph title is title text on row 0, the graph below it, the grid as wi
   assert.match(text(d).slice(1).join('\n'), /^\[ A \][\s\S]*▼[\s\S]*\[ B \]/)
 })
 
-test('every shape validates, its caps drawn around the padded label', () => {
+test('every shape validates; every row of every box has its caps, owned by the node, at its left and right columns', () => {
   for (const shape of Object.keys(CAPS) as Shape[]) {
-    const gr = g('TB', ['A>B'])
-    for (const n of gr.nodes) n.shape = shape
-    const { p, d } = D(gr)
-    assert.equal(validate(d), null, shape)
-    const b = p.boxes.get('A')!, [l, r] = CAPS[shape]
-    assert.equal(text(d)[b.row]!.slice(b.col), `${l} A ${r}`.trimEnd(), shape)
+    const [l, r] = CAPS[shape]
+    for (const [label, wrapAt] of [['one', null], ['a<br/>b<br/>c', null], ['alpha beta gamma', 8]] as const) {
+      const gr = g('TB', ['A>B'], { A: label, B: label })
+      for (const n of gr.nodes) n.shape = shape
+      const { p, d } = D(gr, wrapAt), at = `${shape} ${label}`
+      assert.equal(validate(d), null, at)
+      for (const id of ['A', 'B']) {
+        const b = p.boxes.get(id)!
+        for (let row = b.row; row < b.row + b.rows; row++) {
+          // An empty cap leaves its column to the node's fill.
+          const left = d.cells[row]![b.col], right = d.cells[row]![b.col + b.cols - 1]
+          assert.deepEqual([left?.kind, left?.ch, left?.owners], [l ? 'cap' : 'fill', l ? [...l][0] : ' ', [id]], `${at} ${id}@${row} left`)
+          assert.deepEqual([right?.kind, right?.ch, right?.owners], [r ? 'cap' : 'fill', r ? [...r].at(-1) : ' ', [id]], `${at} ${id}@${row} right`)
+        }
+      }
+      const a = p.boxes.get('A')!
+      if (label === 'one') assert.equal(text(d)[a.row]!.slice(a.col), `${l} one ${r}`.trimEnd(), at)
+    }
   }
 })
 
@@ -161,4 +173,16 @@ test('fan-in: edges into one node share one arrowhead, owned by each, and valida
   }
   const { d } = D(g('TB', ['A>C', 'B>C']))
   assert.deepEqual(d.cells.flat().filter(c => c?.kind === 'arrow').map(c => c!.owners), [['e0', 'e1']])
+})
+
+// The layout marks each edge it reverses, so expect lists a back edge in its source direction whatever its ends.
+test('a back edge is listed in its original direction, whatever its ends: <-->, ---, -->', () => {
+  for (const [tail, head] of [['arrow', 'arrow'], ['none', 'none'], ['none', 'arrow']] as const) {
+    const gr = g('TB', ['A>B', 'B>C', 'C>A'])
+    gr.edges[2]!.tail = tail
+    gr.edges[2]!.head = head
+    const { d } = D(gr)
+    assert.equal(validate(d), null, `${tail} ${head}`)
+    assert.deepEqual(d.expect.edges.map(e => [e.id, e.from, e.to]), [['e0', 'A', 'B'], ['e1', 'B', 'C'], ['e2', 'C', 'A']], `${tail} ${head}`)
+  }
 })

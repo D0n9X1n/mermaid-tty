@@ -195,3 +195,28 @@ test('A5.mutation-tests: a drawing broken two ways reports the earlier check', (
   assert.equal(validate({ ...labelled(2, 2), columns: 2 })?.reason, 'row-too-wide')
   assert.equal(validate(path(['▲', 7, 5, 5], ['▲', '▼']))?.reason, 'edge-disconnected')
 })
+// An edge owns only its heads' arrow cells. The canvas merges a same-glyph arrow of edges that share an endpoint, so an edge
+// whose arrow lands on another edge's head owns an extra head, which fails; a merged fan-in head, <-->, o and x ends pass.
+test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-extra', () => {
+  const draw = (rows: number, cols: number, nodes: [string, number, number][], ink: (c: Canvas) => void,
+    edges: { id: string; from: string; to: string; heads: string[] }[]): Drawing => {
+    const c = createCanvas(rows, cols, cols, () => true)
+    for (const [id, r, col] of nodes) c.text(r, col, id, 'node', id)
+    ink(c)
+    return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edges, edgeLabels: [] })
+  }
+  const extra = draw(2, 3, [['A', 0, 0], ['B', 0, 2], ['C', 1, 2]], c => {
+    c.arrow(0, 1, '►', 'e0'); c.line(1, 0, 3, 'light', 'edge', 'e1'); c.arrow(1, 1, '►', 'e1'); c.arrow(0, 1, '►', 'e1')
+  }, [{ id: 'e0', from: 'A', to: 'B', heads: ['►'] }, { id: 'e1', from: 'A', to: 'C', heads: ['►'] }])
+  assert.deepEqual(extra.cells[0]![1]!.owners, ['e0', 'e1'])
+  assert.equal(validate(extra)?.reason, 'head-extra')
+  const fanIn = draw(3, 3, [['A', 0, 0], ['B', 0, 2], ['C', 2, 1]], c => {
+    c.line(1, 0, 3, 'light', 'edge', 'e0'); c.arrow(1, 1, '▼', 'e0'); c.line(1, 2, 9, 'light', 'edge', 'e1'); c.arrow(1, 1, '▼', 'e1')
+  }, [{ id: 'e0', from: 'A', to: 'C', heads: ['▼'] }, { id: 'e1', from: 'B', to: 'C', heads: ['▼'] }])
+  assert.equal(validate(fanIn), null)
+  for (const [l, r] of [['◄', '►'], ['o', 'x']] as const) {
+    const ends = draw(1, 5, [['A', 0, 0], ['B', 0, 4]], c => { c.arrow(0, 1, l, 'e'); c.line(0, 2, 10, 'light', 'edge', 'e'); c.arrow(0, 3, r, 'e') },
+      [{ id: 'e', from: 'A', to: 'B', heads: [l, r] }])
+    assert.equal(validate(ends), null, `${l} ${r}`)
+  }
+})

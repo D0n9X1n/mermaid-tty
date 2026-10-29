@@ -22,7 +22,7 @@ export function buildLevel(units: readonly Unit[], edges: readonly GEdge[], labe
   const owner = new Map(units.map(u => [u.id, u.owner]))
   const items: Item[] = units.map(u => ({ ...u, rank: rank.get(u.id)! })), segs: Seg[] = []
   const K = 1 + Math.max(-1, ...units.map(u => u.key))
-  const out = edges.map(e => (back.has(e.id) ? { ...e, from: e.to, to: e.from, tail: e.head, head: e.tail } : e))
+  const out = edges.map(e => (back.has(e.id) ? { ...e, from: e.to, to: e.from, tail: e.head, head: e.tail, reversed: true as const } : e))
   for (const e of out) {
     const lo = rank.get(e.from)!, span = e.from === e.to ? (e.label === null ? 0 : 1) : rank.get(e.to)! - lo
     const mid = e.label === null ? -1 : e.from === e.to ? 1 : Math.floor(span / 2), own = common(owner.get(e.from) ?? null, owner.get(e.to) ?? null)

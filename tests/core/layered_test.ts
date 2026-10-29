@@ -128,8 +128,8 @@ test('A1: where borders meet in one gap, the ending bottom border comes first, t
 test('A1: a back edge is reversed with its ends swapped, so its head still points at its own target', () => {
   const x = g('TB', ['A>B', 'B>C', 'C>A']), y = g('TB', ['A>B', 'B>C', 'C>A']); y.edges[2]!.tail = 'arrow'; y.edges[2]!.head = 'circle'
   const p = layoutGraph(x, S) as Placed, q = layoutGraph(y, S) as Placed
-  assert.deepEqual(p.graph.edges[2], { ...x.edges[2], from: 'A', to: 'C', tail: 'arrow', head: 'none' })
-  assert.deepEqual(q.graph.edges[2], { ...y.edges[2], from: 'A', to: 'C', tail: 'circle', head: 'arrow' })
+  assert.deepEqual(p.graph.edges[2], { ...x.edges[2], from: 'A', to: 'C', tail: 'arrow', head: 'none', reversed: true })
+  assert.deepEqual(q.graph.edges[2], { ...y.edges[2], from: 'A', to: 'C', tail: 'circle', head: 'arrow', reversed: true })
   assert.deepEqual([p.graph.edges.slice(0, 2), q.graph.edges.slice(0, 2)], [x.edges.slice(0, 2), y.edges.slice(0, 2)])
 })
 test('A1: a frame is at least its title + 4 wide; a narrower strip or block widens, its members centred', () => {
