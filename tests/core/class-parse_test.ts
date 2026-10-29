@@ -46,7 +46,7 @@ test('A5: reversed ends, an inline annotation, Mermaid member spacing, accTitle 
 // Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text falls back.
 test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text, and an ignored directive is not checked', () => {
   for (const body of ['class A["#9829;"]', 'class A {\n  +x #lt;\n}', 'A : #count;', 'A --> B : #9829;', 'A "#9829;" --> B', 'A --> "#9829;" B',
-    'note "#9829;"', 'namespace N["#9829;"] {\n}', 'class A <<#9829;>>', 'class `#9829;`']) assert.deepEqual(P(body), { reason: 'entity' }, body)
+    'note "#9829;"', 'namespace N["#9829;"] {\n}', 'class A {\n<<#9829;>>\n}', 'class `#9829;`']) assert.deepEqual(P(body), { reason: 'entity' }, body)
   const m = P('class A["C# 1"]\nA : #count\nclassDef hot fill:#f00;\nstyle A fill:#f9f;')
   assert.deepEqual([m.classes[0].label, m.classes[0].members[0].text], ['C# 1', '#count'])
 })
@@ -64,7 +64,47 @@ test('A5.errors: comma generics, nested namespaces, conflicting declarations and
   for (const [body, why] of [['class A\nclass Box~K,V~', 'syntax:3'], ['A : +Map~K,V~ m', 'syntax:2'], ['namespace A {\nnamespace B {\nclass C\n}\n}', 'syntax:3'],
     ['namespace P {\nclass A', 'syntax:2'], ['accDescr {\nx', 'syntax:2'], ['note for Ghost "x"', 'syntax:2'], ['A : <<x>>', 'syntax:2'],
     ['class A~T~\nclass A["l"]', 'syntax:3'], ['class A\nclass A~T~', 'repeat:3'], ['namespace P {\nclass A\n}\nnamespace Q {\nclass A\n}', 'repeat:6'],
-    ['namespace P["x"] {\n}\nnamespace P["y"] {\n}', 'repeat:4'], ['class note0\nnote "x"', 'id-collision']]) assert.deepEqual(P(body!), { reason: why }, body)
+    ['namespace P["x"] {\nclass A\n}\nnamespace P["y"] {\nclass B\n}', 'repeat:5'], ['class note0\nnote "x"', 'id-collision']]) assert.deepEqual(P(body!), { reason: why }, body)
   assert.deepEqual(P('class A["x"]\nclass A["x"]\nclass B~T~\nclass B~T~\nnamespace P {\nclass A\n}\nnamespace P {\nclass C\n}').namespaces,
     [{ id: 'P', label: 'P', classes: ['A', 'C'], notes: [] }])
+})
+
+// Fix cycle 1: each input Mermaid 12.2.0's grammar reads otherwise is matched or falls back. S: the reason, under `class A`.
+const S = (body: string) => P(`class A\n${body}`)
+test('A5 (1): click, link and callback in each form the grammar accepts are parsed and ignored', () => {
+  for (const body of ['click A href "u"', 'click A href "u" "tip"', 'click A href "u" _blank', 'click A href "u" "tip" _self', 'click A call fn()',
+    'click A call fn(x, y)', 'click A call fn() "tip"', 'click A call fn(x) "tip"', 'link A "u"', 'link A "u" _top', 'link A "u" "tip"',
+    'link A "u" "tip" _parent', 'callback A "fn"', 'callback A "fn" "tip"']) assert.deepEqual(S(body).classes.map((c: any) => c.id), ['A'], body)
+})
+test('A5.errors (1): a click, link or callback in any other form falls back', () => {
+  for (const body of ['click A garbage', 'click A', 'click A href u', 'click A href "u" _new', 'click A call fn', 'click A call ()', 'click A href "u" more',
+    'link A', 'link A "u" "t" "x"', 'callback A', 'callback A fn', 'callback A "fn" _blank']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
+})
+// Mermaid's lexer reads `.*direction\s+(TB|BT|RL|LR)[^\n]*` as a direction statement wherever a top-level line holds it, and its
+// \s+ crosses a line end; only `direction XX` alone is drawn as one.
+test('A5.errors (2): a top-level line Mermaid reads as a direction, but for direction XX alone, falls back; inside a block it is text', () => {
+  for (const body of ['A --> B : go direction LR', 'class B["direction TB"]', 'note "misdirection RL"', 'accTitle: direction BT',
+    'accDescr { direction LR }', 'A --> B : direction']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
+  const m = P('namespace N {\nclass A["direction LR"]\n}\nclass B {\n+direction TB\n}\ndirection BT')
+  assert.deepEqual([m.classes[0].label, m.classes[1].members[0].text, m.dir], ['direction LR', '+direction TB', 'BT'])
+})
+test('A5.errors (3): an annotation is one word and :::name one word, neither a keyword, and not both on one class', () => {
+  for (const body of ['class B <<two words>>', 'class B:::bad-name', 'class B:::hot <<x>>', 'class B <<observable>>', 'class B <<note>>',
+    '<<two words>> B', '<<a-b>> B', '<<link>> B', 'class B:::']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
+  const m = P('class A ::: hot\nclass B << iface >> {\n+x\n}\n<<I_1>> C\nclass D {\n<<two words>>\n}\nclass E {\n<<a<b>>\n}')
+  assert.deepEqual(m.classes.map((c: any) => c.annot), [null, 'iface', 'I_1', 'two words', 'a<b'])
+})
+test('A5.errors (4, 5): an empty namespace, and a ~ in a backtick name, fall back', () => {
+  for (const [body, why] of [['namespace N {\n}', 'syntax:4'], ['namespace N {\nnote "x"\n}\nnamespace M {\n}', 'syntax:7'],
+    ['class `B~T~`', 'syntax:3'], ['`B~T~` --> C', 'syntax:3'], ['`B~T~` : +x', 'syntax:3']]) assert.deepEqual(S(body), { reason: why }, body)
+  assert.deepEqual(S('class `B T`').classes.map((c: any) => c.id), ['A', 'B T'])
+})
+test('A5 (6): a "none" cardinality, trimmed, is hidden as Mermaid hides it; another case is text', () =>
+  assert.deepEqual(S('A "none" --> " none " B\nA "None" --> B').relations.map((r: any) => [r.tailLabel, r.headLabel]), [[null, null], ['None', null]]))
+// The matrix (class, supported subset): `A [e]--[e] B`, e is <| |> * o < > or nothing, on either side.
+test('A5 (7, 8): either end takes each of <| |> * o < >, each mapped as Mermaid maps it', () => {
+  const ends = [['<|', 'triangle'], ['|>', 'triangle'], ['*', 'diamond'], ['o', 'odiamond'], ['<', 'arrow'], ['>', 'arrow']]
+  const m = P([...ends.flatMap(([e]) => [`A ${e}-- B`, `A --${e} B`, `A ${e}..${e} B`]), 'A -- B'].join('\n'))
+  assert.deepEqual(m.relations.map((r: any) => [r.tail, r.head, r.line]), [...ends.flatMap(([, k]) => [[k, 'none', 'solid'], ['none', k, 'solid'],
+    [k, k, 'dotted']]), ['none', 'none', 'solid']])
 })
