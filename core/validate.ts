@@ -223,7 +223,9 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 // edge drawn with no mark seems to lead to every node a mark of another edge on that line points at, its own node
 // included. Each such pair of a bare end t and a head h must be an edge of the drawing from t to h, a self-loop when t = h;
 // one edge's own bare end and mark are its own direction. A fan-out, a fan-in and a complete bipartite merge pass; any
-// other merge seems to draw an edge that is not there. Edges with no marks at all on one line must fan (fans).
+// other merge seems to draw an edge that is not there. Edges with no marks at all on one line must fan (fans). An edge with no
+// marks on a line with marked edges shows no direction, so each bare end of a marked edge seems linked to both its
+// endpoints: each such pair must be one node, where the two fan, or two that some edge joins, either way.
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const line = joined(d, all), groups = new Map<string, Edge[]>()
   for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
@@ -233,9 +235,11 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
   const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
+  const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
   for (const group of groups.values()) {
     for (const a of group) for (const b of group) {
       if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
+      if (a.ends.length > 0 && b.ends.length === 0 && bare(a).some(t => !linked(t, b.from) || !linked(t, b.to))) return fail('merge-ambiguous')
     }
     if (!fans(group.filter(e => e.ends.length === 0))) return fail('merge-ambiguous')
   }

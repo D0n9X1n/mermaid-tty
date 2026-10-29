@@ -489,3 +489,20 @@ test('merge-ambiguous: unmarked edges joined in one line pass only when all leav
   assert.deepEqual(text(cross()), ['A B', '└┬┘', ' │', '┌┴┐', 'C D'])
   assert.equal(validate(cross())?.reason, 'merge-ambiguous')                     // A seems linked to C, B to D
 })
+// QA's mixed merge: A, B over C, D, each edge on one trunk along row 2 and, to H, down a stem in column 3 into H's ▼. Open
+// A---B runs along the trunk and open A---C down column 0. Edges are named by their ends: 'AB', 'AH'.
+const leg = (id: string, n: string): Mark[] => {
+  const c = 'AC'.includes(n) ? 0 : 6, up = 'AB'.includes(n)
+  return [[id, up ? 1 : 3, c, 5], [id, 2, c, (up ? 1 : 4) | (c ? 8 : 2)]]
+}
+const hub = (ids: string[]) => marked(8, 7, [['A', 0, 0], ['B', 0, 6], ['C', 4, 0], ['D', 4, 6], ['H', 7, 3]], ids.flatMap((id): Mark[] => {
+  const left = 'AC'.includes(id[0]!)
+  if (id[1] === 'H') return [...leg(id, id[0]!), ...h(id, 2, left ? 1 : 4, left ? 2 : 5), [id, 2, 3, left ? 12 : 6], ...v(id, 3, 3, 5), [id, 6, 3, '▼']]
+  return id === 'AB' ? [...leg(id, 'A'), ...h(id, 2, 1, 5), ...leg(id, 'B')] : v(id, 0, 1, 3)
+}), ids.map(id => `${id} ${id[0]} ${id[1]}${id[1] === 'H' ? ' H▼' : ''}`))
+test('merge-ambiguous: marked and unmarked edges on one line are one network, and edges that share no node must imply only real links', () => {
+  assert.deepEqual(text(hub(['AB', 'AC', 'AH', 'BH', 'CH', 'DH'])), ['A     B', '│     │', '├──┬──┤', '│  │  │', 'C  │  D', '   │', '   ▼', '   H'])
+  assert.equal(validate(hub(['AB', 'AC', 'AH', 'BH', 'CH', 'DH']))?.reason, 'merge-ambiguous')  // QA: D seems linked to A, B and C
+  assert.equal(validate(hub(['AB', 'AH', 'BH'])), null)                                        // a fan-in to H that A---B shares
+  assert.equal(validate(hub(['AB', 'AH', 'BH', 'DH']))?.reason, 'merge-ambiguous')             // D seems linked to A and B
+})
