@@ -1,0 +1,60 @@
+@60
+[ A ]     [ C ]    [ E ]     [ G ]
+  │         ┆        ┆         ┆
+  │1        ┆1       ┆1        ┆1
+  │         ┆        ┆         ┆
+solid     dots     mixed    mixed2
+  │         ┆        ┆         ┆
+  │0..*     ┆0..*    ┆0..*     ┆0..*
+  │         ┆        ┆         ┆
+[ B ]    [ D ]     [ F ]     [ H ]
+@60 roles
+nnNnn     nnNnn    nnNnn     nnNnn
+  e         e        e         e
+  eA        eA       eA        eA
+  e         e        e         e
+LLLLL     LLLL     LLLLL    LLLLLL
+  e         e        e         e
+  eAAAA     eAAAA    eAAAA     eAAAA
+  e         e        e         e
+nnNnn    nnNnn     nnNnn     nnNnn
+@80
+[ A ]     [ C ]    [ E ]     [ G ]
+  │         ┆        ┆         ┆
+  │1        ┆1       ┆1        ┆1
+  │         ┆        ┆         ┆
+solid     dots     mixed    mixed2
+  │         ┆        ┆         ┆
+  │0..*     ┆0..*    ┆0..*     ┆0..*
+  │         ┆        ┆         ┆
+[ B ]    [ D ]     [ F ]     [ H ]
+@80 roles
+nnNnn     nnNnn    nnNnn     nnNnn
+  e         e        e         e
+  eA        eA       eA        eA
+  e         e        e         e
+LLLLL     LLLL     LLLLL    LLLLLL
+  e         e        e         e
+  eAAAA     eAAAA    eAAAA     eAAAA
+  e         e        e         e
+nnNnn    nnNnn     nnNnn     nnNnn
+@120
+[ A ]     [ C ]    [ E ]     [ G ]
+  │         ┆        ┆         ┆
+  │1        ┆1       ┆1        ┆1
+  │         ┆        ┆         ┆
+solid     dots     mixed    mixed2
+  │         ┆        ┆         ┆
+  │0..*     ┆0..*    ┆0..*     ┆0..*
+  │         ┆        ┆         ┆
+[ B ]    [ D ]     [ F ]     [ H ]
+@120 roles
+nnNnn     nnNnn    nnNnn     nnNnn
+  e         e        e         e
+  eA        eA       eA        eA
+  e         e        e         e
+LLLLL     LLLL     LLLLL    LLLLLL
+  e         e        e         e
+  eAAAA     eAAAA    eAAAA     eAAAA
+  e         e        e         e
+nnNnn    nnNnn     nnNnn     nnNnn

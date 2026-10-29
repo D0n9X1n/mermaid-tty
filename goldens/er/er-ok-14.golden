@@ -1,0 +1,36 @@
+@60
+                                    ┌─Billing team────┐
+┌─sales─────┐  ┌─Customer Domain─┐  │ ┌─inner───────┐ │
+│ [ ORDER ] │  │  [ CUSTOMER ]   │  │ │ [ INVOICE ] │ │
+└───────────┘  └─────────────────┘  │ └─────────────┘ │
+                                    └─────────────────┘
+@60 roles
+                                    ffFFFFFFFFFFFFfffff
+ffFFFFFffffff  ffFFFFFFFFFFFFFFFff  f ffFFFFFffffffff f
+f nnNNNNNnn f  f  nnNNNNNNNNnn   f  f f nnNNNNNNNnn f f
+fffffffffffff  fffffffffffffffffff  f fffffffffffffff f
+                                    fffffffffffffffffff
+@80
+                                    ┌─Billing team────┐
+┌─sales─────┐  ┌─Customer Domain─┐  │ ┌─inner───────┐ │
+│ [ ORDER ] │  │  [ CUSTOMER ]   │  │ │ [ INVOICE ] │ │
+└───────────┘  └─────────────────┘  │ └─────────────┘ │
+                                    └─────────────────┘
+@80 roles
+                                    ffFFFFFFFFFFFFfffff
+ffFFFFFffffff  ffFFFFFFFFFFFFFFFff  f ffFFFFFffffffff f
+f nnNNNNNnn f  f  nnNNNNNNNNnn   f  f f nnNNNNNNNnn f f
+fffffffffffff  fffffffffffffffffff  f fffffffffffffff f
+                                    fffffffffffffffffff
+@120
+                                    ┌─Billing team────┐
+┌─sales─────┐  ┌─Customer Domain─┐  │ ┌─inner───────┐ │
+│ [ ORDER ] │  │  [ CUSTOMER ]   │  │ │ [ INVOICE ] │ │
+└───────────┘  └─────────────────┘  │ └─────────────┘ │
+                                    └─────────────────┘
+@120 roles
+                                    ffFFFFFFFFFFFFfffff
+ffFFFFFffffff  ffFFFFFFFFFFFFFFFff  f ffFFFFFffffffff f
+f nnNNNNNnn f  f  nnNNNNNNNNnn   f  f f nnNNNNNNNnn f f
+fffffffffffff  fffffffffffffffffff  f fffffffffffffff f
+                                    fffffffffffffffffff

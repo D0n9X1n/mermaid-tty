@@ -1,0 +1,174 @@
+@60
+ [ Received ]
+      │
+      │1
+      │
+      a
+      │
+      │1
+      │
+ [ Accepted ]
+      │
+      │1
+      │
+      b
+      │
+      │1
+      │
+ [ Prepared ]
+      │
+      │1
+      │
+      c
+      │
+      │1
+      │
+ [ Shipping ]
+      │
+      │1
+      │
+      d
+      │
+      │1
+      │
+[ Delivered ]
+      │
+      │1
+      │
+      e
+      │
+      │1
+      │
+[ Archived ]
+@60 roles
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+nnNNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+nnNNNNNNNNnn
+@80
+ [ Received ]
+      │
+      │1
+      │
+      a
+      │
+      │1
+      │
+ [ Accepted ]
+      │
+      │1
+      │
+      b
+      │
+      │1
+      │
+ [ Prepared ]
+      │
+      │1
+      │
+      c
+      │
+      │1
+      │
+ [ Shipping ]
+      │
+      │1
+      │
+      d
+      │
+      │1
+      │
+[ Delivered ]
+      │
+      │1
+      │
+      e
+      │
+      │1
+      │
+[ Archived ]
+@80 roles
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+ nnNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+nnNNNNNNNNNnn
+      e
+      eA
+      e
+      L
+      e
+      eA
+      e
+nnNNNNNNNNnn
+@120
+             1     1              1     1              1     1              1     1               1     1
+[ Received ]────a────[ Accepted ]────b────[ Prepared ]────c────[ Shipping ]────d────[ Delivered ]────e────[ Archived ]
+@120 roles
+             A     A              A     A              A     A              A     A               A     A
+nnNNNNNNNNnneeeeLeeeennNNNNNNNNnneeeeLeeeennNNNNNNNNnneeeeLeeeennNNNNNNNNnneeeeLeeeennNNNNNNNNNnneeeeLeeeennNNNNNNNNnn

@@ -1,0 +1,102 @@
+@60
+[                      CAR                       ]
+[ string     registrationNumber PK     the plate ]
+[ string     ownerId            PK, FK           ]
+[ string     vin                UK               ]
+[ string?    make                                ]
+[ string(99) model                               ]
+[ string[]   tags                                ]
+[ int        *id                                 ]
+                        │
+                        │1
+                        │
+                       has
+                        │
+                        │0..*
+                        │
+                   [ DRIVER ]
+@60 roles
+nnnnnnnnnnnnnnnnnnnnnnnNNNnnnnnnnnnnnnnnnnnnnnnnnn
+nlLLLLLLlllllLLLLLLLLLLLLLLLLLLlLLlllllOOOOOOOOOln
+nlLLLLLLlllllLLLLLLLllllllllllllLLLLLLllllllllllln
+nlLLLLLLlllllLLLllllllllllllllllLLllllllllllllllln
+nlLLLLLLLllllLLLLlllllllllllllllllllllllllllllllln
+nlLLLLLLLLLLlLLLLLllllllllllllllllllllllllllllllln
+nlLLLLLLLLlllLLLLlllllllllllllllllllllllllllllllln
+nlLLLllllllllLLLllllllllllllllllllllllllllllllllln
+                        e
+                        eA
+                        e
+                       LLL
+                        e
+                        eAAAA
+                        e
+                   nnNNNNNNnn
+@80
+[                      CAR                       ]
+[ string     registrationNumber PK     the plate ]
+[ string     ownerId            PK, FK           ]
+[ string     vin                UK               ]
+[ string?    make                                ]
+[ string(99) model                               ]
+[ string[]   tags                                ]
+[ int        *id                                 ]
+                        │
+                        │1
+                        │
+                       has
+                        │
+                        │0..*
+                        │
+                   [ DRIVER ]
+@80 roles
+nnnnnnnnnnnnnnnnnnnnnnnNNNnnnnnnnnnnnnnnnnnnnnnnnn
+nlLLLLLLlllllLLLLLLLLLLLLLLLLLLlLLlllllOOOOOOOOOln
+nlLLLLLLlllllLLLLLLLllllllllllllLLLLLLllllllllllln
+nlLLLLLLlllllLLLllllllllllllllllLLllllllllllllllln
+nlLLLLLLLllllLLLLlllllllllllllllllllllllllllllllln
+nlLLLLLLLLLLlLLLLLllllllllllllllllllllllllllllllln
+nlLLLLLLLLlllLLLLlllllllllllllllllllllllllllllllln
+nlLLLllllllllLLLllllllllllllllllllllllllllllllllln
+                        e
+                        eA
+                        e
+                       LLL
+                        e
+                        eAAAA
+                        e
+                   nnNNNNNNnn
+@120
+[                      CAR                       ]
+[ string     registrationNumber PK     the plate ]
+[ string     ownerId            PK, FK           ]
+[ string     vin                UK               ]
+[ string?    make                                ]
+[ string(99) model                               ]
+[ string[]   tags                                ]
+[ int        *id                                 ]
+                        │
+                        │1
+                        │
+                       has
+                        │
+                        │0..*
+                        │
+                   [ DRIVER ]
+@120 roles
+nnnnnnnnnnnnnnnnnnnnnnnNNNnnnnnnnnnnnnnnnnnnnnnnnn
+nlLLLLLLlllllLLLLLLLLLLLLLLLLLLlLLlllllOOOOOOOOOln
+nlLLLLLLlllllLLLLLLLllllllllllllLLLLLLllllllllllln
+nlLLLLLLlllllLLLllllllllllllllllLLllllllllllllllln
+nlLLLLLLLllllLLLLlllllllllllllllllllllllllllllllln
+nlLLLLLLLLLLlLLLLLllllllllllllllllllllllllllllllln
+nlLLLLLLLLlllLLLLlllllllllllllllllllllllllllllllln
+nlLLLllllllllLLLllllllllllllllllllllllllllllllllln
+                        e
+                        eA
+                        e
+                       LLL
+                        e
+                        eAAAA
+                        e
+                   nnNNNNNNnn

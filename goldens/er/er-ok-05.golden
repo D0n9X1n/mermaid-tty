@@ -1,0 +1,72 @@
+@60
+[     CAR      ]
+[ string id    ]
+[ int    seats ]
+       │
+       │0..*
+       │
+    drives
+       │
+       │1
+       │
+    [ ROAD ]
+@60 roles
+nnnnnnNNNnnnnnnn
+nlLLLLLLlLLlllln
+nlLLLllllLLLLLln
+       e
+       eAAAA
+       e
+    LLLLLL
+       e
+       eA
+       e
+    nnNNNNnn
+@80
+[     CAR      ]
+[ string id    ]
+[ int    seats ]
+       │
+       │0..*
+       │
+    drives
+       │
+       │1
+       │
+    [ ROAD ]
+@80 roles
+nnnnnnNNNnnnnnnn
+nlLLLLLLlLLlllln
+nlLLLllllLLLLLln
+       e
+       eAAAA
+       e
+    LLLLLL
+       e
+       eA
+       e
+    nnNNNNnn
+@120
+[     CAR      ]
+[ string id    ]
+[ int    seats ]
+       │
+       │0..*
+       │
+    drives
+       │
+       │1
+       │
+    [ ROAD ]
+@120 roles
+nnnnnnNNNnnnnnnn
+nlLLLLLLlLLlllln
+nlLLLllllLLLLLln
+       e
+       eAAAA
+       e
+    LLLLLL
+       e
+       eA
+       e
+    nnNNNNnn

@@ -1,0 +1,8 @@
+erDiagram
+direction LR
+subgraph billing [Billing]
+  direction TB
+  INVOICE ||--o{ LINE : has
+end
+CUSTOMER ||--o{ billing : pays
+billing ||--|| LEDGER : posts

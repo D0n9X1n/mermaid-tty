@@ -1,0 +1,12 @@
+erDiagram
+subgraph sales
+  ORDER
+end
+subgraph "Customer Domain"
+  CUSTOMER
+end
+subgraph billing [Billing team]
+  subgraph inner
+    INVOICE
+  end
+end

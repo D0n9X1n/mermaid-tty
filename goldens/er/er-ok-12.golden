@@ -1,0 +1,60 @@
+@60
+ [ A ]        [ C ]     [ E ]
+   │            │         │
+   │1           │1        │1
+   │            │         │
+ word     quoted words    │
+   │            │         │
+   │0..*        │0..*     │0..*
+   │            │         │
+[ B ]        [ D ]      [ F ]
+@60 roles
+ nnNnn        nnNnn     nnNnn
+   e            e         e
+   eA           eA        eA
+   e            e         e
+ LLLL     LLLLLLLLLLLL    e
+   e            e         e
+   eAAAA        eAAAA     eAAAA
+   e            e         e
+nnNnn        nnNnn      nnNnn
+@80
+ [ A ]        [ C ]     [ E ]
+   │            │         │
+   │1           │1        │1
+   │            │         │
+ word     quoted words    │
+   │            │         │
+   │0..*        │0..*     │0..*
+   │            │         │
+[ B ]        [ D ]      [ F ]
+@80 roles
+ nnNnn        nnNnn     nnNnn
+   e            e         e
+   eA           eA        eA
+   e            e         e
+ LLLL     LLLLLLLLLLLL    e
+   e            e         e
+   eAAAA        eAAAA     eAAAA
+   e            e         e
+nnNnn        nnNnn      nnNnn
+@120
+ [ A ]        [ C ]     [ E ]
+   │            │         │
+   │1           │1        │1
+   │            │         │
+ word     quoted words    │
+   │            │         │
+   │0..*        │0..*     │0..*
+   │            │         │
+[ B ]        [ D ]      [ F ]
+@120 roles
+ nnNnn        nnNnn     nnNnn
+   e            e         e
+   eA           eA        eA
+   e            e         e
+ LLLL     LLLLLLLLLLLL    e
+   e            e         e
+   eAAAA        eAAAA     eAAAA
+   e            e         e
+nnNnn        nnNnn      nnNnn

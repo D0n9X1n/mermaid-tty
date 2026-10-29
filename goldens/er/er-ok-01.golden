@@ -1,0 +1,162 @@
+@60
+Orders
+[ DELIVERY-ADDRESS ]
+         ┆
+         ┆1..*
+         ┆
+       uses
+         ┆
+         ┆1..*
+         ┆
+    [ CUSTOMER ]
+         │
+         │1
+         │
+      places
+         │
+         │0..*
+         │
+      [ ORDER ]
+          │
+          │1
+          │
+      contains
+          │
+          │1..*
+          │
+   [ LINE-ITEM ]
+@60 roles
+TTTTTT
+nnNNNNNNNNNNNNNNNNnn
+         e
+         eAAAA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+    nnNNNNNNNNnn
+         e
+         eA
+         e
+      LLLLLL
+         e
+         eAAAA
+         e
+      nnNNNNNnn
+          e
+          eA
+          e
+      LLLLLLLL
+          e
+          eAAAA
+          e
+   nnNNNNNNNNNnn
+@80
+Orders
+[ DELIVERY-ADDRESS ]
+         ┆
+         ┆1..*
+         ┆
+       uses
+         ┆
+         ┆1..*
+         ┆
+    [ CUSTOMER ]
+         │
+         │1
+         │
+      places
+         │
+         │0..*
+         │
+      [ ORDER ]
+          │
+          │1
+          │
+      contains
+          │
+          │1..*
+          │
+   [ LINE-ITEM ]
+@80 roles
+TTTTTT
+nnNNNNNNNNNNNNNNNNnn
+         e
+         eAAAA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+    nnNNNNNNNNnn
+         e
+         eA
+         e
+      LLLLLL
+         e
+         eAAAA
+         e
+      nnNNNNNnn
+          e
+          eA
+          e
+      LLLLLLLL
+          e
+          eAAAA
+          e
+   nnNNNNNNNNNnn
+@120
+Orders
+[ DELIVERY-ADDRESS ]
+         ┆
+         ┆1..*
+         ┆
+       uses
+         ┆
+         ┆1..*
+         ┆
+    [ CUSTOMER ]
+         │
+         │1
+         │
+      places
+         │
+         │0..*
+         │
+      [ ORDER ]
+          │
+          │1
+          │
+      contains
+          │
+          │1..*
+          │
+   [ LINE-ITEM ]
+@120 roles
+TTTTTT
+nnNNNNNNNNNNNNNNNNnn
+         e
+         eAAAA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+    nnNNNNNNNNnn
+         e
+         eA
+         e
+      LLLLLL
+         e
+         eAAAA
+         e
+      nnNNNNNnn
+          e
+          eA
+          e
+      LLLLLLLL
+          e
+          eAAAA
+          e
+   nnNNNNNNNNNnn
