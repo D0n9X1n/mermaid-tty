@@ -66,9 +66,11 @@ export function run(root: string, spawn: Spawn = spawnSync): number {
   }
 }
 
-// The real spawnSync, through run's default.
-function main(): number {
-  return run(dirname(dirname(fileURLToPath(import.meta.url))))
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
+
+// The CLI: type-checks this repo with spawn, the real spawnSync unless a test passes a fake.
+export function main(spawn: Spawn = spawnSync): number {
+  return run(ROOT, spawn)
 }
 
 if (isMain(import.meta)) process.exitCode = main()
