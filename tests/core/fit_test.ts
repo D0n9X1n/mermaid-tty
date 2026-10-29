@@ -2,6 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import { 
 import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS } from '../../core/registry.ts'
 import type { Drawing } from '../../core/canvas.ts'; import { fail, type Fail } from '../../core/fail.ts'; import type { Step } from '../../core/fit.ts'
 import { register, type DiagramModule, type DiagramType } from '../../core/registry.ts'; import { validate } from '../../core/validate.ts'
+import { flowchart } from '../../core/diagrams/flowchart/layout.ts'
 const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
   layout: (_m: unknown, step: string, cols: number) => {
     const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
@@ -89,9 +90,11 @@ test('A1: every keyword and alias maps as in the table; each one A does not draw
 
 // A module lookup only files and finds: its methods are never called. Registration lasts for the rest of this file.
 const stub = (type: DiagramType): DiagramModule => ({ type, parse: () => fail('stub'), steps: () => [], layout: () => fail('stub') })
+// The flowchart module registers itself on import (T19); sequence stays unregistered until T24.
 test('A1: an enabled type is unregistered until its module registers, then lookup returns that module; a disabled type stays disabled', () => {
-  assert.deepEqual([lookup('flowchart TD'), lookup('graph LR'), lookup('sequenceDiagram')],
-    [{ reason: 'unregistered:flowchart' }, { reason: 'unregistered:flowchart' }, { reason: 'unregistered:sequence' }])
+  assert.equal(lookup('flowchart TD'), flowchart)
+  assert.equal(lookup('graph LR'), flowchart)
+  assert.deepEqual(lookup('sequenceDiagram'), { reason: 'unregistered:sequence' })
   const flow = stub('flowchart')
   register(flow)
   register(stub('pie'))

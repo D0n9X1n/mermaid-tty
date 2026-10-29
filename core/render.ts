@@ -1,0 +1,94 @@
+// The render entry point (plan A §6, T19): a fence body to colored rows, or null to fall back to its source.
+import type { Cell, Drawing } from './canvas.ts'
+import type { Fail } from './fail.ts'
+import { isFail } from './fail.ts'
+import type { Step } from './fit.ts'
+import { fitLadder } from './fit.ts'
+import { createLru } from './lru.ts'
+import { lookup } from './registry.ts'
+import { readSource } from './source.ts'
+import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
+import { palette } from './themes.ts'
+// Imported for its side effect: the flowchart module registers itself once registry.ts has run.
+import './diagrams/flowchart/layout.ts'
+
+export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: Color; bold?: boolean; dimColor?: boolean }
+export type Rows = Span[][]
+export type Options = { columns: number; theme?: string }
+
+// The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail wins.
+export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
+  const src = readSource(source)
+  if (isFail(src)) return src
+  const mod = lookup(src.header)
+  if (isFail(mod)) return mod
+  const model = mod.parse(src)
+  if (isFail(model)) return model
+  return fitLadder(mod, model, o.columns)
+}
+
+// The rows inner draws of source, in o's theme ('default' when none is given), or its Fail.
+function draw(source: string, o: Options, inner: typeof explain): Rows | Fail {
+  const r = inner(source, o)
+  return isFail(r) ? r : toRows(r.drawing, palette(o.theme ?? 'default'))
+}
+
+// The drawing as rows in the theme's palette, or null on any Fail.
+export function renderMermaid(source: string, o: Options): Rows | null {
+  const r = draw(source, o, explain)
+  return isFail(r) ? null : r
+}
+
+// One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
+// fills, take that color as their background and onFill as their color; caps keep it as their color. Null colors are
+// omitted, so mono's spans carry none.
+function cellSpan(cell: Cell, p: Palette): Span {
+  const ink = (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
+  const pill = p.fill && (cell.role === 'node' || cell.role === 'decision') && (cell.kind === 'text' || cell.kind === 'fill')
+  const color = pill ? p.onFill : ink, backgroundColor = pill ? ink : null
+  const span: Span = { text: cell.ch, role: cell.role }
+  if (color !== null) span.color = color
+  if (backgroundColor !== null) span.backgroundColor = backgroundColor
+  if (cell.role === 'title') span.bold = true
+  if ((p.dim as readonly Ink[]).includes(cell.role)) span.dimColor = true
+  return span
+}
+
+const sameStyle = (a: Span, b: Span): boolean => a.role === b.role && a.color === b.color
+  && a.backgroundColor === b.backgroundColor && a.bold === b.bold && a.dimColor === b.dimColor
+
+// Each row as spans: cont cells skipped, each missing cell a blank space with no role, neighbours of one role and style
+// merged, and trailing blank spans trimmed.
+export function toRows(d: Drawing, p: Palette): Rows {
+  return d.cells.map(row => {
+    const spans: Span[] = []
+    for (const cell of row) {
+      if (cell?.kind === 'cont') continue
+      const s: Span = cell ? cellSpan(cell, p) : { text: ' ' }
+      const last = spans[spans.length - 1]
+      if (last && sameStyle(last, s)) last.text += s.text
+      else spans.push(s)
+    }
+    while (spans.length > 0 && spans[spans.length - 1]!.role === undefined) spans.pop()
+    return spans
+  })
+}
+
+// A renderer that caches each source's rows, or its Fail, in an LRU of capacity entries keyed by the source, the columns
+// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit.
+export function createRenderer(capacity = 64, inner: typeof explain = explain):
+  { render(s: string, o: Options, onMiss?: (f: Fail) => void): Rows | Fail; readonly size: number } {
+  const cache = createLru<string, Rows | Fail>(capacity)
+  return {
+    render(s, o, onMiss) {
+      const key = JSON.stringify([s, o.columns, o.theme])
+      const hit = cache.get(key)
+      if (hit !== undefined) return hit
+      const v = draw(s, o, inner)
+      cache.set(key, v)
+      if (isFail(v)) onMiss?.(v)
+      return v
+    },
+    get size() { return cache.size },
+  }
+}
