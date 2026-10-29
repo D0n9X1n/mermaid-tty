@@ -34,12 +34,14 @@ test('A5.mutation-tests: a bar draws exactly its eighths; zero draws nothing, an
   for (const [cells, e] of [['██▌', 21], ['█', 0], ['▌█', 12], ['', 20]] as const) assert.deepEqual(validate(bar(cells, e)), { reason: 'bar' }, cells)
   assert.deepEqual(validate(bar('██▌', 20, { bars: [] })), { reason: 'bar-stray' })
 })
-const vbar = (lanes: readonly (readonly string[])[], eighths: number): Drawing => { const c = createCanvas(2, 4, 4)
+const vbar = (lanes: readonly (readonly string[])[], eighths: number): Drawing => { const c = createCanvas(3, 4, 4)
   lanes.forEach((cells, k) => cells.forEach((g, r) => { if (g) c.cap(r, k, g, 's1', 'x0.b0') }))
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], bars: [{ owner: 'x0.b0', eighths, axis: 'v', lanes: 2 }] }) }
-test('A5.mutation-tests: a positive bar with its cells deleted, a lane missing or a lane short fails; nothing passes vacuously', () => {
+test('A5.mutation-tests: a positive bar with its cells deleted, a lane missing, short or shifted fails; nothing passes vacuously', () => {
   assert.equal(validate(vbar([['▄', '█'], ['▄', '█']], 12)), null)                 // two lanes, each █ then ▄ bottom up: 8 + 4
   for (const lanes of [[['', ''], ['', '']], [['▄', '█'], ['', '']], [['▄', '█'], ['▂', '█']]]) assert.deepEqual(validate(vbar(lanes, 12)), { reason: 'bar' }, String(lanes))
+  assert.equal(validate(vbar([['', '▄', '█'], ['', '▄', '█']], 12)), null)
+  assert.deepEqual(validate(vbar([['', '▄', '█'], ['▄', '█', '']], 12)), { reason: 'bar' })   // one lane shifted up a row: both runs still sum to 12
 })
 const member = (owners: string[]): Drawing => { const c = createCanvas(1, 6, 6); c.text(0, 0, '+name', 'label', owners)
   return c.toDrawing({ labels: [{ owner: owners[0]!, text: '+name' }], edges: [], edgeLabels: [], members: [{ id: 'U.m0', parent: 'U' }] }) }
@@ -61,6 +63,7 @@ test("A5.mutation-tests: a member row is owned by exactly its own id and its par
     - Bar cells are cap cells drawn in a bar glyph: `▏…█` on axis h, `▁…▇█` on axis v.
     - A bar's runs are the maximal row runs (h) or column runs (v) of cap cells whose owners[0] is its owner. Each run reads full `█` cells, then at most one partial glyph, left to right (h) or bottom to top (v), and sums to `eighths`: `█` counts 8, and a partial counts its index + 1.
     - The count is exact, never vacuous: a bar with `eighths > 0` has exactly `lanes ?? 1` runs, its width across the axis as drawn (2 for a vertical xychart bar). A bar with `eighths` 0 has no cell. Deleted cells, a missing or split lane, or any other mismatch fail `bar` (cycle 2).
+    - **Lanes share a baseline (final edit):** the runs lie in `lanes ?? 1` adjacent columns (v) or rows (h), one run in each, so a lane's cells are contiguous. Every run starts on the same baseline, its axis-side end: its bottom row (v) or its left column (h). All runs have the same length, `⌈eighths / 8⌉` cells. A lane shifted by a row or a column, split, or of another length fails `bar`, even when every run sums to `eighths`.
     - A bar cell whose owners[0] is not a listed owner fails `bar-stray`.
   - **`members`:** each listed `{ id, parent }` has at least one cell whose owners are exactly `[id, parent]`, and every cell whose owners[0] is id has those owners, else `member`. Only drawn members are listed: a blank ER column draws no cell, so T50 does not list it (finding 7). T87 accepts a keyed member's legend cells, owned by `[id]` alone (finding 8). When `members` is set, every text or key cell with two distinct owners whose second is not an edge in `expect.edges` must be listed as `{ id: owners[0], parent: owners[1] }`, else `member-unlisted`, so an omitted row fails (B6).
 - [ ] **Done when:**

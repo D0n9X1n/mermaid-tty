@@ -59,12 +59,12 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
     { text: name, role: 'label', id: `C.a${k}.name`, width: 5 }, { text: note, role: 'note', id: `C.a${k}.note`, width: 2 }] as NodeRow['cols']
   gr.nodes[0]!.rows = [{ text: 'CAR', role: 'node', align: 'center' }, { text: 'string id pk', role: 'label', align: 'left', fixed: true, cols: cols(0, 'string', 'id', 'pk') },
     { text: 'int seats', role: 'label', align: 'left', fixed: true, cols: cols(1, 'int', 'seats', '') }]
-  gr.nodes[1]!.rows = [{ text: 'D', role: 'node', align: 'center' }, ...['+run()', '+eat()'].map((text, k) => ({ text, role: 'label', align: 'left', fixed: true, id: `D.m${k}` }) as NodeRow)]
+  gr.nodes[1]!.rows = [{ text: '«service»', role: 'node', align: 'center', id: 'D.annot' }, { text: 'D', role: 'node', align: 'center' }, ...['+run()', '+eat()'].map((text, k) => ({ text, role: 'label', align: 'left', fixed: true, id: `D.m${k}` }) as NodeRow)]
   const d = D(gr), t = text(d); assert.equal(validate(d), null)
   const r1 = t.find(l => l.includes('string id'))!, r2 = t.find(l => l.includes('int    seats'))!; assert.equal(r1.indexOf(' id'), r2.indexOf(' seats'))
   assert.ok(d.cells.flat().some(c => c?.kind === 'text' && c.ch === 's' && c.owners[0] === 'C.a1.name' && c.owners.includes('C')))
   assert.deepEqual(d.expect.members, [...['a0.type', 'a0.name', 'a0.note', 'a1.type', 'a1.name'].map(k => ({ id: `C.${k}`, parent: 'C' })),
-    { id: 'D.m0', parent: 'D' }, { id: 'D.m1', parent: 'D' }])   // a1's blank note draws no cell, so it is not listed; every fixed row is
+    { id: 'D.annot', parent: 'D' }, { id: 'D.m0', parent: 'D' }, { id: 'D.m1', parent: 'D' }])   // a1's blank note draws no cell, so it is not listed; every row with an id is, «annot» included
 })
 test('A4: an end label gets room beside its end, and a reversed edge lists its true ends', () => {
   const one = g('TB', ['A>B']); Object.assign(one.edges[0]!, { head: 'none', headLabel: '0..*' })
@@ -102,7 +102,7 @@ test('A4: an end label gets room beside its end, and a reversed edge lists its t
     - **Reversed edges:** `chains.ts` swaps `tailLabel` and `headLabel` with `tail` and `head`. `draw.ts` names each label by its true end: on a `reversed` edge, the drawn tail's label is `${edge}:head`.
   - **`expect` contracts:**
     - Each end mark is listed on A's per-end-mark contract, `ends: { node, glyph }[]`, at its true node, as A's draw lists arrows; `end-misplaced` checks it. Each end label is listed in T86's `endLabels` as `{ node, owner }`, its owner named by the true end.
-    - Each `cols` column, and each `fixed` row with an `id`, that draws a cell is listed in `expect.members` as `{ id, parent: node.id }`, in drawing order: node by node, row by row, column by column. A blank value draws no cell and is not listed (cycle 2). `members` is set whenever the graph draws a column or a fixed row, so T86's `member-unlisted` catches an omitted one (B6).
+    - Each `cols` column, and each row with an `id` (a `fixed` member row, a class's `«annot»` row `<class>.annot`, any other), that draws a cell is listed in `expect.members` as `{ id, parent: node.id }`, in drawing order: node by node, row by row, column by column. A blank value draws no cell and is not listed (cycle 2). `members` is set whenever the graph draws a column or a row with an `id`, so T86's `member-unlisted` catches an omitted one (B6).
   - **`expect.edges` heads:** each end's glyph, tail first.
 - [ ] **Done when:**
   - `node --test tests/core/graph-c-draw_test.ts tests/core/draw_test.ts tests/core/route_test.ts tests/core/validate-c_test.ts` passes;

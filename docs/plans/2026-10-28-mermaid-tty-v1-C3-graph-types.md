@@ -212,12 +212,14 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'
+import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'; import { validate } from '../../core/validate.ts'
 const X = (body: string, columns = 80) => explain(`classDiagram\n${body}`, { columns, theme: 'mono' }) as any
 test('A3: a class pill shows «annot», its name, then attributes before methods, with no divider row', () => {
   const t = text(X('class Duck {\n  <<service>>\n  +swim()\n  +String beakColor\n}').drawing), at = (s: string) => t.findIndex(l => l.includes(s))
   assert.deepEqual([at('«service»') + 1, at(' Duck ') + 1, at('+String beakColor') + 1], [at(' Duck '), at('+String beakColor'), at('+swim()')])
   assert.ok(t.slice(at('«service»'), at('+swim()') + 1).every(l => /\[.*\]/.test(l)))
+  const duck = X('class Duck {\n  <<service>>\n  +String beakColor\n  +swim()\n}').drawing   // an annotated class with members validates
+  assert.equal(validate(duck), null); assert.deepEqual(duck.expect.members.map((m: any) => m.id), ['Duck.annot', 'Duck.m0', 'Duck.m1'])
 })
 test('A3: ends face their class: △ inheritance, ◆ composition, ◇ aggregation, ▽ a dashed realization', () => {
   const t = text(X('Animal <|-- Duck\nDuck *-- Egg\nLake o-- Duck\nDuck ..|> Swimmer').drawing).join('\n')

@@ -87,6 +87,8 @@ test('A5: frontmatter config scalars become dotted keys; other top-level keys ar
   assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
   assert.deepEqual((readSource('pie\n"a" : 1') as Source).config, {})
   assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: trunk\t# note\n    x: a#b'), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'a#b' })   // a tab-# comment; a # inside a word
+  for (const q of ['"trunk" # note', '"trunk"\t# note', "'trunk' # note"]) assert.deepEqual(cfg(`config:\n  gitGraph:\n    mainBranchName: ${q}`), { 'gitGraph.mainBranchName': 'trunk' }, q)
+  assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: "a # b" # note'), { 'gitGraph.mainBranchName': 'a # b' })   // a # inside the quotes is kept
 })
 test('A5.errors: a config block outside the strict YAML subset falls back', () => {
   const bad = ['config:\n  pie: { textPosition: 0.5 }', 'config:\n  themeVariables:\n    - a', 'config:\n  pie:\n    k: [1, 2]',
@@ -230,10 +232,13 @@ test('A4: a title wraps at columns; stack keeps the parts in order and validates
 })
 test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', () =>
   assert.deepEqual(validate(stack([part('a', 'x'), part('a', 'x')], 10)), { reason: 'label-dup' }))
-test("A4: stack keeps every expect field, A's frames included, so a heading over a framed drawing keeps its frame listed", () => {
-  const framed = { ...part('b', 'y'), expect: { ...part('b', 'y').expect, frames: ['S'] } } as Drawing
-  const d = stack([heading('Title', 'title', 'title', 10) as Drawing, framed], 10)
-  assert.deepEqual((d.expect as any).frames, ['S']); assert.deepEqual(d.expect.labels.map(l => l.owner), ['title', 'b'])
+test("A4: stack keeps every expect field, each asserted alone, so a heading over a drawing drops none", () => {
+  const extra = { frames: ['S'], members: [{ id: 'b.m0', parent: 'b' }], keys: [{ key: 'a', item: 'b', cls: 'note' }], keyable: [{ item: 'b', cls: 'note' }],
+    bars: [{ owner: 'x0', eighths: 8, axis: 'h' }], edges: [{ id: 'e0', from: 'b', to: 'c', heads: ['▼'], ends: [{ node: 'c', glyph: '▼' }] }] }
+  const d = stack([heading('Title', 'title', 'title', 10) as Drawing, { ...part('b', 'y'), expect: { ...part('b', 'y').expect, ...extra } } as Drawing], 10), e = d.expect as any
+  assert.deepEqual(e.frames, extra.frames); assert.deepEqual(e.members, extra.members); assert.deepEqual(e.keys, extra.keys)
+  assert.deepEqual(e.keyable, extra.keyable); assert.deepEqual(e.bars, extra.bars); assert.deepEqual(e.edges, extra.edges)   // edges carry their ends
+  assert.deepEqual(e.labels.map((l: any) => l.owner), ['title', 'b'])
 })
 ```
 - [ ] **Run** `node --test tests/core/sheet_test.ts` → FAIL: `Cannot find module …/core/charts/sheet.ts`.
