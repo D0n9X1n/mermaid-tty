@@ -74,3 +74,12 @@ test('X2: a ~…~ pair in an alias or comment falls back, since erBox shows it a
   assert.deepEqual(P('A["List~T~"]'), { reason: 'generic' }); assert.deepEqual(P('A {\n  string id "a~b~c"\n}'), { reason: 'generic' })
   assert.ok(!('reason' in P('A["about ~5"]')))
 })
+// X3. Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
+// default), and erBox draws each attribute column through createText with markdown on: marked renders all of them, and
+// createText swaps icons and KaTeX.
+test('X3: Markdown, icons and math in an attribute column or any ER text fall back', () => {
+  for (const [body, why] of [['A {\n  string id "**bold**"\n}', 'markdown'], ['A {\n  string id "a\\\\*b"\n}', 'markdown'],
+    ['A ||--o{ B : "a\\\\#b"', 'markdown'], ['A {\n  string id "fa:fa-book"\n}', 'icon'], ['A["fa:fa-book"]', 'icon'],
+    ['A ||--o{ B : "$$x^2$$"', 'math']] as const) assert.deepEqual(P(body), { reason: why }, body)
+  assert.equal(P('A {\n  string id "snake_case a\\nb"\n}').entities[0].attrs[0].comment, 'snake_case a\\nb')
+})

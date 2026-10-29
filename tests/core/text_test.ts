@@ -123,3 +123,29 @@ test('X2: a removed <br> joins nothing, so text on either side is checked on its
   assert.equal(drawable('Q&A<br>x', 'html', 'any'), null); assert.equal(drawable('Q&A<br>x', 'html', 'lower'), null)
   assert.deepEqual(drawable('a&<br>amp;', 'html', 'any'), null); assert.deepEqual(drawable('&am<br>p', 'html', 'any'), { reason: 'entity' })
 })
+
+// X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a markdown
+// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a plain one
+// turns a literal \n into <br />.
+const RENDERED: Mode[] = ['html', 'markdown', 'member']
+test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in every HTML-label mode, and nowhere else', () => {
+  const icons = ['fa:fa-book', 'x fab:fa-github y', 'fas:fa-a-b', 'fak:fa-x', 'fal:fa-x', 'far:fa-x', 'fad:fa-x', 'sofa:fa-x']
+  for (const m of RENDERED) {
+    assert.deepEqual(icons.map(t => D(t, m)), icons.map(() => 'icon'), m)
+    assert.deepEqual(['$$x^2$$', 'a $$b$$ c', '$$$$'].map(t => D(t, m)), ['math', 'math', 'math'], m)
+    assert.deepEqual(['fa:book', 'fa-book', 'fa:fa-', '$5', 'a $$ b', '$$$'].map(t => D(t, m)), Array(6).fill(null), m)
+  }
+  for (const m of ['plain', 'sanitized', 'escaped'] as Mode[]) assert.deepEqual(['fa:fa-book', '$$x$$'].map(t => D(t, m)), [null, null], m)
+})
+test('X3: drawable: markdown and member fail emphasis marked renders and a \\ escaping punctuation; html does not', () => {
+  const md = ['**bold**', '*a*', '_a_', '__init__', '+__init__()', 'x._y_', '(_a_)', 'a*b*c', 'a\\*b', 'a\\\\b', 'a \\# b', 'a * b * c']
+  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(md.map(t => D(t, m)), md.map(() => 'markdown'), m)
+  const ok = ['bold', 'snake_case', 'my_var_name', 'a_b_c', '_private', 'x_', 'a*b', '+someMethod()*', 'C:\\Users', 'a\\nb', '`code`',
+    '# h', '- item', '[x](y)', 'Q&A']
+  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(ok.map(t => D(t, m)), ok.map(() => null), m)
+  assert.equal(D('a < b', 'markdown'), null)
+  assert.deepEqual(md.map(t => D(t, 'html')), md.map(() => null))
+})
+test('X3: drawable: a literal \\n fails newline in html, where Mermaid splits it, and draws in markdown', () => {
+  assert.deepEqual(['a\\nb', 'x\\n'].map(t => [D(t, 'html'), D(t, 'markdown')]), [['newline', null], ['newline', null]])
+})

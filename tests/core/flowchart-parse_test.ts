@@ -164,3 +164,12 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'label-blank-line' }]))
   for (const s of ['A[a<br/>b]', 'A[ a <br/> b ]', 'A -->|a<br>b| B', 'A[ ]', 'A -->| | B']) assert.ok(!('reason' in P(`flowchart TD\n${s}`)), s)
 })
+// X3. Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
+// markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX, and
+// nonMarkdownToHTML turns a literal \n into <br />.
+test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
+  for (const [s, why] of [['A[fa:fa-book]', 'icon'], ['A["fab:fa-github x"]', 'icon'], ['A -->|fa:fa-car| B', 'icon'], ['A["$$x^2$$"]', 'math'],
+    ['A -->|"$$x$$"| B', 'math'], ['subgraph S ["fa:fa-a"]\nA\nend', 'icon'], ['A["a\\nb"]', 'newline'], ['A -->|"a\\nb"| B', 'newline']])
+    assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s)
+  assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
+})

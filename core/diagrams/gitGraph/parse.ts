@@ -22,7 +22,10 @@ const TITLE = /^title[ \t]+(\S.*)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // A token: an attribute key, a double-quoted string with no backslash (Langium's STRING would unescape one), or a word.
-const TOKEN = /(id|msg|tag|type|order|parent):|"([^"\\]*)"|([^\s"]+)/y
+// Mermaid's grammar hides only WS /[ \t]+/, so a word runs to a space, tab or quote; one holding other whitespace fails.
+const TOKEN = /(id|msg|tag|type|order|parent):|"([^"\\]*)"|([^ \t"]+)/y
+// The ends of a line Mermaid's WS terminal skips.
+const ENDS = /^[ \t]+|[ \t]+$/g
 // An unquoted name, as Mermaid's REFERENCE terminal reads it. A keyword, a word Mermaid's INT terminal could take first,
 // or one its title or accessibility terminals could start on lexes as something else, so it fails.
 const NAME = /^\w([-./\w]*[-\w])?$/
@@ -54,9 +57,10 @@ function checked(t: string, n: number, mode: Mode = 'escaped', br: Br = 'literal
 function tokens(t: string, n: number): Token[] {
   const out: Token[] = []
   for (let i = 0; i < t.length;) {
-    if (/\s/.test(t[i]!)) { i++; continue }
+    if (t[i] === ' ' || t[i] === '\t') { i++; continue }
     TOKEN.lastIndex = i
     const m = TOKEN.exec(t) ?? stop(`syntax:${n}`)
+    if (m[3] !== undefined && /\s/.test(m[3])) stop(`syntax:${n}`)
     out.push(m[1] ? { key: m[1] } : m[2] !== undefined ? { str: m[2] } : { word: m[3]! })
     i = TOKEN.lastIndex
   }
@@ -75,11 +79,11 @@ function walk(src: Source): GitGraph {
   const st: State = { g, commits: new Map(), heads: new Map([[main.name, null]]), cur: main.name, seq: 0 }
   let open = 0                                                      // the line an open accDescr { block starts on, or 0
   for (const { n, text } of src.lines) {
-    const t = text.trim(), block = open ? t : ACC_BLOCK.exec(t)?.[1]
+    const t = text.replace(ENDS, ''), block = open ? t : ACC_BLOCK.exec(t)?.[1]
     if (block === undefined) { statement(st, t, n); continue }
     // Accessibility text is not drawn.
     const end = block.indexOf('}')
-    if (end >= 0 && block.slice(end + 1).trim()) stop(`syntax:${n}`)
+    if (end >= 0 && block.slice(end + 1).replace(ENDS, '')) stop(`syntax:${n}`)
     open = end >= 0 ? 0 : open || n
   }
   if (open) stop(`syntax:${open}`)

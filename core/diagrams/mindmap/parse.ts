@@ -88,16 +88,14 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
 // Markdown: mindmapDb gives every label labelType 'markdown', so marked renders it. A * or `, a _ at either end of a
 // word, or a \ before ASCII punctuation (an escape marked drops).
 const MARKDOWN = /[*\x60]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])|\\[!-/:-@[-`{-~]/u
-// Text createText replaces: a Font Awesome icon (replaceIconSubstring) or a $$…$$ KaTeX formula.
-const REPLACED = /fa[bklrs]?:fa-[\w-]|\$\$/
 
 // A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap). Fails on
-// line n for Markdown, replaced text, a blank line, or text drawable or unsupported() rejects.
+// line n for Markdown, a blank line, or text drawable (a markdown HTML label: 'icon' and 'math' for text createText
+// replaces) or unsupported() rejects.
 function label(raw: string, n: number): string[] {
   const s = raw.trim()
   if (MARKDOWN.test(s)) stop(`markdown:${n}`)
-  if (REPLACED.test(s)) stop(`syntax:${n}`)
-  const f = drawable(s, 'html', 'any')
+  const f = drawable(s, 'markdown', 'any')
   if (f) stop(`${f.reason}:${n}`)
   const bad = unsupported(s)
   if (bad) stop(`unsupported-char ${bad}`)

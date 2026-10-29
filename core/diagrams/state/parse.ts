@@ -177,13 +177,13 @@ function closes(rest: string): boolean | null {
   return i < 0 ? null : rest.slice(i + 1).trim() === ''
 }
 
-// Text a statement draws, trimmed, or why it cannot be drawn: 'entity' or 'html' where Mermaid's HTML label, each <br>
-// splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
+// Text a statement draws, trimmed, or why it cannot be drawn: 'entity', 'html', 'markdown', 'icon' or 'math' where
+// Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
 // Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
 // 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end).
 function drawText(raw: string): string | Fail {
   const t = raw.trim()
-  const f = drawable(t, 'html', 'any')
+  const f = drawable(t, 'markdown', 'any')
   if (f) return f
   if (t.includes(';')) return fail('semicolon')
   const bad = unsupported(t)
@@ -314,11 +314,16 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   const ins = new Map<string, number>(), outs = new Map<string, number>()
   for (const e of edges) if (e.style === 'solid') { ins.set(e.to, (ins.get(e.to) ?? 0) + 1); outs.set(e.from, (outs.get(e.from) ?? 0) + 1) }
   for (const d of nodes.values()) if (d.mark === 'bar') d.span = Math.max(3, 2 * Math.max(ins.get(d.id) ?? 0, outs.get(d.id) ?? 0) - 1)
-  // A composite's title draws on its frame, on one line: an HTML label no <br> may split.
+  // A composite's title draws on its frame, on one line: a markdown HTML label no <br> may split.
   for (const c of clusters) {
     if (c.frameless) continue
     c.title = descrs.get(c.id) ?? c.id
-    const f = drawable(c.title, 'html', 'none')
+    const f = drawable(c.title, 'markdown', 'none')
+    if (f) return f
+  }
+  // A state with no description shows its id, a markdown HTML label too.
+  for (const d of nodes.values()) {
+    const f = d.mark || descrs.has(d.id) ? null : drawable(d.id, 'markdown', 'none')
     if (f) return f
   }
   // A transition's id t<k> that a state or composite also has would give two drawn things one owner.

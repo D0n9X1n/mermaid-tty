@@ -11,7 +11,7 @@ test('A5: classes, labels, generics, annotations and members, as Mermaid shows t
 })
 test('A5: relations, cardinality, notes, a namespace and direction', () => {
   const m = P(['Animal <|-- Duck', 'Duck *-- Egg', 'Lake o-- Duck', 'Duck --> Food : eats', 'Duck ..|> Swimmer', 'A "1" --> "*" B : has', 'A <|--|> B', 'A .. B',
-    'note "General"', 'note for Duck "can fly\\nand swim"', 'namespace Pond["Water"] {', '  class Frog', '  note for Frog "ribbit"', '}', 'direction RL'].join('\n'))
+    'note "General"', 'note for Duck "can fly<br>and swim"', 'namespace Pond["Water"] {', '  class Frog', '  note for Frog "ribbit"', '}', 'direction RL'].join('\n'))
   assert.deepEqual(m.relations.map((r: any) => [r.from, r.to, r.tail, r.head, r.line, r.label, r.tailLabel, r.headLabel]), [
     ['Animal', 'Duck', 'triangle', 'none', 'solid', null, null, null], ['Duck', 'Egg', 'diamond', 'none', 'solid', null, null, null],
     ['Lake', 'Duck', 'odiamond', 'none', 'solid', null, null, null], ['Duck', 'Food', 'none', 'arrow', 'solid', 'eats', null, null],
@@ -56,7 +56,7 @@ test('A5.errors: headers are case-sensitive and alone; a keyword in another case
       .map(b => [`classDiagram\n${b}`, 'syntax:2'])]) assert.deepEqual(R(src!), { reason: why }, src)
 })
 test('A5.errors: blank texts and blank label lines fall back, and so does an undrawable character', () => {
-  for (const [body, why] of [['note "a<br><br>b"', 'label-blank-line'], ['note "a\\n"', 'label-blank-line'], ['class A["x<br/>"]', 'label-blank-line'],
+  for (const [body, why] of [['note "a<br><br>b"', 'label-blank-line'], ['note "a<br/>"', 'label-blank-line'], ['class A["x<br/>"]', 'label-blank-line'],
     ['class A[" "]', 'syntax:2'], ['A "" --> B', 'syntax:2'], ['A --> B :', 'syntax:2'], ['note ""', 'syntax:2'], ['namespace N[""] {\n}', 'syntax:2'],
     ['class A["a‍b"]', 'unsupported-char U+200D']]) assert.deepEqual(P(body!), { reason: why }, body)
 })
@@ -142,4 +142,16 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
   const m = S('class B["x<br>Q&A"]\nnote "a < b"\nA "Q&A" --> "a < b" B : Q&A\nclass C {\n<<Q&A>>\n+a > b\n}\nC : +Q&A\nnamespace N["a < b"] {\nclass D\n}')
   assert.deepEqual([m.classes[1].label, m.notes[0].text, m.relations[0].label, m.relations[0].tailLabel, m.relations[0].headLabel, m.classes[2].annot,
     m.classes[2].members.map((x: any) => x.text), m.namespaces[0].label], ['x<br>Q&A', 'a < b', 'Q&A', 'Q&A', 'a < b', 'Q&A', ['+a > b', '+Q&A'], 'a < b'])
+})
+// X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels (marked);
+// a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one through
+// icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits breaks it.
+test('X3: Markdown, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
+  for (const [body, why] of [['class A["**bold**"]', 'markdown'], ['A --> B : **x**', 'markdown'], ['note "**x**"', 'markdown'],
+    ['class A {\n<<__x__>>\n}', 'markdown'], ['class __init__', 'markdown'], ['class A {\n+__init__()\n}', 'markdown'],
+    ['class A["fa:fa-book"]', 'icon'], ['note "$$x^2$$"', 'math'], ['A "a\\nb" --> B', 'newline'], ['namespace N["a\\nb"] {\n}', 'newline'],
+    ['note "a<br\u00a0/>b"', 'html']]) assert.deepEqual(P(body), { reason: why }, body)
+  assert.deepEqual(P('note "First\\nSecond"\nnote "a<br/>b<BR >c"').notes.map((n: any) => n.text), ['First\\nSecond', 'a<br/>b<BR >c'])
+  const m = P('class A["snake_case"]\nA "**" --> B : a*b\nnamespace N["**x**"] {\nclass C\n}')
+  assert.deepEqual([m.classes[0].label, m.relations[0].tailLabel, m.relations[0].label, m.namespaces[0].label], ['snake_case', '**', 'a*b', '**x**'])
 })

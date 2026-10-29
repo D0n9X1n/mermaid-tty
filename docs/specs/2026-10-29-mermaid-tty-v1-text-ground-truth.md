@@ -111,3 +111,28 @@ These cells fall back though Mermaid shows them as written or split. The tests l
 None. Every block of `fixtures/flowchart`, `fixtures/sequence` and `fixtures/corpus` draws the same cells, or fails with the same reason, at 60, 80 and 120 columns as before X1: 204 results compared, all unchanged. The fixtures hold `<br>` and `<br/>` only outside subgraph titles, aliases, frame labels, box titles and titles; no `&` before `#` or two letters; no other `<`; no markers. The one `&` in a drawn field is `Alice & John` in a sequence box, which stays drawable.
 
 Fix cycle 1 (frontmatter and sequence titles sanitized, `<br>` separators ASCII only): none. The same 204 results match the base, including the 10 fixtures with a frontmatter title.
+
+## X3: Markdown, icons and math
+
+Verified by reading Mermaid 12.2.0's source (`npm install mermaid@12.2.0`, its source maps): `rendering-util/createText.ts`, `rendering-util/handle-markdown-text.ts`, `diagrams/common/common.ts`, and each diagram's db; `marked` 16.4.2 was run on probe strings through a copy of `markdownToHTML`.
+
+- **Every HTML label** goes through `createText`, which runs `replaceIconSubstring` (`/(fa[bklrs]?):fa-([\w-]+)/g`: an icon replaces the token) and, when `hasKatex` (`/\$\$(.*?)\$\$/`) matches, renders the whole label as KaTeX. Fails `icon` (also `fad:`, to be safe) and `math`.
+- **Markdown** runs only where `createText` gets `markdown: true`: a label with `labelType: 'markdown'`, and every call that leaves the default. That is every class name, label, annotation, member, note and relation label; every state node, note, transition and composite title (a state shown by its id too); every ER entity, attribute column, relation label and subgraph title (`sanitizeNodeLabelType` defaults to `markdown`); every mindmap node. Not a flowchart node, edge label or subgraph title (`labelType: 'text'`; a `` "`…`" `` string fails `markdown-string` as before), a class cardinality or a namespace title (`createLabel`, `markdown: false`).
+- `markdownToHTML` changes text only through `strong`, `em`, `escape` and newlines; code spans, links, headings, lists, rules and `~~` are emitted as their raw source. So mode `markdown` (and `member`) fails `markdown` on a `\` before ASCII punctuation, two or more `*`, or two or more `_` in runs touching a non-letter, non-digit or an end. Verified as written, and drawn: `a*b`, `+swim()*`, `snake_case`, `a_b_c`, `_private`, `x__`, `C:\Users`, `a\nb`, `` `code` ``, `# h`, `- item`, `[x](y)`. Shown as written but falling back conservatively: `a * b * c` (two `*`). Verified rendered: `**bold**`, `*a*`, `_a_`, `__init__`, `+__init__()`, `x._y_`, `(_a_)`, `a*b*c`, `a\*b`, `a\\b`.
+- **A plain HTML label** (`nonMarkdownToHTML`) turns a literal `\n` into `<br />`: mode `html` fails `newline` on one.
+- **Class notes** reach the label as written: Mermaid converts neither a literal `\n` (shown as written) nor `<br` + U+00A0 + `/>` (no break). The parser no longer rewrites them; `drawable` sees the raw text and `labelLines` splits only the `<br>` HTML would.
+- **gitGraph:** the Langium grammar hides only `WS: /[ \t]+/` and ends lines at `/\r?\n/`. Any other whitespace (U+00A0, U+2028, form feed), between tokens or at a line's end, fails `syntax`.
+
+| Field | Mode before | Mode now |
+|---|---|---|
+| class name, annotation | html, none | markdown, none |
+| class label, note, relation label | html, any | markdown, any |
+| class cardinality, namespace title | html, none | html, none |
+| state text, composite title, id shown as label | html | markdown |
+| ER every text | html | markdown |
+| mindmap label | html (+ own Markdown rule) | markdown (+ own Markdown rule); icons and math now fail `icon:<n>`, `math:<n>`, not `syntax:<n>` |
+| flowchart node, edge label, subgraph title | html | html (now also `icon`, `math`, `newline`) |
+
+Tests: `tests/core/text_test.ts` (the rules), each parser's test (QA repros and an ordinary label per field), `tests/core/text-ground-truth_test.ts` (repros end to end; gitGraph is not drawn yet, so its repros are in `gitGraph-parse_test.ts`).
+
+Blast radius: none. All 612 results (204 blocks of `fixtures/{flowchart,sequence,corpus}` at 60, 80 and 120 columns) are unchanged against 6699750.

@@ -131,3 +131,12 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
   assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label, g.nodes[0].note.text, g.clusters[0].title],
     [['Q&A', 'x|Q&A', 'c'], 'a < b', 'a < b', 'a < b'])
 })
+// X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each, a
+// state's id included where it has no description, and createText swaps icons and KaTeX.
+test('X3: Markdown, icons and math in a state text, or a state id shown as its label, fall back', () => {
+  for (const [body, why] of [['state "**bold**" as A', 'markdown'], ['A --> B : **x**', 'markdown'], ['A\nnote left of A : *x*', 'markdown'],
+    ['state "_c_" as C {\n  c\n}', 'markdown'], ['__init__ --> B', 'markdown'], ['state __c__ {\n  c\n}', 'markdown'],
+    ['A : fa:fa-book', 'icon'], ['A --> B : $$x^2$$', 'math']]) assert.deepEqual(P(body), { reason: why }, body)
+  const g = P('state "snake_case" as A\nA --> my_b : a*b\nD : C:\\x').graph
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label], [['snake_case', 'my_b', 'C:\\x'], 'a*b'])
+})

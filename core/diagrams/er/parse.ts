@@ -263,12 +263,13 @@ function text(s: string, n: number, br: Br = 'none'): string {
   return drawn(s, br)
 }
 
-// A text that draws as written. Every ER text is an HTML label (erBox's createText), so text Mermaid shows otherwise fails
-// as drawable says ('entity' or 'html'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere, as an
+// A text that draws as written. Every ER text is a markdown HTML label (labelType 'markdown', and erBox's createText with
+// markdown on for each attribute column), so text Mermaid shows otherwise fails as drawable says ('entity', 'html',
+// 'markdown', 'icon' or 'math'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere, as an
 // entity's label, an attribute's row and a subgraph's title draw on one line. A blank line among two or more, from
 // <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart.
 function drawn(s: string, br: Br = 'none'): string {
-  const f = drawable(s, 'html', br)
+  const f = drawable(s, 'markdown', br)
   if (f) throw f
   // erBox draws a label through parseGenericTypes, which turns a ~…~ pair into <…>.
   if ((s.match(/~/g) ?? []).length > 1) stop('generic')

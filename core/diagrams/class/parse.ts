@@ -167,7 +167,7 @@ function declare(id: string, generic: string | null, n: number, st: State): Entr
     if (generic !== null && generic !== had.generic) stop(`repeat:${n}`)
     return had
   }
-  check(id, LINE); if (generic !== null) check(generic, LINE)
+  check(id, NAME); if (generic !== null) check(generic, NAME)
   const label = text(generic === null ? id : `${id}<${generic}>`, n, BUILT)
   const box: ClassBox = { id, label, annot: null, members: [], order: st.model.classes.length }
   const entry: Entry = { box, generic, labelled: false, ns: null }
@@ -187,7 +187,7 @@ function relabel(entry: Entry, raw: string, n: number): void {
 // Sets entry's annotation; a second fails, as Mermaid draws only the first.
 function annotate(entry: Entry, raw: string, n: number): void {
   if (entry.box.annot !== null) stop(`repeat:${n}`)
-  entry.box.annot = text(raw, n, LINE)
+  entry.box.annot = text(raw, n, NAME)
 }
 
 // Puts entry's class in space. A class in two namespaces fails, as Mermaid draws it only in the last.
@@ -242,10 +242,12 @@ function generics(t: string, n: number): string {
 }
 
 // How a field's text reaches the screen (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): a label, note or
-// relation label is an HTML label each <br> splits; a name, namespace title, annotation or cardinality an HTML label on one
-// line; a member, member text. BUILT: text this parser builds from fields already checked, such as Box<T>.
+// relation label is a markdown HTML label each <br> splits; a name or annotation a markdown HTML label on one line; a
+// namespace title or cardinality a plain HTML label (createLabel) on one line; a member, member text. BUILT: text this
+// parser builds from fields already checked, such as Box<T>.
 type Field = readonly [Mode, Br]
-const LINES: Field = ['html', 'any'], LINE: Field = ['html', 'none'], MEMBER_TEXT: Field = ['member', 'none'], BUILT: Field = ['plain', 'literal']
+const LINES: Field = ['markdown', 'any'], NAME: Field = ['markdown', 'none'], LINE: Field = ['html', 'none']
+const MEMBER_TEXT: Field = ['member', 'none'], BUILT: Field = ['plain', 'literal']
 
 // Fails as drawable says ('entity' or 'html') when Mermaid would show s, in field, as other text.
 function check(s: string, field: Field): void { const f = drawable(s, ...field); if (f) throw f }
@@ -274,10 +276,11 @@ function relation(m: RegExpExecArray, n: number, st: State): void {
     label: opt(labelRaw, LINES), tailLabel: card(tailRaw), headLabel: card(headRaw), order: rels.length + st.model.notes.length })
 }
 
-// note "t" or note for X "t", with id note<k>: \n and <br> break its lines, as <br>. X must be a class by the end.
+// note "t" or note for X "t", with id note<k>: its text as written, which only a <br> breaks (a literal \n Mermaid shows as
+// written). X must be a class by the end.
 function note(target: string | undefined, raw: string, n: number, st: State): void {
   const notes = st.model.notes, id = `note${notes.length}`, cls = target === undefined ? null : name(target, n)
-  notes.push({ id, for: cls, text: text(raw.replace(/\\n|<br\s*\/?>/gi, '<br>'), n, LINES), order: notes.length + st.model.relations.length })
+  notes.push({ id, for: cls, text: text(raw, n, LINES), order: notes.length + st.model.relations.length })
   if (cls !== null) st.targets.push({ id: cls, n })
   if (st.ns) st.ns.space.notes.push(id)
 }

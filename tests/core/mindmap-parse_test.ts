@@ -44,9 +44,14 @@ test('A5.errors: lines mindmap.jison reads otherwise or rejects fall back as syn
   assert.deepEqual(P('mindmap\n:::x\nR'), { reason: 'syntax:2' })
   for (const body of ['R\n:::', 'R\n  A :::urgent', 'R\n  a[x]:::c', 'R\n  a[x] y', 'R\n  a[x]]', 'R\n  Mindmap ideas', 'R\n  ::ICON(x)',
     'R\n  -)x(-', 'R\n  (-x-)', 'R\n  a(-x-)', 'R\n  a[]', 'R\n  a[""]', 'R\n  a["x" y]', 'R\n  a[x', 'R\n  a{x}', 'R\n  a}', 'R\n  ((x)', 'R\n  (x(',
-    'R\n  a))x)', 'R\n  fa:fa-book', 'R\n  $$x$$', 'R\n  a\u2028b'])
+    'R\n  a))x)', 'R\n  a\u2028b'])
     assert.deepEqual(P(`mindmap\n${body}`), { reason: `syntax:${body.split('\n').length + 1}` }, body)
 })
 test('A5.errors: U+2028 or U+2029 on any line falls back, a :::class line too (Mermaid throws there)', () => {
   for (const sep of [' ', ' ']) for (const line of [`:::x${sep}y`, `  A${sep}B`]) assert.deepEqual(P(`mindmap\nR\n${line}`), { reason: 'syntax:3' }, JSON.stringify(line))
+})
+// X3. mindmapDb gives every label labelType 'markdown'; createText swaps an icon and renders $$…$$ as KaTeX.
+test('X3: an icon or a $$…$$ formula in a mindmap label falls back as icon or math', () => {
+  for (const [body, why] of [['R\n  fa:fa-book', 'icon:3'], ['R\n  a[x fas:fa-car]', 'icon:3'], ['R\n  $$x$$', 'math:3'], ['R\n  a(($$x^2$$))', 'math:3']] as const)
+    assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body)
 })
