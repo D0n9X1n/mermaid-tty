@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseRecord, checkRecords, requirePass, expandGlobs, type ReviewRecord } from '../../scripts/check-review-hashes.ts'
+import { TIER1 } from '../../core/registry.ts'
 
 const sha = (s: string | Uint8Array) => createHash('sha256').update(s).digest('hex')
 const REC = `---\nscope: vr-A\nverdict: pass\ndate: 2026-11-02\nreviewers: [PM, cross-family:gpt-6]\n---\n## Files\n| path | sha256 |\n|---|---|\n| goldens/a.golden | ${sha('A')} |\n## Notes\n- ok\n`
@@ -124,10 +125,12 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
 })
 
 // The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two folders, so
-// C's goldens never reopen A's review. Plan B adds its scopes here.
-test("VR.passes: docs/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () =>
-  assert.deepEqual(JSON.parse(readFileSync(fileURLToPath(new URL('../../docs/reviews/required.json', import.meta.url)), 'utf8')),
-    { 'vr-A': ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts'] }))
+// C's goldens never reopen A's review. Plan C (T85) adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes here.
+test("VR.passes: docs/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
+  const req = JSON.parse(readFileSync(fileURLToPath(new URL('../../docs/reviews/required.json', import.meta.url)), 'utf8'))
+  assert.deepEqual(req['vr-A'], ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts'])
+  assert.deepEqual(Object.keys(req).filter(k => k !== 'vr-A'), TIER1.map(t => `vr-C-${t}`))
+})
 
 const SCRIPT = fileURLToPath(new URL('../../scripts/check-review-hashes.ts', import.meta.url))
 // The CLI, run with args in cwd.

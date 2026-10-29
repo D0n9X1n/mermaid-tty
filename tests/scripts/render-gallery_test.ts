@@ -5,10 +5,12 @@ import { chmodSync, cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writ
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Rows } from '../../core/render.ts'
 import { THEMES } from '../../core/themes.ts'
 import { gallery } from '../../scripts/render-gallery.ts'
-import { DARK_KEYS, glyphXs, rowsToSvg } from '../../scripts/render-svg.ts'
+import { DARK_KEYS, glyphXs } from '../../scripts/render-svg.ts'
+import { TIER1 } from '../../core/registry.ts'
+import { type Styled, toSvg } from '../../scripts/lib/svg.ts'
+import { width } from '../../core/width.ts'
 
 const FIXTURES = fileURLToPath(new URL('../../fixtures/', import.meta.url))
 
@@ -21,22 +23,27 @@ function scratch(t: { after(fn: () => void): void }): string {
 // The SVGs the gallery owes type's fixtures, the rejects excepted: one at 80 columns and one at 60 each, sorted.
 const owed = (type: string) => readdirSync(join(FIXTURES, type)).filter(f => f.endsWith('.mmd') && !f.includes('-reject-'))
   .flatMap(f => [80, 60].map(w => `${f.slice(0, -4)}@${w}.svg`)).sort()
+// The type folders the gallery walks: flowchart, sequence, then the Tier 1 types.
+const TYPES = ['flowchart', 'sequence', ...TIER1]
+// The first ok fixture of type.
+const firstOk = (type: string) => readdirSync(join(FIXTURES, type)).filter(f => f.includes('-ok-')).sort()[0]!.slice(0, -4)
 // A file's glyphs, joined: its text with the blanks left out.
 const glyphs = (file: string) => glyphXs(readFileSync(file, 'utf8')).map(([ch]) => ch).join('')
 
 test('VR.gallery: the self-check names every file in which a glyph is planted off its cell', t => {
-  const out = scratch(t), planted = (rows: Rows) => rowsToSvg(rows).replace(/<text x="(\d+)"/, (_, x: string) => `<text x="${Number(x) + 1}"`)
-  const named = gallery(out, planted).problems.map(p => p.slice(0, p.indexOf(':')))
-  assert.deepEqual(named.sort(), readdirSync(out).filter(f => f.endsWith('.svg')).sort())
+  const out = scratch(t), planted = (rows: Styled[][], title: string) => toSvg(rows, width, title).replace(/<text x="(\d+)"/, (_, x: string) => `<text x="${Number(x) + 1}"`)
+  const named = new Set(gallery(out, planted).problems.map(p => p.slice(0, p.indexOf(':'))))
+  assert.deepEqual([...named].sort(), readdirSync(out).filter(f => f.endsWith('.svg')).sort())
 })
 
-test('VR.gallery: index.html links and shows each SVG once: the sheets, then every non-reject fixture at 80 and 60 under its type', t => {
+test('VR.gallery: index.html links and shows each SVG once: the sheets, then every non-reject fixture of every type at 80 and 60 under its type', t => {
   const out = scratch(t)
   assert.deepEqual(gallery(out).problems, [])
   const html = readFileSync(join(out, 'index.html'), 'utf8'), svgs = readdirSync(out).filter(f => f.endsWith('.svg')).sort()
   const groups = Object.fromEntries(html.split('<h2>').slice(1)
     .map(s => [s.slice(0, s.indexOf('<')), [...s.matchAll(/<a href="([^"]+)"/g)].map(m => m[1]).sort()]))
-  assert.deepEqual(groups, { sheets: ['cjk.svg', 'palettes.svg'], flowchart: owed('flowchart'), sequence: owed('sequence') })
+  assert.deepEqual(groups, { sheets: ['cjk.svg', ...TIER1.map(t => `cjk-${t}.svg`), 'palettes.svg'].sort(), ...Object.fromEntries(TYPES.map(t => [t, owed(t)])) })
+  assert.deepEqual(html.split('<h2>').slice(1).map(s => s.slice(0, s.indexOf('<'))), ['sheets', ...TYPES])
   assert.deepEqual(Object.values(groups).flat().sort(), svgs)
   assert.deepEqual([...html.matchAll(/<img src="([^"]+)"/g)].map(m => m[1]).sort(), svgs)
 })
@@ -49,6 +56,25 @@ test('VR.gallery: the sheets: CJK at 80 and 60; each of the 6 themes labelled an
   assert.ok(cjk.includes('读取配置文件'))
   for (const id of ['flowchart-ok-40', 'sequence-ok-38']) for (const theme of Object.keys(THEMES)) assert.ok(pal.includes(`${theme}:${id}@80`), `${theme}:${id}`)
   for (const { name, roles: { node } } of Object.values(THEMES)) if (node) assert.ok(svg.includes(`fill="${DARK_KEYS[node] ?? node}"`), name)
+})
+
+test('VR.gallery: each Tier 1 type has a CJK sheet of its CJK fixtures at 80 and 60, and its first ok fixture under all 6 themes', t => {
+  const out = scratch(t)
+  assert.deepEqual(gallery(out).problems, [])
+  const pal = glyphs(join(out, 'palettes.svg')), cjkSource = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
+  for (const type of TIER1) {
+    const sheet = glyphs(join(out, `cjk-${type}.svg`)), cjk = readdirSync(join(FIXTURES, type))
+      .filter(f => f.includes('-ok-') && cjkSource.test(readFileSync(join(FIXTURES, type, f), 'utf8'))).map(f => f.slice(0, -4))
+    assert.ok(cjk.length > 0, type)
+    for (const id of cjk) for (const w of [80, 60]) assert.ok(sheet.includes(`nord:${id}@${w}`), `cjk-${type} ${id}@${w}`)
+    for (const theme of Object.keys(THEMES)) assert.ok(pal.includes(`${theme}:${firstOk(type)}@80`), `${theme}:${firstOk(type)}`)
+  }
+})
+
+test("VR.gallery: every gallery SVG is B's toSvg page, the README assets' serializer", t => {
+  const out = scratch(t)
+  assert.deepEqual(gallery(out).problems, [])
+  for (const f of readdirSync(out).filter(f => f.endsWith('.svg'))) assert.match(readFileSync(join(out, f), 'utf8'), /^<svg [^>]* role="img" aria-label="[^"]+">/, f)
 })
 
 const RENDER_GALLERY = fileURLToPath(new URL('../../scripts/render-gallery.ts', import.meta.url))

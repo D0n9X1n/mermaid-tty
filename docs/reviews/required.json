@@ -1,3 +1,14 @@
 {
-  "vr-A": ["goldens/flowchart/**", "goldens/sequence/**", "core/themes.ts"]
+  "vr-A": ["goldens/flowchart/**", "goldens/sequence/**", "core/themes.ts"],
+  "vr-C-state": ["goldens/state/**", "core/themes.ts"],
+  "vr-C-class": ["goldens/class/**", "core/themes.ts"],
+  "vr-C-er": ["goldens/er/**", "core/themes.ts"],
+  "vr-C-mindmap": ["goldens/mindmap/**", "core/themes.ts"],
+  "vr-C-gantt": ["goldens/gantt/**", "core/themes.ts"],
+  "vr-C-pie": ["goldens/pie/**", "core/themes.ts"],
+  "vr-C-gitGraph": ["goldens/gitGraph/**", "core/themes.ts"],
+  "vr-C-timeline": ["goldens/timeline/**", "core/themes.ts"],
+  "vr-C-journey": ["goldens/journey/**", "core/themes.ts"],
+  "vr-C-xychart": ["goldens/xychart/**", "core/themes.ts"],
+  "vr-C-quadrant": ["goldens/quadrant/**", "core/themes.ts"]
 }

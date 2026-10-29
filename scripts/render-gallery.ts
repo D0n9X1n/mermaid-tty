@@ -1,37 +1,62 @@
 // node scripts/render-gallery.ts [OUT_DIR] [--png]: the review gallery, for judging the drawings outside a terminal. It
-// renders every non-reject fixture of fixtures/{flowchart,sequence} to SVG at 80 and 60 columns under nord, stacks the
-// CJK fixtures in cjk.svg and two fixtures under all 6 themes in palettes.svg, and links them all from index.html. It
-// self-checks every SVG, each glyph at x = col × CELL_W, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
+// renders every non-reject fixture of every fixtures/<type> folder but corpus to SVG at 80 and 60 columns under nord,
+// stacks A's CJK fixtures in cjk.svg and each Tier 1 type's in cjk-<type>.svg, puts A's two fixtures and each Tier 1
+// type's first ok fixture under all 6 themes in palettes.svg, and links them all from index.html. Every SVG is B's toSvg
+// page, the README assets' serializer. It self-checks every SVG, with B's misplaced and with offGrid, which measures
+// columns on its own, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Rows } from '../core/render.ts'
+import { TIER1 } from '../core/registry.ts'
+import type { Rows, Span } from '../core/render.ts'
 import { renderMermaid } from '../core/render.ts'
 import { THEMES } from '../core/themes.ts'
+import { width } from '../core/width.ts'
 import { isMain } from './lib/is-main.ts'
-import { esc } from './lib/svg.ts'
-import { CELL_W, offGrid, rowsToSvg } from './render-svg.ts'
+import { CELL, esc, misplaced, type Styled, toSvg } from './lib/svg.ts'
+import { DARK_KEYS, offGrid } from './render-svg.ts'
 
 const FIXTURES = fileURLToPath(new URL('../fixtures/', import.meta.url))
 const WIDTHS = [80, 60]
 type Section = { theme: string; id: string; cols: number }
 
+// The type folders under fixtures/, corpus excepted: flowchart, sequence and the Tier 1 types in that order, then any other.
+const ORDER = ['flowchart', 'sequence', ...TIER1]
+const types = (): string[] => {
+  const dirs = readdirSync(FIXTURES, { withFileTypes: true }).filter(e => e.isDirectory() && e.name !== 'corpus').map(e => e.name)
+  return [...ORDER.filter(t => dirs.includes(t)), ...dirs.filter(t => !ORDER.includes(t)).sort()]
+}
 // The ids of type's fixtures, the rejects excepted, sorted.
 const ids = (type: string) => readdirSync(join(FIXTURES, type)).filter(f => f.endsWith('.mmd') && !f.includes('-reject-')).map(f => f.slice(0, -4)).sort()
-// The rows core draws of the fixture, whose type begins its id, or null when core falls back.
-const draw = ({ theme, id, cols }: Section) =>
-  renderMermaid(readFileSync(join(FIXTURES, id.slice(0, id.indexOf('-')), `${id}.mmd`), 'utf8'), { columns: cols, theme })
+// A fixture's source, by id: its type begins its id.
+const source = (id: string) => readFileSync(join(FIXTURES, id.slice(0, id.indexOf('-')), `${id}.mmd`), 'utf8')
+// Whether a source holds Han, Kana or Hangul.
+const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
 
-// Writes the gallery into out, rendering with toSvg, a seam for the tests, and self-checks every SVG. Returns the
-// problems, each led by its file: a fixture core fell back on, and each glyph not at x = col × CELL_W.
-export function gallery(out: string, toSvg: (rows: Rows) => string = rowsToSvg): { problems: string[] } {
+// A color as hex: a '#rrggbb' as given, a ThemeKey through T30's DARK_KEYS. Anything else throws.
+function hex(c: string): string {
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c
+  if (Object.hasOwn(DARK_KEYS, c)) return DARK_KEYS[c]!
+  throw new Error(`render-gallery: no color for ${JSON.stringify(c)}`)
+}
+// A span as B's Styled, as the README assets style it (render-image.ts): dim draws in inactive, no color in text.
+export const styled = (sp: Span): Styled => ({ text: sp.text, fg: sp.dimColor ? DARK_KEYS.inactive! : sp.color ? hex(sp.color) : DARK_KEYS.text!,
+  ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}), ...(sp.bold ? { bold: true } : {}) })
+// The rows core draws of a section's fixture, or null when core falls back.
+const draw = ({ theme, id, cols }: Section) => renderMermaid(source(id), { columns: cols, theme })
+
+// Writes the gallery into out, serializing with svg (B's toSvg by default; a seam for the tests), and self-checks every
+// SVG. Returns the problems, each led by its file: a fixture core fell back on, a Tier 1 type with no CJK fixture, and
+// each glyph B's misplaced finds off its cell or offGrid finds not at x = col × CELL.
+export function gallery(out: string, svg: (rows: Styled[][], title: string) => string = (rows, title) => toSvg(rows, width, title)):
+  { problems: string[] } {
   mkdirSync(out, { recursive: true })
   const problems: string[] = []
   const write = (file: string, rows: Rows) => {
-    const svg = toSvg(rows)
-    writeFileSync(join(out, file), svg)
-    problems.push(...offGrid(svg, rows, CELL_W).map(p => `${file}: ${p}`))
+    const s = rows.map(row => row.map(styled)), page = svg(s, file.slice(0, -'.svg'.length))
+    writeFileSync(join(out, file), page)
+    problems.push(...[...misplaced(page, s, width), ...offGrid(page, rows, CELL)].map(p => `${file}: ${p}`))
   }
   // A sheet stacks its sections, each under a bold label and followed by a blank row.
   const sheet = (file: string, sections: Section[]) => write(file, sections.flatMap((s): Rows => {
@@ -39,8 +64,9 @@ export function gallery(out: string, toSvg: (rows: Rows) => string = rowsToSvg):
     if (!rows) problems.push(`${file}: core fell back on ${label}`)
     return [[{ text: label, bold: true }], ...(rows ?? []), []]
   }))
-  const groups: [string, string[]][] = [['sheets', ['cjk.svg', 'palettes.svg']]]
-  for (const type of ['flowchart', 'sequence']) {
+  const all = types(), tier1 = TIER1.filter(t => all.includes(t)), nord = (id: string) => WIDTHS.map(cols => ({ theme: 'nord', id, cols }))
+  const groups: [string, string[]][] = [['sheets', ['cjk.svg', ...tier1.map(t => `cjk-${t}.svg`), 'palettes.svg']]]
+  for (const type of all) {
     const files: string[] = []
     for (const id of ids(type)) for (const cols of WIDTHS) {
       const file = `${id}@${cols}.svg`, rows = draw({ theme: 'nord', id, cols })
@@ -48,8 +74,14 @@ export function gallery(out: string, toSvg: (rows: Rows) => string = rowsToSvg):
     }
     groups.push([type, files])
   }
-  sheet('cjk.svg', ['flowchart-ok-40', 'sequence-ok-26'].flatMap(id => WIDTHS.map(cols => ({ theme: 'nord', id, cols }))))
-  sheet('palettes.svg', ['flowchart-ok-40', 'sequence-ok-38'].flatMap(id => Object.keys(THEMES).map(theme => ({ theme, id, cols: 80 }))))
+  sheet('cjk.svg', ['flowchart-ok-40', 'sequence-ok-26'].flatMap(nord))
+  for (const t of tier1) {
+    const cjk = ids(t).filter(id => id.includes('-ok-') && CJK.test(source(id)))
+    if (!cjk.length) problems.push(`cjk-${t}.svg: no ok fixture of ${t} holds Han, Kana or Hangul`)
+    sheet(`cjk-${t}.svg`, cjk.flatMap(nord))
+  }
+  const firsts = tier1.flatMap(t => ids(t).find(id => id.includes('-ok-')) ?? [])
+  sheet('palettes.svg', ['flowchart-ok-40', 'sequence-ok-38', ...firsts].flatMap(id => Object.keys(THEMES).map(theme => ({ theme, id, cols: 80 }))))
   writeFileSync(join(out, 'index.html'), index(groups))
   return { problems }
 }
