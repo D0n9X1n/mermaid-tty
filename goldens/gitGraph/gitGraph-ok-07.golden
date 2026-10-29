@@ -1,0 +1,54 @@
+@60
+Release log
+╷     main
+●     init
+├─╮   hotfix
+│ ●   fix typo
+├─┼─╮ feature/x.y
+│ │ ●
+◉─┴─┘
+@60 roles
+TTTTTTTTTTT
+1     !!!!
+1     LLLL
+222   @@@@@@
+1 2   LLLLLLLL
+33333 ###########
+1 2 3
+13333
+@80
+Release log
+╷     main
+●     init
+├─╮   hotfix
+│ ●   fix typo
+├─┼─╮ feature/x.y
+│ │ ●
+◉─┴─┘
+@80 roles
+TTTTTTTTTTT
+1     !!!!
+1     LLLL
+222   @@@@@@
+1 2   LLLLLLLL
+33333 ###########
+1 2 3
+13333
+@120
+Release log
+╷     main
+●     init
+├─╮   hotfix
+│ ●   fix typo
+├─┼─╮ feature/x.y
+│ │ ●
+◉─┴─┘
+@120 roles
+TTTTTTTTTTT
+1     !!!!
+1     LLLL
+222   @@@@@@
+1 2   LLLLLLLL
+33333 ###########
+1 2 3
+13333

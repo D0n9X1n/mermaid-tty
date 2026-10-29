@@ -1,0 +1,10 @@
+// tests/golden/gitGraph_test.ts — gitGraph fixtures (plan C T81): coverage rows, and lane and tag inks.
+import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
+import { renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'; import { coverageOf, fx, spanOf } from './c-lib.ts'
+const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/gitGraph').map(f => f.replace('.mmd', ''))
+test('A5: every gitGraph coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'gitGraph', ids), []))
+test('A7: each lane takes a series color for its glyphs and name; tags take the note role', () => {
+  const n = THEMES.nord, R = (id: string) => renderMermaid(fx(id), { columns: 80, theme: 'nord' })!
+  assert.deepEqual([spanOf(R('gitGraph-ok-02'), /^main$/)?.color, spanOf(R('gitGraph-ok-02'), /^develop$/)?.color], [n.series.s1, n.series.s2])
+  assert.equal(spanOf(R('gitGraph-ok-01'), /^\[v1\.0\.0\]$/)?.color, n.roles.note)
+})
