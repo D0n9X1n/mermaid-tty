@@ -46,3 +46,5 @@ jobs:
           node-version: 24
       - run: npm ci --prefix scripts/e2e
       - run: cd scripts/e2e && node -e "import('node-pty').then(m => console.log('node-pty spawn:', typeof m.spawn))"
+      # The screen reader and the PTY/tmux drivers on each OS; tmux tests skip where tmux is absent (Windows).
+      - run: node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts
