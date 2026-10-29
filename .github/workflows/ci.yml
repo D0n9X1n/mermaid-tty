@@ -48,3 +48,23 @@ jobs:
       - run: cd scripts/e2e && node -e "import('node-pty').then(m => console.log('node-pty spawn:', typeof m.spawn))"
       # The screen reader and the PTY/tmux drivers on each OS; tmux tests skip where tmux is absent (Windows).
       - run: node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts
+  # TEMPORARY (diagnosis): why a tmux server exits at once on ubuntu-latest. Bisects the env and options; removed once known.
+  tmux-debug:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: |
+          tmux -V; locale -a | grep -i utf || true; echo "TERM=${TERM:-unset} TMUX_TMPDIR=${TMUX_TMPDIR:-unset} uid=$(id -u)"
+          d="$(mktemp -d)"; cd "$d"
+          try() { local name="$1"; shift; mkdir -p "$d/$name"; (cd "$d/$name" && "$@" >out 2>&1; echo "$name exit=$?"; cat out); }
+          OPTS=(set -g window-size manual \; set -g default-size 100x40 \; set -g default-terminal xterm-256color \; set -g set-clipboard on \; set -g remain-on-exit on \;)
+          try 1-plain        tmux -vv -L s1 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
+          try 2-envi-full    env -i HOME="$HOME" PATH="$PATH" USER=e2e TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash tmux -vv -L s2 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
+          try 3-envi-bare    env -i HOME="$HOME" PATH="$PATH" tmux -vv -L s3 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
+          try 4-opts-plain   tmux -vv -L s4 -f /dev/null "${OPTS[@]}" new-session -d -s t -x 100 -y 40 -- sleep 30
+          try 5-opts-envi    env -i HOME="$HOME" PATH="$PATH" USER=e2e TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash tmux -vv -L s5 -f /dev/null "${OPTS[@]}" new-session -d -s t -x 100 -y 40 -- sleep 30
+          try 6-opts-noclip  tmux -vv -L s6 -f /dev/null set -g window-size manual \; set -g default-size 100x40 \; set -g remain-on-exit on \; new-session -d -s t -x 100 -y 40 -- sleep 30
+          for f in "$d"/*/tmux-server-*.log; do echo "== $f"; tail -n 15 "$f"; done
+          tmux -L s1 kill-server 2>/dev/null; true
