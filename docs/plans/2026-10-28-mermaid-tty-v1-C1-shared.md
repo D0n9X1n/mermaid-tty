@@ -7,23 +7,22 @@
 - In a layout, `heading(title)` is short for `heading(title, 'title', 'title', cols)`, skipped when the title is null.
 
 ### T40: Tier gate, `Step`, Tier 1 stubs, registration
-**Group** G1 · **Deps** T12, T19 · **Covers** spec C Tiers and Registry, index §9, A5.errors (disabled keywords), B1 (the README table's source)
+**Group** G1 · **Deps** T12, T19 · **Covers** spec C Tiers and Registry, index §9, A5.errors (disabled keywords), B1 (the support table's source)
 **Files:**
 - **Modify:**
-  - `core/registry.ts`;
-  - `core/fit.ts` (`Step`);
-  - `core/render.ts` (registers `TIER1_MODULES`);
+  - `core/registry.ts`, `core/fit.ts` (`Step`);
+  - `core/diagrams/flowchart/layout.ts` (a `Step` guard before `SPACING[step]`);
+  - `core/render.ts` (imports `./diagrams/all.ts`);
   - `tests/core/fit_test.ts` and `tests/core/render_test.ts`.
 - **Create:**
   - `core/diagrams/stub.ts` and `core/diagrams/all.ts`;
-  - `core/diagrams/<type>/layout.ts` for each of the 11 Tier 1 types, each holding `export const <name> = stub('<type>')`.
-- **Test:** `tests/core/registry-tiers_test.ts`.
+  - `core/diagrams/<type>/layout.ts` for each of the 11 Tier 1 types, each holding `export const <name> = stub('<type>')` and `register(<name>)`.
+- **Test:** `tests/core/registry-tiers_test.ts`. T88 owns the vr-C record check.
 - [ ] **Failing test:**
 ```ts
-import test from 'node:test'; import assert from 'node:assert/strict'; import { readdirSync, readFileSync } from 'node:fs'
+import test from 'node:test'; import assert from 'node:assert/strict'
 import { ENABLED, TIER1, TIER2, TIER2_PASSED, KEYWORDS, lookup, supportTable } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'; import { TIER1_MODULES } from '../../core/diagrams/all.ts'
-import { parseRecord } from '../../scripts/check-review-hashes.ts'
 const kws = (t: string) => Object.keys(KEYWORDS).filter(k => KEYWORDS[k] === t)
 test('A5.errors: ENABLED is A, Tier 1 and the passed Tier 2 types; every other Tier 2 keyword is disabled', () => {
   assert.deepEqual([...ENABLED], ['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED])
@@ -31,12 +30,6 @@ test('A5.errors: ENABLED is A, Tier 1 and the passed Tier 2 types; every other T
   assert.deepEqual([...TIER2].sort(), ['architecture', 'block', 'c4', 'kanban', 'packet', 'radar', 'requirement', 'sankey', 'treemap', 'zenuml'])
   for (const t of TIER2.filter(t => !TIER2_PASSED.includes(t))) for (const k of kws(t)) assert.deepEqual(lookup(k), { reason: `disabled:${t}` }, k)
   assert.deepEqual(explain('radar-beta\naxis A', { columns: 80 }), { reason: 'disabled:radar' })
-})
-test('A5.errors: a Tier 2 type is enabled only with a vr-C-<type> pass record', () => {
-  const passed = readdirSync('docs/reviews').filter(f => f.endsWith('.md')).map(f => parseRecord(f, readFileSync(`docs/reviews/${f}`, 'utf8')))
-    .flatMap(r => ('scope' in r && r.verdict === 'pass' ? [r.scope] : []))
-  for (const t of TIER2_PASSED) assert.ok(passed.includes(`vr-C-${t}`), t)
-  assert.equal(TIER2_PASSED.every(t => ENABLED.has(t)), true)
 })
 test('A5.errors: every Tier 1 keyword resolves to its registered module', () => {
   assert.equal(TIER1_MODULES.length, 11); assert.ok(TIER1_MODULES.every(m => TIER1.includes(m.type)))
@@ -56,47 +49,71 @@ test('B1: supportTable lists each ENABLED type with its header keywords', () => 
     - `ENABLED = new Set(['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED])`.
     - `supportTable()` gives the two header rows, then one row per `ENABLED` type, listing its non-null keywords in `KEYWORDS` order.
   - **`fit.ts`:** widen `Step` as in §4.
+  - **`flowchart/layout.ts`:** the guard `isSpacingStep = (s: Step): s is keyof typeof SPACING => Object.hasOwn(SPACING, s)` comes first. `layout` returns `fail('step')` unless the step passes it, so `SPACING[step]` still typechecks (TS7053). Flowchart's `steps` never yields another step, so no drawing changes.
   - **`stub.ts`:** `stub(type)` returns a module whose `parse` and `layout` fail `unimplemented:<type>` and whose `steps` is `[]`.
-  - **Each `<type>/layout.ts`:** exports `state`, `classDiagram`, `er`, `gantt`, `pie`, `xychart`, `quadrant`, `journey`, `mindmap`, `gitGraph` or `timeline` as `stub(…)`. The type's module task replaces the file.
-  - **`all.ts`:** imports the 11 modules and exports `TIER1_MODULES: readonly DiagramModule<any>[]`.
-  - **`render.ts`:** `for (const m of TIER1_MODULES) register(m)`, next to A's registrations.
-  - **A's tests:** A's tests used `pie` as the disabled example, and pie is now Tier 1. Use `radar-beta` (`disabled:radar`) instead:
-    - in `fit_test.ts`: lines 15–17, the sweep at 86–87 (a Tier 1 keyword now expects `unregistered:<type>`), and the stubs at 92–116;
-    - in `render_test.ts`: the "unsupported types return null" source becomes `radar-beta\naxis A`.
-
-    Their titles keep their IDs.
-- [ ] **Done when:** `node --test tests/core/registry-tiers_test.ts tests/core/fit_test.ts tests/core/render_test.ts` passes.
+  - **Each `<type>/layout.ts`:** exports `state`, `classDiagram`, `er`, `gantt`, `pie`, `xychart`, `quadrant`, `journey`, `mindmap`, `gitGraph` or `timeline` as `stub(…)`. It registers itself at the bottom, as flowchart's does. The type's module task replaces the file and keeps the `register` line.
+  - **`all.ts`:** imports the 11 files and exports `TIER1_MODULES: readonly DiagramModule<any>[]`. `render.ts` adds `import './diagrams/all.ts'` after A's two module imports.
+  - **A's tests:** pie is now Tier 1, so each assertion that used it as the disabled example uses `radar-beta` (`disabled:radar`) instead. Titles keep their IDs.
+    - `fit_test.ts:15–16`: the title says "ENABLED is A, Tier 1 and the passed Tier 2 types". The check is `[...ENABLED].sort()` against `['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED].sort()`.
+    - `:18`: `lookup('radar-beta axis A')` is `disabled:radar`.
+    - `:87`: the sweep keeps its formula, over the keywords whose type is null or in `TIER2`. Tier 1 keywords are checked by this task's second test, which loads `all.ts`.
+    - `:100–104`: `register(stub('radar'))`, then `lookup('radar-beta')` is `disabled:radar`. Registration still does not enable a type.
+    - `:113–115`: `'radar-beta: axis A'` and `'radar-beta\taxis A'` are `disabled:radar`.
+    - `:118`: `lookup('  radar-beta')` is `disabled:radar`.
+    - `render_test.ts:14`: the unsupported source is `'radar-beta\naxis A'`.
+    - `:22`: the first-Fail check is `explain('radar-beta\naxis A', O)` → `disabled:radar`.
+    - `:118` (`explain('pie', …)` → `bad-columns`) is unchanged, since columns are checked first.
+- [ ] **Done when:**
+  - `node --test tests/core/registry-tiers_test.ts tests/core/fit_test.ts tests/core/render_test.ts` passes;
+  - `node scripts/typecheck.ts` passes;
+  - `node scripts/check.ts A4` passes, with every golden unchanged.
 - [ ] **Commit:** `git commit -m "Gate Tier 2 types and register Tier 1 stubs"`
 
-### T41: Source config keys
-**Group** G1 · **Deps** — · **Covers** matrix common rule 3 (honored config keys), index §5.1
+### T41: Source config keys, a strict YAML subset
+**Group** G1 · **Deps** — · **Covers** matrix common rule 3 (honored config keys), index §5.1, fix-cycle finding 3
 **Files:**
-- **Modify:** `core/source.ts`, and `tests/core/source_test.ts`, where every `Source` literal gains `config: {}`.
+- **Modify:** `core/source.ts`, and `tests/core/source_test.ts`, where every `Source` literal gains `config: {}` and every other assertion is kept.
 - **Test:** `tests/core/source-config_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readSource, type Source } from '../../core/source.ts'
-const cfg = (fm: string) => (readSource(`---\n${fm}\n---\ngitGraph\ncommit`) as Source).config
-test('A5: frontmatter config scalars become dotted keys; other keys are ignored', () => {
+const src = (fm: string) => readSource(`---\n${fm}\n---\ngitGraph\ncommit`)
+const cfg = (fm: string) => (src(fm) as Source).config
+test('A5: frontmatter config scalars become dotted keys; other top-level keys are ignored', () => {
   assert.deepEqual(cfg('title: Log\nconfig:\n  theme: dark\n  gitGraph:\n    mainBranchName: "trunk"\n    mainBranchOrder: 2\ndisplayMode: compact'),
     { theme: 'dark', 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': '2' })
-  assert.deepEqual(cfg('config:\n  mindmap:\n    colorBy: depth\n  timeline:\n    disableMulticolor: true'),
+  assert.deepEqual(cfg('config:\n  mindmap:\n    colorBy: depth # a comment\n\n  timeline:\n    disableMulticolor: true'),
     { 'mindmap.colorBy': 'depth', 'timeline.disableMulticolor': 'true' })
-  assert.deepEqual(cfg('config:\n  pie:\n    textPosition: 0.5\n  themeVariables:\n    - a'), { 'pie.textPosition': '0.5' })
+  assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
   assert.deepEqual((readSource('pie\n"a" : 1') as Source).config, {})
 })
-test('A5.errors: a tab in frontmatter indentation falls back', () =>
-  assert.deepEqual(readSource('---\nconfig:\n\tmindmap:\n---\nmindmap\nA'), { reason: 'frontmatter' }))
+test('A5.errors: a config block outside the strict YAML subset falls back', () => {
+  const bad = ['config:\n  pie: { textPosition: 0.5 }', 'config:\n  themeVariables:\n    - a', 'config:\n  pie:\n    k: [1, 2]',
+    'config:\n  a: &x 1', 'config:\n  a: *x', 'config:\n  a: !!str 1', 'config:\n  a: |\n    text', 'config:\n  a: >\n    text',
+    'config:\n  a: one\n    two', 'config:\n  a: 1\n  a: 2', 'config:\n\tmindmap:', 'config:\n  a: "open', 'config:\n    a: 1\n  b: 2',
+    'config:\n  a:', 'config:\n  a: b: c', 'config:\n  a: "x\\q"']
+  for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
+})
 ```
 - [ ] **Run** `node --test tests/core/source-config_test.ts` → FAIL: `Expected values to be strictly deep-equal` (`config` is `undefined`).
-- [ ] **Implement:**
-  - **The block:** the unindented line `config:` opens it, and the next unindented line ends it.
-  - **Each line** that matches `^( *)([^\s:#-][^:]*):\s*(.*)$`: pop the stack entries whose indent is not less than this line's. With a value, set `config[[...keys, key].join('.')]` to the value with one matching `"`/`'` pair removed, as `title:` does. Without a value, push `[indent, key]`.
-  - **Skipped:** a `- ` list line.
-  - **Tabs:** a tab in any frontmatter line's leading whitespace fails `frontmatter`, as YAML does.
-  - **Default:** `config` is `{}` when there is no frontmatter. The top-level `title:` rule is unchanged.
-- [ ] **Done when:** `node --test tests/core/source-config_test.ts tests/core/source_test.ts` passes.
-- [ ] **Commit:** `git commit -m "Read frontmatter config keys as dotted paths"`
+- [ ] **Implement** in `core/source.ts`:
+  - **The block:** the unindented line `config:` opens it, and the next unindented line ends it. Other top-level keys keep A's reader, and the `title:` rule is unchanged.
+  - **Lines:** blank lines and lines whose first non-space is `#` are skipped. Every other line must be `<spaces><key>:` or `<spaces><key>: <scalar>`, where a key matches `[A-Za-z_][\w.-]*`. A tab in any frontmatter line's leading whitespace fails, as before.
+  - **Nesting:** keep a stack of open mappings, each with its indent.
+    - A key with no value opens a mapping, and the next line must be deeper.
+    - Any other line's indent must equal an open mapping's indent, which closes the deeper ones.
+    - A key repeated in one mapping fails.
+  - **Scalars** stay strings, set at `config[[...keys, key].join('.')]`:
+    - **Plain:** must not start with `[ ] { } , & * ! | > % @ # ' "`, a backtick, or `- `. It ends at ` #`, is trimmed, and must not contain `: `.
+    - **Double-quoted:** one line; `\"` and `\\` are its only escapes.
+    - **Single-quoted:** one line; `''` is one `'`.
+    - After a quoted scalar, only spaces and a ` #` comment may follow.
+  - **Errors:** anything else fails `frontmatter`. That includes a flow map or list, a sequence, an anchor, an alias, a tag, a block scalar, a multi-line scalar, a key with no value and no children, and bad indentation. A's pipeline already turns `frontmatter` into a fallback.
+  - **Default:** `config` is `{}` when there is no frontmatter.
+- [ ] **Done when:**
+  - `node --test tests/core/source-config_test.ts tests/core/source_test.ts` passes;
+  - `node scripts/check.ts A4` passes, with A's goldens unchanged.
+- [ ] **Commit:** `git commit -m "Read frontmatter config keys through a strict YAML subset"`
 
 ### T42: C's glyphs
 **Group** G1 · **Deps** — · **Covers** matrix common rule 12, A8.platforms
@@ -192,7 +209,7 @@ test('A4: horizontal and vertical eighth-block runs; zero draws nothing', () => 
 - [ ] **Commit:** `git commit -m "Add eighth-cell scales and bar glyph runs"`
 
 ### T45: Sheet: `heading` and `stack`
-**Group** G1 · **Deps** — · **Covers** matrix common rules 3 and 6 (title and header rows wrap at `columns`), A5.mutation-tests
+**Group** G1 · **Deps** — · **Covers** matrix common rules 3 and 6 (title and header rows wrap at `columns`), fix-cycle finding 10, A5.mutation-tests
 **Files:** create `core/charts/sheet.ts`. Test: `tests/core/sheet_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -207,6 +224,8 @@ test('A4: a title wraps at columns; stack keeps the parts in order and validates
   const d = stack([h, part('a', 'x'), part('b', 'y')], 10)
   assert.deepEqual(text(d), ['Release', 'plan for', 'Q3', 'x', 'y']); assert.equal(validate(d), null); assert.equal(d.columns, 10)
   assert.deepEqual(heading('Supercalifragilistic', 'title', 'title', 10), { reason: 'word-too-wide' })
+  const br = heading('one<br/>two', 'title', 'title', 10) as Drawing
+  assert.deepEqual(text(br), ['one', 'two']); assert.equal(validate(br), null)
 })
 test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', () =>
   assert.deepEqual(validate(stack([part('a', 'x'), part('a', 'x')], 10)), { reason: 'label-dup' }))
@@ -215,7 +234,7 @@ test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', (
 - [ ] **Implement:**
   - **`heading`:** wrap each `labelLines(text)` line at `columns`; a null wrap fails `word-too-wide`. Draw one row per piece, in `ink`, owned by `owner`.
     - The first piece of the first line has no join. A later piece carries its wrap join, and the first piece of line k > 0 carries `'\n'`.
-    - `expect` is `{ labels: [{ owner, text }], edges: [], edgeLabels: [] }`. The `title` role is drawn bold (A's `toRows`).
+    - `expect` is `{ labels: [{ owner, text: labelLines(text).join('\n') }], edges: [], edgeLabels: [] }`: the text as drawn, so a `<br/>` title validates. The `title` role is drawn bold (A's `toRows`).
   - **`stack`:**
     - Concatenate the parts' rows, padding each row with `null` to the widest part.
     - Shift each part's conflicts by its row offset, and concatenate the parts' `labels`, `edges` and `edgeLabels`.
@@ -224,37 +243,54 @@ test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', (
 - [ ] **Commit:** `git commit -m "Add chart headings and part stacking"`
 
 ### T46: Legend
-**Group** G2 · **Deps** T45 · **Covers** matrix common rule 7 (keys, wrapping, all or none), spec C rules 4 and 6, A5.mutation-tests
-**Files:** create `core/charts/legend.ts`. Test: `tests/core/legend_test.ts`.
+**Group** G3 · **Deps** T45, T87 · **Covers** matrix common rule 7 (keys, wrapping, all or none), spec C rules 4 and 6, fix-cycle finding 1, A5.mutation-tests
+**Files:** create `core/charts/legend.ts`; modify `core/charts/sheet.ts` (`stack` carries the contract fields). Test: `tests/core/legend_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { fieldKey, pointKey, legendRows, type LegendRow } from '../../core/charts/legend.ts'
-import { validate } from '../../core/validate.ts'; import type { Drawing } from '../../core/canvas.ts'; import { text } from './graph-fixture.ts'
-const row = (key: string, owner: string, s: string): LegendRow => ({ key, keyInk: 'label', owner, parts: [{ text: s, ink: 'value', owner }] })
+import { fieldKey, pointKey, legendRows, withLegend, type LegendRow } from '../../core/charts/legend.ts'
+import { validate } from '../../core/validate.ts'; import { createCanvas, type Drawing } from '../../core/canvas.ts'; import { text } from './graph-fixture.ts'
+const row = (key: string, item: string, s: string): LegendRow => ({ key, keyInk: 'label', item, cls: 'timing', parts: [{ text: s, ink: 'value', owner: item }] })
+// A body that draws each [key, item] in place on row 0, three cells apart.
+const body = (keys: readonly [string, string][]): Drawing => { const c = createCanvas(1, 12, 12)
+  keys.forEach(([key, item], i) => c.key(0, 3 * i, key, 'label', item, false)); return c.toDrawing({ labels: [], edges: [], edgeLabels: [] }) }
 test('A4: field keys a…z, aa…; point keys 1…; a row wraps under its text', () => {
   assert.deepEqual([0, 25, 26, 27, 701, 702].map(fieldKey), ['a', 'z', 'aa', 'ab', 'zz', 'aaa']); assert.deepEqual([0, 9, 11].map(pointKey), ['1', '10', '12'])
-  const d = legendRows([row('a', 't1.t:legend', '2024-01-01 · 10d'), row('aa', 't2.t:legend', 'one two')], 16) as Drawing
-  assert.deepEqual(text(d), ['a 2024-01-01 ·', '  10d', 'aa one two']); assert.equal(validate(d), null)
-  assert.equal(d.cells[0]![0]!.kind, 'cap'); assert.equal(d.cells[0]![2]!.kind, 'text')
+  const d = legendRows([row('a', 't1.t', '2024-01-01 · 10d'), row('aa', 't2.t', 'one two')], 16) as Drawing
+  assert.deepEqual(text(d), ['a 2024-01-01 ·', '  10d', 'aa one two'])
+  assert.equal(d.cells[0]![0]!.kind, 'key'); assert.equal(d.cells[0]![0]!.legend, true); assert.equal(d.cells[0]![2]!.kind, 'text')
   assert.deepEqual(legendRows([row('a', 'x', 'Supercalifragilistic')], 16), { reason: 'word-too-wide' })
 })
-test('A5.mutation-tests: a legend owner drawn in two rows is a duplicate', () =>
-  assert.deepEqual(validate(legendRows([row('a', 'n1:legend', 'memo'), row('b', 'n1:legend', 'memo')], 20) as Drawing), { reason: 'label-dup' }))
+test('A5.mutation-tests: withLegend lists every key, so a key missing in place, a stray key or a duplicate row fails', () => {
+  const rows = [row('a', 't1.t', 'one'), row('b', 't2.t', 'two')], keyable = [{ item: 't1.t', cls: 'timing' }, { item: 't2.t', cls: 'timing' }]
+  const ok = withLegend(body([['a', 't1.t'], ['b', 't2.t']]), rows, 12, keyable) as Drawing
+  assert.deepEqual(ok.expect.keys, [{ key: 'a', item: 't1.t', cls: 'timing' }, { key: 'b', item: 't2.t', cls: 'timing' }]); assert.equal(validate(ok), null)
+  assert.deepEqual(validate(withLegend(body([['a', 't1.t']]), rows, 12, keyable) as Drawing), { reason: 'key-missing' })
+  assert.deepEqual(validate(withLegend(body([['a', 't1.t'], ['b', 't2.t']]), rows.slice(0, 1), 12, keyable) as Drawing), { reason: 'key-stray' })
+  assert.deepEqual(validate(legendRows([row('a', 'n1', 'memo'), row('b', 'n1', 'memo')], 20) as Drawing), { reason: 'label-dup' })
+})
 ```
 - [ ] **Run** `node --test tests/core/legend_test.ts` → FAIL: `Cannot find module …/core/charts/legend.ts`.
 - [ ] **Implement:**
   - **Keys:** `fieldKey(i)` is bijective base 26: `i < 26 ? letter(i) : fieldKey(⌊i/26⌋ − 1) + letter(i mod 26)`. `pointKey(i)` is `String(i + 1)`.
+  - **Types** (index §4):
+    - `LegendRow = { key; keyInk; item; cls; parts }`;
+    - `LegendPart = { text; ink; owner: string | null }`.
+    - The item is the keyed thing's own id, such as a note, `r3:label` or `t2.t`. No `:legend` owner exists.
   - **`legendRows`**, for each row:
-    - Draw the key as caps in `keyInk`, owned by `row.owner`. The text starts at `start = width(key) + 1`.
+    - Draw the key with `cv.key(r, 0, key, keyInk, item, true)`. The text starts at `start = width(key) + 1`.
     - The parts' words pack greedily into `columns − start` cells, with one space between parts. Continuation rows indent to `start`.
     - A word wider than the field fails `word-too-wide`.
     - Each part's first piece has no join, so it starts its own instance; a continuation carries its wrap join.
     - An `owner: null` part is drawn as caps.
     - `expect` lists one `{ owner, text }` per owned part of each row.
-  - **`withLegend(d, rows, columns)`:** `rows.length ? stack([d, legendRows(…)], columns) : d`, passing a Fail through.
-- [ ] **Done when:** `node --test tests/core/legend_test.ts` passes.
-- [ ] **Commit:** `git commit -m "Add field and point keys and wrapped legend rows"`
+  - **`withLegend(d, rows, columns, keyable = [])`:**
+    - A Fail passes through.
+    - With rows, it gives `stack([d, legendRows(rows, columns)], columns)`; otherwise it gives d.
+    - It always appends `rows.map(r => ({ key: r.key, item: r.item, cls: r.cls }))` to `expect.keys`, and `keyable` to `expect.keyable`. So T87 checks the in-place keys the body drew.
+  - **`stack`** (T45) also concatenates the optional `bars`, `members`, `keys` and `keyable`. `edges[].ends` travel with their edge.
+- [ ] **Done when:** `node --test tests/core/legend_test.ts tests/core/sheet_test.ts tests/core/validate-keys_test.ts` passes.
+- [ ] **Commit:** `git commit -m "Add field and point keys and keyed legend rows"`
 
 ### T47: Axis
 **Group** G1 · **Deps** — · **Covers** gantt and horizontal xychart axes (matrix), spec C rule 6 (nothing collides)
@@ -282,25 +318,31 @@ test('A4: ticks sit at their cells; a label that leaves the field, or meets the 
 - [ ] **Commit:** `git commit -m "Add the chart tick rule and its labels"`
 
 ### T48: C golden harness
-**Group** G2 · **Deps** T20, T40, T42 · **Covers** spec C Test strategy (fixtures at 60/80/120, rejections, fit −1/0/+1, no border-only rows), matrix common rule 11, A4, A4.fit-ladder, A5.errors, A3
+**Group** G2 · **Deps** T20, T40, T42 · **Covers** spec C Test strategy (fixtures at 60/80/120, rejections, fit −1/0/+1, no border-only rows), matrix common rule 11 and the Coverage table, fix-cycle findings 11 and 12, A4, A4.fit-ladder, A5.errors, A3, A8.platforms
 **Files:**
 - **Create:** `tests/golden/c-lib.ts` (index §4) and `tests/golden/c-golden_test.ts`.
 - **Modify:**
-  - `tests/golden/golden-lib.ts`: export `roleCode(cell)`, adding `V` for a `value` text cell and `v` for any other `value` cell;
+  - `tests/golden/golden-lib.ts`: export `roleCode(cell)`, A's `code` with one change. A `text` cell in series ink sᵢ codes as `!@#$%^&*`[i − 1], so the glyph scan never reads source text as a drawn series glyph. A drawn series cell keeps `1`–`8`. No A golden has a series ink, so A's goldens stay byte-identical.
   - `docs/reviews/required.json`: `vr-A` becomes `["goldens/flowchart/**", "goldens/sequence/**", "core/themes.ts"]`, so C's goldens never reopen A's review.
 - [ ] **Failing test:**
 ```ts
-import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'; import { explain } from '../../core/render.ts'; import { createCanvas } from '../../core/canvas.ts'
-import { goldenOf, widest, roleCode } from './golden-lib.ts'; import { TIER1_DIRS, expectLines, fx, borderRows, coverageOf } from './c-lib.ts'
+import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, mkdtempSync } from 'node:fs'
+import { join } from 'node:path'; import { tmpdir } from 'node:os'; import { explain } from '../../core/render.ts'; import { createCanvas } from '../../core/canvas.ts'
+import { goldenOf, goldenGlyphs, widest, roleCode } from './golden-lib.ts'; import { GATED_DIRS, LADDER, expectLines, fx, borderRows, coverageOf } from './c-lib.ts'
 const W = [60, 80, 120], X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
-for (const type of TIER1_DIRS) for (const f of existsSync(`fixtures/${type}`) ? readdirSync(`fixtures/${type}`).sort() : []) {
-  const id = f.replace(/\.mmd$/, ''), src = fx(id), lines = expectLines(src)
-  if (id.includes('-reject-')) test(`A5.errors: ${id} falls back`, () => {
-    for (const e of lines.length ? lines : W.map(cols => ({ cols, step: 'fallback' as const }))) {
-      const r = X(src, e.cols); if (e.step === 'fallback') assert.ok('reason' in r, `${id}@${e.cols}`); else assert.equal(r.step, e.step, `${id}@${e.cols}`) }
+const MATRIX = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8')
+for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
+  const ids = readdirSync(`fixtures/${type}`).filter(f => f.endsWith('.mmd')).map(f => f.slice(0, -4)).sort()
+  test(`A5: ${type} coverage rows cite exactly its fixtures, and each ladder fixture carries its expect lines`, () => {
+    assert.deepEqual(coverageOf(MATRIX, type, ids), [])
+    for (const id of LADDER[type] ?? []) assert.ok(ids.includes(id) && expectLines(fx(id)).length > 0, id)
   })
-  else {
+  for (const id of ids) {
+    const src = fx(id), lines = expectLines(src)
+    if (id.includes('-reject-')) { test(`A5.errors: ${id} falls back`, () => {
+      for (const e of lines.length ? lines : W.map(cols => ({ cols, step: 'fallback' as const }))) {
+        const r = X(src, e.cols); if (e.step === 'fallback') assert.ok('reason' in r, `${id}@${e.cols}`); else assert.equal(r.step, e.step, `${id}@${e.cols}`) }
+    }); continue }
     test(`A4: ${id} renders, validates and matches its golden at 60/80/120, with no border-only rows`, () => {
       const g = goldenOf(W.map(w => { const r = X(src, w); assert.ok(!('reason' in r), `${id}@${w} ${r.reason}`)
         assert.deepEqual(borderRows(r.drawing), [], `${id}@${w}`); return [w, r.drawing] as const }))
@@ -321,23 +363,48 @@ test('A3: borderRows flags an item row with caps and no text; glyph-only owners 
   const c = createCanvas(2, 6, 6); c.cap(0, 0, '[', 'node', 'A'); c.text(0, 2, 'x', 'node', 'A'); c.cap(1, 0, '[', 'node', 'A'); c.cap(1, 3, '●', 'node', 'S')
   assert.deepEqual(borderRows(c.toDrawing({ labels: [{ owner: 'A', text: 'x' }], edges: [], edgeLabels: [] })), ['A@1'])
 })
-test('A5: coverageOf finds cited-but-missing and ok-but-uncited fixtures', () =>
-  assert.deepEqual(coverageOf('## Coverage\n| pie | x | pie-ok-01, pie-reject-09 |', 'pie', ['pie-ok-01', 'pie-ok-02', 'pie-reject-01']), ['missing pie-reject-09', 'uncited pie-ok-02']))
+test('A5: coverageOf finds missing, uncited and empty rows, and a type with no rows', () => {
+  assert.deepEqual(coverageOf('## Coverage\n| pie | x | pie-ok-01, pie-reject-09 |\n| pie | y |  |', 'pie', ['pie-ok-01', 'pie-ok-02', 'pie-reject-01']),
+    ['empty: y', 'missing pie-reject-09', 'uncited pie-ok-02'])
+  assert.deepEqual(coverageOf('## Coverage\n| pie | x | pie-ok-01 |', 'gantt', ['gantt-ok-01']), ['no rows: gantt'])
+})
 test("VR.reviewers: vr-A covers only A's goldens and the themes", () => assert.deepEqual(JSON.parse(readFileSync('docs/reviews/required.json', 'utf8'))['vr-A'],
   ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts']))
-test('A4: a value cell has role code V (text) or v (drawn)', () => assert.deepEqual([roleCode({ ch: '1', role: 'value', kind: 'text', owners: ['x'], dirs: 0 }),
-  roleCode({ ch: '┬', role: 'value', kind: 'cap', owners: ['x'], dirs: 0 })], ['V', 'v']))
+test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as 1–8, and the glyph scan skips source text', () => {
+  const cell = (role: any, kind: any) => ({ ch: 'x', role, kind, owners: ['x'], dirs: 0 })
+  assert.deepEqual([cell('value', 'text'), cell('value', 'cap'), cell('s1', 'text'), cell('s8', 'text'), cell('s2', 'cap'), cell('note', 'key')].map(roleCode),
+    ['V', 'v', '!', '*', '2', 'o'])
+  const dir = mkdtempSync(join(tmpdir(), 'cg-')); writeFileSync(join(dir, 'x.golden'), '@80\n中文 █\n@80 roles\n!~!~ 1\n')
+  assert.deepEqual(goldenGlyphs(dir), [])
+})
 ```
 - [ ] **Run** `node --test tests/golden/c-golden_test.ts` → FAIL: `Cannot find module …/tests/golden/c-lib.ts`.
 - [ ] **Implement `c-lib.ts`:**
-  - **`TIER1_DIRS`:** the 11 fixture folders; each is also its Coverage type name.
+  - **`GATED_DIRS`:** the 11 Tier 1 fixture folders, then each type in `TIER2_PASSED` (T88). Each is also its Coverage type name. A type is checked from the task that adds its fixture folder; each type's fixtures land in one task.
+  - **`LADDER: Readonly<Record<string, readonly string[]>>`** lists the fixtures that must carry `%% expect` lines:
+    - state-ok-18…22, class-ok-24…28, er-ok-18…22;
+    - gantt-ok-02, -04, -05, -12, -13, -15, -16 and gantt-reject-14;
+    - pie-ok-08, -09 and pie-reject-06;
+    - xychart-ok-09, -10 and xychart-reject-12;
+    - quadrant-ok-08, -09 and quadrant-reject-09;
+    - journey-ok-05, -06 and journey-reject-08;
+    - mindmap-ok-09…12 and mindmap-reject-06;
+    - gitGraph-ok-10 and gitGraph-reject-07;
+    - timeline-ok-10…12 and timeline-reject-07.
   - **`expectLines`** reads `^%% expect (\d+) (\w+)(?: widest (\d+))?$`, omitting `widest` when it is absent.
   - **`fx(id)`** reads `fixtures/<id less -(ok|reject)-NN>/<id>.mmd`.
-  - **`borderRows(d)`:** for each owner named in any text or `cont` cell's owners, every row holding that owner's `cap` or `fill` cell must hold one of its text cells. Owners with no text, such as marks, bars, connectors and `pt:` keys, pass.
-  - **`coverageOf`:** the ids cited on `| <type> |` rows after `## Coverage`. It returns `missing <id>` for each cited id not in `fixtures`, then `uncited <id>` for each `-ok-` fixture that is never cited, each sorted.
+  - **`borderRows(d)`:** for each owner named in any text or `cont` cell's owners, every row holding that owner's `cap` or `fill` cell must hold one of its text cells. Owners with no text, such as marks, bars, connectors and point keys, pass; a `key` cell is neither cap nor fill.
+  - **`coverageOf(matrix, type, ids)`:** reads the `| <type> | <feature> | <ids> |` rows after `## Coverage`. It returns, each group sorted:
+    - `empty: <feature>` for a row citing no id;
+    - `missing <id>` for each cited id not in `ids`;
+    - `uncited <id>` for each `-ok-` id never cited;
+    - only `no rows: <type>` when the type has no row.
   - **`spanOf`:** the first span whose text matches.
   - **`hrun` and `vrun`:** sum the eighths of consecutive `▏…█` caps rightward from `(row, col)`, or of `▁…█` caps upward from row `base − 1`.
-- [ ] **Done when:** `node --test tests/golden/c-golden_test.ts tests/golden/golden_test.ts` passes. With no C fixtures yet, only the self-tests run, and A's goldens are unchanged.
+- [ ] **Implement `golden-lib.ts`:** export `roleCode`, used by `goldenOf`. `scan` still checks the `[a-z0-9]` codes, so a shifted series code is skipped like any other source text.
+- [ ] **Done when:**
+  - `node --test tests/golden/c-golden_test.ts tests/golden/golden_test.ts` passes. With no C fixtures yet, only the self-tests run.
+  - `node scripts/check.ts A4` passes, with A's goldens byte-identical.
 - [ ] **Commit:** `git commit -m "Add the C golden harness and narrow vr-A to A's goldens"`
 
 **Every fixture task (T56–T84)** follows the same pattern:
