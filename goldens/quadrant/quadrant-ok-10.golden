@@ -1,0 +1,120 @@
+@60
+┌────────────────────────────┬────────────────────────────┐
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+├────────────────────────────┼────────────────────────────┤
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │           3                │
+│                            │                2           │
+│                            │                      1     │
+└────────────────────────────┴────────────────────────────┘
+1 Point A (0.9, 0.0)
+2 Point B (0.8, 0.1)
+3 Point C (0.7, 0.2)
+3 Point D (0.7, 0.2)
+@60 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f           1                f
+f                            f                1           f
+f                            f                      1     f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+@80
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │            3                 │
+│                              │                  2           │
+│                              │                        1     │
+└──────────────────────────────┴──────────────────────────────┘
+1 Point A (0.9, 0.0)
+2 Point B (0.8, 0.1)
+3 Point C (0.7, 0.2)
+3 Point D (0.7, 0.2)
+@80 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f            1                 f
+f                              f                  1           f
+f                              f                        1     f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+@120
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │            3                 │
+│                              │                  2           │
+│                              │                        1     │
+└──────────────────────────────┴──────────────────────────────┘
+1 Point A (0.9, 0.0)
+2 Point B (0.8, 0.1)
+3 Point C (0.7, 0.2)
+3 Point D (0.7, 0.2)
+@120 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f            1                 f
+f                              f                  1           f
+f                              f                        1     f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV
+1 LLLLLLL VVVVVVVVVV

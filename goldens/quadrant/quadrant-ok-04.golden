@@ -1,0 +1,120 @@
+@60
+┌────────────────────────────┬────────────────────────────┐
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                1           │                            │
+│                            │                            │
+├────────────────────────────┼────────────────────────────┤
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                2           │
+│                            │                            │
+│                            │                            │
+└────────────────────────────┴────────────────────────────┘
+1 A (0.3, 0.6)
+1 B (0.3, 0.6)
+1 C (0.32, 0.6)
+2 A (0.8, 0.2)
+@60 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                1           f                            f
+f                            f                            f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                1           f
+f                            f                            f
+f                            f                            f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV
+1 L VVVVVVVVVV
+1 L VVVVVVVVVVV
+1 L VVVVVVVVVV
+@80
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                  1           │                              │
+│                              │                              │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                  2           │
+│                              │                              │
+│                              │                              │
+└──────────────────────────────┴──────────────────────────────┘
+1 A (0.3, 0.6)
+1 B (0.3, 0.6)
+1 C (0.32, 0.6)
+2 A (0.8, 0.2)
+@80 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                  1           f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                  1           f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV
+1 L VVVVVVVVVV
+1 L VVVVVVVVVVV
+1 L VVVVVVVVVV
+@120
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                  1           │                              │
+│                              │                              │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                  2           │
+│                              │                              │
+│                              │                              │
+└──────────────────────────────┴──────────────────────────────┘
+1 A (0.3, 0.6)
+1 B (0.3, 0.6)
+1 C (0.32, 0.6)
+2 A (0.8, 0.2)
+@120 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                  1           f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                  1           f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV
+1 L VVVVVVVVVV
+1 L VVVVVVVVVVV
+1 L VVVVVVVVVV
