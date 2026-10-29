@@ -37,3 +37,8 @@ test('A5.errors: a class or namespace named as a relation or a note fails id-cla
     assert.deepEqual(X(body), { reason: 'id-clash' }, body)
   assert.ok(X('class r\nclass notes\nclass r0a').drawing)
 })
+test('A4.fit-ladder: keyed, a note written above a labelled relation takes its key first, in source order', () => {
+  const r = X('direction LR\nnote for B "Supercalifragilisticexpialidocious"\nA --> B : uses\nB --> C : Antidisestablishmentarianism', 40)
+  assert.equal(r.step, 'keyed'); assert.equal(validate(r.drawing), null)
+  assert.deepEqual(r.drawing.expect.keys.map((k: any) => [k.key, k.item]), [['a', 'note0'], ['b', 'r0:label'], ['c', 'r1:label']])
+})

@@ -120,3 +120,14 @@ test('A5: a transition and a region chain are whole edges: solid with an arrow h
     { id: 'C:chain0', from: 'C:r0', to: 'C:r1', style: 'invisible', tail: 'none', head: 'none', label: null, minlen: 1, order: 1 },
     { id: 't1', from: 'start:C:r1', to: 'b', style: 'solid', tail: 'none', head: 'arrow', label: null, minlen: 1, order: 2 }])
 })
+
+// X2 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): a description, transition label or note is an HTML label
+// each <br> splits; a composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls back.
+test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back', () => {
+  for (const [body, why] of [['state "a<!--c-->b" as A', 'html'], ['A : a<i>b</i>', 'html'], ['A --> B : a<b>', 'html'], ['A\nnote left of A : &lt x', 'entity'],
+    ['A\nnote left of A\n  a<b>\nend note', 'html'], ['state "First<br>Second" as C {\n  a\n}', 'html'], ['state C {\n  a\n}\nC : x<br>y', 'html'],
+    ['state "a;b" as A', 'semicolon'], ['A\nnote left of A\n  a;b\nend note', 'semicolon']] as const) assert.deepEqual(P(body), { reason: why }, body)
+  const g = P('state "Q&A" as A\nA --> B : a < b\nB : x<br>Q&A\nnote left of A : a < b\nstate "a < b" as C {\n  c\n}').graph
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label, g.nodes[0].note.text, g.clusters[0].title],
+    [['Q&A', 'x|Q&A', 'c'], 'a < b', 'a < b', 'a < b'])
+})

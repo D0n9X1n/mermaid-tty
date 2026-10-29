@@ -3,11 +3,11 @@
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, Mark, NodeRow, Note } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { labelLines } from '../../text.ts'
+import { drawable, labelLines } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
-// The graph, and the frontmatter title; the graph's own title stays null.
-export type StateModel = { graph: Graph; title: string | null }
+// The graph, the frontmatter title (the graph's own title stays null), and each note's id in source order, which keys follow.
+export type StateModel = { graph: Graph; title: string | null; notes: string[] }
 
 const HEADER = /^stateDiagram(?:-v2)?$/
 // A state id: letters, digits, _ and -, with no - at either end (where Mermaid's lexer would read it as part of --> or --),
@@ -177,12 +177,15 @@ function closes(rest: string): boolean | null {
   return i < 0 ? null : rest.slice(i + 1).trim() === ''
 }
 
-// Text a statement draws, trimmed, or why it cannot be drawn: 'entity' for a #…; (Mermaid decodes one anywhere in the
-// diagram's body, so it would draw other text), 'unsupported-char U+XXXX' for a character no terminal draws reliably, and
+// Text a statement draws, trimmed, or why it cannot be drawn: 'entity' or 'html' where Mermaid's HTML label, each <br>
+// splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
+// Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
 // 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end).
 function drawText(raw: string): string | Fail {
   const t = raw.trim()
-  if (/#\w+;/.test(t)) return fail('entity')
+  const f = drawable(t, 'html', 'any')
+  if (f) return f
+  if (t.includes(';')) return fail('semicolon')
   const bad = unsupported(t)
   if (bad) return fail(`unsupported-char ${bad}`)
   const ls = labelLines(t)
@@ -311,7 +314,13 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   const ins = new Map<string, number>(), outs = new Map<string, number>()
   for (const e of edges) if (e.style === 'solid') { ins.set(e.to, (ins.get(e.to) ?? 0) + 1); outs.set(e.from, (outs.get(e.from) ?? 0) + 1) }
   for (const d of nodes.values()) if (d.mark === 'bar') d.span = Math.max(3, 2 * Math.max(ins.get(d.id) ?? 0, outs.get(d.id) ?? 0) - 1)
-  for (const c of clusters) if (!c.frameless) c.title = descrs.get(c.id) ?? c.id
+  // A composite's title draws on its frame, on one line: an HTML label no <br> may split.
+  for (const c of clusters) {
+    if (c.frameless) continue
+    c.title = descrs.get(c.id) ?? c.id
+    const f = drawable(c.title, 'html', 'none')
+    if (f) return f
+  }
   // A transition's id t<k> that a state or composite also has would give two drawn things one owner.
   const ids = new Set([...nodes.keys(), ...clusters.map(c => c.id)])
   if (edges.some(e => ids.has(e.id))) return fail('id-collision')
@@ -325,7 +334,9 @@ export function parseState(src: Source): StateModel | Fail {
   const r = read(src)
   if (isFail(r)) return r
   const g = walk(r.stmts, r.composites)
-  return isFail(g) ? g : { graph: { ...g, title: null }, title: src.title }
+  if (isFail(g)) return g
+  const notes = r.stmts.flatMap(s => (s.kind === 'note' ? [`${s.id}:note`] : []))
+  return { graph: { ...g, title: null }, title: src.title, notes }
 }
 
 // Whether a region holds no state and no composite of its own.

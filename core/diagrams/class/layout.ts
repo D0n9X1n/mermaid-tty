@@ -32,10 +32,11 @@ function parse(src: Source): ClassModel | Fail {
   return isFail(m) ? m : clash(m) ?? m
 }
 
-// The keyable items in source order: relation labels, then notes, as the model orders each.
+// The keyable items, relation labels and notes, in source order: the order the parse gives them together.
 function items(m: ClassModel): { item: string; cls: 'label' | 'note'; text: string }[] {
-  return [...m.relations.flatMap((r, k) => (r.label === null ? [] : [{ item: `${rel(k)}:label`, cls: 'label' as const, text: r.label }])),
-    ...m.notes.map(n => ({ item: n.id, cls: 'note' as const, text: n.text }))]
+  return [...m.relations.flatMap((r, k) => (r.label === null ? [] : [{ item: `${rel(k)}:label`, cls: 'label' as const, text: r.label, order: r.order }])),
+    ...m.notes.map(n => ({ item: n.id, cls: 'note' as const, text: n.text, order: n.order }))]
+    .sort((a, b) => a.order - b.order).map(({ order: _, ...x }) => x)
 }
 
 // The graph for a direction and wrapAt: class pills, note nodes (one key row when keyed), relation edges r<k>, a dotted

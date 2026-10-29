@@ -55,3 +55,9 @@ test('A4.fit-ladder: keyed with no notes fails step; the frontmatter title draws
   const r = explain('---\ntitle: Lights\n---\nstateDiagram-v2\nA --> B', { columns: 80, theme: 'mono' }) as any
   assert.equal(text(r.drawing)[0], 'Lights')
 })
+test('A4.fit-ladder: keyed, notes take keys in source order, not node order', () => {
+  const W = 'Supercalifragilisticexpialidocious', r = X(`s1\ns2\nnote right of s2 : ${W}\ns2 --> s1\nnote left of s1 : ${W}`, 40)
+  assert.equal(r.step, 'keyed')
+  assert.deepEqual(r.drawing.expect.keys.map((k: any) => [k.key, k.item]), [['a', 's2:note'], ['b', 's1:note']])
+  assert.deepEqual(r.drawing.expect.keyable.map((k: any) => k.item), ['s2:note', 's1:note'])
+})

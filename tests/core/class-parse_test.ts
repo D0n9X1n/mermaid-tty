@@ -35,7 +35,7 @@ test('A5: a frontmatter title, classDiagram-v2, and every field set, none undefi
   R('---\ntitle: Zoo\n---\nclassDiagram-v2\nA <|-- B\nnote for A "n"'), { dir: 'TB', title: 'Zoo',
     classes: [{ id: 'A', label: 'A', annot: null, members: [], order: 0 }, { id: 'B', label: 'B', annot: null, members: [], order: 1 }],
     relations: [{ id: 'rel0', from: 'A', to: 'B', tail: 'triangle', head: 'none', line: 'solid', label: null, tailLabel: null, headLabel: null,
-      order: 0 }], notes: [{ id: 'note0', for: 'A', text: 'n', order: 0 }], namespaces: [] }))
+      order: 0 }], notes: [{ id: 'note0', for: 'A', text: 'n', order: 1 }], namespaces: [] }))
 test('A5: reversed ends, an inline annotation, Mermaid member spacing, accTitle and accDescr', () => {
   const m = P(['A --|> B', 'A --* C', 'A --o D', 'class E <<enum>> {', '  + x', '  + getX()$ int', '  -f(List~T~ a) Map~K~', '}', 'accTitle: t',
     'accDescr {', 'class Z', '}', 'accDescr : d'].join('\n'))
@@ -89,10 +89,10 @@ test('A5.errors (2): a top-level line Mermaid reads as a direction, but for dire
   assert.deepEqual([m.classes[0].label, m.classes[1].members[0].text, m.dir], ['direction LR', '+direction TB', 'BT'])
 })
 test('A5.errors (3): an annotation is one word and :::name one word, neither a keyword, and not both on one class', () => {
-  for (const body of ['class B <<two words>>', 'class B:::bad-name', 'class B:::hot <<x>>', 'class B <<observable>>', 'class B <<note>>',
+  for (const body of ['class B <<two words>>', 'class B:::bad-name', 'class B:::hot <<x>>', 'class B <<note>>',
     '<<two words>> B', '<<a-b>> B', '<<link>> B', 'class B:::']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
-  const m = P('class A ::: hot\nclass B << iface >> {\n+x\n}\n<<I_1>> C\nclass D {\n<<two words>>\n}\nclass E {\n<<a<b>>\n}')
-  assert.deepEqual(m.classes.map((c: any) => c.annot), [null, 'iface', 'I_1', 'two words', 'a<b'])
+  const m = P('class A ::: hot\nclass B << iface >> {\n+x\n}\n<<I_1>> C\nclass D {\n<<two words>>\n}')
+  assert.deepEqual(m.classes.map((c: any) => c.annot), [null, 'iface', 'I_1', 'two words'])
 })
 test('A5.errors (4, 5): an empty namespace, and a ~ in a backtick name, fall back', () => {
   for (const [body, why] of [['namespace N {\n}', 'syntax:4'], ['namespace N {\nnote "x"\n}\nnamespace M {\n}', 'syntax:7'],
@@ -107,4 +107,39 @@ test('A5 (7, 8): either end takes each of <| |> * o < >, each mapped as Mermaid 
   const m = P([...ends.flatMap(([e]) => [`A ${e}-- B`, `A --${e} B`, `A ${e}..${e} B`]), 'A -- B'].join('\n'))
   assert.deepEqual(m.relations.map((r: any) => [r.tail, r.head, r.line]), [...ends.flatMap(([, k]) => [[k, 'none', 'solid'], ['none', k, 'solid'],
     [k, k, 'dotted']]), ['none', 'none', 'solid']])
+})
+
+// Fix cycle 2: Mermaid's lexer reads `\s*o` as aggregation only before a word boundary (jison's /^(?:\s*o\b)/), ahead of \w+.
+const rels = (body: string) => P(body).relations.map((r: any) => [r.from, r.to, r.tail, r.head, r.line])
+test('A5 (9): an o that starts a longer word is the class name, not an aggregation end', () => {
+  assert.deepEqual(rels('Fruit --orange\nFruit ..orange\nFruit --o B\nAo-- B\nC --oé'), [['Fruit', 'orange', 'none', 'none', 'solid'],
+    ['Fruit', 'orange', 'none', 'none', 'dotted'], ['Fruit', 'B', 'none', 'odiamond', 'solid'], ['Ao', 'B', 'none', 'none', 'solid'],
+    ['C', 'é', 'none', 'odiamond', 'solid']])
+})
+test('A5.errors (10): an unquoted id with a standalone o, which Mermaid lexes as aggregation, falls back; o inside a word is a name', () => {
+  for (const body of ['class o', 'class o-X', 'class X-o-Y', 'click o href "u"', 'link X-o "u"', 'note for o "x"', 'o : +x', '<<I>> o', 'o --> B',
+    'B --> é-o', 'namespace o {\nclass C\n}', 'class B <<o>>', 'class B:::o']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
+  const m = S('class oX\nclass Xo-o1\nclass o_1\nclass `o`\nclass B <<observable>>\nclass C:::orange\nclick oX href "u"')
+  assert.deepEqual(m.classes.map((c: any) => [c.id, c.annot]), [['A', null], ['oX', null], ['Xo-o1', null], ['o_1', null], ['o', null],
+    ['B', 'observable'], ['C', null]])
+})
+// The grammar: STYLE ALPHA stylesOpt, CLASSDEF classList stylesOpt, CSSCLASS STR ALPHA; a style is ALPHA, :label, :, # or % pieces.
+test('A5.errors (11): style, classDef and cssClass lines outside their grammar fall back; their valid forms draw nothing', () => {
+  for (const body of ['style A', 'classDef hot', 'cssClass junk', 'style A-B fill:red', 'style A fill:red; color:blue', 'style A fill-x',
+    'classDef hot,', 'classDef a-b fill:red', 'cssClass "" hot', 'cssClass "A" hot cold', 'style A fill,', 'style A fill :::x', 'style A class',
+    'style o fill:red']) assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
+  const m = S('style A fill:#f9f,stroke:#333,stroke-width:4px\nclassDef hot,cold fill:#f00\nclassDef x font:12pt , color : red\nstyle A fill:red,\nclassDef hot, fill:red\n' +
+    'cssClass "A" hot\ncssClass "A,B" cold\nstyle A fill:#f9f;\nstyle A #f00 50%')
+  assert.deepEqual(m.classes.map((c: any) => c.id), ['A'])
+})
+// X2 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): each drawn field in its mode. Label, note and relation
+// label: html, any <br> splits; namespace title, annotation, cardinality and a backtick name: html, no <br>; a member: member.
+test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back', () => {
+  for (const [body, why] of [['class B["a<!--c-->b"]', 'html'], ['namespace N["First<br>Second"] {\nclass B\n}', 'html'], ['note "a<i>x</i>"', 'html'],
+    ['A --> B : a<b>', 'html'], ['A "a<br>b" --> B', 'html'], ['A --> "x<b>y" B', 'html'], ['class B {\n<<a<b>>\n}', 'html'], ['class B {\n+a<b\n}', 'html'],
+    ['B : +x<br>y', 'html'], ['B : +Q&am x', 'entity'], ['class B {\n+é&éé\n}', 'entity'], ['class `a<b>`', 'html'], ['class `a<br>b`', 'html'], ['note "&lt;"', 'entity'],
+    ['class B["&amp;"]', 'entity'], ['class Box~a<b>~', 'html']]) assert.deepEqual(S(body), { reason: why }, body)
+  const m = S('class B["x<br>Q&A"]\nnote "a < b"\nA "Q&A" --> "a < b" B : Q&A\nclass C {\n<<Q&A>>\n+a > b\n}\nC : +Q&A\nnamespace N["a < b"] {\nclass D\n}')
+  assert.deepEqual([m.classes[1].label, m.notes[0].text, m.relations[0].label, m.relations[0].tailLabel, m.relations[0].headLabel, m.classes[2].annot,
+    m.classes[2].members.map((x: any) => x.text), m.namespaces[0].label], ['x<br>Q&A', 'a < b', 'Q&A', 'Q&A', 'a < b', 'Q&A', ['+a > b', '+Q&A'], 'a < b'])
 })
