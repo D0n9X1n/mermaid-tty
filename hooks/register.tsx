@@ -1,31 +1,36 @@
-import type { Register, RenderElement } from 'claude-code'
+import type { Register, RenderElement, StateDollar } from 'claude-code'
 import { isFail } from '../core/fail.ts'
 import { createRenderer, type Rows } from '../core/render.ts'
 import { splitFences } from './fences.ts'
-import { passThrough, type Mode } from './mode.ts'
+import { modeReply, parseModeArgs, passThrough, type Mode } from './mode.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that
 // fails to draw (joined to the prose around it), goes through next() unchanged, as does a
 // reply with nothing drawn. A reply that opens on a diagram first sends next() an empty
-// block, which draws the reply's bullet (D5). The command and its probe handler stay
-// until T22 replaces them.
+// block, which draws the reply's bullet (D5). /mermaid-tty source|diagram sets the mode,
+// kept in $.state; in source mode every reply goes through next() untouched.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const renderer = createRenderer(64)
 
-// The loader follows $ only into top-level functions, so mode lives here. T22 reads $.state.
-async function mode(_$: unknown): Promise<Mode> { return 'diagram' }
+// The loader follows $ only into top-level functions, so mode lives here. A read while a
+// ui.render hook draws subscribes that drawing, so a later set draws it again.
+async function mode($: StateDollar): Promise<Mode> { return (await $.state.get(SOURCE)).value === true ? 'source' : 'diagram' }
 
 export const register: Register = (on, options) => {
   const theme = String(options.theme ?? 'default')
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'mermaid-tty', description: 'Show mermaid diagrams as drawings or as their source' })
+    await $.command.register({ name: 'mermaid-tty', description: 'Show Mermaid diagrams as source or diagram: /mermaid-tty [source|diagram]' })
     return next(e)
   })
 
-  on('command.run', { command: 'mermaid-tty' }, async $ => {
-    await $.state.set(SOURCE, true)
-    return { text: 'mermaid-tty: source (probe)' }
+  // CommandRunInput types args as a string, yet a run that leaves it out arrives undefined.
+  on('command.run', { command: 'mermaid-tty' }, async ($, e) => {
+    const a = parseModeArgs(String(e.args ?? '')), cur = await mode($)
+    if ('error' in a) return { text: a.error }
+    if ('report' in a) return { text: modeReply(cur, false) }
+    await $.state.set(SOURCE, a.set === 'source'); $.ui.invalidate('ui.render')
+    return { text: modeReply(a.set, a.set !== cur) }
   })
 
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
