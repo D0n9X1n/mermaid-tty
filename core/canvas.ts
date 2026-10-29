@@ -6,7 +6,9 @@ import type { Expect } from './validate.ts'
 import { width } from './width.ts'
 
 export type Kind = 'text' | 'cap' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'  // cont = 2nd cell of a W/F char
-export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted' }  // arms: per-arm weights 'urdl'
+// On a line cell, the dirs one owner drew there; a cell's segs are OR-merged per owner in write order, their union its dirs.
+export type Seg = { owner: string; dirs: number }
+export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted'; segs?: readonly Seg[] }  // arms: per-arm weights 'urdl'
 export type Conflict = { row: number; col: number; had: string; by: string }  // had: owners[0] of the cell hit, or 'out-of-bounds'; by: owners[0] of the write
 export type Drawing = { columns: number; cells: (Cell | null)[][]; conflicts: readonly Conflict[]; expect: Expect }
 export type Canvas = {
@@ -101,7 +103,7 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       const arms = [1, 2, 4, 8].map(b => (dirs & b ? k : '0')).join('')
       const old = cells[r]![c]
       if (!old || BACKGROUND.has(old.kind)) {
-        cells[r]![c] = { ch: glyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight }
+        cells[r]![c] = { ch: glyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight, segs: [{ owner, dirs }] }
         return
       }
       // Any other kind is exclusive: a Conflict at once, so line asks shares only about a line cell's owners.
@@ -113,7 +115,9 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       const all = old.dirs | dirs
       const style = old.style === 'dotted' ? weight : old.style!   // a dotted cell takes the new line's style: dotted only while every line in it is
       const owners = old.owners.includes(owner) ? old.owners : [...old.owners, owner]
-      cells[r]![c] = { ...old, ch: glyph(all, merged, style), owners, dirs: all, arms: merged, style }
+      const had = old.segs ?? [], seg = had.find(s => s.owner === owner)
+      const segs = seg ? had.map(s => (s === seg ? { owner, dirs: s.dirs | dirs } : s)) : [...had, { owner, dirs }]
+      cells[r]![c] = { ...old, ch: glyph(all, merged, style), owners, dirs: all, arms: merged, style, segs }
     },
     lifeline(r, c, heavy, owner) { under(r, c, { ch: junction(5, heavy ? 'heavy' : 'light'), role: 'note', kind: 'lifeline', owners: [owner], dirs: 5 }) },
     frame(top, left, bottom, right, role, owner, title) {

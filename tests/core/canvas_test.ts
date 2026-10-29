@@ -73,7 +73,8 @@ test('A8.platforms: a straight dotted run draws ┄ or ┆; a dotted bend or bra
   c.line(2, 1, 5, 'dotted', 'edge', 'A>B'); c.line(2, 1, 8, 'dotted', 'edge', 'A>C'); c.line(2, 0, 10, 'dotted', 'edge', 'A>C'); c.line(3, 1, 5, 'dotted', 'edge', 'A>B')
   const d = c.toDrawing(E)
   assert.deepEqual(rows(d), ['┄┐ ', ' ┆ ', '┄┤ ', ' ┆ '])
-  assert.deepEqual(d.cells[2]![1], { ch: '┤', role: 'edge', kind: 'line', owners: ['A>B', 'A>C'], dirs: 13, arms: '1011', style: 'dotted' })
+  assert.deepEqual(d.cells[2]![1], { ch: '┤', role: 'edge', kind: 'line', owners: ['A>B', 'A>C'], dirs: 13, arms: '1011', style: 'dotted',
+    segs: [{ owner: 'A>B', dirs: 5 }, { owner: 'A>C', dirs: 8 }] })
   assert.deepEqual(d.conflicts, [])
 })
 // A cell stays dotted only while every line in it is dotted: otherwise it is no dotted run, and draws the glyph of its arms.
@@ -124,7 +125,8 @@ test('A5.mutation-tests: a merged line cell keeps its first role and style, list
   const c = createCanvas(1, 1, 1, fromSameNode)
   c.line(0, 0, 10, 'heavy', 'edge', 'A>B'); c.line(0, 0, 4, 'light', 'value', 'A>C'); c.line(0, 0, 2, 'heavy', 'value', 'A>B')
   const d = c.toDrawing(E)
-  assert.deepEqual(d.cells[0]![0], { ch: '┯', role: 'edge', kind: 'line', owners: ['A>B', 'A>C'], dirs: 14, arms: '0212', style: 'heavy' })
+  assert.deepEqual(d.cells[0]![0], { ch: '┯', role: 'edge', kind: 'line', owners: ['A>B', 'A>C'], dirs: 14, arms: '0212', style: 'heavy',
+    segs: [{ owner: 'A>B', dirs: 10 }, { owner: 'A>C', dirs: 4 }] })
   assert.deepEqual(d.conflicts, [])
 })
 // This shares looks up each owner's edge, as a renderer's might, and throws for an owner that has none.
@@ -145,7 +147,8 @@ test('A5.mutation-tests: a line merges through any old owner it shares with, not
   const c = createCanvas(1, 1, 1, fromSameNode)
   c.line(0, 0, 10, 'light', 'edge', 'A>B'); c.line(0, 0, 5, 'light', 'edge', 'C>D'); c.line(0, 0, 5, 'light', 'edge', 'C>E')
   const d = c.toDrawing(E)
-  assert.deepEqual(d.cells[0]![0], { ch: '┼', role: 'edge', kind: 'line', owners: ['A>B', 'C>D', 'C>E'], dirs: 15, arms: '1111', style: 'light' })
+  assert.deepEqual(d.cells[0]![0], { ch: '┼', role: 'edge', kind: 'line', owners: ['A>B', 'C>D', 'C>E'], dirs: 15, arms: '1111', style: 'light',
+    segs: [{ owner: 'A>B', dirs: 10 }, { owner: 'C>D', dirs: 5 }, { owner: 'C>E', dirs: 5 }] })
   assert.deepEqual(d.conflicts, [])
 })
 test('A5.mutation-tests: cap, fill and arrow cells are exclusive: a later write, even a line of the same owner, is logged as {row,col,had,by}', () => {
@@ -259,4 +262,14 @@ test('A5.mutation-tests: an arrow on a same-glyph arrow of an edge it shares wit
   const d = c.toDrawing(E)
   assert.deepEqual(d.cells[0]![0], { ch: '▼', role: 'arrow', kind: 'arrow', owners: ['A>C', 'B>C'], dirs: 0 })
   assert.deepEqual(d.conflicts, [{ row: 0, col: 1, had: 'A>C', by: 'B>C' }, { row: 0, col: 2, had: 'A>C', by: 'B>D' }])
+})
+// Beside the union dirs and owners, a line cell keeps the dirs each owner drew there, OR-merged per owner in write order,
+// so the validator can tell a crossing from a turn that shares its glyph.
+test('A5.mutation-tests: a line cell records the dirs each owner drew there', () => {
+  const c = createCanvas(1, 2, 2, (a, b) => a[0] === b[0])
+  c.line(0, 0, 3, 'light', 'edge', 'e1'); c.line(0, 0, 12, 'light', 'edge', 'e2'); c.line(0, 0, 4, 'light', 'edge', 'e1')
+  c.line(0, 1, 5, 'light', 'edge', 'x'); c.line(0, 1, 10, 'heavy', 'edge', 'y')
+  const [a, b] = c.toDrawing(E).cells[0]!
+  assert.deepEqual([a!.dirs, a!.owners, a!.segs], [15, ['e1', 'e2'], [{ owner: 'e1', dirs: 7 }, { owner: 'e2', dirs: 12 }]])
+  assert.deepEqual([b!.dirs, b!.owners, b!.segs], [15, ['x', 'y'], [{ owner: 'x', dirs: 5 }, { owner: 'y', dirs: 10 }]])
 })

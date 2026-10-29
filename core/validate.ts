@@ -22,10 +22,11 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: labels, edges, dangling lines, conflicts, row widths, edge labels. null if none.
+// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all)
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ??
+    rows(d) ?? edgeLabels(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -140,6 +141,28 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
           ((n.kind === 'text' || n.kind === 'cont') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
       if (!connected) return fail('line-dangling')
     }
+  }
+  return null
+}
+
+type Edge = Expect['edges'][number]
+// Whether two edges share an endpoint, so that a cell both draw may be a junction of theirs.
+const related = (a: Edge, b: Edge): boolean => [a.from, a.to].some(x => x === b.from || x === b.to)
+// A crossing hides no junction. Where two edges that share no endpoint meet in a line cell, each edge there drew it
+// straight, 5 (│) or 10 (─), by the dirs the cell records for that edge, and each such pair crosses, one │ and one ─: read
+// as a crossing, an edge turning inside would vanish, and read as a junction, the crossing edges would join. A cell where
+// only related edges meet, a fan-out or fan-in, is fine. A cell that records no dirs for an edge there, as a hand-built
+// cell may not, fails closed: its glyph alone cannot tell a crossing from a turn.
+function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
+  const edges = new Map(d.expect.edges.map(e => [e.id, e]))
+  for (const p of all) {
+    if (p.cell.kind !== 'line') continue
+    const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
+    const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b)).map(b => [a, b] as const))
+    if (pairs.length === 0) continue
+    const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
+    if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) return fail('crossing-ambiguous')
+    if (pairs.some(([a, b]) => drew(a) === drew(b))) return fail('crossing-ambiguous')
   }
   return null
 }

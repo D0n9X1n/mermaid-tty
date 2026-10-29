@@ -1,6 +1,8 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
 import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'
+import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
+import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
   return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['▼'] }], edgeLabels: [] })
@@ -261,4 +263,71 @@ test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-
       [{ id: 'e', from: 'A', to: 'B', heads: [l, r] }])
     assert.equal(validate(ends), null, `${l} ${r}`)
   }
+})
+
+// The pipeline at explain's natural step: rankGap 3, nodeGap 4, no wrap, 80 columns.
+function drawn(gr: Graph): Drawing {
+  const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt: null }); if ('reason' in p) throw new Error(p.reason)
+  const routes = routeGraph(p); if ('reason' in routes) throw new Error(routes.reason)
+  return drawGraph(p, routes, 80)
+}
+// QA's repro: the ┼ under B holds B→D straight down, E's self-loop straight across, and B→E turning inside it.
+test('A5.mutation-tests: a crossing that hides a third edge turning inside it fails crossing-ambiguous', () => {
+  const d = drawn(g('TB', ['A>B', 'B>D', 'B>E', 'E>E', 'C>D']))
+  assert.equal(validate(d)?.reason, 'crossing-ambiguous', text(d).join('\n'))
+})
+// A hand-drawn grid: nodes [id, row, col, owners?] drawn as their id; marks [edge, row, col, a line's dirs or a head glyph];
+// edges 'id from to head?'. Any two owners may merge a line or arrow cell, so only the validator judges a meeting.
+type Mark = [string, number, number, number | string]
+const v = (o: string, c: number, r0: number, r1: number): Mark[] => Array.from({ length: r1 - r0 + 1 }, (_, i) => [o, r0 + i, c, 5])
+const h = (o: string, r: number, c0: number, c1: number): Mark[] => Array.from({ length: c1 - c0 + 1 }, (_, i) => [o, r, c0 + i, 10])
+function sketch(rows: number, cols: number, nodes: [string, number, number, string[]?][], marks: Mark[], edges: string[]): Drawing {
+  const c = createCanvas(rows, cols, cols, () => true)
+  for (const [id, r, col, owners] of nodes) c.text(r, col, id, 'node', owners ?? id)
+  for (const [o, r, col, x] of marks) { if (typeof x === 'number') c.line(r, col, x, 'light', 'edge', o); else c.arrow(r, col, x, o) }
+  return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edgeLabels: [],
+    edges: edges.map(s => { const [id = '', from = '', to = '', head] = s.split(' '); return { id, from, to, heads: head ? [head] : [] } }) })
+}
+test('A5.mutation-tests: unrelated edges cross straight and perpendicular, and related edges meet any way, and both pass', () => {
+  // ┼: A→B down column 3 crosses C→D along row 3.
+  assert.equal(validate(sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
+    [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])), null)
+  // ┬: A→B and A→C leave A together, and A→C turns down at the fork.
+  assert.equal(validate(sketch(4, 6, [['A', 0, 0], ['B', 0, 5], ['C', 3, 2]],
+    [...h('e0', 0, 1, 3), ['e0', 0, 4, '►'], ['e1', 0, 1, 10], ['e1', 0, 2, 12], ['e1', 1, 2, 5], ['e1', 2, 2, '▼']], ['e0 A B ►', 'e1 A C ▼'])), null)
+  // A→B and A→C share row 2 until A→C turns at ┬, and X→Y crosses their shared run at column 2.
+  assert.equal(validate(sketch(6, 8, [['A', 2, 0], ['B', 2, 7], ['C', 5, 4], ['X', 0, 2], ['Y', 5, 2]],
+    [...h('e0', 2, 1, 5), ['e0', 2, 6, '►'], ...h('e1', 2, 1, 3), ['e1', 2, 4, 12], ['e1', 3, 4, 5], ['e1', 4, 4, '▼'], ...v('e2', 2, 1, 3), ['e2', 4, 2, '▼']],
+    ['e0 A B ►', 'e1 A C ▼', 'e2 X Y ▼'])), null)
+})
+test('A5.mutation-tests: unrelated edges overlapping on one axis, or any turn inside their crossing, fail crossing-ambiguous', () => {
+  // N→B and member row M→K drawn down one column as one line: each runs straight, but on the same axis.
+  assert.equal(validate(sketch(7, 1, [['N', 0, 0], ['M', 1, 0, ['M', 'N']], ['K', 5, 0, ['K', 'B']], ['B', 6, 0]],
+    [...v('e0', 0, 2, 3), ['e0', 4, 0, '▼'], ...v('e1', 0, 2, 3), ['e1', 4, 0, '▼']], ['e0 N B ▼', 'e1 M K ▼']))?.reason, 'crossing-ambiguous')
+  // B→D crosses X→Y straight, and B→Y, related to both, turns inside their ┼ onto X→Y's run.
+  assert.equal(validate(sketch(6, 8, [['B', 0, 3], ['D', 5, 3], ['X', 2, 0], ['Y', 2, 7]],
+    [...v('e0', 3, 1, 3), ['e0', 4, 3, '▼'], ['e1', 1, 3, 5], ['e1', 2, 3, 3], ...h('e1', 2, 4, 5), ['e1', 2, 6, '►'], ...h('e2', 2, 1, 5), ['e2', 2, 6, '►']],
+    ['e0 B D ▼', 'e1 B Y ►', 'e2 X Y ►']))?.reason, 'crossing-ambiguous')
+})
+// C→D's middle cell drawn ─, or ┴ with an arm up at A→B's ►: an arrowhead ends only its own edges, so that arm dangles.
+test("A3: a line arm that points at another edge's arrowhead fails line-dangling", () => {
+  const d = (mid: number) => sketch(2, 6, [['A', 0, 0], ['B', 0, 3], ['C', 1, 0], ['D', 1, 5]],
+    [['e0', 0, 1, 10], ['e0', 0, 2, '►'], ['e1', 1, 1, 10], ['e1', 1, 2, mid], ['e1', 1, 3, 10], ['e1', 1, 4, '►']], ['e0 A B ►', 'e1 C D ►'])
+  assert.equal(validate(d(10)), null)
+  assert.equal(validate(d(11))?.reason, 'line-dangling')
+})
+// dag/114's shape: A→B leaves A down, U-turns right and up into B, and C→D crosses both legs in adjacent cells. Each ┼ is a
+// straight crossing, yet its neighbour ┼ points back at A→B a third time: only the dirs each edge drew there tell them apart.
+test('A5.mutation-tests: an edge crossed twice in adjacent cells, as its U-turn straddles another edge, passes', () => {
+  assert.equal(validate(sketch(5, 7, [['A', 0, 2], ['B', 0, 3], ['C', 3, 0], ['D', 3, 6]],
+    [...v('e0', 2, 1, 3), ['e0', 4, 2, 3], ['e0', 4, 3, 9], ...v('e0', 3, 2, 3), ['e0', 1, 3, '▲'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']],
+    ['e0 A B ▲', 'e1 C D ►'])), null)
+})
+// A plain ┼ whose cell does not say which dirs each edge drew there, as a hand-built cell may not, fails closed.
+test('A5.mutation-tests: a crossing cell without per-owner dirs fails crossing-ambiguous', () => {
+  const d = sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
+    [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])
+  assert.equal(validate(d), null)
+  delete d.cells[3]![3]!.segs
+  assert.equal(validate(d)?.reason, 'crossing-ambiguous')
 })
