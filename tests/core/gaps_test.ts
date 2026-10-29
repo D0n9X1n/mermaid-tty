@@ -26,3 +26,12 @@ test('A1: gaps reads the bands the layout recorded, so a band a title widened st
   assert.deepEqual(run('LR'), [cols, [[null, 'col', 5, 8, [5]], [null, 'col', 22, 25, [22]]]])
   assert.deepEqual(run('RL'), [cols, [[null, 'col', 5, 8, [8]], [null, 'col', 22, 25, [25]]]])
 })
+test('A1: a sealed block nested in another keeps its own bands, so gaps finds the inner gap and no false outer ones', () => {
+  const x = g('TB', ['A>B'])
+  x.clusters.push({ id: 'o', title: 'O', dir: 'TB', nodes: [], clusters: ['i'] }, { id: 'i', title: 'I', dir: 'LR', nodes: ['A', 'B'], clusters: [] })
+  const p = layoutGraph(x, S) as Placed
+  assert.deepEqual([p.boxes.get('A'), p.boxes.get('B')], [{ row: 2, col: 4, rows: 1, cols: 5 }, { row: 2, col: 12, rows: 1, cols: 5 }])
+  assert.deepEqual(p.bands, [{ block: null, axis: 'row', from: 0, to: 4 }, { block: 'o', axis: 'row', from: 1, to: 3 },
+    { block: 'i', axis: 'col', from: 4, to: 8 }, { block: 'i', axis: 'col', from: 12, to: 16 }])
+  assert.deepEqual(gaps(p), [{ block: 'i', axis: 'col', from: 9, to: 11, borders: [] }])
+})
