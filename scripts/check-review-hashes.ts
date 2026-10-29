@@ -44,19 +44,25 @@ const KEYS = Object.keys(VALID)
 const cells = (row: string) => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
 const HEX64 = /^[0-9a-f]{64}$/
 
-// The files of the ## Files table. Its lines, from that heading to the next, blank ones skipped, are
-// | path | sha256 |, a |---|---| row, then one | <path> | <64 lowercase hex> | row per reviewed file.
+// The files of the record's one ## Files table. Every non-blank line from that heading to the next ## heading
+// is the table: | path | sha256 |, a |---|---| row, then one | <path> | <64 lowercase hex> | row per reviewed
+// file, each path once. A table row anywhere else, or a second ## Files heading, fails the record.
 function filesTable(path: string, lines: string[]): ReviewFile[] | { error: string } {
   const start = lines.indexOf('## Files')
   if (start < 0) return { error: `${path}: no ## Files table` }
-  const next = lines.findIndex((l, i) => i > start && l.startsWith('#'))
-  const [header, rule, ...rows] = lines.slice(start + 1, next < 0 ? lines.length : next).filter(l => l.trim() !== '')
+  if (lines.indexOf('## Files', start + 1) >= 0) return { error: `${path}: more than one ## Files heading` }
+  const next = lines.findIndex((l, i) => i > start && l.startsWith('## '))
+  const stop = next < 0 ? lines.length : next
+  const stray = lines.find((l, i) => (i < start || i >= stop) && l.trimStart().startsWith('|'))
+  if (stray) return { error: `${path}: table row outside ## Files ${JSON.stringify(stray)}` }
+  const [header, rule, ...rows] = lines.slice(start + 1, stop).filter(l => l.trim() !== '')
   if (JSON.stringify(cells(header ?? '')) !== '["path","sha256"]' || !cells(rule ?? '').every(c => /^:?-+:?$/.test(c)))
     return { error: `${path}: the Files table must start with | path | sha256 | and a |---|---| row` }
   const files: ReviewFile[] = []
   for (const row of rows) {
     const [file, hash, ...rest] = cells(row)
     if (!file || !HEX64.test(hash ?? '') || rest.length) return { error: `${path}: bad Files row ${JSON.stringify(row)}` }
+    if (files.some(f => f.path === file)) return { error: `${path}: ${file} appears twice in ## Files` }
     files.push({ path: file, sha256: hash! })
   }
   return files

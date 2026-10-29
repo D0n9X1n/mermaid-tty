@@ -90,7 +90,7 @@ test('VR.reviewers: ## Files is a | path | sha256 | table whose rows each hold a
   assert.deepEqual((parseRecord('r.md', withRows(ROW, `|  core/themes.ts  |  ${sha('T')}  |`)) as ReviewRecord).files,
     [{ path: 'goldens/a.golden', sha256: sha('A') }, { path: 'core/themes.ts', sha256: sha('T') }])
   for (const row of [`| goldens/a.golden | ${sha('A').toUpperCase()} |`, `| goldens/a.golden | ${sha('A').slice(1)} |`, `| goldens/a.golden | ${sha('A')}0 |`,
-    `|  | ${sha('A')} |`, `| goldens/a.golden | ${sha('A')} | x |`, '| goldens/a.golden |', 'goldens/a.golden was reviewed too'])
+    `|  | ${sha('A')} |`, `| goldens/a.golden | ${sha('A')} | x |`, '| goldens/a.golden |', 'goldens/a.golden was reviewed too', '### More'])
     assert.deepEqual(parseRecord('r.md', withRows(ROW, row)), { error: `r.md: bad Files row ${JSON.stringify(row)}` })
   const table = { error: 'r.md: the Files table must start with | path | sha256 | and a |---|---| row' }
   for (const text of [REC.replace('| path | sha256 |\n', ''), REC.replace('|---|---|\n', ''), REC.replace('| path |', '| file |')])
@@ -183,4 +183,45 @@ test('VR.passes: an unknown or extra argument exits 1 with usage, so a mistyped 
     const r = cli(dir, ...args)
     assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', 'usage: node scripts/check-review-hashes.ts [--require-pass | --table <path>...]\n'], args.join(' '))
   }
+})
+
+// 64 zeroes: the hash of no file anyone reviewed.
+const Z = '0'.repeat(64)
+
+// The QA repro: a second ## Files table was never read, so its rows went unchecked and --require-pass still exited 0.
+test('VR.reviewers: a second ## Files table fails the record, so --require-pass exits 1 rather than leave its rows unchecked', t => {
+  const dir = tree(t, {
+    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Files\n| path | sha256 |\n|---|---|\n| absent | ${Z} |\n`,
+  })
+  const r = cli(dir, '--require-pass')
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: more than one ## Files heading',
+    'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
+})
+
+test('VR.reviewers: a table row outside ## Files, under ## Notes, indented or before the heading, fails the record', () => {
+  const stray = (line: string) => ({ error: `r.md: table row outside ## Files ${JSON.stringify(line)}` })
+  for (const row of [`| absent | ${Z} |`, `  | absent | ${Z} |`])
+    assert.deepEqual(parseRecord('r.md', `${REC}${row}\n`), stray(row))
+  const before = `| goldens/b.golden | ${Z} |`
+  assert.deepEqual(parseRecord('r.md', REC.replace('## Files', () => `${before}\n## Files`)), stray(before))
+})
+
+test('VR.reviewers: a Files row whose path appears twice fails the record, whether its hash repeats or differs', () => {
+  for (const twice of [ROW, `| goldens/a.golden | ${Z} |`])
+    assert.deepEqual(parseRecord('r.md', withRows(ROW, twice)), { error: 'r.md: goldens/a.golden appears twice in ## Files' })
+})
+
+// The strict grammar still takes a real record: a title, blank lines, an aligned table, and prose sections that hold | mid-line.
+test('VR.reviewers: a valid record, one ## Files table then prose-only sections, still passes --require-pass', t => {
+  const text = ['---', 'scope: vr-A', 'verdict: pass', 'date: 2026-11-02', 'reviewers: [PM, cross-family:gpt-6]', '---', '# vr-A review', '',
+    '## Files', '', '| path | sha256 |', '|:---|---:|', `| goldens/a.golden | ${sha('A')} |`, `|  core/themes.ts  |  ${sha('T')}  |`, '',
+    '## Notes', '', 'The PM checked the a | b labels.', '### Detail', '- ok', ''].join('\n')
+  const dir = tree(t, {
+    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'docs/reviews/2026-11-02-vr-A.md': text,
+  })
+  const r = cli(dir, '--require-pass')
+  assert.deepEqual([r.status, r.stdout, r.stderr],
+    [0, 'check-review-hashes: 1 record(s); every reviewed file matches its SHA-256; every required path has a passing verdict\n', ''])
 })
