@@ -1,6 +1,6 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { renderMermaid, explain, createRenderer, toRows, type Span } from '../../core/render.ts'; import { THEMES, palette } from '../../core/themes.ts'
-import { createCanvas } from '../../core/canvas.ts'
+import { createCanvas } from '../../core/canvas.ts'; import { KEYWORDS, TIER1, lookup } from '../../core/registry.ts'
 import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { fitLadder } from '../../core/fit.ts'
 import { readSource } from '../../core/source.ts'; import { validate } from '../../core/validate.ts'
 import type { Source } from '../../core/source.ts'
@@ -11,7 +11,7 @@ const FC = 'flowchart TD\nA[读取配置文件] --> B{完成?}', O = { columns: 
 const spans = (rows: Span[][] | null) => rows!.flat()
 
 test('A5.errors: parse errors and unsupported types return null', () => {
-  for (const s of ['flowchart TD\nA[open --> B', 'pie title x\n"a": 1', 'flowchart-elk TD\nA', 'Flowchart TD\nA']) assert.equal(renderMermaid(s, O), null, s)
+  for (const s of ['flowchart TD\nA[open --> B', 'radar-beta\naxis A', 'flowchart-elk TD\nA', 'Flowchart TD\nA']) assert.equal(renderMermaid(s, O), null, s)
   assert.deepEqual(explain('flowchart TD\nA[👨‍👩]', O), { reason: 'unsupported-char U+200D' })
 })
 test('A4.fit-ladder: below the minimum width falls back', () => assert.ok('reason' in explain(FC, { columns: 8, theme: 'nord' })))
@@ -19,7 +19,7 @@ test('A4.fit-ladder: below the minimum width falls back', () => assert.ok('reaso
 // The first Fail wins, in pipeline order: the source, the header's module, the parse, then the fit ladder.
 test('A5.errors: explain returns the first Fail of source, lookup, parse and fit, in that order', () => {
   assert.deepEqual(explain('flowchart TD', O), { reason: 'empty' })
-  assert.deepEqual(explain('pie title x\n"a": 1', O), { reason: 'disabled:pie' })
+  assert.deepEqual(explain('radar-beta\naxis A', O), { reason: 'disabled:radar' })
   const bad = 'flowchart TD\nA[open --> B'
   assert.deepEqual(explain(bad, O), flowchart.parse(readSource(bad) as Source))
   const model = flowchart.parse(readSource(FC) as Source)
@@ -27,6 +27,13 @@ test('A5.errors: explain returns the first Fail of source, lookup, parse and fit
 })
 test('A2: explain draws a sequence diagram: its module registers on import, as flowchart\'s does', () => {
   assert.equal((explain('sequenceDiagram\nA->>B: hi', O) as { step: string }).step, 'natural')
+})
+// render.ts imports diagrams/all.ts (plan C T40). This file loads no Tier 1 module itself, so lookup finds only what
+// render.ts registered.
+test('A5.errors: render.ts registers each Tier 1 module on import, so no Tier 1 keyword is unregistered', () => {
+  const tier1 = Object.keys(KEYWORDS).filter(k => TIER1.some(t => t === KEYWORDS[k]))
+  assert.deepEqual(tier1.map(k => [k, (lookup(k) as { type?: string }).type]), tier1.map(k => [k, KEYWORDS[k]]))
+  assert.deepEqual([...new Set(tier1.map(k => KEYWORDS[k]))].sort(), [...TIER1].sort())
 })
 test('A4.fit-ladder: explain returns the first step that fits, with its drawing at the given columns', () => {
   const r = explain(FC, O) as { step: string; drawing: { columns: number } }

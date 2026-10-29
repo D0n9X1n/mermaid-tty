@@ -1,4 +1,5 @@
-// The diagram registry (plan A §6, A1): each header keyword's diagram type, the types A draws, and their modules.
+// The diagram registry (plan A §6, A1; plan C T40): each header keyword's diagram type, the Tier 1 and Tier 2 types, the
+// types drawn, and their modules.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -30,8 +31,18 @@ export const KEYWORDS: Readonly<Record<string, DiagramType | null>> = {
   'packet-beta': 'packet', packet: 'packet',
 }
 
-// The types A draws; every other type falls back as disabled.
-export const ENABLED: ReadonlySet<DiagramType> = new Set<DiagramType>(['flowchart', 'sequence'])
+// The types C draws (plan C §4). Each has its own core/diagrams/<type>/layout.ts, which files a stub (diagrams/stub.ts)
+// until the type's own task replaces it.
+export const TIER1: readonly DiagramType[] =
+  ['state', 'class', 'er', 'mindmap', 'gantt', 'pie', 'gitGraph', 'timeline', 'journey', 'xychart', 'quadrant']
+// The types C gates (plan C §9): each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens, and
+// one commit then adds it to TIER2_PASSED. None has passed in v1.
+export const TIER2: readonly DiagramType[] =
+  ['requirement', 'c4', 'block', 'architecture', 'kanban', 'packet', 'sankey', 'treemap', 'radar', 'zenuml']
+export const TIER2_PASSED: readonly DiagramType[] = []
+
+// The types drawn: A's two, Tier 1 and the passed Tier 2 types. Every other type falls back as disabled.
+export const ENABLED: ReadonlySet<DiagramType> = new Set<DiagramType>(['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED])
 
 export type DiagramModule<M = unknown> = {
   type: DiagramType
@@ -41,7 +52,7 @@ export type DiagramModule<M = unknown> = {
 }
 
 // Each type's module, filed by register under the module's own type. It starts empty: T19 and T24 register flowchart's
-// and sequence's here.
+// and sequence's here, and diagrams/all.ts (plan C T40) loads each Tier 1 type's.
 const MODULES: Partial<Record<DiagramType, DiagramModule>> = {}
 
 // Files mod under mod.type, replacing any module filed there before.
@@ -57,4 +68,11 @@ export function lookup(header: string): DiagramModule | Fail {
   if (type === null) return fail(`fallback:${kw}`)
   if (!ENABLED.has(type)) return fail(`disabled:${type}`)
   return MODULES[type] ?? fail(`unregistered:${type}`)
+}
+
+// The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its header
+// keywords in KEYWORDS order. T85 writes it to docs/generated/support-table.md.
+export function supportTable(): string {
+  const keywords = (t: DiagramType) => Object.keys(KEYWORDS).filter(k => KEYWORDS[k] === t).map(k => `\`${k}\``).join(', ')
+  return ['| Type | Header keywords |', '|---|---|', ...[...ENABLED].map(t => `| \`${t}\` | ${keywords(t)} |`)].join('\n')
 }

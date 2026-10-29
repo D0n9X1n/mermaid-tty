@@ -9,9 +9,11 @@ import { lookup } from './registry.ts'
 import { readSource } from './source.ts'
 import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
 import { palette } from './themes.ts'
-// Imported for their side effect: the flowchart and sequence modules register themselves once registry.ts has run.
+// Imported for their side effect: the flowchart and sequence modules, then each Tier 1 type's (diagrams/all.ts), register
+// themselves once registry.ts has run.
 import './diagrams/flowchart/layout.ts'
 import './diagrams/sequence/layout.ts'
+import './diagrams/all.ts'
 
 export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: Color; bold?: boolean; dimColor?: boolean }
 export type Rows = Span[][]

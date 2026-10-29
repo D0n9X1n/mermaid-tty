@@ -1,8 +1,9 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { createCanvas } from '../../core/canvas.ts'
-import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS } from '../../core/registry.ts'
+import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS, TIER1, TIER2, TIER2_PASSED } from '../../core/registry.ts'
 import type { Drawing } from '../../core/canvas.ts'; import { fail, type Fail } from '../../core/fail.ts'; import type { Step } from '../../core/fit.ts'
 import { register, type DiagramModule, type DiagramType } from '../../core/registry.ts'; import { validate } from '../../core/validate.ts'
 import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { sequence } from '../../core/diagrams/sequence/layout.ts'
+import { readSource, type Source } from '../../core/source.ts'
 const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
   layout: (_m: unknown, step: string, cols: number) => {
     const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
@@ -12,10 +13,10 @@ test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () =>
   assert.ok('reason' in fitLadder(fake as never, {}, 4))
 })
 // The A1 test below also covers matrix row flowchart-reject-05: a flowchart-elk TD header falls back.
-test('A1: registry keywords; ENABLED is exactly A', () => {
-  assert.deepEqual([...ENABLED].sort(), ['flowchart', 'sequence'])
+test('A1: registry keywords; ENABLED is A, Tier 1 and the passed Tier 2 types', () => {
+  assert.deepEqual([...ENABLED].sort(), ['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED].sort())
   assert.equal(KEYWORDS['graph'], 'flowchart'); assert.equal(KEYWORDS['stateDiagram-v2'], 'state'); assert.equal(KEYWORDS['flowchart-elk'], null)
-  assert.deepEqual(lookup('flowchart-elk TD'), { reason: 'fallback:flowchart-elk' }); assert.deepEqual(lookup('pie title x'), { reason: 'disabled:pie' })
+  assert.deepEqual(lookup('flowchart-elk TD'), { reason: 'fallback:flowchart-elk' }); assert.deepEqual(lookup('radar-beta axis A'), { reason: 'disabled:radar' })
   assert.deepEqual(lookup('Flowchart TD'), { reason: 'unknown-type' })
 })
 
@@ -69,6 +70,17 @@ test('A4.fit-ladder: a type with no steps fails with too-wide and lays out nothi
   assert.deepEqual(fit([], 10, calls), { reason: 'too-wide' })
   assert.deepEqual(calls, [])
 })
+// C widens Step (T40): flowchart's layout fails 'step' for any step outside its own ladder, before it reads SPACING, and
+// still draws each step of its own ladder.
+test('A4.fit-ladder: flowchart lays out only the steps of its own ladder; any other Step fails with step', () => {
+  const g = flowchart.parse(readSource('flowchart LR\nA --> B') as Source) as never
+  for (const step of ['keyed', 'keyedWrap', 'horizontal', 'oneActor', 'compact', 'outline'] as Step[])
+    assert.deepEqual(flowchart.layout(g, step, 80), { reason: 'step' }, step)
+  for (const step of ['natural', 'tight', 'wrap', 'lrToTd'] as Step[]) {
+    const d = flowchart.layout(g, step, 80)
+    assert.deepEqual('reason' in d ? d : [d.columns, validate(d)], [80, null], step)
+  }
+})
 
 // Every keyword and alias of each type, as plan A T12 lists them; flowchart-elk and requirement are explicit fallbacks.
 const TYPES: Record<DiagramType, readonly string[]> = {
@@ -82,26 +94,28 @@ const TYPES: Record<DiagramType, readonly string[]> = {
 }
 const TABLE: [string, string | null][] = [...Object.entries(TYPES).flatMap(([type, kws]) => kws.map((kw): [string, string] => [kw, type])),
   ['flowchart-elk', null], ['requirement', null]]
-test('A1: every keyword and alias maps as in the table; each one A does not draw is disabled or falls back', () => {
+// Tier 1 keywords are enabled but unregistered here, since this file does not load diagrams/all.ts; registry-tiers_test.ts
+// checks that each resolves to its module.
+test('A1: every keyword and alias maps as in the table; each Tier 2 one is disabled, and each null one falls back', () => {
   assert.deepEqual(KEYWORDS, Object.fromEntries(TABLE))
-  const sweep = TABLE.filter(([, type]) => type !== 'flowchart' && type !== 'sequence')
+  const sweep = TABLE.filter(([, type]) => type === null || TIER2.some(t => t === type))
   assert.deepEqual(sweep.map(([kw]) => lookup(kw)), sweep.map(([kw, type]) => ({ reason: type === null ? `fallback:${kw}` : `disabled:${type}` })))
 })
 
 // A module lookup only files and finds: its methods are never called. Registration lasts for the rest of this file.
 const stub = (type: DiagramType): DiagramModule => ({ type, parse: () => fail('stub'), steps: () => [], layout: () => fail('stub') })
-// The flowchart and sequence modules register themselves on import (T19, T24), so no enabled type stays unregistered.
+// The flowchart and sequence modules register themselves on import (T19, T24), so neither stays unregistered.
 test('A1: lookup returns each enabled type\'s registered module, sequenceDiagram included, then the module registered in its place; a disabled type stays disabled', () => {
   assert.equal(lookup('flowchart TD'), flowchart)
   assert.equal(lookup('graph LR'), flowchart)
   assert.equal(lookup('sequenceDiagram'), sequence)
   const flow = stub('flowchart')
   register(flow)
-  register(stub('pie'))
+  register(stub('radar'))
   assert.equal(lookup('flowchart TD'), flow)
   assert.equal(lookup('graph LR'), flow)
-  assert.deepEqual([lookup('sequenceDiagram'), lookup('pie'), lookup('flowchart-elk TD')],
-    [sequence, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }])
+  assert.deepEqual([lookup('sequenceDiagram'), lookup('radar-beta'), lookup('flowchart-elk TD')],
+    [sequence, { reason: 'disabled:radar' }, { reason: 'fallback:flowchart-elk' }])
 })
 test('A1: registering a second module of a type replaces the first, so lookup returns the second', () => {
   const first = stub('flowchart'), second = stub('flowchart')
@@ -110,12 +124,12 @@ test('A1: registering a second module of a type replaces the first, so lookup re
   assert.equal(lookup('flowchart TD'), second)
 })
 test('A1: the keyword is the first whitespace-separated token of the header, less one trailing colon', () => {
-  const headers = ['sequenceDiagram:', 'pie: title x', 'pie\ttitle x', 'flowchart-elk: TD', 'stateDiagram-v2::']
+  const headers = ['sequenceDiagram:', 'radar-beta: axis A', 'radar-beta\taxis A', 'flowchart-elk: TD', 'stateDiagram-v2::']
   assert.deepEqual(headers.map(h => lookup(h)),
-    [sequence, { reason: 'disabled:pie' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }, { reason: 'unknown-type' }])
+    [sequence, { reason: 'disabled:radar' }, { reason: 'disabled:radar' }, { reason: 'fallback:flowchart-elk' }, { reason: 'unknown-type' }])
 })
 test('A1: whitespace before the keyword is skipped, so a header with leading spaces still names its type', () => {
-  assert.deepEqual(lookup('  pie'), { reason: 'disabled:pie' })
+  assert.deepEqual(lookup('  radar-beta'), { reason: 'disabled:radar' })
 })
 test('A1: an empty header, a keyword in the wrong case and an Object.prototype name are each an unknown type', () => {
   const headers = ['', 'GRAPH TD', 'sequencediagram', 'toString', 'constructor x', 'hasOwnProperty:', '__proto__']

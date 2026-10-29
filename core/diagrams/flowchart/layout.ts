@@ -48,9 +48,14 @@ function firstValid(g: Graph, gaps: Gaps, wraps: readonly (number | null)[], col
   return last
 }
 
-// natural and tight draw once, unwrapped; wrap tries each wrapAt; lrToTd (LR and RL only) redraws LR as TB, RL as BT.
+// Whether s is a step with its own row in SPACING. C's steps (plan C T40) have none, and flowchart's ladder never lists them.
+const isSpacingStep = (s: Step): s is keyof typeof SPACING => Object.hasOwn(SPACING, s)
+
+// natural and tight draw once, unwrapped; wrap tries each wrapAt; lrToTd (LR and RL only) redraws LR as TB, RL as BT. Any
+// other step fails 'step'.
 function layout(g: Graph, step: Step, columns: number): Drawing | Fail {
   if (step === 'lrToTd') return firstValid({ ...g, dir: g.dir === 'RL' ? 'BT' : 'TB' }, SPACING.tight.TB, [null, ...WRAPS], columns)
+  if (!isSpacingStep(step)) return fail('step')
   const gaps = SPACING[step][across(g) ? 'LR' : 'TB']
   return step === 'wrap' ? firstValid(g, gaps, WRAPS, columns) : attempt(g, { ...gaps, wrapAt: null }, columns)
 }

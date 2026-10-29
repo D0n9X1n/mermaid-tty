@@ -6,7 +6,8 @@ import { fail, isFail } from './fail.ts'
 import type { DiagramModule } from './registry.ts'
 import { validate } from './validate.ts'
 
-export type Step = 'natural' | 'tight' | 'wrap' | 'lrToTd'          // C widens this union with its own steps
+// A's four steps, then C's (plan C §4, T40). A type's ladder lists only the steps its layout draws.
+export type Step = 'natural' | 'tight' | 'wrap' | 'lrToTd' | 'keyed' | 'keyedWrap' | 'horizontal' | 'oneActor' | 'compact' | 'outline'
 
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a wider
