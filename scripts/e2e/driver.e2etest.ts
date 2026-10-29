@@ -59,6 +59,15 @@ writeFileSync(join(dir, 'hup.mjs'), [
 ].join('\n'))
 const HUP = process.platform === 'win32' ? [process.execPath, join(dir, 'hup.mjs'), dir]
   : ['/bin/sh', '-c', `trap '' HUP; sleep 1000 & echo "$$ $!" > pids; echo ready; wait`]
+// A program that exits on a hangup, and whose child ignores hangups: it prints its pid, then starts the child, which
+// prints its own.
+writeFileSync(join(dir, 'kid.mjs'), [
+  "import { spawn } from 'node:child_process'",
+  "process.on('SIGHUP', () => process.exit(0))",
+  "console.log('parent ' + process.pid)",
+  "spawn(process.execPath, ['-e', \"process.on('SIGHUP', () => {}); console.log('child ' + process.pid); setInterval(() => {}, 1000)\"], { stdio: 'inherit' })",
+  'setInterval(() => {}, 1000)',
+].join('\n'))
 // The program's first row under driver: the size, TERM and env it was given; tmux sets TMUX itself.
 const first = (driver: Driver) => `100x40 TERM=xterm-256color USER=e2e TMUX=${driver === 'tmux' ? 'set' : 'unset'} PARENT=unset`
 const pid = () => Number(readFileSync(join(dir, 'pid'), 'utf8'))
@@ -136,6 +145,28 @@ for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${dri
     for (const p of pids) assert.equal(await gone(p), true, `pid ${p}`)
     if (driver === 'tmux') assert.equal(existsSync(socketPath()), false)
   } finally { for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {} }
+})
+
+// The child stays in the program's process group, which outlives the program. Windows has no process groups, and
+// taskkill /T cannot find the tree under a program that has exited, so there only stop() hangs the program up.
+for (const early of [false, true]) for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver stop() kills the child of a program that exits on a hangup${early ? ' before stop()' : ''}, though the child ignores hangups`, { skip: SKIP[driver] || (early && process.platform === 'win32') }, async () => {
+  const s = await startSession({ driver, argv: [process.execPath, join(dir, 'kid.mjs')], cwd: dir, env: envFor(driver) })
+  let child = 0
+  try {
+    const screen = await s.waitFor(/^child \d+$/m, 10000), pidOf = (who: string) => Number(new RegExp(`^${who} (\\d+)$`, 'm').exec(screen)?.[1])
+    const parent = pidOf('parent')
+    child = pidOf('child')
+    assert.ok(parent > 0 && child > 0, `parent ${parent}, child ${child}`)
+    if (early) {
+      process.kill(parent, 'SIGHUP')
+      assert.equal(await gone(parent), true)
+    }
+    await s.stop()
+    assert.deepEqual([await gone(parent), await gone(child)], [true, true])
+  } finally {
+    if (child > 0) try { process.kill(child, 'SIGKILL') } catch {}
+    await s.stop()
+  }
 })
 
 test('A9.harness: waitFor checks its deadline before each read, and abandons a read that outlasts it', async () => {
