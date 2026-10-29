@@ -24,3 +24,27 @@ export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}
 // One string per row: a cont cell is '', an empty cell ' ', any other its ch; trailing spaces trimmed.
 const ch = (c: Cell | null) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
 export const text = (d: Drawing): string[] => d.cells.map(row => row.map(ch).join('').replace(/ +$/, ''))
+
+// Independently read shared arms as joined edge networks, then enumerate the source/head pairs they imply.
+export function falsePairs(d: Drawing): string[] {
+  const edges = new Map(d.expect.edges.map(e => [e.id, e])), groups = new Map(d.expect.edges.map(e => [e.id, new Set([e.id])]))
+  for (const row of d.cells) for (const c of row) {
+    if (c?.kind !== 'line') continue
+    const segs = (c.segs ?? []).filter(s => edges.has(s.owner))
+    for (const a of segs) for (const b of segs) if (a.dirs & b.dirs) {
+      const all = new Set([...groups.get(a.owner)!, ...groups.get(b.owner)!])
+      for (const id of all) groups.set(id, all)
+    }
+  }
+  const pairs = new Set(d.expect.edges.flatMap(e => [`${e.from}>${e.to}`,
+    ...((e.ends ?? []).some(end => end.node === e.from) ? [`${e.to}>${e.from}`] : [])]))
+  const bad = new Set<string>()
+  for (const ids of new Set(groups.values())) {
+    if (ids.size < 2) continue
+    const members = [...ids].map(id => edges.get(id)!)
+    const tails = new Set(members.flatMap(e => [e.from, ...((e.ends ?? []).some(end => end.node === e.from) ? [e.to] : [])]))
+    const heads = new Set(members.flatMap(e => [e.to, ...(e.ends ?? []).map(end => end.node)]))
+    for (const from of tails) for (const to of heads) if (!pairs.has(`${from}>${to}`)) bad.add(`${from}>${to}`)
+  }
+  return [...bad].sort()
+}

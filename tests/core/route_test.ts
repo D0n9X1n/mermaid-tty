@@ -4,7 +4,7 @@ import { layoutGraph } from '../../core/graph/layered.ts'
 import type { Placed } from '../../core/graph/layered.ts'
 import { routeGraph } from '../../core/graph/route.ts'
 import type { Route } from '../../core/graph/route.ts'
-import { g } from './graph-fixture.ts'
+import { falsePairs, g, text } from './graph-fixture.ts'
 import { drawGraph } from '../../core/graph/draw.ts'
 import { validate } from '../../core/validate.ts'
 import { explain } from '../../core/render.ts'
@@ -27,7 +27,71 @@ const linked = (r: Route, p?: Placed) => r.cells.every((c, i) => {
 })
 const at = (r: Route) => new Set(r.cells.map(c => `${c.r},${c.c}`))
 
-test('A1: R2 every owner stays straight where unrelated edges cross', { todo: 'router fix cycle 3: merge-ambiguous rejects its drawing, which implies C→E' }, () => {
+test('A1: R3 fan-in cannot join a fan-out network that implies a missing edge', () => {
+  const r = explain('flowchart TB\nA --> B\nA --> C\nD --> B', { columns: 80 })
+  assert.ok(!('reason' in r))
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
+  assert.equal(text(r.drawing).join('\n'), [
+    '[ A ]  [ D ]', '  │      └┐', ' ┌┤     ┌┐│', ' │└─────┘││', ' ▼       ▼▼', '[ C ]  [ B ]',
+  ].join('\n'))
+})
+
+test('A1: R3 two-headed links never merge into a one-headed incoming net', () => {
+  const r = explain('flowchart TB\nA --> C\nB <--> C', { columns: 80 })
+  assert.ok(!('reason' in r))
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
+  assert.equal(text(r.drawing).join('\n'), [
+    '[ A ]    [ B ]', '  │        ▲', '  └───┐┌┐  │', '      ││└──┘', '      ▼▼', '    [ C ]',
+  ].join('\n'))
+})
+
+test('A1: R3 RL three-row source keeps a straight middle-row departure', () => {
+  const p = layoutGraph(g('RL', ['A>B'], { A: 'one<br/>two<br/>three' }), {
+    rankGap: 6, nodeGap: 1, wrapAt: null,
+  }) as Placed
+  const b = p.boxes.get('B')!
+  const q = { ...p, boxes: new Map(p.boxes).set('B', { ...b, row: 0 }) }
+  const rs = routeGraph(q)
+  assert.ok(Array.isArray(rs))
+  assert.equal(rs[0]!.cells[0]!.dirs, 10)
+  const d = drawGraph(q, rs, 80)
+  assert.equal(validate(d), null)
+  assert.equal(text(d).join('\n'), ['[ B ]◄──┐ [  one  ]', '        └─[  two  ]', '          [ three ]'].join('\n'))
+})
+
+test('A1: R3 a rejoined suffix cannot merge before the target channel', () => {
+  const p = layoutGraph(g('LR', ['N0=>N1|yes', 'N1=>N2', 'N0>N3|yes', 'N2.>N4', 'N1=>N1', 'N0.>N1', 'N0.>N1'],
+    { N0: 'a wider node' }), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  const a = rs.find(r => r.edge === 'e5')!, b = rs.find(r => r.edge === 'e6')!, head = b.ends[0]!
+  const suffix: Route['cells'][number][] = []
+  for (let i = 1; i <= Math.min(a.cells.length, b.cells.length); i++) {
+    const x = a.cells.at(-i)!, y = b.cells.at(-i)!
+    if (x.r !== y.r || x.c !== y.c) break
+    suffix.push(y)
+  }
+  assert.ok(suffix.length > 0)
+  assert.ok(suffix.every(c => Math.abs(c.r - head.r) <= 2))
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
+
+test('A1: R3 self-loop turns stay out of crossings even when all owners share its node', () => {
+  const gr = g('LR', ['N0>N1', 'N1.>N2|yes', 'N0>N3', 'N0>N0|成功'], { N2: '读取配置', N3: '读取配置' })
+  gr.clusters = [{ id: 'S', title: null, dir: null, nodes: ['N2'], clusters: [] }]
+  const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  const d = drawGraph(p, rs, 120, x => x)
+  assert.equal(validate(d), null)
+  const loop = rs.find(r => r.edge === 'e3')!
+  for (const c of loop.cells) if (d.cells[c.r]![c.c]!.dirs === 15) assert.ok(c.dirs === 5 || c.dirs === 10)
+  assert.deepEqual(falsePairs(d), [])
+})
+
+test('A1: R2 every owner stays straight where unrelated edges cross', () => {
   const p = layoutGraph(g('TB', ['A>B', 'B>D', 'B>E', 'E>E', 'C>D']), {
     rankGap: 3, nodeGap: 4, wrapAt: null,
   }) as Placed
@@ -59,7 +123,7 @@ test('A1: R2 horizontal label waypoints use geometry when the middle line is bla
   }
 })
 
-test('A1: R2 an outside head never crosses a line on its own in-stem', { todo: 'router fix cycle 3: merge-ambiguous rejects its drawing, which implies N3→N2' }, () => {
+test('A1: R2 an outside head never crosses a line on its own in-stem', () => {
   const p = layoutGraph(g('LR', ['N0>N1', 'N1=>N2', 'N1>N3', 'N1>N4', 'N4>N5|yes', 'N5=>N6',
     'N4.>N7', 'N3.>N7', 'N3.>N7', 'N3.>N1', 'N4.>N2'], { N0: '读取<br/>配置' }), {
     rankGap: 5, nodeGap: 6, wrapAt: null,
@@ -121,7 +185,7 @@ test('A1: side-entry splices never retrace a cell or create a one-arm spur', () 
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
-test('A1: side-entry splices preserve all dummy and label waypoints in order', { todo: 'router fix cycle 3: merge-ambiguous rejects its drawing, which implies D→B' }, () => {
+test('A1: side-entry splices preserve all dummy and label waypoints in order', () => {
   const graph = g('TB', ['D>E', 'B>E'])
   Object.assign(graph.edges[1]!, { tail: 'arrow', minlen: 3 })
   graph.clusters = [{ id: 'S2', nodes: ['B'], title: null, dir: null, clusters: [] }]
@@ -428,9 +492,9 @@ test('A1: a back-edge side entry fails when both side stems are blocked', () => 
   const graph = g('TB', ['A>B', 'B>C', 'C>A'])
   graph.clusters = [{ id: 's', title: 'group', dir: null, nodes: ['A'], clusters: [] }]
   const original = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
-  const p = { ...original, cols: original.cols + 3,
-    boxes: new Map([...original.boxes].map(([id, b]) => [id, { ...b, col: b.col + 3 }])),
-    frames: new Map([...original.frames].map(([id, b]) => [id, { ...b, col: b.col + 3 }])) }
+  const p = { ...original, cols: original.cols + 6,
+    boxes: new Map([...original.boxes].map(([id, b]) => [id, { ...b, col: b.col + 6 }])),
+    frames: new Map([...original.frames].map(([id, b]) => [id, { ...b, col: b.col + 6 }])) }
   p.graph.edges[0]!.style = 'invisible'
   p.graph.edges[1]!.style = 'invisible'
   const a = p.boxes.get('A')!
@@ -440,8 +504,9 @@ test('A1: a back-edge side entry fails when both side stems are blocked', () => 
   assert.deepEqual(result, { reason: 'route-conflict' })
   boxes.delete('left')
   const free = routeGraph({ ...p, boxes })
-  if (Array.isArray(free)) assert.equal(free.find(r => r.edge === 'e2')!.ends[0]!.ch, '►')
-  else assert.equal(free.reason, 'route-conflict') // The remaining obstacle's clearance can also block the connector.
+  assert.ok(Array.isArray(free))
+  assert.equal(free.find(r => r.edge === 'e2')!.ends[0]!.ch, '►')
+  assert.equal(validate(drawGraph({ ...p, boxes }, free, 120)), null)
 })
 
 test('A1: distinct port groups cannot occupy the same face cell', () => {
@@ -464,12 +529,12 @@ test('A1: unrelated routes cannot share a one-cell obstacle passage', () => {
 
 test('A1: obstacle detours preserve mandatory dummy waypoints', () => {
   const p = layoutGraph(g('TB', ['A>B', 'B>C', 'C>D', 'A>D']), {
-    rankGap: 4, nodeGap: 4, wrapAt: null,
+    rankGap: 6, nodeGap: 6, wrapAt: null,
   }) as Placed
   const d = p.boxes.get('e3#1')!
   const boxes = new Map(p.boxes).set('obstacle', { row: d.row - 2, col: d.col, rows: 1, cols: 1 })
   const rs = routeGraph({ ...p, boxes })
-  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.ok(Array.isArray(rs))
   const r = rs.find(r => r.edge === 'e3')!
   assert.equal(r.cells.filter(c => c.r === d.row && c.c === d.col).length, 1)
   assert.ok(linked(r))

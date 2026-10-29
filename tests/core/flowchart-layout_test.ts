@@ -54,10 +54,10 @@ test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarke
   assert.ok(Array.isArray(routes))
   assert.ok(routes[0]!.cells.every(c => c.r < 3 || c.r > 5 || c.c < 6 || c.c > 10))
   const g = graph('flowchart TB\nN0 --> N1\nN0 --> N2\nN1 --> N4\nN3 -->|Q| N4\nN5 ~~~ N3\nN5 --- N2\nN4 --> N5')
-  const p = layoutGraph(g, { rankGap: 3, nodeGap: 4, wrapAt: null })
+  const p = layoutGraph(g, { rankGap: 5, nodeGap: 6, wrapAt: null })
   assert.ok(!isFail(p))
   const rs = routeGraph(p)
-  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.ok(Array.isArray(rs))
   for (const r of rs) {
     const edge = p.graph.edges.find(e => e.id === r.edge)!
     for (const n of g.nodes.filter(n => n.id !== edge.from && n.id !== edge.to)) {
@@ -70,12 +70,11 @@ test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarke
   const result = explain('flowchart TB\nN0 --> N1\nN0 --> N2\nN1 --> N4\nN3 -->|Q| N4\nN5 ~~~ N3\nN5 --- N2\nN4 --> N5', { columns: 80 })
   assert.ok(!isFail(result))
   assert.equal(text(result.drawing).join('\n'), [
-    '    [ N0 ]', '  ┌───┴─────┐', '  │         │', '  │         │', '  │         │', '  ▼         │', '[ N1 ]      │',
-    '  │         └───┐', '  │             │', '  │             │', '  │           ┌─┼────────┐', '  ▼           │ │        │',
-    '[ N4 ]◄───────┘ │        │', '  │             └────┐   │', '  └────────┐         │   │', '           │         │   │',
-    '           │         │   │', '           ▼         │   │', '         [ N5 ]      │   Q', '           └─────┐   │   │',
-    '               ┌─┼───┘   │', '       ┌───────┼┐│       │', '       │       │└┼──┐    │', '       │       ▼ │  │    │',
-    ' [ N3 ]┘     [ N2 ] └────┘',
+    '    [ N0 ]', '  ┌───┴─────┐', '  │         │', '  ▼         │', '[ N1 ]      │', '  │         └───┐',
+    '  │             │', '  │           ┌─┼───────┐', '  ▼           │ │       │', '[ N4 ]◄───────┘ │       │',
+    '  │             └────┐  │', '  └────────┐         │  │', '           │         │  │', '           ▼         │  │',
+    '         [ N5 ]      │  Q', '           └─────┐   │  │', '               ┌─┼───┘  │', '       ┌───────┼┐│      │',
+    '       │       │└┼──┐   │', '       │       ▼ │  │   │', ' [ N3 ]┘     [ N2 ] └───┘',
   ].join('\n'))
 })
 
@@ -141,7 +140,7 @@ test('A1: R2 label exits keep a one-column-compatible target port on their axis'
   assert.equal(validate(result.drawing), null)
 })
 
-test('A1: R2 long labelled edges keep dummy and label axes aligned', { todo: 'router fix cycle 3: merge-ambiguous rejects its drawing, which implies E→D' }, () => {
+test('A1: R2 long labelled edges keep dummy and label axes aligned', () => {
   const g = graph('flowchart TD\nA[Receive request] --> B{Cache hit?}\nB -- Yes --> C[Return data]\nB -- No --> D[Query MySQL]\nD --> E[Write back to cache]\nE --> C\nC --> F([End])')
   const p = layoutGraph(g, { rankGap: 3, nodeGap: 4, wrapAt: null })
   assert.ok(!isFail(p))
@@ -154,8 +153,8 @@ test('A1: R2 long labelled edges keep dummy and label axes aligned', { todo: 'ro
   assert.equal(text(result.drawing).join('\n'), [
     '[ Receive request ]', '         │', '         ▼', '  { Cache hit? }', '    ┌───┴─────────┐', '    │             │',
     '    │            No', '    │             │', '    │             ▼', '   Yes     [ Query MySQL ]',
-    '    │             │', '    │             ▼', '    │    [ Write back to cache ]', '    │               │',
-    '    └───┬───────────┘', '        │', '        ▼', ' [ Return data ]', '        │', '        ▼', '    ([ End ])',
+    '    │             │', '    │             ▼', '    └─┐  [ Write back to cache ]', '      │    ┌────────┘',
+    '      │    │', '      ▼    ▼', ' [ Return data ]', '        │', '        ▼', '    ([ End ])',
   ].join('\n'))
 })
 

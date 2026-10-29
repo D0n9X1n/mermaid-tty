@@ -9,7 +9,7 @@ import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } fro
 import { compact } from '../../core/graph/compact.ts'
 import type { End, Graph } from '../../core/graph/model.ts'
 import { validate } from '../../core/validate.ts'
-import { g } from './graph-fixture.ts'
+import { falsePairs as drawnFalsePairs, g } from './graph-fixture.ts'
 
 // xorshift32 from a fixed seed: next(n) is an integer in [0, n).
 function random(seed: number) { return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n } }
@@ -195,7 +195,7 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
 // the ones that seem to draw an edge the source does not have, (iv); the floor of validated drawings keeps the check meaningful.
 test('A1: every seeded drawing the validator passes reads honestly from its cells', async t => {
   const next = random(0x5eed2), bad: string[] = []
-  let routed = 0, validated = 0, implied = 0
+  let routed = 0, validated = 0, implied = 0, implications = 0
   for (let i = 0; i < 1500; i++) {
     const graph = graphFor(i, next)
     const src: Src[] = graph.edges.map(({ id, from, to, tail, head }) => ({ id, from, to, tail, head }))
@@ -204,14 +204,17 @@ test('A1: every seeded drawing the validator passes reads honestly from its cell
     routed++
     if (validate(d)) continue
     validated++
+    const pairs = drawnFalsePairs(d)
+    if (pairs.length) implications++
+    for (const pair of pairs) bad.push(`graph ${i}: false implied pair ${pair}`)
     const lies = honesty(d, src)
     if (lies.some(v => v.startsWith('(iv)'))) implied++
     for (const v of lies) bad.push(`graph ${i}: ${v}`)
   }
-  t.diagnostic(`graphs 1500, drawn ${routed}, validated ${validated}, implying a false pair ${implied}, violations ${bad.length}`)
+  t.diagnostic(`graphs 1500, drawn ${routed}, validated ${validated}, implying a false pair ${implied}, shared-arm false pairs ${implications}, violations ${bad.length}`)
   assert.equal(implied, 0, `${implied} validated drawings imply a false pair, as ${bad.find(v => v.includes('(iv)'))}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} violations`)
-  await t.test('at least 1,000 of the 1,500 graphs validate', { todo: 'router fix cycle 3: 95 seeded drawings fail merge-ambiguous, so 937 validate' },
+  await t.test('at least 1,000 of the 1,500 graphs validate',
     () => assert.ok(validated >= 1000, `only ${validated} of 1500 validated`))
 })
 

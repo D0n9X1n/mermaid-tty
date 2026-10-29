@@ -5,7 +5,7 @@ import { routeGraph } from '../../core/graph/route.ts'
 import { drawGraph } from '../../core/graph/draw.ts'
 import { compact } from '../../core/graph/compact.ts'
 import { validate } from '../../core/validate.ts'
-import { g } from './graph-fixture.ts'
+import { falsePairs, g } from './graph-fixture.ts'
 
 function random(seed: number) {
   return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n }
@@ -40,7 +40,7 @@ function graphFor(kind: typeof classes[number], index: number, next: (n: number)
   return graph
 }
 
-test('A1: seeded router property covers 2000 graphs without invalid drawings', { todo: 'router fix cycle 3: 574 routed drawings fail merge-ambiguous' }, () => {
+test('A1: seeded router property covers 2000 graphs without invalid drawings', () => {
   const next = random(0x17a10), failures: string[] = [], rates: Record<string, number> = {}
   for (const kind of classes) {
     let conflicts = 0, raw = 0
@@ -60,7 +60,16 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', {
       // At layout coordinates, where the routes' cells are; compacted, as shown, it must validate too.
       const drawing = drawGraph(p, rs, 10000, x => x), error = validate(drawing) ?? validate(compact(drawing))
       if (error) failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`)
+      assert.deepEqual(falsePairs(drawing), [], `${kind}/${i} false implied pair`)
+      assert.deepEqual(falsePairs(compact(drawing)), [], `${kind}/${i} compacted false implied pair`)
       for (const r of rs) {
+        const loop = p.graph.edges.find(e => e.id === r.edge)!
+        if (loop.from === loop.to) for (const c of r.cells) {
+          const owners = drawing.cells[c.r]![c.c]!.segs ?? []
+          if (drawing.cells[c.r]![c.c]!.dirs === 15 && owners.length > 1) {
+            assert.ok(owners.every(s => s.dirs === 5 || s.dirs === 10), `${kind}/${i} self-loop crossing`)
+          }
+        }
         for (const other of rs.slice(rs.indexOf(r) + 1)) {
           const otherCells = new Map(other.cells.map(c => [`${c.r},${c.c}`, c]))
           const shared = new Set<string>()

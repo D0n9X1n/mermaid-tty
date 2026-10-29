@@ -366,9 +366,9 @@ test('A5.mutation-tests: a crossing cell without per-owner dirs fails crossing-a
 // merge-ambiguous: edges whose drawn lines join read as one line, so each end without a mark seems to lead to each head on
 // it. A merge that implies an edge the drawing does not have fails, by explain at 80 columns and on hand-built grids.
 const verdict = (src: string) => { const r = explain(src, { columns: 80, theme: 'mono' }); return 'reason' in r ? r.reason : null }
-test('merge-ambiguous: QA repros, a merged line that implies D→C or A→B, fall back', () => {
-  assert.equal(verdict('flowchart TB\nA --> B\nA --> C\nD --> B'), 'merge-ambiguous')
-  assert.equal(verdict('flowchart TB\nA --> C\nB <--> C'), 'merge-ambiguous')
+test('merge-ambiguous: QA repros render after the router separates unsafe merges', () => {
+  assert.equal(verdict('flowchart TB\nA --> B\nA --> C\nD --> B'), null)
+  assert.equal(verdict('flowchart TB\nA --> C\nB <--> C'), null)
 })
 test('merge-ambiguous: fan-out, fan-in, complete bipartite, a self-loop, a two-headed edge and open links still draw', () => {
   for (const src of ['A --> B\nA --> C', 'A --> C\nB --> C', 'A & B --> C & D', 'A --> A', 'A <--> B', 'A --- B\nA --- C'])

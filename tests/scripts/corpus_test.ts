@@ -8,5 +8,5 @@ test("A10: at least 90 synthetic blocks with the owner's feature mix", () => {
     assert.ok(share(re) >= min, String(re))
   assert.ok(C.filter(s => /^sequenceDiagram/m.test(s) && /^\s*title /m.test(s)).length >= 3)
 })
-test('A10: every block renders and validates at 80 and 120 columns', { todo: 'router fix cycle 3: merge-ambiguous rejects blocks 4, 41, 54, 88' },
+test('A10: every block renders and validates at 80 and 120 columns',
   () => assert.deepEqual(gate('fixtures/corpus').failed, []))

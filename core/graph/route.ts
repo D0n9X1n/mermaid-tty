@@ -19,6 +19,24 @@ function routeObstacles(p: Placed, e: GEdge): Box[] {
   return [...p.boxes].filter(([id]) => !id.startsWith(`${e.id}#`) && id !== `${e.id}:label`).map(([id, b]) =>
     id === e.from || id === e.to ? b : { row: b.row - 1, col: b.col - 1, rows: b.rows + 2, cols: b.cols + 2 })
 }
+// Disjoint complete bipartite nets: joining any two lines in a net implies only declared edges.
+function mergeGroups(p: Placed): Map<string, string> {
+  const edges = p.graph.edges.filter(e => e.style !== 'invisible').toSorted((a, b) => a.order - b.order)
+  const eligible = (e: GEdge) => e.tail === 'none' && e.head === 'arrow' && e.from !== e.to && !e.reversed
+  const groups: GEdge[][] = [], result = new Map<string, string>()
+  for (const e of edges) {
+    let group = eligible(e) ? groups.find(g => {
+      if (!eligible(g[0]!) || g[0]!.style !== e.style || !g.some(n => n.from === e.from || n.to === e.to)) return false
+      const tails = new Set([...g.map(n => n.from), e.from]), heads = new Set([...g.map(n => n.to), e.to])
+      return [...tails].every(from => [...heads].every(to => edges.some(n => eligible(n) && n.style === e.style && n.from === from && n.to === to)))
+    }) : undefined
+    if (!group) { group = []; groups.push(group) }
+    group.push(e)
+    result.set(e.id, group[0]!.id)
+  }
+  return result
+}
+
 type Segment = { nodes: readonly string[]; dirs: number }
 const unrelated = (a: Segment, b: Segment) => !a.nodes.some(id => b.nodes.includes(id))
 function straightCrossing(owners: readonly Segment[]): boolean {
@@ -240,6 +258,7 @@ function findPath(start: Port, end: Port, blocked: (c: Point) => boolean,
 }
 
 function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = []): Route[] | Fail {
+  const groups = mergeGroups(p)
   const edges = p.graph.edges.filter(e => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   if (constrainedFirst) edges.sort((a, b) => Number(b.tail !== 'none') - Number(a.tail !== 'none') ||
     Number(b.label !== null) - Number(a.label !== null) || b.minlen - a.minlen || a.order - b.order)
@@ -266,13 +285,13 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
     if (b && n.title !== null) for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) titleCells.add(`${b.row},${c}`)
   }
   const title = (c: Point) => titleCells.has(keyOf(c))
-  const candidates = (id: string, style: string, mark: string, preferred: number, target = false): Port[] => {
+  const candidates = (id: string, style: string, mark: string, preferred: number, net: string, target = false): Port[] => {
     const b = p.boxes.get(id) ?? p.frames.get(id)
     if (!b) return []
     const out: Port[] = []
     for (const face of [preferred, (preferred + 1) % 4, (preferred + 3) % 4, back(preferred)]) {
       const size = face % 2 ? b.rows : b.cols
-      const group = `${id}:${face}:${style}:${mark}`, fixed = ports.get(group)
+      const group = `${net}:${id}:${face}:${style}:${mark}`, fixed = ports.get(group)
       const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) => Math.abs(a - middle(size)) - Math.abs(b - middle(size)) || b - a)
       for (const i of slots) {
         const at = face === 0 ? { r: b.row - 1, c: b.col + i } : face === 1 ? { r: b.row + i, c: b.col + b.cols }
@@ -403,10 +422,10 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
   }
   const preferred = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
   for (const e of edges) {
-    const sources = candidates(e.from, e.style, e.tail, preferred)
+    const sources = candidates(e.from, e.style, e.tail, preferred, groups.get(e.id)!)
     const fanInOut = e.from !== e.to && e.tail === 'none' && edges.filter(n => n.from === e.from).length > 1 &&
       new Set(edges.filter(n => n.to === e.to).map(n => n.from)).size > 1
-    const targets = candidates(e.to, e.style, e.head, back(preferred), true).filter(port =>
+    const targets = candidates(e.to, e.style, e.head, back(preferred), groups.get(e.id)!, true).filter(port =>
       !fanInOut || preferred % 2 !== 0 || port.face === back(preferred))
     let result: { route: Route; source: Port; target: Port } | null = null
     for (const source of sources) {
@@ -435,6 +454,7 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
 }
 
 function channelsRoute(p: Placed): Route[] | Fail {
+  const groups = mergeGroups(p)
   const edges = p.graph.edges.filter(e => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   let across = p.graph.dir === 'LR' || p.graph.dir === 'RL'
   let sign = p.graph.dir === 'BT' || p.graph.dir === 'RL' ? -1 : 1
@@ -443,11 +463,11 @@ function channelsRoute(p: Placed): Route[] | Fail {
     const f = p.frames.get(cluster.id)
     return f && cluster.title !== null && c.r === f.row && c.c >= f.col + 2 && c.c <= f.col + 3 + width(cluster.title)
   })
-  const port = (id: string, source: boolean, style: string, end: string): number => {
+  const port = (id: string, source: boolean, style: string, end: string, group: string): number => {
     const b = (p.boxes.get(id) ?? p.frames.get(id))!
     const peers = edges.filter(e => (source ? e.from : e.to) === id)
-    const keys = [...new Set(peers.map(e => `${e.style}:${source ? e.tail : e.head}`))]
-    const index = keys.indexOf(`${style}:${end}`)
+    const keys = [...new Set(peers.map(e => `${groups.get(e.id)}:${e.style}:${source ? e.tail : e.head}`))]
+    const index = keys.indexOf(`${group}:${style}:${end}`)
     const size = across ? b.rows : b.cols, low = across ? b.row : b.col
     if (keys.length > size) return NaN
     const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) =>
@@ -464,18 +484,18 @@ function channelsRoute(p: Placed): Route[] | Fail {
       .filter(e => { const a = p.boxes.get(e.from) ?? p.frames.get(e.from)!;
         const target = p.boxes.get(peers[0]!.from) ?? p.frames.get(peers[0]!.from)!;
         return across ? a.col === target.col : a.row === target.row })
-      .map(e => port(e.from, true, e.style, e.tail)))
+      .map(e => port(e.from, true, e.style, e.tail, groups.get(e.id)!)))
     const candidates = Array.from({ length: size }, (_, i) => low + i)
       .sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) || a - b)
     const face = sign === 1 ? (across ? b.col : b.row) : -(across ? b.col + b.cols - 1 : b.row + b.rows - 1)
     const clear = (x: number) => [1, 2, 3].every(d => ![...p.boxes.values()].some(b => inside(point(face - d, x), b)))
     if (peers.length === 1 && keys.length === 1) {
       const e = peers[0]!, label = p.boxes.get(`${e.id}:label`)
-      const x = label ? (across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)) : port(e.from, true, e.style, e.tail)
+      const x = label ? (across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)) : port(e.from, true, e.style, e.tail, groups.get(e.id)!)
       if (x >= low && x < low + size && !blocked.has(x) && clear(x)) return x
     }
     if (manySources) {
-      const sourcePorts = peers.map(e => port(e.from, true, e.style, e.tail)).sort((a, b) => a - b)
+      const sourcePorts = peers.map(e => port(e.from, true, e.style, e.tail, groups.get(e.id)!)).sort((a, b) => a - b)
       const mean = (sourcePorts[0]! + sourcePorts.at(-1)!) / 2
       candidates.sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) ||
         (low + offset < mean ? a - b : b - a))
@@ -498,8 +518,8 @@ function channelsRoute(p: Placed): Route[] | Fail {
     }))
     const start = sign === 1 ? (across ? a.col + a.cols : a.row + a.rows) : -(across ? a.col : a.row) + 1
     const finish = sign === 1 ? (across ? b.col : b.row) - 1 : -(across ? b.col + b.cols : b.row + b.rows)
-    const sx = port(e.from, true, e.style, e.tail)
-    const tx = port(e.to, false, e.style, e.head)
+    const sx = port(e.from, true, e.style, e.tail, groups.get(e.id)!)
+    const tx = port(e.to, false, e.style, e.head, groups.get(e.id)!)
     if (!Number.isFinite(sx) || !Number.isFinite(tx)) return fail('route-conflict')
     const waypoints = [...p.boxes].filter(([id]) => id.startsWith(`${e.id}#`))
       .map(([, b]) => ({ m: sign * (across ? b.col : b.row), x: across ? b.row : b.col }))
@@ -513,7 +533,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       waypoints.sort((a, b) => a.m - b.m)
     }
     const stops = [...waypoints, { m: finish, x: tx }]
-    const path: Point[] = [], net = `${e.from}:${e.style}:${e.tail}`
+    const path: Point[] = [], net = `${groups.get(e.id)}:${e.from}:${e.style}:${e.tail}`
     let m = start, x = sx
     for (const [i, stop] of stops.entries()) {
       const gap = channels.find(g => g.axis === (across ? 'col' : 'row') && g.from >= m && g.to < stop.m)
@@ -522,7 +542,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       const nets = tracks.get(key) ?? new Map<string, number>()
       tracks.set(key, nets)
       const fan = across && edges.filter(n => n.from === e.from && n.style === e.style && n.tail === e.tail).length > 1
-      const firstTrack = Math.max(gap?.from ?? m, m + (i === 0 && (e.tail !== 'none' || fan) ? 2 : 0))
+      const firstTrack = Math.max(gap?.from ?? m, m + (i === 0 && (e.tail !== 'none' || fan) ? 2 : i === 0 && across && a.rows > 1 ? 1 : 0))
       if (x !== stop.x && !nets.has(net)) {
         let track = Math.max(firstTrack, ...[...nets.values()].map(n => n + 1))
         const obstacles = routeObstacles(p, e)
@@ -536,7 +556,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       let track = x === stop.x ? m : nets.get(net)!
       if (i === stops.length - 1 && edges.filter(n => n.from === e.from).length === 1) {
         const incoming = routes.filter(r => { const n = edges.find(n => n.id === r.edge)!;
-          return n.to === e.to && n.style === e.style && n.head === e.head })
+          return groups.get(n.id) === groups.get(e.id) && n.to === e.to && n.style === e.style && n.head === e.head })
         const previous = incoming.flatMap(r => r.cells).filter(c => (across ? c.dirs === 5 : c.dirs === 10))
           .map(c => sign * (across ? c.c : c.r)).filter(n => n >= firstTrack && n < stop.m - 1)
         if (previous.length) track = Math.min(...previous)
@@ -607,7 +627,8 @@ function channelsRoute(p: Placed): Route[] | Fail {
     if (!crossingsFit(p, e, cells, routes)) return fail('route-conflict')
     for (const other of routes) {
       const edge = edges.find(n => n.id === other.edge)!
-      const related = e.style === edge.style && (e.from === edge.from && e.tail === edge.tail || e.to === edge.to && e.head === edge.head)
+      const related = groups.get(e.id) === groups.get(edge.id) &&
+        (e.from === edge.from && e.tail === edge.tail || e.to === edge.to && e.head === edge.head)
       const occupied = new Map(other.cells.map(c => [keyOf(c), c.dirs]))
       if (ends.some(c => occupied.has(keyOf(c))) || other.ends.some(c => cells.some(n => keyOf(c) === keyOf(n)))) {
         return fail('route-conflict')
