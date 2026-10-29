@@ -4,6 +4,7 @@
 import { cmp, dec, parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
+import { drawable } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // A source number: its text as written, which prints, and its exact value.
@@ -48,7 +49,7 @@ function stop(reason: string): never { throw fail(reason) }
 // The model src's statements build, or why it cannot be drawn: 'header' (not xychart-beta or xychart, alone or with
 // vertical or horizontal), 'syntax:<n>' (a statement on source line n outside the subset, or an accDescr { there with no
 // }), 'repeat:<n>' (a second title, from frontmatter or a statement, x-axis or y-axis, or a repeated category, on line
-// n), 'entity' (a #…; entity in a text), 'unsupported-char U+XXXX' (a text character no terminal draws reliably), 'length' (a series without one value per
+// n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal draws reliably), 'length' (a series without one value per
 // group), 'series' (more than 8 line series or 26 bar series) or 'domain' (no y range that holds every value: see domain).
 export function parseXy(src: Source): Xy | Fail {
   try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
@@ -99,12 +100,13 @@ function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
 }
 
 // A text's content. A "…" is trimmed, as Mermaid's xychart database trims each text; a "`…`" markdown string fails, and
-// so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. A #…;
-// entity fails 'entity': Mermaid encodes it in the body and its SVG decodes it, so it would draw as other text.
+// so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. Text Mermaid
+// shows otherwise fails as drawable says: each text is sanitized, with no <br>, as the title is ('entity' or 'html').
 function text(s: string, n: number): string {
   const quoted = s.startsWith('"'), t = quoted ? s.slice(1, -1).trim() : s
   if (quoted ? s.startsWith('"`') || t === '' : KEYWORD.test(s)) stop(`syntax:${n}`)
-  if (/#\w+;/.test(t)) stop('entity')
+  const f = drawable(t, 'sanitized', 'none')
+  if (f) stop(f.reason)
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }

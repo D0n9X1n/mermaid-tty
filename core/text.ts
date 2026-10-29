@@ -1,4 +1,34 @@
+import { fail, type Fail } from './fail.ts'
 import { isWide, width } from './width.ts'
+
+// How a field's text reaches the screen in Mermaid 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md):
+// html, an HTML label; plain, text as written; sanitized, DOMPurify's output; escaped, < and > escaped; member, a class member.
+export type Mode = 'html' | 'plain' | 'sanitized' | 'escaped' | 'member'
+// What a <br> does there: any spelling splits; only lowercase <br> splits; each is drawn as written; or none can be drawn.
+export type Br = 'any' | 'lower' | 'literal' | 'none'
+
+// Every mode: Mermaid encodes #name; and #123; as entities, and its ﬂ°, ¶ß markers become & and ;, so text holding one
+// shows other text.
+const ENTITY = /#\w+;|ﬂ°|¶ß/
+const BR_ANY = /<br\s*\/?>/gi
+// The text each mode shows differently, and why.
+const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
+  plain: [],
+  html: [[/<[A-Za-z/!?]/, 'html'], [/&(?:#|[A-Za-z]{2})/, 'entity']],
+  sanitized: [[/</, 'html']],
+  escaped: [[/[<>]/, 'html']],
+  member: [[/</, 'html'], [/&(?:#|\p{L}{2})/u, 'entity']],
+}
+
+// Why text, in a field of mode and br, would draw other text than Mermaid shows: 'entity' or 'html'; null if it draws as
+// written, each <br> that splits removed first.
+export function drawable(text: string, mode: Mode, br: Br): Fail | null {
+  if (ENTITY.test(text)) return fail('entity')
+  if (br === 'none' && /<br/i.test(text)) return fail('html')
+  const t = br === 'any' ? text.replace(BR_ANY, '') : br === 'lower' ? text.replaceAll('<br>', '') : text
+  const hit = RULES[mode].find(([re]) => re.test(t))
+  return hit ? fail(hit[1]) : null
+}
 
 // One piece of a wrapped line, and how it attaches to the previous piece: '' after
 // a split between W/F characters, ' ' after a split at spaces. The first piece of

@@ -18,6 +18,7 @@ import { parsePie, type Pie } from './parse.ts'
 const widest = (xs: readonly string[]): number => Math.max(0, ...xs.map(width))
 
 // Both steps draw each label as wrap's pieces, so a run of spaces draws as one and the ends trim, as validate reads it.
+// A label never splits at a <br>: Mermaid shows a slice's <br> as written, so it wraps only at spaces.
 // natural: labels unwrapped, and the bar field W = min(60, columns − N − V − P − 3), at least 10. wrap: W = 10, and labels
 // wrap to columns − V − P − 13, so the row still fits. Any other step fails 'step'.
 function layout(pie: Pie, step: Step, columns: number): Drawing | Fail {
