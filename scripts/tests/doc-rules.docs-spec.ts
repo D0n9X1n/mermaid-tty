@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, publishWikiErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
+import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
+import { publishWikiErrors } from '../docs/workflow-tree.ts';
 const R = 'https://github.com/D0n9X1n/mermaid-tty', S = 'https://img.shields.io/github', SHA = 'a'.repeat(40), IMG = ['assets/readme/after.svg'];
 const README = `<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>\n\n**${TAGLINE}**\n\n` +
   `[![CI](${R}/actions/workflows/ci.yml/badge.svg)](${R}/actions/workflows/ci.yml) [![Release](${S}/v/release/D0n9X1n/mermaid-tty)](${R}/releases) ` +
@@ -42,9 +43,14 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [publishWikiErrors, WIKI, '  workflow_dispatch:\n', '', 'workflow_dispatch'], [publishWikiErrors, WIKI, 'contents: write', 'contents: read', 'job-scoped'],
   [publishWikiErrors, WIKI, 'ubuntu-latest', 'windows-latest', 'ubuntu'], [publishWikiErrors, WIKI, `@${SHA} # v7.0.1`, '@v7', 'pinned'],
   [publishWikiErrors, WIKI, '        shell: bash\n        run: scripts', '        run: scripts', 'without shell: bash'], [publishWikiErrors, WIKI, '[main]\n', '[main]\n    paths: [wiki/**]\n', 'paths'],
-  [publishWikiErrors, WIKI, `- uses: actions/checkout@${SHA} # v7.0.1`, '- "uses": actions/checkout@v7', 'not pinned by full SHA with a # version comment: - uses: actions/checkout@v7'],
-  [publishWikiErrors, WIKI, '        shell: bash\n        run: scripts', "        'run' : scripts", 'step runs a .sh script without shell: bash: - id: mirror'],
+  [publishWikiErrors, WIKI, `- uses: actions/checkout@${SHA} # v7.0.1`, '- "uses": actions/checkout@v7', 'not pinned by full SHA with a # version comment: - "uses": actions/checkout@v7'],
+  [publishWikiErrors, WIKI, '        shell: bash\n        run: scripts', "        'run' : scripts", 'publish-wiki.yml:16: step runs a .sh script without shell: bash'],
   [publishWikiErrors, WIKI, '[main]\n', '[main]\n    "paths": [wiki/**]\n', 'paths filter would skip merges'],
+  // As publish-wiki.yml jobs: a flow sequence hiding a quoted uses key; an id, or the publisher call, only in a comment.
+  [publishWikiErrors, WIKI, "== 'true'\n", "== 'true'\n  sneak:\n    runs-on: ubuntu-latest\n    steps: [\n      \"uses\":\"actions/checkout@v7\"\n    ]\n",
+    'not pinned by full SHA with a # version comment: "uses":"actions/checkout@v7"'],
+  [publishWikiErrors, WIKI, '- id: mirror', '- name: mirror # id: mirror', 'check step has no stable id'],
+  [publishWikiErrors, WIKI, 'run: scripts/publish-wiki.sh', 'run: echo ok # scripts/publish-wiki.sh', 'missing publisher call'],
 ];
 for (const [rule, base, from, to, want] of cases)
   test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`));

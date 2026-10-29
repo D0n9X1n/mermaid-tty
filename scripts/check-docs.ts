@@ -2,7 +2,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assetImages, iconErrors, imageErrors, publishWikiErrors, readmeErrors } from './lib/doc-rules.ts';
+import { publishWikiErrors } from './docs/workflow-tree.ts';
+import { assetImages, iconErrors, imageErrors, readmeErrors } from './lib/doc-rules.ts';
 import { IMAGES } from './lib/images.ts';
 const root = fileURLToPath(new URL('..', import.meta.url)), at = (p: string) => join(root, p);
 const read = (p: string) => (existsSync(at(p)) ? readFileSync(at(p), 'utf8').replace(/\r\n/g, '\n') : '');
