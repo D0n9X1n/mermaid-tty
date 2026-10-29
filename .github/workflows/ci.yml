@@ -56,15 +56,17 @@ jobs:
         shell: bash
     steps:
       - run: |
-          tmux -V; locale -a | grep -i utf || true; echo "TERM=${TERM:-unset} TMUX_TMPDIR=${TMUX_TMPDIR:-unset} uid=$(id -u)"
-          d="$(mktemp -d)"; cd "$d"
-          try() { local name="$1"; shift; mkdir -p "$d/$name"; (cd "$d/$name" && "$@" >out 2>&1; echo "$name exit=$?"; cat out); }
-          OPTS=(set -g window-size manual \; set -g default-size 100x40 \; set -g default-terminal xterm-256color \; set -g set-clipboard on \; set -g remain-on-exit on \;)
-          try 1-plain        tmux -vv -L s1 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
-          try 2-envi-full    env -i HOME="$HOME" PATH="$PATH" USER=e2e TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash tmux -vv -L s2 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
-          try 3-envi-bare    env -i HOME="$HOME" PATH="$PATH" tmux -vv -L s3 -f /dev/null new-session -d -s t -x 100 -y 40 -- sleep 30
-          try 4-opts-plain   tmux -vv -L s4 -f /dev/null "${OPTS[@]}" new-session -d -s t -x 100 -y 40 -- sleep 30
-          try 5-opts-envi    env -i HOME="$HOME" PATH="$PATH" USER=e2e TERM=xterm-256color LANG=C.UTF-8 LC_ALL=C.UTF-8 SHELL=/bin/bash tmux -vv -L s5 -f /dev/null "${OPTS[@]}" new-session -d -s t -x 100 -y 40 -- sleep 30
-          try 6-opts-noclip  tmux -vv -L s6 -f /dev/null set -g window-size manual \; set -g default-size 100x40 \; set -g remain-on-exit on \; new-session -d -s t -x 100 -y 40 -- sleep 30
-          for f in "$d"/*/tmux-server-*.log; do echo "== $f"; tail -n 15 "$f"; done
-          tmux -L s1 kill-server 2>/dev/null; true
+          set +e
+          tmux -V; echo "TERM=${TERM:-unset}"
+          d="$(mktemp -d)"; n=0
+          try() { local name="$1"; shift; n=$((n+1)); mkdir -p "$d/$name"; (cd "$d/$name"; "$@" >out 2>&1; echo "$name exit=$? :: $(tr '\n' ' ' < out)"); tmux -L "s$n" kill-server >/dev/null 2>&1; }
+          NS=(new-session -d -s t -x 100 -y 40 -- sleep 30)
+          try a-window-size  tmux -L s1 -f /dev/null set -g window-size manual \; "${NS[@]}"
+          try b-default-size tmux -L s2 -f /dev/null set -g default-size 100x40 \; "${NS[@]}"
+          try c-default-term tmux -L s3 -f /dev/null set -g default-terminal xterm-256color \; "${NS[@]}"
+          try d-clipboard    tmux -L s4 -f /dev/null set -g set-clipboard on \; "${NS[@]}"
+          try e-remain       tmux -L s5 -f /dev/null set -g remain-on-exit on \; "${NS[@]}"
+          try f-ns-first     tmux -L s6 -f /dev/null "${NS[@]}" \; set -g window-size manual \; set -g default-size 100x40 \; set -g remain-on-exit on
+          try g-start-server tmux -L s7 -f /dev/null start-server \; set -g window-size manual \; set -g default-size 100x40 \; "${NS[@]}"
+          try h-exit-empty   tmux -L s8 -f /dev/null set -s exit-empty off \; set -g window-size manual \; "${NS[@]}"
+          true
