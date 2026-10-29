@@ -1,0 +1,67 @@
+// The layered layout (plan A §6–7): a Graph placed on a cell grid, each node, edge label and dummy a Box, each cluster a frame.
+import { fail, isFail } from '../fail.ts'
+import type { Fail } from '../fail.ts'
+import type { Extent, Unit } from './chains.ts'
+import { ancestors, clusterTree, subgraph } from './clusters.ts'
+import type { GEdge, Graph } from './model.ts'
+import { place } from './place.ts'
+import type { Rect } from './place.ts'
+import { labelSize, nodeSize } from './sizes.ts'
+import type { Size } from './sizes.ts'
+
+export type Box = { row: number; col: number; rows: number; cols: number }
+export type Spacing = { rankGap: number; nodeGap: number; wrapAt: number | null }
+export type Placed = { graph: Graph; boxes: ReadonlyMap<string, Box>; frames: ReadonlyMap<string, Box>; rows: number; cols: number }
+
+const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
+
+// A sealed cluster is laid out on its own, in its own direction or else its parent's, and placed as one block: its frame a
+// border on each side, plus a pad cell on each side across the ranks. An open cluster is a strip of the level it is on, in
+// that level's direction. An edge may end on a sealed cluster, never on an open one.
+export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
+  const across = g.dir === 'LR' || g.dir === 'RL', pr = across ? 2 : 1, pc = across ? 1 : 2  // a block's margin
+  const ext = (z: Size): Extent => (across ? { cross: z.rows, main: z.cols } : { cross: z.cols, main: z.rows })
+  const t = clusterTree(g), top = (x: string) => !ancestors(t.parent, x).some(c => t.sealed.has(c))
+  if (g.edges.some(e => [e.from, e.to].some(x => t.byId.has(x) && !t.sealed.has(x)))) return fail('cluster-edge')
+  const units: Unit[] = [], subs = new Map<string, Placed>(), last = Math.max(-1, ...g.nodes.map(n => n.order))
+  for (const n of g.nodes.filter(n => top(n.id))) {
+    const z = nodeSize(n, s.wrapAt)
+    if (isFail(z)) return z
+    units.push({ id: n.id, kind: 'node', owner: t.parent.get(n.id) ?? null, key: n.order, ...ext(z) })
+  }
+  for (const [i, c] of g.clusters.entries()) {
+    if (!t.sealed.has(c.id) || !top(c.id)) continue
+    const sub = layoutGraph(subgraph(g, t, c), s), inner = g.nodes.filter(n => ancestors(t.parent, n.id).includes(c.id))
+    if (isFail(sub)) return sub
+    subs.set(c.id, sub)
+    const key = inner.length > 0 ? Math.min(...inner.map(n => n.order)) : last + 1 + i
+    units.push({ id: c.id, kind: 'block', owner: t.parent.get(c.id) ?? null, key, ...ext({ rows: sub.rows + 2 * pr, cols: sub.cols + 2 * pc }) })
+  }
+  units.sort((a, b) => a.key - b.key)
+  const free = g.edges.filter(e => top(e.from) && top(e.to)), labels = new Map<string, Extent>()
+  for (const e of free) {
+    const z = e.label === null ? null : labelSize(e.label, s.wrapAt)
+    if (z && isFail(z)) return z
+    if (z) labels.set(e.id, ext(z))
+  }
+  const outer = new Map(g.clusters.filter(c => !t.sealed.has(c.id) && top(c.id)).map(c => [c.id, t.parent.get(c.id) ?? null] as const))
+  const p = place(units, free, labels, outer, s)
+  // LR swaps the axes; BT and RL mirror the main one.
+  const box = (r: Rect): Box => {
+    const m = g.dir === 'BT' || g.dir === 'RL' ? p.long - r.main - r.long : r.main
+    return across ? { row: r.cross, col: m, rows: r.wide, cols: r.long } : { row: m, col: r.cross, rows: r.long, cols: r.wide }
+  }
+  const boxes = new Map<string, Box>(), frames = new Map<string, Box>()
+  for (const [id, r] of p.rects) {
+    const b = box(r), sub = subs.get(id)
+    if (!sub) { boxes.set(id, b); continue }
+    frames.set(id, b)
+    for (const [k, v] of sub.boxes) boxes.set(k, shift(v, b.row + pr, b.col + pc))
+    for (const [k, v] of sub.frames) frames.set(k, shift(v, b.row + pr, b.col + pc))
+  }
+  for (const [id, r] of p.strips) frames.set(id, box(r))
+  // Each edge as drawn: a back edge, here or in a block, reversed with its ends swapped.
+  const drawn = new Map<string, GEdge>([...p.edges, ...[...subs.values()].flatMap(x => x.graph.edges)].map(e => [e.id, e]))
+  const graph = { ...g, edges: g.edges.map(e => drawn.get(e.id) ?? e) }
+  return { graph, boxes, frames, rows: across ? p.wide : p.long, cols: across ? p.long : p.wide }
+}
