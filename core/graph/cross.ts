@@ -33,32 +33,46 @@ function pull(ranks: Ranks, segs: readonly Seg[], cons: readonly Link[], x: Map<
 // A strip's left and right border on the cross axis: one variable each over every rank it spans, so it is a strip.
 export const LEFT = (c: string) => `\u0001${c}`, RIGHT = (c: string) => `\u0002${c}`
 
-// The separations along each rank, in order: items nodeGap apart, and a border and a pad cell per strip level. A border
-// opens a strip after an item or border, and closes it before one; gap is its last cell to the next start.
-function separations(ranks: Ranks, path: (o: string | null) => string[], nodeGap: number): Link[] {
+// The separations along each rank, in order: items nodeGap apart, and a border and a pad cell per strip level, plus the
+// strip's extra pad cells on each side (pad). A border opens a strip after an item or border, and closes it before one.
+function separations(ranks: Ranks, path: (o: string | null) => string[], nodeGap: number,
+  pad: ReadonlyMap<string, readonly [number, number]>): Link[] {
   const cons: Link[] = []
   for (const r of ranks) {
     let open: string[] = [], last: { id: string; end: number; opens: boolean } | null = null
-    const put = (id: string, end: number, opens: boolean, closes: boolean) => {
-      if (last) cons.push({ id: '', from: last.id, to: id, minlen: last.end + (last.opens || closes ? 2 : nodeGap + 1) })
+    const put = (id: string, end: number, opens: boolean, closes: boolean, extra = 0) => {
+      if (last) cons.push({ id: '', from: last.id, to: id, minlen: last.end + extra + (last.opens || closes ? 2 : nodeGap + 1) })
       last = { id, end, opens }
     }
     for (const it of r) {
       const p = path(it.owner), keep = open.findIndex((c, i) => p[i] !== c)
       const n = keep < 0 ? open.length : keep
-      for (const c of open.slice(n).reverse()) put(RIGHT(c), 0, false, true)
-      for (const c of p.slice(n)) put(LEFT(c), 0, true, false)
+      for (const c of open.slice(n).reverse()) put(RIGHT(c), 0, false, true, pad.get(c)?.[1])
+      for (const c of p.slice(n)) put(LEFT(c), pad.get(c)?.[0] ?? 0, true, false)
       put(it.id, it.cross - 1, false, false); open = p
     }
-    for (const c of [...open].reverse()) put(RIGHT(c), 0, false, true)
+    for (const c of [...open].reverse()) put(RIGHT(c), 0, false, true, pad.get(c)?.[1])
   }
   return cons
 }
 
-// Each item's and strip border's start on the cross axis, the smallest is 0.
-export function crossAxis(ranks: Ranks, segs: readonly Seg[], nodeGap: number, path: (o: string | null) => string[] = () => []): Map<string, number> {
-  const cons = separations(ranks, path, nodeGap)
-  const x = longestPath([...new Set([...ranks.flat().map(i => i.id), ...cons.flatMap(c => [c.from, c.to])])], cons)
+// Each item's and strip border's start on the cross axis, the smallest is 0. fit: a strip's least width, for its title. A
+// strip narrower than that is padded on both sides, so its members stay centred; deepest first, as one widens those around it.
+export function crossAxis(ranks: Ranks, segs: readonly Seg[], nodeGap: number, path: (o: string | null) => string[] = () => [],
+  fit: ReadonlyMap<string, number> = new Map()): Map<string, number> {
+  const pad = new Map<string, [number, number]>()
+  const solve = () => {
+    const cons = separations(ranks, path, nodeGap, pad)
+    return { cons, x: longestPath([...new Set([...ranks.flat().map(i => i.id), ...cons.flatMap(c => [c.from, c.to])])], cons) }
+  }
+  for (const d of [...new Set([...fit.keys()].map(c => path(c).length))].sort((a, b) => b - a)) {
+    const { x } = solve()
+    for (const [c, w] of fit) {
+      const short = w - (x.get(RIGHT(c))! - x.get(LEFT(c))! + 1)
+      if (path(c).length === d && short > 0) pad.set(c, [short >> 1, short - (short >> 1)])
+    }
+  }
+  const { cons, x } = solve()
   pull(ranks, segs, cons, x)
   const min = Math.min(...x.values())
   for (const [id, v] of x) x.set(id, v - min)
