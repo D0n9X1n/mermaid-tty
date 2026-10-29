@@ -4,7 +4,7 @@ const W = [60, 80, 120], EDGE = new Set(['flowchart-reject-04', 'sequence-reject
 const LADDER: Record<string, string> = { 'flowchart-ok-41': 'natural', 'flowchart-ok-42': 'tight', 'flowchart-ok-43': 'wrap', 'flowchart-ok-44': 'lrToTd',
   'sequence-ok-27': 'natural', 'sequence-ok-28': 'tight', 'sequence-ok-29': 'wrap' }
 // Goldens whose drawing a validator rule now rejects as misleading, '<rule>: <id>', until their layout owners fix them.
-const TODO: Record<string, string> = { 'sequence-ok-34': 'frame-broken: sequence-ok-34' }
+const TODO: Record<string, string> = {}
 const src =(id: string) => readFileSync(join('fixtures', id.split('-')[0]!, `${id}.mmd`), 'utf8')
 for (const type of ['flowchart', 'sequence']) for (const f of existsSync(`fixtures/${type}`) ? readdirSync(`fixtures/${type}`) : []) {
   const id = f.replace(/\.mmd$/, ''), A = type === 'flowchart' ? 'A1' : 'A2'
