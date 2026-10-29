@@ -60,10 +60,11 @@ function crossingsFit(p: Placed, e: GEdge, cells: Route['cells'], routes: readon
   }
   return cells.every(c => straightCrossing([...(occupied.get(keyOf(c)) ?? []), { nodes: [e.from, e.to], dirs: c.dirs }]))
 }
-// Match draw.ts's centered label text, leaving its padding available to the line.
+// Match draw.ts's centered label text, leaving its padding available to the line; a keyed label's ink is its key box.
 function labelInk(p: Placed, e: GEdge): Box[] {
   const b = p.boxes.get(`${e.id}:label`)
   if (!b || e.label === null) return []
+  if (e.labelKey !== undefined) return [{ row: b.row, col: b.col, rows: 1, cols: width(e.labelKey) }]  // a key box is all ink
   const pieces = labelLines(e.label).flatMap(t => wrap(t, b.cols - 2) ?? [{ text: t, join: '' }])
   return pieces.map((piece, i) => ({ row: b.row + i, col: b.col + ((b.cols - width(piece.text)) >> 1),
     rows: 1, cols: width(piece.text) }))

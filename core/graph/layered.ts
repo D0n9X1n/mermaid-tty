@@ -15,8 +15,9 @@ export type Spacing = { rankGap: number; nodeGap: number; wrapAt: number | null 
 // A level's rank band along its main axis, rows or columns from to to: block is null for the top level, else the sealed
 // cluster laid out on its own. Placed.bands lists each level's in order; gaps() reads the gaps between them.
 export type Band = { block: string | null; axis: 'row' | 'col'; from: number; to: number }
+// notes: each side note's box, by note id, beside its node's pill in boxes.
 export type Placed = { graph: Graph; boxes: ReadonlyMap<string, Box>; frames: ReadonlyMap<string, Box>; rows: number; cols: number
-  bands?: readonly Band[] }
+  bands?: readonly Band[]; notes?: ReadonlyMap<string, Box> }
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
 
@@ -28,13 +29,22 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   const across = g.dir === 'LR' || g.dir === 'RL', pr = across ? 2 : 1, pc = across ? 1 : 2  // a block's margin
   const ext = (z: Size): Extent => (across ? { cross: z.rows, main: z.cols } : { cross: z.cols, main: z.rows })
   const t = clusterTree(g), top = (x: string) => !ancestors(t.parent, x).some(c => t.sealed.has(c))
-  const fit = new Map(g.clusters.map(c => [c.id, width(c.title ?? '') + 4] as const))  // ┌─title─┐, and ┌──┐ with none
+  // ┌─title─┐, and ┌──┐ with none; a frameless cluster has no border, pad or title row, so no margin and no fit.
+  const fit = new Map(g.clusters.map(c => [c.id, c.frameless ? 0 : width(c.title ?? '') + 4] as const))
+  const margin = (id: string): [number, number] => (t.byId.get(id)?.frameless ? [0, 0] : [pr, pc])
   if (g.edges.some(e => [e.from, e.to].some(x => t.byId.has(x) && !t.sealed.has(x)))) return fail('cluster-edge')
   const units: Unit[] = [], subs = new Map<string, Placed>(), last = Math.max(-1, ...g.nodes.map(n => n.order))
+  // A side note, left when its ranks go across (withNotes made it a node): its node's unit grows on its side by the note's
+  // widest line, wrapped at wrapAt, or its key, plus ' ┄┄'; its main extent is the larger of its rows and the note's lines.
+  const sided = new Map<string, { pill: Size; note: Size; side: 'left' | 'right'; id: string }>()
   for (const n of g.nodes.filter(n => top(n.id))) {
     const z = nodeSize(n, s.wrapAt, across)
     if (isFail(z)) return z
-    units.push({ id: n.id, kind: 'node', owner: t.parent.get(n.id) ?? null, key: n.order, ...ext(z) })
+    const note = n.note && !across ? (n.note.key !== undefined ? { rows: 1, cols: width(n.note.key) + 2 } : labelSize(n.note.text, s.wrapAt)) : null
+    if (note && isFail(note)) return note
+    const w = note ? { rows: Math.max(z.rows, note.rows), cols: z.cols + note.cols - 2 + 3 } : z
+    if (note) sided.set(n.id, { pill: z, note: { rows: note.rows, cols: note.cols - 2 }, side: n.note!.side, id: n.note!.id })
+    units.push({ id: n.id, kind: 'node', owner: t.parent.get(n.id) ?? null, key: n.order, ...ext(w) })
   }
   for (const [i, c] of g.clusters.entries()) {
     if (!t.sealed.has(c.id) || !top(c.id)) continue
@@ -42,13 +52,14 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
     if (isFail(sub)) return sub
     subs.set(c.id, sub)
     const key = inner.length > 0 ? Math.min(...inner.map(n => n.order)) : last + 1 + i
-    const cols = Math.max(sub.cols + 2 * pc, fit.get(c.id) ?? 0)
-    units.push({ id: c.id, kind: 'block', owner: t.parent.get(c.id) ?? null, key, ...ext({ rows: sub.rows + 2 * pr, cols }) })
+    const [mr, mc] = margin(c.id), cols = Math.max(sub.cols + 2 * mc, fit.get(c.id) ?? 0)
+    units.push({ id: c.id, kind: 'block', owner: t.parent.get(c.id) ?? null, key, ...ext({ rows: sub.rows + 2 * mr, cols }) })
   }
   units.sort((a, b) => a.key - b.key)
   const free = g.edges.filter(e => top(e.from) && top(e.to)), labels = new Map<string, Extent>()
   for (const e of free) {
-    const z = e.label === null ? null : labelSize(e.label, s.wrapAt)
+    // A keyed label is drawn as its key alone: a one-row box its key wide, with no pad.
+    const z = e.label === null ? null : e.labelKey !== undefined ? { rows: 1, cols: width(e.labelKey) } : labelSize(e.label, s.wrapAt)
     if (z && isFail(z)) return z
     if (z) labels.set(e.id, ext(z))
   }
@@ -67,16 +78,23 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   const axis = across ? 'col' : 'row'
   const bands: Band[] = p.bands.map(({ main, long }) => ({ block: null, axis, from: at(main, long), to: at(main, long) + long - 1 }))
   bands.sort((a, b) => a.from - b.from)
-  const boxes = new Map<string, Box>(), frames = new Map<string, Box>()
+  const boxes = new Map<string, Box>(), frames = new Map<string, Box>(), notes = new Map<string, Box>()
   for (const [id, r] of p.rects) {
-    const b = box(r), sub = subs.get(id)
+    const b = box(r), sub = subs.get(id), x = sided.get(id)
+    if (x) {  // the pill at its unit's top, on the far side from its note; the note's lines from the same row
+      const pill = x.side === 'left' ? b.col + b.cols - x.pill.cols : b.col
+      boxes.set(id, { row: b.row, col: pill, rows: x.pill.rows, cols: x.pill.cols })
+      notes.set(x.id, { row: b.row, col: x.side === 'left' ? b.col : b.col + x.pill.cols + 3, rows: x.note.rows, cols: x.note.cols })
+      continue
+    }
     if (!sub) { boxes.set(id, b); continue }
-    frames.set(id, b)
-    const dc = pc + ((b.cols - sub.cols - 2 * pc) >> 1)  // content centred in a frame widened for its title
-    for (const [k, v] of sub.boxes) boxes.set(k, shift(v, b.row + pr, b.col + dc))
-    for (const [k, v] of sub.frames) frames.set(k, shift(v, b.row + pr, b.col + dc))
+    frames.set(id, b)  // a frameless cluster's box too, for the drawer
+    const [mr, mc] = margin(id), dc = mc + ((b.cols - sub.cols - 2 * mc) >> 1)  // content centred in a frame widened for its title
+    for (const [k, v] of sub.boxes) boxes.set(k, shift(v, b.row + mr, b.col + dc))
+    for (const [k, v] of sub.frames) frames.set(k, shift(v, b.row + mr, b.col + dc))
+    for (const [k, v] of sub.notes ?? []) notes.set(k, shift(v, b.row + mr, b.col + dc))
     for (const n of sub.bands ?? []) {
-      const d = n.axis === 'row' ? b.row + pr : b.col + dc
+      const d = n.axis === 'row' ? b.row + mr : b.col + dc
       bands.push({ ...n, block: n.block ?? id, from: n.from + d, to: n.to + d })
     }
   }
@@ -132,5 +150,5 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   }
   const rows = Math.max(across ? p.wide : p.long, ...[...boxes.values()].map(b => b.row + b.rows))
   const cols = Math.max(across ? p.long : p.wide, ...[...boxes.values()].map(b => b.col + b.cols))
-  return { graph, boxes, frames, rows, cols, bands }
+  return { graph, boxes, frames, rows, cols, bands, ...(notes.size > 0 ? { notes } : {}) }
 }
