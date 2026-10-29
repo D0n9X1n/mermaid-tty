@@ -25,9 +25,9 @@ test('VR.passes: every required scope needs a passing record for each of its pat
 const parsed = (path: string): ReviewRecord =>
   ({ path, scope: 'vr-A', verdict: 'pass', date: '2026-11-02', reviewers: ['PM', 'cross-family:gpt-6'], files: [{ path: 'goldens/a.golden', sha256: sha('A') }] })
 
-test('VR.reviewers: a CRLF record parses as its LF twin, but each reviewed file hashes by its raw bytes, CR included', () => {
+test('VR.reviewers: a CRLF or lone-CR record parses as its LF twin, but each reviewed file hashes by its raw bytes, CR included', () => {
   assert.deepEqual(parseRecord('docs/reviews/x.md', REC), parsed('docs/reviews/x.md'))
-  assert.deepEqual(parseRecord('docs/reviews/x.md', REC.replaceAll('\n', '\r\n')), parsed('docs/reviews/x.md'))
+  for (const eol of ['\r\n', '\r']) assert.deepEqual(parseRecord('docs/reviews/x.md', REC.replaceAll('\n', eol)), parsed('docs/reviews/x.md'), JSON.stringify(eol))
   const crlf = parseRecord('c.md', REC.replace(sha('A'), sha('A\r\n'))) as ReviewRecord
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\r\n')), [])
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\n')), [`goldens/a.golden: recorded ${sha('A\r\n')} actual ${sha('A\n')}`])
@@ -273,3 +273,25 @@ test('VR.reviewers: an HTML comment, a lone closing tag or a processing instruct
 
 test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes', () =>
   assert.deepEqual(parseRecord('r.md', withNotes('The PM read a < b, 1<2, x <= y and b <- a.')), parsed('r.md')))
+
+// The QA repro: CommonMark ends a line at a lone CR, so GitHub renders this table under ## Notes, while a split on LF and
+// CRLF alone saw one line and left the absent row unchecked.
+test('VR.reviewers: a table on lone-CR lines under ## Notes fails the record, so --require-pass exits 1', t => {
+  const dir = tree(t, {
+    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\rpath | sha256\r--- | ---\rabsent | ${Z}\r`,
+  })
+  const r = cli(dir, '--require-pass')
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
+    'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
+})
+
+// text, which ends in LF, with its lines ended in turn by LF, CRLF and a lone CR: CommonMark's three line endings.
+const mixed = (text: string) => text.split('\n').slice(0, -1).map((l, i) => l + ['\n', '\r\n', '\r'][i % 3]).join('')
+
+test('VR.reviewers: a record whose lines end in a mix of LF, CRLF and lone CR parses as its LF twin, each line checked alone', () => {
+  assert.deepEqual(parseRecord('r.md', mixed(withRows(ROW, `| core/themes.ts | ${sha('T')} |`))),
+    { ...parsed('r.md'), files: [{ path: 'goldens/a.golden', sha256: sha('A') }, { path: 'core/themes.ts', sha256: sha('T') }] })
+  const bad = `| core/themes.ts | ${sha('T').toUpperCase()} |`
+  assert.deepEqual(parseRecord('r.md', mixed(withRows(bad, ROW))), { error: `r.md: bad Files row ${JSON.stringify(bad)}` })
+})

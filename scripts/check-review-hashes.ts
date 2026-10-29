@@ -85,7 +85,8 @@ const RAW_HTML = /<[A-Za-z/!?]/
 
 // The record in text, found at path, or { error } naming the first way it breaks the record format.
 export function parseRecord(path: string, text: string): ReviewRecord | { error: string } {
-  const lines = text.split(/\r?\n/)
+  // CommonMark's line endings, LF, CRLF and a lone CR, so every rule sees the lines GitHub renders.
+  const lines = text.split(/\r\n|\r|\n/)
   const raw = lines.find(l => RAW_HTML.test(l))
   if (raw) return { error: `${path}: raw HTML ${JSON.stringify(raw)}` }
   const end = lines.indexOf('---', 1)
