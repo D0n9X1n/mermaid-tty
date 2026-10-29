@@ -42,6 +42,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [publishWikiErrors, WIKI, '  workflow_dispatch:\n', '', 'workflow_dispatch'], [publishWikiErrors, WIKI, 'contents: write', 'contents: read', 'job-scoped'],
   [publishWikiErrors, WIKI, 'ubuntu-latest', 'windows-latest', 'ubuntu'], [publishWikiErrors, WIKI, `@${SHA} # v7.0.1`, '@v7', 'pinned'],
   [publishWikiErrors, WIKI, '        shell: bash\n        run: scripts', '        run: scripts', 'without shell: bash'], [publishWikiErrors, WIKI, '[main]\n', '[main]\n    paths: [wiki/**]\n', 'paths'],
+  [publishWikiErrors, WIKI, `- uses: actions/checkout@${SHA}`, `- "uses": actions/checkout@${SHA}`, 'not pinned by full SHA with a # version comment: - "uses"'],
 ];
 for (const [rule, base, from, to, want] of cases)
   test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`));
