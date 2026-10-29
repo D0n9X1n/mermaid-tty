@@ -44,8 +44,14 @@ export function npxInvocation(version: string, config: string, win32: boolean): 
   return { command: ['npx', ...args, file].join(' '), args: [], shell: true }
 }
 
-function main(): number {
-  const root = dirname(dirname(fileURLToPath(import.meta.url)))
+// The part of spawnSync that run uses, so that a test can pass a fake.
+export type Spawn = (command: string, args: string[], options: { cwd: string; stdio: 'inherit'; shell: boolean }) =>
+  { status: number | null; error?: Error }
+
+// Type-checks the repo at root: writes its tsconfig to a temp dir and runs tsc there with spawn.
+// Returns tsc's status, or 1 when tsc was killed or never started (status null, or an error set).
+// The dir is removed in every case; an error that spawn throws propagates, after the removal.
+export function run(root: string, spawn: Spawn = spawnSync): number {
   const hooks = existsSync(join(root, '.claude-plugin', 'types', 'claude-code'))
   const version = readFileSync(join(root, 'scripts', 'TS_VERSION'), 'utf8').trim()
   const dir = mkdtempSync(join(tmpdir(), 'mtty-tsc-'))
@@ -53,10 +59,16 @@ function main(): number {
     const config = join(dir, 'tsconfig.json')
     writeFileSync(config, JSON.stringify(tsconfigFor(root, hooks), null, 2))
     const { command, args, shell } = npxInvocation(version, config, process.platform === 'win32')
-    return spawnSync(command, args, { cwd: dir, stdio: 'inherit', shell }).status ?? 1
+    const r = spawn(command, args, { cwd: dir, stdio: 'inherit', shell })
+    return r.error || r.status === null ? 1 : r.status
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+}
+
+// The real spawnSync, through run's default.
+function main(): number {
+  return run(dirname(dirname(fileURLToPath(import.meta.url))))
 }
 
 if (isMain(import.meta)) process.exitCode = main()
