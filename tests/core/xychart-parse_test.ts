@@ -48,3 +48,10 @@ test('A5.errors: markdown, blank and undrawable texts, keywords in any case or l
     ['lines [1]', 'syntax:2'], ['bar [1, 2]\nline [1]', 'length'], ['y-axis -5 --> 5\nbar [1]', 'domain'], ['bar [1]\nline [-1]', 'domain'],
     [times(27, 'bar [1]'), 'series']] as const) assert.deepEqual(Q(body), { reason: why }, body)
 })
+// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text would
+// draw differently here, so it falls back, as flowchart's labels do. A # with no ; is text.
+test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text', () => {
+  for (const body of ['title "Love #9829;"', 'x-axis ["a#quot;b", c]\nbar [1, 2]', 'line "#lt;3" [1]', 'y-axis "#9829;" 0 --> 5\nbar [1]'])
+    assert.deepEqual(P(`xychart-beta\n${body}`), { reason: 'entity' }, body)
+  assert.equal(P('xychart-beta\ntitle "C# 1.0"\nbar [1]').title, 'C# 1.0')
+})
