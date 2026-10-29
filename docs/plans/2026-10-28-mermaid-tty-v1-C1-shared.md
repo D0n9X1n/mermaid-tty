@@ -417,5 +417,6 @@ test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as
 
 **Every fixture task (T56–T84)** follows the same pattern:
 - Add its `.mmd` files, with `%% expect` lines on the ladder and boundary fixtures.
+- Each reject fixture has exactly one cause: apart from the one rule it tests, its body is valid, so no other rule could reject it.
 - Run `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts`, then read every new golden at 60/80/120, against the tangle rules and the matrix's text design.
 - Add `tests/golden/<type>_test.ts` with its coverage, numbers and spans tests.

@@ -3,7 +3,7 @@
 **Depends on:** the index (§4, §5), C1 (T40, T43–T48). Conventions are as in C4.
 
 ### T71: xychart parse
-**Group** G2 · **Deps** T43 · **Covers** matrix xychart subset (headers, orientation, text tokens, numbers, axes, series) and its fallbacks; xychart-reject-01…11, -13…17
+**Group** G2 · **Deps** T43 · **Covers** matrix xychart subset (headers, orientation, text tokens, numbers, axes, series) and its fallbacks; xychart-reject-01…11, -13…18
 **Files:** create `core/diagrams/xychart/parse.ts`.
 - **Model:** `Xy = { orientation: 'vertical' | 'horizontal', title, xTitle, categories: string[] | null, yTitle, range: { lo: Num; hi: Num } | null, series: { kind: 'bar' | 'line', name: string | null, values: Num[] }[] }`, where `Num = { raw: string; value: Dec }`.
 - **Test:** `tests/core/xychart-parse_test.ts`.
@@ -54,7 +54,7 @@ test('A5.errors: point labels, a numeric x range, unquoted-text limits, repeats,
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'
+import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'; import { validate } from '../../core/validate.ts'
 const X = (src: string, columns: number) => explain(src, { columns, theme: 'mono' }) as any
 const SALES = 'xychart-beta\ntitle Sales\nx-axis [jan, feb, mar]\ny-axis 0 --> 100\nbar [20, 75, 50]\nline [30, 60, 90]'
 test('A4: the matrix sketch: an 8-row plot, the axis, the categories, one value row per series', () => {
@@ -75,6 +75,17 @@ test('A4: computed bounds print as exact decimals; a point sits in row max(1, �
   const t = text(X('xychart-beta\nline [+1.3, .6, 2.4, -.34]', 80).drawing), row = (c: number) => 8 - t.findIndex(l => l[c] === '●')
   assert.deepEqual([t[0], t[4], t[8]].map(l => l!.trim().split(' ')[0]), ['2.4', '1.03', '-0.34'])
   assert.deepEqual([8, 13, 18, 23].map(row), [5, 3, 8, 1]); assert.equal(t.at(-1), '●       +1.3   .6  2.4 -.34')
+})
+// One vertical chart, every bar listed: x0.b1 is the zero bar; x0.b2 (40 eighths) is drawn 2 lanes wide.
+const BARS = 'xychart-beta\nx-axis [a, b, c]\ny-axis 0 --> 80\nbar [20, 0, 50]'
+test('A5.mutation-tests: expect.bars lists every xychart bar; a deleted or one-lane-narrow positive bar fails bar', () => {
+  const d = X(BARS, 80).drawing, own = (c: any) => c?.kind === 'cap' && c.owners[0] === 'x0.b2'
+  assert.deepEqual(d.expect.bars.map((b: any) => [b.owner, b.eighths]), [['x0.b0', 16], ['x0.b1', 0], ['x0.b2', 40]]); assert.equal(validate(d), null)
+  const cols = [...new Set(d.cells.flatMap((row: any[]) => row.flatMap((c, k) => (own(c) ? [k] : []))))]
+  assert.deepEqual([cols.length, d.expect.bars[2].lanes], [2, 2])
+  const cut = (keep: (k: number) => boolean) => ({ ...d, cells: d.cells.map((row: any[]) => row.map((c, k) => (own(c) && !keep(k) ? null : c))) })
+  assert.deepEqual(validate(cut(() => false)), { reason: 'bar' })             // every cell of a positive bar deleted
+  assert.deepEqual(validate(cut(k => k !== cols.at(-1))), { reason: 'bar' })  // drawn one lane narrow
 })
 ```
 - [ ] **Run** `node --test tests/core/xychart-layout_test.ts` → FAIL: `TypeError: Cannot read properties of undefined (reading 'cells')` (the stub).
@@ -103,13 +114,13 @@ test('A4: computed bounds print as exact decimals; a point sits in row max(1, �
     - The axis titles swap places. A legend lists the named series as `tag name`.
   - **Printing:** values as written; an explicit bound as written; a computed bound and the midpoint by `toExact`.
   - **Roles:** axes, ticks and rules `frame`; categories, tags and names `label`; tick labels and values `value`; bars and markers `s<k>`, by source order over all series.
-  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`; each bar `x<k>.b<j>`, so two bars of one series never share a run. `expect.bars` lists `{ owner: 'x<k>.b<j>', eighths, axis, lanes }` for every bar: axis `v` in a vertical chart, `h` in a horizontal one, and `lanes` its drawn width across the axis (T86).
+  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`; each bar `x<k>.b<j>`, so two bars of one series never share a run. `expect.bars` is always set and lists every bar, a zero-value bar included (`eighths` 0, no cell; `[]` with no bar series), series by series, then group by group, as `{ owner: 'x<k>.b<j>', eighths, axis, lanes }`; `k` counts every series, bars and lines, in source order. Axis `v` in a vertical chart, `h` in a horizontal one; `lanes` is the bar's drawn width across the axis (T86). So a positive bar whose cells vanish, or that is drawn a lane narrow, fails `bar`.
 - [ ] **Done when:** `node --test tests/core/xychart-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw xycharts vertically and horizontally"`
 
 ### T73: xychart fixtures and goldens
 **Group** G5 · **Deps** T48, T72 · **Covers** every xychart-ok and xychart-reject fixture and the matrix's eighth-rows and ticks; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/xychart/xychart-{ok-01…11,reject-01…13}.mmd` and `goldens/xychart/*.golden`. Test: `tests/golden/xychart_test.ts`.
+**Files:** create `fixtures/xychart/xychart-{ok-01…11,reject-01…18}.mmd` and `goldens/xychart/*.golden`. Test: `tests/golden/xychart_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -130,6 +141,13 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
     r[i + 2]!.filter(s => s.text.includes('●')).at(-1)?.color], [n.series.s1, n.series.s2, n.series.s3])
   assert.equal(r[i]!.find(s => s.text.trim() === '40')?.color, n.roles.value)
 })
+test('A5.mutation-tests: every xychart-ok fixture lists every bar, zero bars included, in order, at 60, 80 and 120', () => {
+  for (const id of ids.filter(i => i.includes('-ok-'))) {
+    const series = [...fx(id).matchAll(/^\s*(bar|line)\b[^[\n]*\[([^\]]*)\]/gm)]   // x<k>: k counts every series, bars and lines, in source order
+    const want = series.flatMap((m, k) => (m[1] === 'bar' ? m[2]!.split(',').map((_, j) => `x${k}.b${j}`) : []))
+    for (const w of [60, 80, 120]) assert.deepEqual((explain(fx(id), { columns: w, theme: 'mono' }) as any).drawing.expect.bars.map((b: any) => b.owner), want, `${id}@${w}`)
+  }
+})
 ```
 - [ ] **Run** `node --test tests/golden/xychart_test.ts` → FAIL: `ENOENT: no such file or directory, scandir 'fixtures/xychart'`.
 - [ ] **Fixtures** (each body follows `xychart-beta` unless a header is given; docs examples are copied from `xyChart.md` at `1fb78698`, an init directive becoming frontmatter `config:`):
@@ -147,13 +165,13 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
 | reject-05…08 | `x-axis 0 --> 100`, `bar [1]`; `title Sales Revenue`, `bar [1]`; `x-axis Q1 [a, b]`, `bar [1, 2]`; `x-axis [barley, wheat]`, `bar [1, 2]` |
 | reject-09…11 | `bar [1, 2` (unclosed); `x-axis [a, a]`, `bar [1, 2]`; `y-axis 5 --> 5`, `line [5]` |
 | reject-12, -13 | `%% expect 60 fallback`, `%% expect 120 natural`, `xychart-beta horizontal`, `x-axis [` + a one-word 50-letter category of `q`s + `]`, `bar [1]` (a vertical header would fit in 56 cells); nine `line [1]` series |
-| reject-14…17 | ok-01's body plus: `` title "`**Sales**`" `` (a markdown string); a second `x-axis [a, b]`; then alone, `bar [0, 0]` with no `y-axis` (an all-zero implicit range); 27 `bar [1]` series |
+| reject-14…18 | each only the header `xychart-beta` (`xychart-beta horizontal` where shown) and these lines, so each has one cause: `` title "`**Sales**`" ``, `bar [1, 2]` (the only title is a markdown string); `x-axis [a, b]`, `x-axis [c, d]`, `bar [1, 2]` (a repeated `x-axis`); `bar [0, 0]` (an all-zero implicit range); `horizontal`, then 27 `bar [1]` series (more than 26 bar series); `y-axis 0 --> 100`, `y-axis 0 --> 50`, `bar [1, 2]` (a repeated `y-axis`) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/xychart/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/xychart_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add xychart fixtures and goldens"`
 
 ### T74: Quadrant parse and module
-**Group** G4 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07, -10…15
+**Group** G4 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07, -10…16
 **Files:** create `core/diagrams/quadrant/parse.ts`.
 - **Model:** `Quadrant = { title, x: [string, string | null] | null, y: [string, string | null] | null, quads: (string | null)[], points: { name, x: Num, y: Num }[], fields: { owner, text }[] }`.
 - `fields` lists the quadrant and x-axis texts in source order (an axis: left, then right).
@@ -214,7 +232,7 @@ test('A5.errors: point styles, bad coordinates, a lone -->, repeats and a keywor
 
 ### T75: Quadrant fixtures and goldens
 **Group** G5 · **Deps** T48, T74 · **Covers** every quadrant-ok and quadrant-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/quadrant/quadrant-{ok-01…10,reject-01…09}.mmd` and `goldens/quadrant/*.golden`. Test: `tests/golden/quadrant_test.ts`.
+**Files:** create `fixtures/quadrant/quadrant-{ok-01…10,reject-01…16}.mmd` and `goldens/quadrant/*.golden`. Test: `tests/golden/quadrant_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -250,7 +268,7 @@ test('A7: point keys take s1; the frame takes frame; coordinates take value', ()
 | reject-01…04 | ok-01's body plus `Point A: [0.9, 0.0] radius: 12`; `A: [1.2, 0.5]`; `A: [1.0, 0.5]`; `x-axis Low -->` |
 | reject-05…07 | `quadrant-1 A`, `quadrant-1 B`; `A: [0.3 0.6]`; `Titled work: [0.3, 0.6]` |
 | reject-08, -09 | ok-05's `P1`…`P9`, then `J: [0.49, 0.5]`: J takes key 10 in the left half's last cell, so the key runs into the cross; `%% expect 18 fallback` and the docs campaign example (q = 7) |
-| reject-10…15 | ok-01's body plus: `` quadrant-1 "`**A**`" `` (markdown); a second `x-axis Low --> High`; `A: [.5, 0.5]`; `Point A: [0.9, 0.0] color: #ff3300`; `… stroke-color: #10f0f0`; `… stroke-width: 5px` |
+| reject-10…16 | each only the header `quadrantChart` and these lines, so each has one cause: `` quadrant-1 "`**A**`" ``, `A: [0.3, 0.6]` (the only `quadrant-1` is a markdown string); `x-axis Low --> High`, `x-axis Cold --> Hot`, `A: [0.3, 0.6]` (a repeated `x-axis`); `A: [.5, 0.5]`; `Point A: [0.9, 0.0] color: #ff3300`; `Point A: [0.9, 0.0] stroke-color: #10f0f0`; `Point A: [0.9, 0.0] stroke-width: 5px`; `y-axis Low --> High`, `y-axis Cold --> Hot`, `A: [0.3, 0.6]` (a repeated `y-axis`) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/quadrant/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/quadrant_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add quadrant fixtures and goldens"`

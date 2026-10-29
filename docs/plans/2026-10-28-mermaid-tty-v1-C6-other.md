@@ -95,7 +95,7 @@ test('A4.fit-ladder: narrowing takes natural, compact, wrapped labels, the outli
 
 ### T78: Mindmap fixtures and goldens
 **Group** G4 · **Deps** T48, T77 · **Covers** every mindmap-ok and mindmap-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/mindmap/mindmap-{ok-01…14,reject-01…06}.mmd` and `goldens/mindmap/*.golden`. Test: `tests/golden/mindmap_test.ts`.
+**Files:** create `fixtures/mindmap/mindmap-{ok-01…14,reject-01…09}.mmd` and `goldens/mindmap/*.golden`. Test: `tests/golden/mindmap_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -131,7 +131,7 @@ Size ok-09…12 with `node scripts/explain.ts FILE 60`.
 - [ ] **Commit:** `git commit -m "Add mindmap fixtures and goldens"`
 
 ### T79: gitGraph parse
-**Group** G2 · **Deps** T41 · **Covers** matrix gitGraph subset (headers, commit, branch, checkout/switch, merge, cherry-pick, order, `mainBranchName`/`Order`) and Mermaid's db errors; gitGraph-reject-01…06, -08…17
+**Group** G2 · **Deps** T41 · **Covers** matrix gitGraph subset (headers, commit, branch, checkout/switch, merge, cherry-pick, order, `mainBranchName`/`Order`) and Mermaid's db errors; gitGraph-reject-01…06, -08…19
 **Files:** create `core/diagrams/gitGraph/parse.ts`.
 - **Model:** `GitGraph = { dir: 'LR' | 'TB' | 'BT', title, branches: { name, order }[], events: { kind: 'start' | 'commit' | 'merge' | 'pick', branch, from?, id, msg, tags, type, line }[] }`.
 - For a pick, `id` is the source commit's id.
@@ -176,13 +176,13 @@ test('A5.errors: what Mermaid throws on falls back, and so do repeated ids and a
     - main exists from the start, named `config['gitGraph.mainBranchName'] ?? 'main'`, with order `Number(config['gitGraph.mainBranchOrder'] ?? 0)`.
     - Each branch has a head, null at first. main's `start` event comes first.
   - **Branches:** `branch` fails `branch:<n>` when the branch exists. Otherwise it starts at the current head, is checked out and emits `start`. `checkout`/`switch` of an unknown branch fails `checkout:<n>`.
-  - **Merges:** `merge` fails `merge:<n>` for itself, an unknown branch, a branch with no commits, the same head as the current branch, or a current branch with no commits.
+  - **Merges:** `merge` fails `merge:<n>` for itself, an unknown branch, a branch with no commits, the same head as the current branch, or a current branch with no commits. A current branch with no commits includes `main` before its first commit, since Mermaid's branch map starts `main → null` (gitGraph-reject-18).
   - **Ids:** a reused commit or merge id fails `repeat:<n>`.
   - **Cherry-picks:** `cherry-pick` fails `pick:<n>` for:
     - an unknown id;
     - a source on the current branch;
     - a current branch with no commits;
-    - a merge source without a `parent:`, or any source, an ordinary commit included, with a `parent:` that is not one of its parents, as pinned Mermaid throws.
+    - a merge source without a `parent:`, or any source, an ordinary commit or a merge commit, with a `parent:` that is not one of its direct parents (gitGraph-reject-17, -19), as pinned Mermaid throws.
     - With no tag, the pick is tagged `cherry-pick:<id>`, plus `|parent:<p>` for a merge, as Mermaid does.
   - **Merge type:** an untyped merge keeps `type: null`, so T80 draws the default `◉`; an explicit `type:` is kept, `NORMAL` included (finding 2).
   - **Other:** a second title fails `repeat:<n>`. `accTitle` and `accDescr` are ignored.
@@ -238,7 +238,7 @@ test('A4.fit-ladder: labels wrap at the label column; too many lanes fall back',
 
 ### T81: gitGraph fixtures and goldens
 **Group** G4 · **Deps** T48, T80 · **Covers** every gitGraph-ok and gitGraph-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/gitGraph/gitGraph-{ok-01…11,reject-01…07}.mmd` and `goldens/gitGraph/*.golden`. Test: `tests/golden/gitGraph_test.ts`.
+**Files:** create `fixtures/gitGraph/gitGraph-{ok-01…15,reject-01…19}.mmd` and `goldens/gitGraph/*.golden`. Test: `tests/golden/gitGraph_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -270,6 +270,7 @@ test('A7: each lane takes a series color for its glyphs and name; tags take the 
 | reject-05…07 | `commit`, `branch b`, `commit`, `checkout main`, `merge b id: "m"`, `branch c`, `commit`, `cherry-pick id: "m"`; `commit type: BOLD`; `%% expect 60 fallback`, `%% expect 80 natural`, then 30 × (`branch b<i>`, `commit`, `checkout main`): 31 lanes put the label column at 62 |
 | reject-08…12 | `commit id: "a" id: "b"`; `title A`, `title B`, `commit`; `commit id: "m"`, `branch b`, `commit`, `checkout main`, `merge b id: "m"`; `commit`, `merge nope`; `commit`, `merge main` |
 | reject-13…17 | `branch b`, `checkout main`, `commit`, `merge b` (b has no commits); `commit`, `cherry-pick id: "zz"`; `commit id: "a"`, `cherry-pick id: "a"`; `branch b`, `commit id: "x"`, `checkout main`, `cherry-pick id: "x"`; `commit id: "ZERO"`, `branch develop`, `commit id: "A"`, `checkout main`, `commit id: "ONE"`, `cherry-pick id: "A" parent: "ONE"` |
+| reject-18, -19 | `branch b`, `commit`, `checkout main`, `merge b` (main has no commits yet: Mermaid's branch map starts `main → null`, so `merge` throws); ok-04's body with its last line's `parent: "B"` changed to `parent: "ZERO"` (MERGE's direct parents are ONE and B; nothing else is wrong) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/gitGraph/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/gitGraph_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add gitGraph fixtures and goldens"`
@@ -361,7 +362,7 @@ test('A4.fit-ladder: gap 2, then gap 1; a word wider than every capped column sk
 
 ### T84: Timeline fixtures and goldens
 **Group** G4 · **Deps** T48, T83 · **Covers** every timeline-ok and timeline-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/timeline/timeline-{ok-01…13,reject-01…07}.mmd` and `goldens/timeline/*.golden`. Test: `tests/golden/timeline_test.ts`.
+**Files:** create `fixtures/timeline/timeline-{ok-01…14,reject-01…10}.mmd` and `goldens/timeline/*.golden`. Test: `tests/golden/timeline_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'

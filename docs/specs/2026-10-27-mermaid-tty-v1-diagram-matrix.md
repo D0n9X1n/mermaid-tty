@@ -806,7 +806,7 @@ c 2024-01-31 · 0d
 - `gantt-ok-04`: docs' milestone example (`HH:mm`, `%H:%M`): `◆` at 17:50 and 18:10; Task A 17:51 → 18:01. Timings `17:49 · 2m`, `10m`, `5m`, `18:08 · 4m`. At 120 (W = 60): `◆` at cells 2 and 54; Task A from cell 5, 209 eighths; 5-minute ticks at 0, 13, 26, 39, 52.
 - `gantt-ok-05`: docs' syntax example without `excludes`: status fields `!✓`, `!▸`, `! `, ` ▸`, ` ✓`; forward `until isadded`; repeated names; tasks without ids. Timings include `2014-01-06 · 2014-01-08`, `2014-01-06 · 24h` (not `1d`), `after a1 · 20h` (trimmed) and `until isadded`; `T` = 23. Step 1 at 120 (W = 57); step 2 at 80 (W = 39, keys `a`–`q`); step 3 at 60, where `Completed task in the critical line` wraps to 34 cells.
 - `gantt-ok-06`: `active, done` shows `✓` and the `done` role; a `crit` milestone's `◆` takes the `crit` role.
-- `gantt-ok-07`: `500ms`, `30s` and `1.5h` print as written (not `90m`); a `0d` task draws no bar and prints its timing; tasks before any section.
+- `gantt-ok-07`: `500ms`, `30s`, `1.5s`, `1.5m` and `1.5h` print as written (not `1500ms`, `90s` or `90m`) and span exactly 1.5 s, 90 s and 90 min; a `0d` task draws no bar and prints its timing; tasks before any section.
 - `gantt-ok-08`: `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`: timings keep the `dateFormat` text; tick labels use `axisFormat`.
 - `gantt-ok-09`: `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`: timings keep the unpadded dates as written.
 - `gantt-ok-10`: `%%` comments, frontmatter title, `displayMode: compact` (ignored), `todayMarker off`.
@@ -997,10 +997,11 @@ a      20  75  50
 - `xychart-reject-11`: `y-axis 5 --> 5`.
 - `xychart-reject-12`: one 50-letter category, at 60 columns.
 - `xychart-reject-13`: 9 line series.
-- `xychart-reject-14`: a markdown string title, `` "`**Sales**`" ``.
+- `xychart-reject-14`: the only title is a markdown string, `` "`**Sales**`" ``; nothing else is wrong.
 - `xychart-reject-15`: a second `x-axis`.
 - `xychart-reject-16`: every value 0 and no `y-axis` range, so the implicit range is empty (`y0 = y1 = 0`).
 - `xychart-reject-17`: 27 bar series.
+- `xychart-reject-18`: a second `y-axis`.
 
 ### quadrant
 
@@ -1087,12 +1088,13 @@ Reach
 - `quadrant-reject-07`: a point named `Titled work` (Mermaid reads a title).
 - `quadrant-reject-08`: a 10th point at x = 0.49, the last cell of the left half: its key `10` would run into the cross.
 - `quadrant-reject-09`: docs' campaign example at 18 columns (q = 7).
-- `quadrant-reject-10`: a markdown string, `` quadrant-1 "`**A**`" ``.
+- `quadrant-reject-10`: the only `quadrant-1` is a markdown string, `` "`**A**`" ``; nothing else is wrong.
 - `quadrant-reject-11`: a second `x-axis`.
 - `quadrant-reject-12`: `A: [.5, 0.5]` (the point pattern needs `0.`).
 - `quadrant-reject-13`: `Point A: [0.9, 0.0] color: #ff3300`.
 - `quadrant-reject-14`: `Point A: [0.9, 0.0] stroke-color: #10f0f0`.
 - `quadrant-reject-15`: `Point A: [0.9, 0.0] stroke-width: 5px`.
+- `quadrant-reject-16`: a second `y-axis`.
 
 ### journey
 
@@ -1154,6 +1156,7 @@ Go to work
 - `journey-reject-08`: a one-word 50-letter task name with actor `Me`, at 60 columns.
 - `journey-reject-09`: an empty actor list, `A: 3:`.
 - `journey-reject-10`: extra colons, `A: 3: Me: Cat`.
+- `journey-reject-11`: an empty actor inside the list, `A: 3: Me,,Cat`.
 
 ### sankey
 
@@ -1468,6 +1471,8 @@ Attributes go in any order. The title follows common rule 3. Honored config keys
 - `gitGraph-reject-15`: a cherry-pick of a commit on the current branch.
 - `gitGraph-reject-16`: a cherry-pick onto a branch with no commits.
 - `gitGraph-reject-17`: a cherry-pick of an ordinary commit with a `parent:` that is not its parent.
+- `gitGraph-reject-18`: `branch b`, `commit`, `checkout main`, `merge b`: main has no commits, as Mermaid's branch map starts `main → null`.
+- `gitGraph-reject-19`: a cherry-pick of a merge commit with a `parent:` that is not its direct parent (`gitGraph-ok-04` with `parent: "ZERO"`).
 
 ### timeline
 

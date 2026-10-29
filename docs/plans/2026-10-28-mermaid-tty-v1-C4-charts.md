@@ -4,7 +4,7 @@
 **Conventions:** as in C1. A layout test renders through `explain` under mono and reads rows with `text()`. `bar(e, w)` is `hbar(e)` padded to `w` cells, written out in each test so the expected rows are literal.
 
 ### T63: Pie parse and module
-**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix pie (subset, text design, numbers, ladder), spec C rules 5 and 7 (pie sorts by value), pie-reject-01…05
+**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix pie (subset, text design, numbers, ladder), spec C rules 5 and 7 (pie sorts by value), pie-reject-01…05, -07
 **Files:** create `core/diagrams/pie/parse.ts` (`Pie = { title: string | null; slices: { label, raw, value: Dec, order }[] }`); replace T40's stub in `core/diagrams/pie/layout.ts` (export `pie`). Test: `tests/core/pie-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -49,7 +49,7 @@ test('A5.errors: zero, negative, repeated, unquoted, backslash and empty pies fa
 
 ### T64: Pie fixtures and goldens
 **Group** G4 · **Deps** T48, T63 · **Covers** every pie-ok and pie-reject fixture, and their numbers; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/pie/pie-{ok-01…10,reject-01…06}.mmd` and `goldens/pie/*.golden`. Test: `tests/golden/pie_test.ts`.
+**Files:** create `fixtures/pie/pie-{ok-01…10,reject-01…07}.mmd` and `goldens/pie/*.golden`. Test: `tests/golden/pie_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -87,7 +87,7 @@ test('A7: bars take series colors by source order, so sorting keeps them; values
 - [ ] **Commit:** `git commit -m "Add pie fixtures and goldens"`
 
 ### T65: Journey parse and module
-**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix journey (subset, text design, numbers, ladder), journey-reject-01…07
+**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix journey (subset, text design, numbers, ladder), journey-reject-01…07, -09…11 (an empty actor list, extra colons, an empty actor inside the list)
 **Files:** create `core/diagrams/journey/parse.ts` (`Journey = { title, groups: { name: string | null; tasks: { name, score: Dec, raw, actors: string[] }[] }[] }`); replace T40's stub in `core/diagrams/journey/layout.ts` (export `journey`). Test: `tests/core/journey-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -133,7 +133,7 @@ test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a se
 
 ### T66: Journey fixtures and goldens
 **Group** G4 · **Deps** T48, T65 · **Covers** every journey-ok and journey-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/journey/journey-{ok-01…08,reject-01…08}.mmd` and `goldens/journey/*.golden`. Test: `tests/golden/journey_test.ts`.
+**Files:** create `fixtures/journey/journey-{ok-01…08,reject-01…11}.mmd` and `goldens/journey/*.golden`. Test: `tests/golden/journey_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -164,6 +164,7 @@ test('A7: a section and its bars share a series color; scores carry the value ro
 | reject-01…04 | `journey`, `section S`, then `Make tea: 6: Me`; `Make tea: high: Me`; `Make tea: 5`; `Do work: 1: Me, Me` |
 | reject-05…08 | the same with `Fix #12: 3: Me`; `Plan; review: 3: Me`; `journey`, `section Morning: early`, `A: 1: Me`; `%% expect 60 fallback`, `%% expect 120 natural`, `journey`, `section S`, a one-word 50-letter task name `: 3: Me` |
 | reject-09, -10 | `journey`, `section S`, then: `A: 3:` (an empty actor list); `A: 3: Me: Cat` (extra colons) |
+| reject-11 | `journey`, `section S`, then `A: 3: Me,,Cat` (an empty actor inside the list) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/journey/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/journey_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add journey fixtures and goldens"`
@@ -189,7 +190,7 @@ test('A4: axis tokens print fixed widths and English names; a date-free dateForm
   assert.deepEqual([A('%s'), A('%Y-%m-%d', false)], [{ reason: 'axis-format' }, { reason: 'axis-format' }])
 })
 test('A4: durations are whole ms; M, y, junk, a fractional d or w, and fractions of a ms are null; tick steps follow the matrix', () => {
-  assert.deepEqual(['500ms', '30s', '2m', '1.5h', '2d', '1w', '0d'].map(parseDuration), [500, 30_000, 2 * MIN, 5_400_000, 2 * D, 7 * D, 0])
+  assert.deepEqual(['500ms', '30s', '1.5s', '2m', '1.5m', '1.5h', '2d', '1w', '0d'].map(parseDuration), [500, 30_000, 1_500, 2 * MIN, 90_000, 5_400_000, 2 * D, 7 * D, 0])
   for (const s of ['1M', '1y', '3dX', '1.0001ms', 'd', '1.5', '1.5d', '0.5w']) assert.equal(parseDuration(s), null, s)
   assert.deepEqual([tickStep(30 * D, 60, 10), tickStep(30 * D, 35, 10), tickStep(23 * MIN, 60, 5), tickStep(510 * MIN, 43, 5), tickStep(1e6 * D, 10, 10)],
     [7 * D, 14 * D, 5 * MIN, 3 * 3_600_000, null])
@@ -213,7 +214,7 @@ test('A4: durations are whole ms; M, y, junk, a fractional d or w, and fractions
 - [ ] **Commit:** `git commit -m "Add gantt date formats, durations and tick steps"`
 
 ### T68: Gantt parse and resolve
-**Group** G3 · **Deps** T67 · **Covers** matrix gantt subset and resolution rules (`after`, `until`, forward ids, milestones, the previous task); gantt-reject-01…09, -11, -12, -15…17
+**Group** G3 · **Deps** T67 · **Covers** matrix gantt subset and resolution rules (`after`, `until`, forward ids, milestones, the previous task); gantt-reject-01…09, -11, -12, -15…17, -19…25, -27
 **Files:** create `core/diagrams/gantt/parse.ts`.
 - **Model:** `Gantt = { title, dated: boolean, axis: AxisFmt, sections: string[], tasks: { name, section, tags, start, end, timing, line }[] }`.
 - `section` is −1 for tasks before the first section. `start` and `end` are naive UTC ms.
@@ -319,7 +320,7 @@ test('A5.errors: a lone 0d milestone has M = 0 and falls back', () => assert.dee
 
 ### T70: Gantt fixtures and goldens
 **Group** G5 · **Deps** T48, T69 · **Covers** every gantt-ok and gantt-reject fixture and the matrix's bar, `◆` and tick numbers; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
-**Files:** create `fixtures/gantt/gantt-{ok-01…16,reject-01…17}.mmd` and `goldens/gantt/*.golden`. Test: `tests/golden/gantt_test.ts`.
+**Files:** create `fixtures/gantt/gantt-{ok-01…16,reject-01…27}.mmd` and `goldens/gantt/*.golden`. Test: `tests/golden/gantt_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
@@ -354,6 +355,9 @@ test('A7: crit, done and active bars take the arrow, note and decision roles; ot
   const ink = (name: string, g: string) => r.find(row => row.some(s => s.text.includes(name)))!.find(s => s.text.includes(g))?.color
   assert.deepEqual([ink('Both', '█'), ink('Gate', '◆'), ink('Doing', '█'), ink('Plain', '█')], [n.roles.note, n.roles.arrow, n.roles.decision, n.series.s1])
 })
+test('A4: gantt-ok-07 renders and prints 1.5s, 1.5m and 1.5h as written, so a regression that rejects them fails', () => {
+  const t = text(X('gantt-ok-07', 120)); assert.ok(['1.5s', '1.5m', '1.5h'].every(s => t.some(l => l.includes(s))), t.join('\n'))
+})
 ```
 - [ ] **Run** `node --test tests/golden/gantt_test.ts` → FAIL: `ENOENT: no such file or directory, scandir 'fixtures/gantt'`.
 - [ ] **Fixtures** (each body follows `gantt`; expect lines go after any frontmatter; docs examples are copied from `gantt.md` at `1fb78698`):
@@ -364,7 +368,7 @@ test('A7: crit, done and active bars take the arrow, note and decision roles; ot
 | ok-02, -03 | the sketch: `title Release`, `section Build`, `Spec :crit, done, s, 2024-01-01, 10d`, `Code :active, after s, 20d`, `Ship :milestone, 2024-01-31, 0d`; the docs' `after b a` / `until b c` example (`apple :a, 2017-07-20, 1w`, `banana :crit, b, 2017-07-23, 1d`, `cherry :active, c, after b a, 1d`, `kiwi :d, 2017-07-20, until b c`) |
 | ok-04 | the docs' milestone example: `dateFormat HH:mm`, `axisFormat %H:%M`, `Initial milestone :milestone, m1, 17:49, 2m`, `Task A :10m`, `Task B :5m`, `Final milestone :milestone, m2, 18:08, 4m` |
 | ok-05 | `%% expect 120 natural`, `%% expect 80 keyed`, `%% expect 60 keyedWrap`, then the docs' syntax example without its `excludes` line and its `%%` notes: 4 sections, 17 tasks, a forward `until isadded` |
-| ok-06, -07 | `Both :active, done, 2024-01-01, 3d`, `Gate :crit, milestone, 2024-01-04, 2d`, `Doing :active, 2024-01-02, 2d`, `Plain :2024-01-03, 1d`; `Tick :2024-01-01, 500ms`, `Wait :30s`, `Cook :1.5h`, `Mark :0d`, `section Later`, `Ship :1d` |
+| ok-06, -07 | `Both :active, done, 2024-01-01, 3d`, `Gate :crit, milestone, 2024-01-04, 2d`, `Doing :active, 2024-01-02, 2d`, `Plain :2024-01-03, 1d`; `Tick :2024-01-01, 500ms`, `Wait :30s`, `Cook :1.5h`, `Brew :1.5m`, `Pour :1.5s`, `Mark :0d`, `section Later`, `Ship :1d` |
 | ok-08, -09 | `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`, `Run :r, 2024-03-01T08:00:00.000, 2024-03-01T09:30:00.500`, `Rest :after r, 30m`; `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`, `Plan :p, 1/7/2024 9:0:0, 3/7/2024 17:30:0`, `Build :after p, 2d` |
 | ok-10, -11 | frontmatter `title: Plan` and `config:` / `gantt:` / `displayMode: compact`, then `todayMarker off`, `%% a comment`, `A :2024-01-01, 2d`, `B :1d`; `title 项目计划`, `section 设计`, `需求分析 :2024-01-01, 3d`, `编码 :5d` |
 | ok-12, -13 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 keyed`, `Ship the release v1 :2024-01-01, 10d` (19 + 16 + 20 + 5 = 60); `%% expect 60 keyedWrap`, `Review the quarterly release plan with the team :2024-01-01, 3d` (the name wraps to 34 cells) |
