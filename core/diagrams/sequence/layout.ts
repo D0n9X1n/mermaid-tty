@@ -248,7 +248,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (m.activate) shift(m.to, end, 1)
     if (m.deactivate) shift(m.from, end + 1, -1)
     labels.push({ owner: `${id}:label`, text: plain(c.text.get(m)!) })
-    edges.push({ id, from: m.from, to: m.to, heads: [head, tail].filter(h => h !== null) })
+    edges.push({ id, from: m.from, to: m.to, ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
     if (ps.some(p => p.text)) edgeLabels.push({ owner: `${id}:label`, edge: id })
   }
   // A note: one row per line, centered in a box of note fill one column wider each side than its widest line; over its
@@ -270,6 +270,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     row = top + ps.length
     labels.push({ owner: id, text: plain(c.text.get(n)!) })
   }
+  const frames: string[] = []                                     // each drawn frame's and box's owner id
   // A frame: its top border carrying its title, its sections' rows with a ┄ divider row carrying [cond] before each one
   // after the first, then its bottom border; two columns beyond its contents, wider if its title needs it.
   const frame = (f: Frame) => {
@@ -281,6 +282,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     lo = Math.min(olo, left); hi = Math.max(ohi, right)
     const role: Ink = f.type === 'rect' ? 'note' : 'frame'
     back.push((cv, dx) => cv.frame(top, left + dx, bottom, right + dx, role, id, ts[0] || undefined))
+    frames.push(id)
     if (ts[0]) labels.push({ owner: id, text: ts[0] })
     dividers.forEach((r, j) => {
       const own = `${id}.${j + 1}`, t = ts[j + 1]!, tl = width(t)
@@ -309,6 +311,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (!m) return
     const left = xs[m[0]]! - c.pills[m[0]]!.left - 2, right = Math.max(xs[m[1]]! + c.pills[m[1]]!.right + 2, left + width(b.label ?? '') + 3)
     back.unshift((cv, dx) => cv.frame(head - 1, left + dx, last + 1, right + dx, 'frame', `b${i}`, b.label ?? undefined))
+    frames.push(`b${i}`)
     touch(left, right)
     if (b.label) labels.push({ owner: `b${i}`, text: b.label })
   })
@@ -329,7 +332,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   }
   const cv = createCanvas(last + 1 + (boxed ? 1 : 0), hi - lo + 1, columns)
   for (const op of [...back, ...life, ...fore]) op(cv, -lo)
-  return cv.toDrawing({ labels, edges, edgeLabels })
+  return cv.toDrawing({ labels, edges, edgeLabels, frames })
 }
 
 // natural and tight draw once, unwrapped; wrap tries each width in WRAPS: the first drawing validate accepts, else the last.

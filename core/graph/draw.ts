@@ -50,15 +50,17 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number):
   const at = (b: Box | undefined): Box | undefined => b && { ...b, row: b.row + y }
   const cv = createCanvas(p.rows + y, Math.max(p.cols, width(title ?? '')), columns, shares)
   const labels: Expect['labels'][number][] = [], edges: Expect['edges'][number][] = []
-  const edgeLabels: Expect['edgeLabels'][number][] = []
+  const edgeLabels: Expect['edgeLabels'][number][] = [], frames: string[] = []
   if (title !== null) {
     cv.text(0, 0, title, 'title', 'title')
     labels.push({ owner: 'title', text: title })
   }
   // Each cluster's frame, its title on the top border, owned by the cluster; a line crossing a border keeps its glyph.
+  // Every cluster is listed, so one the layout did not place fails closed.
   for (const c of p.graph.clusters) {
     const f = at(p.frames.get(c.id))
     if (f) cv.frame(f.row, f.col, f.row + f.rows - 1, f.col + f.cols - 1, 'frame', c.id, c.title ?? undefined)
+    frames.push(c.id)
     if (c.title !== null) labels.push({ owner: c.id, text: c.title })
   }
   // A row's text is owned by [row id ?? node id, node id], deduplicated; each owner's rows, joined by '\n', are one label.
@@ -75,14 +77,17 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number):
     for (const end of route.ends) cv.arrow(end.r + y, end.c, end.ch, route.edge)
   }
   for (const e of p.graph.edges.filter(x => x.style !== 'invisible')) {
-    // The layout marks a back edge it drew reversed, so its ends swap back. Its heads are its route's end glyphs.
-    const route = routes.find(x => x.edge === e.id)
-    edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to, heads: route?.ends.map(x => x.ch) ?? [] })
+    // The layout marks a back edge it drew reversed, its from, to, tail and head swapped, so from and to swap back. Its
+    // route's end marks are the drawn tail's, at the drawn from, then the drawn head's, at the drawn to: whichever way it was
+    // drawn, each sits at the node named here.
+    const route = routes.find(x => x.edge === e.id), nodes = [...(e.tail === 'none' ? [] : [e.from]), ...(e.head === 'none' ? [] : [e.to])]
+    edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to,
+      ends: (route?.ends ?? []).map((x, i) => ({ node: nodes[i] ?? '', glyph: x.ch })) })
     if (e.label === null) continue
     const owner = `${e.id}:label`, b = at(p.boxes.get(owner)), text = labelLines(e.label)
     labels.push({ owner, text: text.join('\n') })
     edgeLabels.push({ owner, edge: e.id })
     if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
-  return cv.toDrawing({ labels, edges, edgeLabels })
+  return cv.toDrawing({ labels, edges, edgeLabels, frames })
 }

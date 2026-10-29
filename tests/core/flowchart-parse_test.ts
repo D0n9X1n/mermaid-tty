@@ -155,3 +155,12 @@ test('A5.errors: an @{…} body that does not read whole as key: value pairs, ea
     'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }', 'A@{\n  shape: cyl\n}']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
 })
+
+// A blank label line, from consecutive <br/> or a <br/> leading or trailing the trimmed label, is a box row with no text,
+// and an inline edge label whose middle line the router cannot place. A label blank as a whole is still allowed.
+test('A5.errors: a node or edge label with a blank line fails label-blank-line', () => {
+  const bad = ['A[a<br/><br/>b]', 'A[<br/>a]', 'A[a<br/>]', 'A[" a<br/> "]', 'A[a<br/> <br>b]', 'A@{ label: "a<br><br>b" }',
+    'A -->|a<br/><br/>b| B', 'A -->|<br/>a| B', 'A -- a<br/> --> B', 'A -->|<br/>| B']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'label-blank-line' }]))
+  for (const s of ['A[a<br/>b]', 'A[ a <br/> b ]', 'A -->|a<br>b| B', 'A[ ]', 'A -->| | B']) assert.ok(!('reason' in P(`flowchart TD\n${s}`)), s)
+})

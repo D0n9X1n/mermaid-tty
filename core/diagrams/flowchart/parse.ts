@@ -370,8 +370,9 @@ function mention(text: string, at: number): Mention | Fail | null {
       if (key === 'shape') m.shape = shapeFromName(value)
       else if (key === 'label') {
         const t = value.startsWith('`') ? fail('markdown-string') : checked(value)
-        if (isFail(t)) return t
-        m.lines = labelLines(t)
+        const ls = isFail(t) ? t : splitLabel(t)
+        if (isFail(ls)) return ls
+        m.lines = ls
       }
     }
     return m
@@ -381,9 +382,9 @@ function mention(text: string, at: number): Mention | Fail | null {
   const pairs = BRACKETS.filter(([o]) => o === open)
   const c = closer(text, at + open.length, pairs.map(([, close]) => close))
   if (!c) return null
-  const t = label(text.slice(at + open.length, c.at))
-  if (isFail(t)) return t
-  return { id, end: classEnd(text, c.at + c.close.length), shape: pairs.find(([, close]) => close === c.close)![2], lines: labelLines(t) }
+  const t = label(text.slice(at + open.length, c.at)), ls = isFail(t) ? t : splitLabel(t)
+  if (isFail(ls)) return ls
+  return { id, end: classEnd(text, c.at + c.close.length), shape: pairs.find(([, close]) => close === c.close)![2], lines: ls }
 }
 
 // The index past a :::name class at i, else i.
@@ -415,10 +416,21 @@ function label(raw: string): string | Fail {
   return checked(trimmed.replace(/^"(.*)"$/s, '$1'))
 }
 
-// An edge label as label reads it, but null if it is blank: a blank label would draw no cells.
+// An edge label as label reads it, but null if it is blank: a blank label would draw no cells. A blank line in it fails,
+// as splitLabel says, so one of only <br/> fails too.
 function edgeLabel(raw: string): string | null | Fail {
   const t = label(raw)
-  return isFail(t) || t.trim() ? t : null
+  if (isFail(t)) return t
+  const ls = splitLabel(t)
+  return isFail(ls) ? ls : t.trim() ? t : null
+}
+
+// A label's lines, split at each <br>. A blank line among two or more, from consecutive <br/> or one leading or trailing
+// the trimmed label, fails label-blank-line: a node would draw a box row with no text, and the router cannot place an
+// inline edge label whose middle line is empty. One blank line is a label blank as a whole, which a node or edge allows.
+function splitLabel(t: string): string[] | Fail {
+  const ls = labelLines(t)
+  return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : ls
 }
 
 // Label text as written, if it can be drawn: a #…; entity or an unsupported character fails.

@@ -6,7 +6,7 @@ import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { se
 const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
   layout: (_m: unknown, step: string, cols: number) => {
     const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
-    return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [] }) } }
+    return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [], frames: [] }) } }
 test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () => {
   assert.equal((fitLadder(fake as never, {}, 10) as { step: string }).step, 'tight')
   assert.ok('reason' in fitLadder(fake as never, {}, 4))
@@ -30,7 +30,7 @@ function draw(what: Rung[1], columns: number): Drawing | Fail {
   const t = 'x'.repeat(n), c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
   c.text(0, 0, t, 'node', 'A')
   if (what === 'clash') c.arrow(0, 0, '►', 'A')
-  return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [], frames: [] })
 }
 function fit(rungs: readonly Rung[], columns: number, calls: [Step, number][] = []) {
   const mod: DiagramModule<readonly Rung[]> = { type: 'flowchart', parse: () => fail('unused'), steps: m => m.map(([step]) => step),

@@ -49,14 +49,14 @@ test('A7: spans carry the palette colors; mono carries none', () => {
 })
 test('A7: a series-inked cell yields a span with role s3 and the palette series color (C contract)', () => {
   const c = createCanvas(1, 4, 4); c.text(0, 0, 'ab', 's3', 'x')
-  const span = toRows(c.toDrawing({ labels: [], edges: [], edgeLabels: [] }), palette('nord'))[0]![0]!
+  const span = toRows(c.toDrawing({ labels: [], edges: [], edgeLabels: [], frames: [] }), palette('nord'))[0]![0]!
   assert.deepEqual([span.role, span.color], ['s3', THEMES.nord.series.s3])
 })
 
 // A drawing written cell by cell: a node pill around a wide label then an arrow; an empty row; an edge and its label
 // after a blank; a title; a decision pill. _ is no cell.
 const c = (ch: string, role: Ink, kind: Cell['kind']): Cell => ({ ch, role, kind, owners: ['x'], dirs: 0 }), _ = null
-const D: Drawing = { columns: 20, conflicts: [], expect: { labels: [], edges: [], edgeLabels: [] }, cells: [
+const D: Drawing = { columns: 20, conflicts: [], expect: { labels: [], edges: [], edgeLabels: [], frames: [] }, cells: [
   [c('[', 'node', 'cap'), c(' ', 'node', 'fill'), c('读', 'node', 'text'), c('', 'node', 'cont'), c('取', 'node', 'text'),
     c('', 'node', 'cont'), c(' ', 'node', 'fill'), c(']', 'node', 'cap'), _, _, c('▼', 'arrow', 'arrow'), _, _],
   [_, _, _],

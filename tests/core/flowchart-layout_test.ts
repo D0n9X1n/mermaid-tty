@@ -70,7 +70,7 @@ test('A1: Q1 retry edges run outside and enter a side port', () => {
   const rows = text(result.drawing)
   assert.ok(rows[0]!.includes('◄'), rows.join('\n'))
   assert.ok(!rows.some(row => /[┼╂┿╋]/.test(row)), rows.join('\n'))
-  assert.equal(result.drawing.expect.edges.find(e => e.from === 'D' && e.to === 'A')!.heads[0], '◄')
+  assert.deepEqual(result.drawing.expect.edges.find(e => e.from === 'D' && e.to === 'A')!.ends, [{ node: 'A', glyph: '◄' }])
   assert.equal(rows.join('\n'), [
     '     [ 开始 ]◄──────────┐', '      ┌──┘              │', '      │                 │', '      ▼                 │',
     '  { 检查 }              │', '    ┌─┴──────────┐      │', '    │            │      │', '    │            │      │',

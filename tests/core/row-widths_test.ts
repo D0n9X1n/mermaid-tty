@@ -11,7 +11,7 @@ const plain = (d: Drawing) => toRows(d, palette('default')).map(r => r.map(s => 
 // A one-row drawing of a title, as draw.ts writes one, on a grid 3 cells wide, at the given columns.
 function titleRow(text: string, columns: number): Drawing {
   const c = createCanvas(1, 3, columns); c.text(0, 0, text, 'title', 'title')
-  return c.toDrawing({ labels: [{ owner: 'title', text }], edges: [], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'title', text }], edges: [], edgeLabels: [], frames: [] })
 }
 // A title of x then pad spaces, kept by its quotes and drawn, so the title row is pad + 1 wide.
 const TITLED = (pad: number) => `---\ntitle: "x${' '.repeat(pad)}"\n---\nflowchart TD\nA`

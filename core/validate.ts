@@ -7,9 +7,12 @@ import { width } from './width.ts'
 
 export type Expect = {
   labels: readonly { owner: string; text: string }[]                                     // every label instance, keyed by owner id
-  edges: readonly { id: string; from: string; to: string; heads: readonly string[] }[]  // drawn edges; ~~~ is not listed
+  edges: readonly { id: string; from: string; to: string; ends: readonly End[] }[]       // drawn edges; ~~~ is not listed
   edgeLabels: readonly { owner: string; edge: string }[]
+  frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
 }
+// A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
+export type End = { node: string; glyph: string }
 
 // A drawn cell and where it is.
 type Spot = { r: number; c: number; cell: Cell }
@@ -22,11 +25,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels. null if none.
+// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels, frames.
+// null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ??
-    rows(d) ?? edgeLabels(d, all)
+    rows(d) ?? edgeLabels(d, all) ?? frames(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -98,31 +102,32 @@ const connects = (x: Cell, id: string): boolean =>
   ((x.kind === 'line' || x.kind === 'arrow') && owns(x, id)) || ((x.kind === 'text' || x.kind === 'cont') && x.owners[0] === `${id}:label`)
 
 // Each edge is connected: a walk over the cells that connect it, from its line or arrow cells next to from (a line there
-// must point at from), reaches a cell next to to. Each head is its own arrow cell of the edge at an end node, and none
-// sits on a junction.
+// must point at from), reaches a cell next to to. Each end mark is its own arrow cell of the edge beside its own node, and
+// none sits on a junction.
 function edges(d: Drawing, all: readonly Spot[]): Fail | null {
   // The first of sides on which p touches a cell of any of ids.
   const toward = (p: Spot, ids: readonly string[], sides = SIDES) => sides.find(s => ids.some(id => owns(beside(d, p, s), id)))
-  // The side a head meets an end node on: the side its glyph points at, or any side for a head with no point.
-  const aim = (p: Spot, ids: readonly string[]) => { const s = POINT.get(p.cell.ch); return toward(p, ids, s ? [s] : SIDES) }
+  // The side a mark meets its node on: the side its glyph points at, or any side for a mark with no point.
+  const aim = (p: Spot, node: string) => { const s = POINT.get(p.cell.ch); return toward(p, [node], s ? [s] : SIDES) }
   for (const e of d.expect.edges) {
     const mine = all.filter(p => connects(p.cell, e.id))
     const starts = mine.filter(p => SIDES.some(s => owns(beside(d, p, s), e.from) &&
       (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (p.cell.dirs & s.bit) !== 0))))
     if (!walk(mine, starts).some(p => toward(p, [e.to]))) return fail('edge-disconnected')
-    // Every head claims its own arrow cell first; only then is the cell behind each, opposite its point, checked.
-    const pool = mine.filter(p => p.cell.kind === 'arrow'), heads: Spot[] = []
-    for (const h of e.heads) {
-      const i = pool.findIndex(p => p.cell.ch === h && aim(p, [e.from, e.to]))
-      if (i < 0) return fail('edge-disconnected')
-      heads.push(...pool.splice(i, 1))
+    // Every end claims its own arrow cell first; only then is the cell behind each, opposite the side it meets its node on,
+    // checked. An end whose glyph the edge draws fewer times than its ends need is missing; any other unclaimed end has its
+    // mark drawn somewhere else: beside the other node, or pointing away from its own.
+    const pool = mine.filter(p => p.cell.kind === 'arrow'), claimed: [Spot, Side][] = []
+    const drawn = (g: string) => mine.filter(p => p.cell.kind === 'arrow' && p.cell.ch === g).length
+    for (const end of e.ends) {
+      const i = pool.findIndex(p => p.cell.ch === end.glyph && aim(p, end.node))
+      if (i < 0) return fail(drawn(end.glyph) < e.ends.filter(x => x.glyph === end.glyph).length ? 'edge-disconnected' : 'end-misplaced')
+      const p = pool.splice(i, 1)[0]!
+      claimed.push([p, aim(p, end.node)!])
     }
-    // Any arrow cell of the edge no head claimed is an extra head, as when the canvas merged it into another edge's head.
+    // Any arrow cell of the edge no end claimed is an extra head, as when the canvas merged it into another edge's head.
     if (pool.length > 0) return fail('head-extra')
-    for (const head of heads) {
-      const s = aim(head, [e.from, e.to])!
-      if (degree(at(d, head.r - s.dr, head.c - s.dc)) >= JUNCTION) return fail('head-on-junction')
-    }
+    for (const [p, s] of claimed) if (degree(at(d, p.r - s.dr, p.c - s.dc)) >= JUNCTION) return fail('head-on-junction')
   }
   return null
 }
@@ -181,6 +186,35 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
     const route = all.filter(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && owns(p.cell, edge))
     const near = all.some(p => owns(p.cell, owner) && route.some(q => Math.max(Math.abs(p.r - q.r), Math.abs(p.c - q.c)) <= 1))
     if (!near) return fail('label-not-adjacent')
+  }
+  return null
+}
+
+// Each frame stays closed. Its own frame cells span a box, and each cell on the box's border is a frame cell of its own or,
+// off the corners, one of: its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its
+// own dividers `${id}.${k}`, ├ on its left side or ┤ on its right; or a line only edges cross straight through, each by the
+// dirs it drew there: │ (5) through the top or bottom, ─ (10) through a side. A lifeline needs no exception: a frame draws
+// first, and a lifeline only fills empty cells. Text over a border, a run along it, or a frame with no cells is broken.
+function frames(d: Drawing, all: readonly Spot[]): Fail | null {
+  const edges = new Set(d.expect.edges.map(e => e.id))
+  for (const id of d.expect.frames) {
+    const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
+    if (mine.length === 0) return fail('frame-broken')
+    const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
+    const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
+    const divider = (o: string) => o.startsWith(`${id}.`) && /^\d+$/.test(o.slice(id.length + 1))
+    const kept = (r: number, c: number): boolean => {
+      const x = at(d, r, c), across = r === top || r === bottom, side = c === left || c === right
+      if (x?.kind === 'frame') return x.owners[0] === id
+      if (!x || (across && side)) return false
+      if (x.kind === 'text' || x.kind === 'cont') return r === top && x.owners[0] === id
+      if (x.kind !== 'line' || x.owners.length === 0) return false
+      if (side && x.dirs === (c === left ? 7 : 13) && x.owners.every(divider)) return true
+      const dirs = across ? 5 : 10
+      return x.dirs === dirs && x.owners.every(o => edges.has(o) && x.segs?.find(s => s.owner === o)?.dirs === dirs)
+    }
+    for (let c = left; c <= right; c++) if (!kept(top, c) || !kept(bottom, c)) return fail('frame-broken')
+    for (let r = top + 1; r < bottom; r++) if (!kept(r, left) || !kept(r, right)) return fail('frame-broken')
   }
   return null
 }

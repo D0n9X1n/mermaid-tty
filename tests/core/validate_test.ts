@@ -5,7 +5,7 @@ import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } fro
 import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
-  return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['▼'] }], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
 }
 const cut = (d: Drawing, r: number, c: number) => { d.cells[r]![c] = null; return d }
 
@@ -30,7 +30,7 @@ test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', ()
   wrongOwner.cells[1]![3] = { ch: '─', kind: 'line', role: 'edge', owners: ['other'], dirs: 10 }
   wrongOwner.cells[1]![2] = { ...wrongOwner.cells[1]![2]!, dirs: 7 }
   wrongOwner.cells[2]![2] = { ...wrongOwner.cells[1]![2]!, ch: '│', dirs: 5 }
-  wrongOwner.expect = { ...wrongOwner.expect, edges: [{ id: 'A>B', from: 'A', to: 'B', heads: [] }] }
+  wrongOwner.expect = { ...wrongOwner.expect, edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [] }] }
   assert.equal(validate(wrongOwner)?.reason, 'line-dangling')
   const loop = two()
   const line = (dirs: number, owners = ['A>B']) => ({ ch: '─', kind: 'line' as const, role: 'edge' as const, owners, dirs })
@@ -65,7 +65,7 @@ test('A5.mutation-tests: identical text on distinct ids passes', () => assert.eq
 function label(expected: string, pieces: readonly (readonly [string, Piece['join']?])[]): Drawing {
   const c = createCanvas(pieces.length, 20, 20)
   pieces.forEach(([s, join], r) => c.text(r, 0, s, 'label', 'n1', join))
-  return c.toDrawing({ labels: [{ owner: 'n1', text: expected }], edges: [], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'n1', text: expected }], edges: [], edgeLabels: [], frames: [] })
 }
 // The first piece joins with '' or none; a piece split at a space with ' ', one split between W/F characters with '', and
 // the first piece of a later label line with '\n'.
@@ -91,21 +91,22 @@ test('A5.mutation-tests: a label blank after collapsing needs no instance, and a
 })
 test('A5.mutation-tests: text drawn by an owner that expect does not list is a duplicate', () => {
   const c = createCanvas(1, 4, 4); c.text(0, 0, 'a', 'label', 'n1'); c.text(0, 2, 'x', 'label', 'n9')
-  assert.equal(validate(c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }, { owner: 'n9', text: 'x' }], edges: [], edgeLabels: [] })), null)
-  assert.equal(validate(c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }], edges: [], edgeLabels: [] }))?.reason, 'label-dup')
+  assert.equal(validate(c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }, { owner: 'n9', text: 'x' }], edges: [], edgeLabels: [], frames: [] })), null)
+  assert.equal(validate(c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }], edges: [], edgeLabels: [], frames: [] }))?.reason, 'label-dup')
 })
 // Node N: header row n, then member row m, whose cells list N after their own id N.m. The edge touches only the member row.
 test('A5.mutation-tests: a member row owns its own text, and an edge reaches its node through it', () => {
   const c = createCanvas(5, 1, 1); c.text(0, 0, 'n', 'node', 'N'); c.text(1, 0, 'm', 'node', ['N.m', 'N'])
   c.line(2, 0, 5, 'light', 'edge', 'N>B'); c.arrow(3, 0, '▼', 'N>B'); c.text(4, 0, 'b', 'node', 'B')
-  const d = c.toDrawing({ labels: [{ owner: 'N', text: 'n' }, { owner: 'N.m', text: 'm' }, { owner: 'B', text: 'b' }], edges: [{ id: 'N>B', from: 'N', to: 'B', heads: ['▼'] }], edgeLabels: [] })
+  const d = c.toDrawing({ labels: [{ owner: 'N', text: 'n' }, { owner: 'N.m', text: 'm' }, { owner: 'B', text: 'b' }], edges: [{ id: 'N>B', from: 'N', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
   assert.equal(validate(d), null)
 })
 
 // Edge A>B from a to b, one cell per step: down column 0, or along row 0 when across. A number is a line's dirs, a string an
 // arrow glyph, null an empty cell, and { text, owners } a label cell, whose owners[0] expect lists with its text.
+// Each of ends names an end mark's node, then its glyph: 'B▼'.
 type Step = number | string | null | { text: string; owners: string[] }
-function path(steps: readonly Step[], heads: readonly string[], across = false): Drawing {
+function path(steps: readonly Step[], ends: readonly string[], across = false): Drawing {
   const n = steps.length + 2, c = across ? createCanvas(1, n, n) : createCanvas(n, 1, 1), extra: { owner: string; text: string }[] = []
   const pos = (i: number): [number, number] => (across ? [0, i] : [i, 0])
   c.text(...pos(0), 'a', 'node', 'A')
@@ -115,22 +116,22 @@ function path(steps: readonly Step[], heads: readonly string[], across = false):
     else if (s) { c.text(...pos(i + 1), s.text, 'label', s.owners); extra.push({ owner: s.owners[0]!, text: s.text }) }
   })
   c.text(...pos(n - 1), 'b', 'node', 'B')
-  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, ...extra], edges: [{ id: 'A>B', from: 'A', to: 'B', heads }], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, ...extra], edges: [{ id: 'A>B', from: 'A', to: 'B', ends: ends.map(s => ({ node: s[0]!, glyph: s.slice(1) })) }], edgeLabels: [], frames: [] })
 }
 test('A5.mutation-tests: an edge whose line at from points away from it is disconnected', () => {
-  assert.equal(validate(path([5, '▼'], ['▼'])), null)
-  assert.equal(validate(path([4, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, '▼'], ['B▼'])), null)
+  assert.equal(validate(path([4, '▼'], ['B▼']))?.reason, 'edge-disconnected')
 })
 test('A5.mutation-tests: an edge whose cells stop short of to is disconnected, with or without a head', () => {
   assert.equal(validate(path([5, 5], [])), null)
   assert.equal(validate(path([5, null], []))?.reason, 'edge-disconnected')
-  assert.equal(validate(path([5, null, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, null, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
 })
 // [5, 4]: the upper line points down, the lower one not up; [1, 5]: the lower line points up, the upper one not down.
 test('A5.mutation-tests: two line cells join only where their dirs point at each other', () => {
-  assert.equal(validate(path([5, 5, '▼'], ['▼'])), null)
-  assert.equal(validate(path([5, 4, '▼'], ['▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path([1, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, 5, '▼'], ['B▼'])), null)
+  assert.equal(validate(path([5, 4, '▼'], ['B▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([1, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
 })
 // A forks at a ├ that A>B and A>C share: a in row 0, ├┐ in row 1, then ││, ▼▼ and bc.
 function fork(): Drawing {
@@ -139,7 +140,7 @@ function fork(): Drawing {
   c.line(1, 0, 3, 'light', 'edge', 'A>C'); c.line(1, 1, 12, 'light', 'edge', 'A>C'); c.line(2, 1, 5, 'light', 'edge', 'A>C'); c.arrow(3, 1, '▼', 'A>C')
   c.text(4, 0, 'b', 'node', 'B'); c.text(4, 1, 'c', 'node', 'C')
   return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'C', text: 'c' }],
-    edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['▼'] }, { id: 'A>C', from: 'A', to: 'C', heads: ['▼'] }], edgeLabels: [] })
+    edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }, { id: 'A>C', from: 'A', to: 'C', ends: [{ node: 'C', glyph: '▼' }] }], edgeLabels: [], frames: [] })
 }
 test('A5.mutation-tests: an edge passes through a junction cell it shares with a sibling edge, but never walks the sibling cells', () => {
   assert.equal(validate(fork()), null)
@@ -148,10 +149,10 @@ test('A5.mutation-tests: an edge passes through a junction cell it shares with a
 // An edge label drawn on the path: its cells list the label id A>B:label, then the edge id. Text under any other owner is not
 // the edge's label, even when its cells list A>B too.
 test("A5.mutation-tests: an edge's own label cell joins any adjacent cell of its edge but starts nothing; text of another owner breaks the edge, even text the edge owns", () => {
-  assert.equal(validate(path([5, { text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['▼'])), null)
-  assert.equal(validate(path([5, { text: 'L', owners: ['L1'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path([5, { text: 'L', owners: ['L1', 'A>B'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path([{ text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, { text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['B▼'])), null)
+  assert.equal(validate(path([5, { text: 'L', owners: ['L1'] }, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([5, { text: 'L', owners: ['L1', 'A>B'] }, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path([{ text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
 })
 // a, then ─, 成功 (each W character a text cell, then a cont cell), ─, ► and b along row 0: the route enters 成 and leaves
 // from 功's cont cell. The label's cells list owners: A>B:label alone, or with A>B.
@@ -159,7 +160,7 @@ function through(owners: string[]): Drawing {
   const c = createCanvas(1, 9, 9); c.text(0, 0, 'a', 'node', 'A'); c.line(0, 1, 10, 'light', 'edge', 'A>B'); c.text(0, 2, '成功', 'label', owners)
   c.line(0, 6, 10, 'light', 'edge', 'A>B'); c.arrow(0, 7, '►', 'A>B'); c.text(0, 8, 'b', 'node', 'B')
   return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: owners[0]!, text: '成功' }],
-    edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['►'] }], edgeLabels: [{ owner: owners[0]!, edge: 'A>B' }] })
+    edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '►' }] }], edgeLabels: [{ owner: owners[0]!, edge: 'A>B' }], frames: [] })
 }
 test("A5.mutation-tests: an edge's own label bridges its route through its cont cells too, whether its cells list the edge or not", () => {
   assert.equal(validate(through(['A>B:label', 'A>B'])), null)
@@ -168,7 +169,7 @@ test("A5.mutation-tests: an edge's own label bridges its route through its cont 
 // QA's repro: A, then down column 0 an edge e's line, a cell `cell` draws, ▼ and B, on a grid cols wide.
 function gap(cell: (c: Canvas) => void, cols = 1): Drawing {
   const c = createCanvas(5, cols, cols); c.text(0, 0, 'A', 'node', 'A'); c.line(1, 0, 5, 'light', 'edge', 'e'); cell(c); c.arrow(3, 0, '▼', 'e'); c.text(4, 0, 'B', 'node', 'B')
-  return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }], edges: [{ id: 'e', from: 'A', to: 'B', heads: ['▼'] }], edgeLabels: [] })
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }], edges: [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
 }
 test('A5.mutation-tests: a blank fill or a cap never connects an edge, even one the edge owns', () => {
   assert.equal(validate(gap(c => c.line(2, 0, 5, 'light', 'edge', 'e'))), null)
@@ -184,28 +185,29 @@ test('A5.mutation-tests: a fill the edge owns beside its connected line changes 
 })
 // <--> draws ▲ next to A and ▼ next to B; o--o draws ● at each end.
 test('A5.mutation-tests: each head of a two-headed edge is its own arrow cell next to an end node, and neither sits on a junction', () => {
-  assert.equal(validate(path(['▲', 5, '▼'], ['▲', '▼'])), null)
-  assert.equal(validate(path([5, 5, '▼'], ['▲', '▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path(['▲', 5, 5], ['▲', '▼']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path(['●', 5, '●'], ['●', '●'])), null)
-  assert.equal(validate(path(['●', 5, 5], ['●', '●']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path(['▲', 7, 5, '▼'], ['▲', '▼']))?.reason, 'head-on-junction')
-  assert.equal(validate(path(['▲', 5, 7, '▼'], ['▲', '▼']))?.reason, 'head-on-junction')
-  assert.equal(validate(path(['●', 7, 5, '●'], ['●', '●']))?.reason, 'head-on-junction')
+  assert.equal(validate(path(['▲', 5, '▼'], ['A▲', 'B▼'])), null)
+  assert.equal(validate(path([5, 5, '▼'], ['A▲', 'B▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path(['▲', 5, 5], ['A▲', 'B▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path(['●', 5, '●'], ['A●', 'B●'])), null)
+  assert.equal(validate(path(['●', 5, 5], ['A●', 'B●']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path(['▲', 7, 5, '▼'], ['A▲', 'B▼']))?.reason, 'head-on-junction')
+  assert.equal(validate(path(['▲', 5, 7, '▼'], ['A▲', 'B▼']))?.reason, 'head-on-junction')
+  assert.equal(validate(path(['●', 7, 5, '●'], ['A●', 'B●']))?.reason, 'head-on-junction')
 })
-// ▲ ► ▼ ◄ must point at the end node they are next to; ● has no point, so it may touch either end on any side.
+// ▲ ► ▼ ◄ must point at the node their end names; ● has no point, so it may touch its node on any side. A directional
+// mark beside its node that points away is drawn, but misplaced.
 test('A5.mutation-tests: a directional head points at the end node it is next to', () => {
-  assert.equal(validate(path(['▲', 5], ['▲'])), null)
-  assert.equal(validate(path([5, '▲'], ['▲']))?.reason, 'edge-disconnected')
-  assert.equal(validate(path(['◄', 10], ['◄'], true)), null)
-  assert.equal(validate(path([10, '►'], ['►'], true)), null)
-  assert.equal(validate(path([10, '◄'], ['◄'], true))?.reason, 'edge-disconnected')
-  assert.equal(validate(path(['►', 10], ['►'], true))?.reason, 'edge-disconnected')
+  assert.equal(validate(path(['▲', 5], ['A▲'])), null)
+  assert.equal(validate(path([5, '▲'], ['B▲']))?.reason, 'end-misplaced')
+  assert.equal(validate(path(['◄', 10], ['A◄'], true)), null)
+  assert.equal(validate(path([10, '►'], ['B►'], true)), null)
+  assert.equal(validate(path([10, '◄'], ['B◄'], true))?.reason, 'end-misplaced')
+  assert.equal(validate(path(['►', 10], ['A►'], true))?.reason, 'end-misplaced')
 })
 // a, an empty cell, b, then three empty cells: 3 columns once the trailing spaces drop, the gap between a and b included.
 test('A5.mutation-tests: a row is measured as drawn: an empty cell counts as a space, and trailing spaces drop', () => {
   const c = createCanvas(1, 6, 6); c.text(0, 0, 'a', 'label', 'n1'); c.text(0, 2, 'b', 'label', 'n2')
-  const d = c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }, { owner: 'n2', text: 'b' }], edges: [], edgeLabels: [] })
+  const d = c.toDrawing({ labels: [{ owner: 'n1', text: 'a' }, { owner: 'n2', text: 'b' }], edges: [], edgeLabels: [], frames: [] })
   assert.equal(validate({ ...d, columns: 3 }), null)
   assert.equal(validate({ ...d, columns: 2 })?.reason, 'row-too-wide')
 })
@@ -221,7 +223,7 @@ function labelled(row: number, col: number, edge = 'A>B'): Drawing {
   const c = createCanvas(3, 5, 5); c.text(0, 0, 'a', 'node', 'A'); c.line(0, 1, 10, 'light', 'edge', 'A>B'); c.line(0, 2, 10, 'light', 'edge', 'A>B')
   c.arrow(0, 3, '►', 'A>B'); c.text(0, 4, 'b', 'node', 'B'); c.text(row, col, 'L', 'label', ['L1', edge])
   return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'L1', text: 'L' }],
-    edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['►'] }], edgeLabels: [{ owner: 'L1', edge }] })
+    edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '►' }] }], edgeLabels: [{ owner: 'L1', edge }], frames: [] })
 }
 // (1,0) and (1,4) touch the edge only at a corner: distance 1. (2,2) is distance 2. (1,2) is under A>B, not its edge X>Y.
 test('A5.mutation-tests: an edge label needs a cell within Chebyshev distance 1 of a line or arrow cell of its own edge', () => {
@@ -237,30 +239,30 @@ test('A5.mutation-tests: a drawing broken two ways reports the earlier check', (
   assert.equal(validate({ ...cut(two(), 1, 2), conflicts: [{ row: 0, col: 2, had: 'a', by: 'X' }] })?.reason, 'edge-disconnected')
   assert.equal(validate({ ...two(), conflicts: [{ row: 0, col: 2, had: 'a', by: 'X' }], columns: 2 })?.reason, 'overwrite')
   assert.equal(validate({ ...labelled(2, 2), columns: 2 })?.reason, 'row-too-wide')
-  assert.equal(validate(path(['▲', 7, 5, 5], ['▲', '▼']))?.reason, 'edge-disconnected')
+  assert.equal(validate(path(['▲', 7, 5, 5], ['A▲', 'B▼']))?.reason, 'edge-disconnected')
 })
-// An edge owns only its heads' arrow cells. The canvas merges a same-glyph arrow of edges that share an endpoint, so an edge
+// An edge owns only its end marks' arrow cells. The canvas merges a same-glyph arrow of edges that share an endpoint, so an edge
 // whose arrow lands on another edge's head owns an extra head, which fails; a merged fan-in head, <-->, o and x ends pass.
 test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-extra', () => {
   const draw = (rows: number, cols: number, nodes: [string, number, number][], ink: (c: Canvas) => void,
-    edges: { id: string; from: string; to: string; heads: string[] }[]): Drawing => {
+    edges: { id: string; from: string; to: string; ends: { node: string; glyph: string }[] }[]): Drawing => {
     const c = createCanvas(rows, cols, cols, () => true)
     for (const [id, r, col] of nodes) c.text(r, col, id, 'node', id)
     ink(c)
-    return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edges, edgeLabels: [] })
+    return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edges, edgeLabels: [], frames: [] })
   }
   const extra = draw(2, 3, [['A', 0, 0], ['B', 0, 2], ['C', 1, 2]], c => {
     c.arrow(0, 1, '►', 'e0'); c.line(1, 0, 3, 'light', 'edge', 'e1'); c.arrow(1, 1, '►', 'e1'); c.arrow(0, 1, '►', 'e1')
-  }, [{ id: 'e0', from: 'A', to: 'B', heads: ['►'] }, { id: 'e1', from: 'A', to: 'C', heads: ['►'] }])
+  }, [{ id: 'e0', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '►' }] }, { id: 'e1', from: 'A', to: 'C', ends: [{ node: 'C', glyph: '►' }] }])
   assert.deepEqual(extra.cells[0]![1]!.owners, ['e0', 'e1'])
   assert.equal(validate(extra)?.reason, 'head-extra')
   const fanIn = draw(3, 3, [['A', 0, 0], ['B', 0, 2], ['C', 2, 1]], c => {
     c.line(1, 0, 3, 'light', 'edge', 'e0'); c.arrow(1, 1, '▼', 'e0'); c.line(1, 2, 9, 'light', 'edge', 'e1'); c.arrow(1, 1, '▼', 'e1')
-  }, [{ id: 'e0', from: 'A', to: 'C', heads: ['▼'] }, { id: 'e1', from: 'B', to: 'C', heads: ['▼'] }])
+  }, [{ id: 'e0', from: 'A', to: 'C', ends: [{ node: 'C', glyph: '▼' }] }, { id: 'e1', from: 'B', to: 'C', ends: [{ node: 'C', glyph: '▼' }] }])
   assert.equal(validate(fanIn), null)
   for (const [l, r] of [['◄', '►'], ['o', 'x']] as const) {
     const ends = draw(1, 5, [['A', 0, 0], ['B', 0, 4]], c => { c.arrow(0, 1, l, 'e'); c.line(0, 2, 10, 'light', 'edge', 'e'); c.arrow(0, 3, r, 'e') },
-      [{ id: 'e', from: 'A', to: 'B', heads: [l, r] }])
+      [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'A', glyph: l }, { node: 'B', glyph: r }] }])
     assert.equal(validate(ends), null, `${l} ${r}`)
   }
 })
@@ -285,8 +287,8 @@ function sketch(rows: number, cols: number, nodes: [string, number, number, stri
   const c = createCanvas(rows, cols, cols, () => true)
   for (const [id, r, col, owners] of nodes) c.text(r, col, id, 'node', owners ?? id)
   for (const [o, r, col, x] of marks) { if (typeof x === 'number') c.line(r, col, x, 'light', 'edge', o); else c.arrow(r, col, x, o) }
-  return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edgeLabels: [],
-    edges: edges.map(s => { const [id = '', from = '', to = '', head] = s.split(' '); return { id, from, to, heads: head ? [head] : [] } }) })
+  return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edgeLabels: [], frames: [],
+    edges: edges.map(s => { const [id = '', from = '', to = '', head] = s.split(' '); return { id, from, to, ends: head ? [{ node: to, glyph: head }] : [] } }) })
 }
 test('A5.mutation-tests: unrelated edges cross straight and perpendicular, and related edges meet any way, and both pass', () => {
   // ┼: A→B down column 3 crosses C→D along row 3.

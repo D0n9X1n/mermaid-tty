@@ -1,7 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { createCanvas } from '../../core/canvas.ts'
 import type { Cell, Drawing } from '../../core/canvas.ts'
 import { CAPS } from '../../core/caps.ts'; import { GLYPHS } from '../../core/glyphs.ts'
-const E = { labels: [], edges: [], edgeLabels: [] }
+const E = { labels: [], edges: [], edgeLabels: [], frames: [] }
 test('A5.mutation-tests: wide text takes two cells; shared lines merge into junctions', () => {
   const c = createCanvas(3, 6, 6, (a, b) => a.split('>')[0] === b.split('>')[0])
   assert.equal(c.text(0, 0, '中a', 'label', 'n1'), 3); c.line(1, 1, 10, 'light', 'edge', 'A>B'); c.line(1, 1, 4, 'light', 'edge', 'A>C')
@@ -207,7 +207,7 @@ test('A8.platforms: every glyph a busy canvas draws outside text is in GLYPHS: i
 })
 // The canvas does not clip to the budget: the validator's overlong-row check needs a row that can be too wide.
 test('A5.mutation-tests: toDrawing reports the column budget, not the grid width, with the cells, the conflict log and the expect it was given', () => {
-  const c = createCanvas(1, 3, 2), ex = { labels: [{ owner: 'n1', text: 'abc' }], edges: [], edgeLabels: [] }
+  const c = createCanvas(1, 3, 2), ex = { labels: [{ owner: 'n1', text: 'abc' }], edges: [], edgeLabels: [], frames: [] }
   assert.equal(c.text(0, 0, 'abc', 'label', 'n1'), 3)
   assert.deepEqual(c.toDrawing(ex), { columns: 2, cells: [[{ ch: 'a', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 }, { ch: 'b', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 },
     { ch: 'c', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 }]], conflicts: [], expect: ex })
