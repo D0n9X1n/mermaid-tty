@@ -285,6 +285,10 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules.
 | `-04` | Repeated: `s1 : one`, then `s1 : two` |
 | `-05` | Repeated: two notes on one state |
 | `-06` | Duplicate: id `x` inside two composites |
+| `-07` | Valid prefix, then a floating `note "memo" as N1` |
+| `-08` | Valid prefix, then `state c <<choice>>` and a description `c : pick` |
+| `-09` | Valid prefix, then `state f <<fork>>` and a description `f : split` |
+| `-10` | Valid prefix, then `state j <<join>>` and a description `j : merge` |
 
 ### class
 
@@ -362,6 +366,8 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules.
 | `-05` | Repeated: `<<interface>> A` and `<<service>> A` |
 | `-06` | Repeated: `class A["x"]`, then `class A["y"]` |
 | `-07` | Duplicate: `class Box~int~` and `class Box~str~` |
+| `-08` | Valid prefix, then a nested `namespace A { namespace B { class C } }` |
+| `-09` | Valid prefix, then a generic with a comma, `class Box~K,V~` |
 
 ### ER
 
@@ -441,6 +447,11 @@ An id used for both an entity and a subgraph also falls back.
 | `-06` | Repeated: `p[Person]`, then `p[Human]` |
 | `-07` | Duplicate: `CAR` listed in two subgraphs |
 | `-08` | Duplicate: `Sales` used as an entity, then as a subgraph id |
+| `-09` | Valid prefix, then the attribute `List~string~ tags` in an entity block |
+| `-10` | Valid prefix, then an attribute name in backticks, `` string `id` `` |
+| `-11` | Valid prefix, then Markdown in an alias, `p["**Person**"]` |
+| `-12` | Valid prefix, then Markdown in a relation label, `A \|\|--o{ B : "_owns_"` |
+| `-13` | Valid prefix, then an entity name in backticks, `` `CAR` `` |
 
 ### requirement
 
@@ -726,17 +737,19 @@ axisFormat <fmt>   %Y %y %m %d %e %H %M %S %L %j %b %a; other text is
   id     [A-Za-z0-9_-]+, unique
   start  <date> | after <id> [<id>…]        omitted: previous task's end
   end    <date> | <n><unit> | until <id> [<id>…]
-  unit   ms s m h d w; n may be a decimal giving whole ms (1.5d)
+  unit   ms s m h d w; n may be a decimal giving whole ms, for ms s m h only (1.5h)
 ```
 
 A task name is any text without `:`; names may repeat, as in the docs. The previous task is the one before it in source order, across sections. `after` takes the latest end of its ids; `until` takes the earliest start, since the task runs "until … starts". An id may be defined later, as the docs' `until isadded` is. As in the docs, a milestone sits at start + duration/2 and the next task starts at its end.
 
 **Not supported (falls back):**
 - `excludes`, `includes`, `weekday`, `weekend`, `tickInterval`, `topAxis`, `inclusiveEndDates`, `todayMarker` other than `off`, and the `vert` tag. The docs don't define `excludes` precisely enough to reproduce, so it falls back rather than being drawn approximately.
-- `M` and `y` durations; any other duration token (the docs say Mermaid silently turns `3dX` into zero); a date that doesn't match `dateFormat`; a format token not listed above.
+- `M` and `y` durations; a fractional `d` or `w` duration (`1.5d`); any other duration token (the docs say Mermaid silently turns `3dX` into zero); a date that doesn't match `dateFormat`; a format token not listed above.
 - A repeated or unknown id, a reference cycle, a first task with no start, an end before its start, more than 3 items after the tags.
 - A task name with `%` as its first or second character, one that starts with a `YYYY-MM-DD` date, or one whose first word is `call`: Mermaid's lexer reads these as a comment or as tokens.
 - `displayMode: compact` is ignored: every task keeps its own row.
+
+**Amendment (plan C fix cycle 1, 2026-10-29):** a fractional `d` or `w` duration falls back. Mermaid's `ganttDb.js` adds a duration with Day.js `add(n, unit)`, which rounds a fractional day or week to whole days (`1.5d` adds 2 days); this design does not reproduce that rounding. Day.js adds a fractional `h`, `m`, `s` or `ms` exactly, so those stay supported.
 
 **Text design** (W = 30; source: `title Release`, `section Build`, `Spec :crit, done, s, 2024-01-01, 10d`, `Code :active, after s, 20d`, `Ship :milestone, 2024-01-31, 0d`):
 
@@ -793,7 +806,7 @@ c 2024-01-31 · 0d
 - `gantt-ok-04`: docs' milestone example (`HH:mm`, `%H:%M`): `◆` at 17:50 and 18:10; Task A 17:51 → 18:01. Timings `17:49 · 2m`, `10m`, `5m`, `18:08 · 4m`. At 120 (W = 60): `◆` at cells 2 and 54; Task A from cell 5, 209 eighths; 5-minute ticks at 0, 13, 26, 39, 52.
 - `gantt-ok-05`: docs' syntax example without `excludes`: status fields `!✓`, `!▸`, `! `, ` ▸`, ` ✓`; forward `until isadded`; repeated names; tasks without ids. Timings include `2014-01-06 · 2014-01-08`, `2014-01-06 · 24h` (not `1d`), `after a1 · 20h` (trimmed) and `until isadded`; `T` = 23. Step 1 at 120 (W = 57); step 2 at 80 (W = 39, keys `a`–`q`); step 3 at 60, where `Completed task in the critical line` wraps to 34 cells.
 - `gantt-ok-06`: `active, done` shows `✓` and the `done` role; a `crit` milestone's `◆` takes the `crit` role.
-- `gantt-ok-07`: `500ms`, `30s`, `1.5h` and `1.5d` print as written (not `90m` or `36h`); a `0d` task draws no bar and prints its timing; tasks before any section.
+- `gantt-ok-07`: `500ms`, `30s` and `1.5h` print as written (not `90m`); a `0d` task draws no bar and prints its timing; tasks before any section.
 - `gantt-ok-08`: `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`: timings keep the `dateFormat` text; tick labels use `axisFormat`.
 - `gantt-ok-09`: `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`: timings keep the unpadded dates as written.
 - `gantt-ok-10`: `%%` comments, frontmatter title, `displayMode: compact` (ignored), `todayMarker off`.
@@ -822,6 +835,16 @@ c 2024-01-31 · 0d
 - `gantt-reject-15`: `Call vendor :2d` (Mermaid's lexer starts a `call`).
 - `gantt-reject-16`: `5% bonus :2d` (Mermaid skips the line as a comment).
 - `gantt-reject-17`: `2024-01-01 kickoff :1d` (Mermaid lexes a date).
+- `gantt-reject-18`: duration `1.5d` (the amendment above).
+- `gantt-reject-19`: valid chart, then `includes 2024-01-06`.
+- `gantt-reject-20`: valid chart, then `weekday monday`.
+- `gantt-reject-21`: valid chart, then `weekend friday`.
+- `gantt-reject-22`: valid chart, then `tickInterval 1week`.
+- `gantt-reject-23`: valid chart, then `topAxis`.
+- `gantt-reject-24`: valid chart, then `inclusiveEndDates`.
+- `gantt-reject-25`: valid chart, then `todayMarker stroke-width:5px`.
+- `gantt-reject-26`: duration `1y`.
+- `gantt-reject-27`: `B :crit, b1, 2024-01-04, 3d, 4d` (four items after the tags).
 
 ### pie
 
@@ -849,11 +872,11 @@ Cats ██████████▌                                          
 Rats █▉                                                            15  3.1%
 ```
 
-- One row per slice, sorted by value, largest first; ties keep source order.
+- One row per slice, sorted by value, largest first; ties keep source order. This differs on purpose from Mermaid's pie, which keeps source order (`pieRenderer.ts` sorts with `null`): the text design is a ranked bar list, not a circle, and a ranked list reads largest first.
 - A row: the label padded to the widest label `N`, a space, the bar field `W`, a space, the value right-aligned to the widest value `V`, a space, and the percentage right-aligned to the widest percentage `P`.
 - Each bar takes its slice's series color, assigned in source order, so sorting doesn't change colors.
 
-**Numbers:** `M = Σv`, so the bars together fill the field, like an unrolled pie. A bar is `round(8·v/Σv·W)` eighth-cells. A percentage is `100·v/Σv`, rounded half up to one decimal and printed with `%`; printed percentages need not sum to 100.0.
+**Numbers:** `M = Σv`, so the bars together fill the field, like an unrolled pie. A bar is `round(8·v/Σv·W)` eighth-cells. A percentage is `100·v/Σv`, rounded half up to one decimal and printed with `%`; printed percentages need not sum to 100.0. Mermaid prints whole percentages on its slices and leaves slices under 1% off the circle; this design keeps one decimal and draws every slice on purpose, since dropping a slice would hide a source item (spec C rule 4).
 
 **Collisions and narrow widths:** each slice owns a row, so nothing collides. A row is `N + W + V + P + 3` cells. Ladder:
 1. `W = min(60, columns − N − V − P − 3)`, if that is at least 10.
@@ -879,6 +902,7 @@ Rats █▉                                                            15  3.1%
 - `pie-reject-04`: an unquoted label (`Dogs : 386`).
 - `pie-reject-05`: a header with no slices.
 - `pie-reject-06`: a one-word 50-letter label, at 60 columns.
+- `pie-reject-07`: a backslash in a label, `"a\b" : 1`.
 
 ### xychart
 
@@ -1118,6 +1142,8 @@ Go to work
 - `journey-reject-06`: `Plan; review: 3: Me` (no lexer rule for `;`).
 - `journey-reject-07`: `section Morning: early`.
 - `journey-reject-08`: a one-word 50-letter task name with actor `Me`, at 60 columns.
+- `journey-reject-09`: an empty actor list, `A: 3:`.
+- `journey-reject-10`: extra colons, `A: 3: Me: Cat`.
 
 ### sankey
 
@@ -2023,7 +2049,8 @@ The title follows common rule 3. No config key is honored.
 | gantt | `until` with several ids; forward reference | gantt-ok-03, gantt-ok-05 |
 | gantt | explicit start and end dates | gantt-ok-05, gantt-ok-15, gantt-reject-07 |
 | gantt | default start = previous task's end | gantt-ok-01, gantt-ok-05, gantt-reject-08 |
-| gantt | durations `ms` `s` `m` `h` `d` `w`, decimals | gantt-ok-03, gantt-ok-04, gantt-ok-07, gantt-reject-02, gantt-reject-09 |
+| gantt | durations `ms` `s` `m` `h` `d` `w`; decimals for `ms` `s` `m` `h` only | gantt-ok-03, gantt-ok-04, gantt-ok-07, gantt-reject-02, gantt-reject-09, gantt-reject-18, gantt-reject-26 |
+| gantt | `excludes`, `includes`, `weekday`, `weekend`, `tickInterval`, `topAxis`, `inclusiveEndDates`, a `todayMarker` other than `off`, more than 3 items after the tags fall back | gantt-reject-01, gantt-reject-19, gantt-reject-20, gantt-reject-21, gantt-reject-22, gantt-reject-23, gantt-reject-24, gantt-reject-25, gantt-reject-27 |
 | gantt | zero-length task; repeated names | gantt-ok-05, gantt-ok-07 |
 | gantt | timing column: start and end as written | gantt-ok-01, gantt-ok-02, gantt-ok-03, gantt-ok-04, gantt-ok-05, gantt-ok-07, gantt-ok-08, gantt-ok-09 |
 | gantt | timings move into the keyed legend | gantt-ok-05, gantt-ok-12, gantt-ok-13, gantt-ok-15 |

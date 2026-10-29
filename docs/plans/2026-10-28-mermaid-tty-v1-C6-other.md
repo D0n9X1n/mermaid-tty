@@ -386,10 +386,11 @@ test('A7: without sections each period takes the next series color; disableMulti
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/timeline/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/timeline_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add timeline fixtures and goldens"`
 
-### T85: Visual gate: gallery, tangle, review scopes, README table, stubs gone
+### T85: Visual gate: gallery, tangle, review scopes, support table, stubs gone
 **Group** G7 · **Deps** T30, T31, T32 and every fixture task (T56, T59, T62, T64, T66, T70, T73, T75, T78, T81, T84) · **Covers** spec C Visual gate (a gallery from the goldens, as PNG through B's SVG pipeline, at 80, at 60 and with CJK; the PM's review and a cross-family review per type), spec C Registry (the README table), VR.gallery, VR.tangled, VR.reviewers, VR.passes, B1
 **Files:**
-- **Modify:** `scripts/render-gallery.ts` (T30), `scripts/check-tangle.ts` (T31), `docs/reviews/required.json`, and the "Supported diagrams" section of `README.md`.
+- **Modify:** `scripts/render-gallery.ts` (T30), `scripts/check-tangle.ts` (T31), `docs/reviews/required.json`.
+- **Create:** `scripts/support-table.ts` and `docs/generated/support-table.md`. C never edits `README.md`; B-T12 includes the generated file.
 - **Delete:** `core/diagrams/stub.ts`.
 - **Test:** `tests/scripts/gallery-c_test.ts`.
 - [ ] **Failing test:**
@@ -415,7 +416,7 @@ test('VR.reviewers: each Tier 1 type has its own review scope over its goldens a
   const req = JSON.parse(readFileSync('docs/reviews/required.json', 'utf8'))
   for (const t of TIER1) assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
 })
-test('B1: the README support table is supportTable()', () => assert.ok(readFileSync('README.md', 'utf8').includes(supportTable())))
+test('B1: docs/generated/support-table.md is exactly supportTable()', () => assert.equal(readFileSync('docs/generated/support-table.md', 'utf8'), supportTable() + '\n'))
 test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   for (const t of TIER1) assert.ok(!('reason' in explain(readFileSync(`fixtures/${t}/${t}-ok-01.mmd`, 'utf8'), { columns: 120 })), t)
 })
@@ -430,12 +431,12 @@ test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
     - Spans map to `Styled` with their colors; a ThemeKey resolves through T30's `DARK_KEYS`. `--png` runs `rsvg-convert`, as in T30.
   - **`check-tangle.ts`** (extends T31): it walks the same folders at 60, 80 and 120 and prints one `<type>: <n> ok` line per type. It still exits 1 on any hit.
   - **`required.json`:** add `"vr-C-<type>": ["goldens/<type>/**", "core/themes.ts"]` for the 11 types. CI stays red until each verdict is recorded, as for `vr-A` (PM, 2026-10-28).
-  - **`README.md`:** the "Supported diagrams" table is `supportTable()`'s output. B owns the page, and C supplies these rows (B3 waits on C for them).
+  - **`scripts/support-table.ts`:** `--write` writes `supportTable()` and a newline to `docs/generated/support-table.md`, and `--check` exits 1 when the file differs. B owns `README.md` and includes the file through B-T12, so C never edits the README.
   - **`stub.ts`:** delete it; no `layout.ts` imports it any more.
   - **The review of each type** (by people, as in plan A §14):
     1. Run `node scripts/render-gallery.ts out/gallery --png`.
     2. The PM checks the type's PNGs at 80 and 60, and its CJK sheet, for color and legibility.
     3. A cross-family reviewer reads its goldens' text and role rows against the tangle rules and the matrix's text design.
     4. They record `docs/reviews/<date>-vr-C-<type>.md`, with the Files rows that `node scripts/check-review-hashes.ts --table goldens/<type> core/themes.ts` prints.
-- [ ] **Done when:** `node --test tests/scripts/gallery-c_test.ts` passes and `node scripts/render-gallery.ts out/gallery` exits 0. The merge gate, `node scripts/check-review-hashes.ts --require-pass`, passes once the 11 records exist.
-- [ ] **Commit:** `git commit -m "Gate the Tier 1 types: gallery, tangle, review scopes and the README table"`
+- [ ] **Done when:** `node --test tests/scripts/gallery-c_test.ts` passes, and `node scripts/render-gallery.ts out/gallery` and `node scripts/support-table.ts --check` exit 0. The merge gate, `node scripts/check-review-hashes.ts --require-pass`, passes once the 11 records exist.
+- [ ] **Commit:** `git commit -m "Gate the Tier 1 types: gallery, tangle, review scopes and the support table"`

@@ -4,7 +4,7 @@
 **Conventions:** as in C1. A parse test builds its input with `P(body)`, which puts the header in front, so the body's first line is source line 2. Parse failures carry the source line: `syntax:<n>`, `repeat:<n>`, `scope:<n>`.
 
 ### T54: State parse
-**Group** G2 · **Deps** T49 · **Covers** matrix state subset, state-ok-01…16, -23…25 (the model), state-reject-01…06, spec C rules 1 and 8
+**Group** G2 · **Deps** T49 · **Covers** matrix state subset, state-ok-01…16, -23…25 (the model), state-reject-01…10, spec C rules 1 and 8; parse fails for a floating note and for a description on a choice, fork or join (state-reject-07…10)
 **Files:** create `core/diagrams/state/parse.ts` (`StateModel = { graph: Graph; title: string | null }`). Test: `tests/core/state-parse_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -90,7 +90,7 @@ test('A4.fit-ladder: the state ladder; notes too wide for their slot become keys
 - [ ] **Implement:**
   - **The module:** `parse = parseState`; `steps = m => graphSteps(m.graph.dir, true)`; `layout = (m, step, cols) => drawAt(o => build(m, o), m.graph.dir, step, cols, m.title)`.
   - **`build(m, { dir, keyed })`:** the graph with `dir`.
-    - Keyed: each note, in source order, gets `fieldKey(k)` as its text. Its legend row is `{ key, keyInk: 'note', owner: '<note id>:legend', parts: [{ text: its lines joined by ' ', ink: 'note', owner: '<note id>:legend' }] }`.
+    - Keyed: each note, in source order, gets `fieldKey(k)` as its text. Its legend row is `{ key, keyInk: 'note', item: '<note id>', cls: 'note', parts: [{ text: its lines joined by ' ', ink: 'note', owner: '<note id>' }] }`. The note's `key` draws in place (T50), and `keyable` lists every note (T87).
     - Unkeyed: notes as written; `legend: []`. Notes wrap at `wrapAt` in layered (T51).
   - **Roles** (matrix): states `node`; `●`, `◉` and bars `node`; `◇` `decision`; composites `frame`; transition labels `label`, on their own rank (A's layout); notes `note`.
 - [ ] **Done when:** `node --test tests/core/state-layout_test.ts` passes.
@@ -136,6 +136,7 @@ test('A7: states, choices, notes and frames carry their nord roles', () => {
 | ok-23, -24, -25 | `[*] --> a`, `a : Same`, `b : Same`, `a --> b`; ok-04's body plus `classDef bad fill:#f00` and `class s1 bad`; ok-04's body plus `click s1 href "https://example.com"` |
 | reject-01…03 | `[*] --> s1`, `s1 --> [*]`, `state s9`; `state Two Words {`, `a --> b`, `}`; `state A {`, `a --> b` with no `}` |
 | reject-04…06 | `s1 : one`, `s1 : two`; `s1 --> s2`, `note left of s1 : a`, `note right of s1 : b`; `state A {`, `x --> y`, `}`, `state B {`, `x --> z`, `}` |
+| reject-07…10 | valid prefix, then: `note "memo" as N1`; `state c <<choice>>`, `c : pick`; `state f <<fork>>`, `f : split`; `state j <<join>>`, `j : merge` |
 
 Size ok-18…22 with `node scripts/explain.ts FILE 60`. The reject fixtures carry no expect lines, so they fall back at 60, 80 and 120.
 - [ ] **Done when:**
@@ -145,7 +146,7 @@ Size ok-18…22 with `node scripts/explain.ts FILE 60`. The reject fixtures carr
 - [ ] **Commit:** `git commit -m "Add state fixtures and goldens"`
 
 ### T57: Class parse
-**Group** G3 · **Deps** T52 · **Covers** matrix class subset, class-ok-01…23 and -29…31 (the model), class-reject-01…07, spec C rules 1 and 8
+**Group** G3 · **Deps** T52 · **Covers** matrix class subset, class-ok-01…23 and -29…31 (the model), class-reject-01…09, spec C rules 1 and 8; parse fails for a nested namespace and a generic with a comma (class-reject-08, -09)
 **Files:** create `core/diagrams/class/parse.ts`.
 - **Model:** `ClassModel = { dir, title, classes: { id, label, annot, members: Member[], order }[], relations: { id, from, to, tail, head, line: 'solid' | 'dotted', label, tailLabel, headLabel, order }[], notes: { id, for, text, order }[], namespaces: { id, label, classes, notes }[] }`.
 - **Test:** `tests/core/class-parse_test.ts`.
@@ -235,7 +236,7 @@ test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence,
     - **Notes:** each is a `plain` node in the `note` role, id `note<k>`, with left-aligned `note` rows. A `note for X` note adds the edge `{ id: '<note>:link', from: note, to: X, style: 'dotted', tail: 'none', head: 'none', label: null, minlen: 1 }`.
     - **Relations:** each is an edge `r<k>` with its style, ends, label, `tailLabel` and `headLabel` (role `label`), `minlen` 1.
     - **Namespaces:** each is a cluster titled with its label.
-    - **Keyed:** relation labels and notes, in source order, take `fieldKey(k)`. Their legend owners are `r<k>:label:legend` and `note<k>:legend`, in the `label` and `note` inks.
+    - **Keyed:** relation labels and notes, in source order, take `fieldKey(k)`. Their legend rows' items are `r<k>:label` (`cls: 'label'`) and `note<k>` (`cls: 'note'`), in the `label` and `note` inks, each owned by its item. A label sets `labelKey` and a note `key` (T50), and `keyable` lists every label and note, so each class is keyed all or none (T87).
   - **Color:** member rows are in the `label` role and are not filled (T50), so in a color theme only the header rows are.
 - [ ] **Done when:** `node --test tests/core/class-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Lay out class diagrams on the graph ladder"`
@@ -252,7 +253,8 @@ const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md',
 test('A5: every class coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'class', ids), []))
 test('A4: class-ok-04 lists attributes before methods, each in source order', () => {
   const t = text((explain(fx('class-ok-04'), { columns: 80, theme: 'mono' }) as any).drawing), at = (s: string) => t.findIndex(l => l.includes(s))
-  assert.ok(at('+String name') < at('+int age') && at('+int age') < at('+run()') && at('+run()') < at('+eat()'))
+  const i = ['+String name', '+int age', '+run()', '+eat()'].map(at); assert.ok(i.every(k => k >= 0), i.join())   // each found, then in order
+  assert.deepEqual(i, [...i].sort((a, b) => a - b)); assert.equal(new Set(i).size, 4)
 })
 test('A7: headers fill with the node role; members, cardinality and notes carry their roles', () => {
   const n = THEMES.nord.roles, R = (id: string) => renderMermaid(fx(id), { columns: 80, theme: 'nord' })!
@@ -280,13 +282,14 @@ test('A7: headers fill with the node role; members, cardinality and notes carry 
 | ok-29, -30, -31 | `class A["Same"]`, `class B["Same"]`, `A --> B`; ok-12's body plus `click A href "https://example.com"`, `link B "https://example.com"`, `callback A "cb"`; ok-12's body plus `style A fill:#f9f`, `classDef hot fill:#f00`, `cssClass "A" hot`, `class B:::hot` |
 | reject-01…04 | `class A`, `A --() bar`; `class X`, `namespace A.B {`, `class C`, `}`; `class A`, `A`; `class A {`, `+x` with no `}` |
 | reject-05…07 | `<<interface>> A`, `<<service>> A`; `class A["x"]`, `class A["y"]`; `class Box~int~`, `class Box~str~` |
+| reject-08, -09 | valid prefix, then: `namespace A {`, `namespace B {`, `class C`, `}`, `}`; `class Box~K,V~` |
 
 Size ok-24…28 with `node scripts/explain.ts FILE 60`.
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/class/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/class_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add class fixtures and goldens"`
 
 ### T60: ER parse
-**Group** G3 · **Deps** T52 · **Covers** matrix ER subset, er-ok-01…17 and -23, -24 (the model), er-reject-01…08, spec C rules 1 and 8
+**Group** G3 · **Deps** T52 · **Covers** matrix ER subset, er-ok-01…17 and -23, -24 (the model), er-reject-01…13, spec C rules 1 and 8; parse fails for `~…~` and backtick attribute words, Markdown in aliases and relation labels, and backtick names (er-reject-09…13)
 **Files:** create `core/diagrams/er/parse.ts`.
 - **Model:** `ErModel = { dir, title, entities: { id, label, attrs: Attr[], order }[], relations: { id, from, to, left, right, line, label, order }[], subgraphs: { id, title, dir, entities, subgraphs }[], keyable: { owner, text }[] }`.
 - `keyable` lists the non-empty comments (owner `<entity>.a<k>.comment`) and relation labels (owner `r<k>:label`), in source order.
@@ -368,7 +371,7 @@ test('A4.fit-ladder: at keyed, comments and relation labels share one key sequen
     - **Entities:** each is a `rect` node in the `node` role. Its rows are the centered label, then `erRows(id, attrs, wrapAt)`.
     - **Relations:** each is an edge `r<k>`, solid or dotted, with tail and head `none`, label `''` → null, `tailLabel = left`, `headLabel = right` and `endRole: 'arrow'` (the matrix: cardinality replaces the crow's foot).
     - **Subgraphs:** each is a cluster `{ id, title: title ?? id, dir, nodes: entities, clusters: subgraphs }`.
-  - **Keyed:** each `keyable` item, in order, gets `fieldKey(k)` in place: the comment column's text, or the edge label. Its legend row owner is `<owner>:legend`, in the `note` ink for a comment and the `label` ink for a label. Cardinality is never keyed.
+  - **Keyed:** each `keyable` item, in order, gets `fieldKey(k)` in place: the comment column's text, or the edge label. Its legend row's item is `<owner>` itself (`cls` `comment` or `label`), in the `note` ink for a comment and the `label` ink for a label. The column sets `key` and the label `labelKey` (T50), and `keyable` lists them all (T87). Cardinality is never keyed.
 - [ ] **Done when:** `node --test tests/core/er-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Lay out ER diagrams on the graph ladder"`
 
@@ -413,6 +416,7 @@ test('A7: entity headers fill with the node role; comments carry note; cardinali
 | ok-23, -24 | `p[Same]`, `q[Same]`, `p \|\|--o{ q : x`; ok-01's body plus `style CUSTOMER fill:#f9f` |
 | reject-01…04 | `A \|\|--\|\| B : x`, `A u--\|\| B : x`; `A \|\|--\|\| B : x`, `"This **is** _Markdown_"`; `A \|\|--o{ B : x %% note`; `A \|\|--o{ B` |
 | reject-05…08 | `CAR {`, `string id` with no `}`; `p[Person]`, `p[Human]`; `subgraph s1`, `CAR`, `end`, `subgraph s2`, `CAR`, `end`; `Sales`, `subgraph Sales`, `X`, `end` |
+| reject-09…13 | valid prefix, then: `CAR {`, `List~string~ tags`, `}`; `CAR {`, `` string `id` ``, `}`; `p["**Person**"]`; `A \|\|--o{ B : "_owns_"`; `` `CAR` `` |
 
 Size ok-18…22 with `node scripts/explain.ts FILE 60`.
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/er/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/er_test.ts tests/golden/golden_test.ts` passes.

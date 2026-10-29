@@ -4,7 +4,7 @@
 **Conventions:** as in C1. A layout test renders through `explain` under mono and reads rows with `text()`. `bar(e, w)` is `hbar(e)` padded to `w` cells, written out in each test so the expected rows are literal.
 
 ### T63: Pie parse and module
-**Group** G3 · **Deps** T40, T44, T45 · **Covers** matrix pie (subset, text design, numbers, ladder), spec C rules 5 and 7 (pie sorts by value), pie-reject-01…05
+**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix pie (subset, text design, numbers, ladder), spec C rules 5 and 7 (pie sorts by value), pie-reject-01…05
 **Files:** create `core/diagrams/pie/parse.ts` (`Pie = { title: string | null; slices: { label, raw, value: Dec, order }[] }`); replace T40's stub in `core/diagrams/pie/layout.ts` (export `pie`). Test: `tests/core/pie-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -41,6 +41,7 @@ test('A5.errors: zero, negative, repeated, unquoted, backslash and empty pies fa
   - **Layout** (index §5 ladder):
     - **Rows:** `heading(title, 'title', 'title', cols)`, then one row per slice. Slices sort by value, descending; ties keep source order.
     - **A row:** the label (role `label`, owner `s<k>`) padded to N; the `hbar(eighths(v, Σv, W))` caps (ink `s<(k mod 8) + 1>` for source index k, owner `s<k>`); the value as written, right-aligned to V (role `value`, owner `s<k>.v`); and `percent(v, Σv)`, right-aligned to P (owner `s<k>.p`).
+    - **Contract (T86):** `expect.bars` lists `{ owner: 's<k>', eighths, axis: 'h' }` for every slice, so a wrong or partial bar fails `validate`.
     - **`natural`:** `W = min(60, cols − N − V − P − 3)`; it fails `too-wide` below 10.
     - **`wrap`:** W = 10, and labels wrap to `cols − V − P − 13`. N is then the widest wrapped piece, and the bar sits on the label's first row.
 - [ ] **Done when:** `node --test tests/core/pie-layout_test.ts` passes.
@@ -80,12 +81,13 @@ test('A7: bars take series colors by source order, so sorting keeps them; values
 | ok-09, -10 | `%% expect 60 wrap`, `pie`, a 52-cell label of several words `: 1`, `"b" : 1`; ok-01's body plus `accTitle: Pets` |
 | reject-01…03 | `pie`, `"Dogs" : 0`; `pie`, `"Dogs" : -5`; `pie`, `"Dogs" : 386`, `"Dogs" : 85` |
 | reject-04…06 | `pie`, `Dogs : 386`; `pie title Empty` (no slices); `%% expect 60 fallback`, `%% expect 120 natural`, `pie`, a one-word 50-letter label `: 1` |
+| reject-07 | `pie`, `"a\b" : 1` (a backslash in a label) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/pie/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/pie_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add pie fixtures and goldens"`
 
 ### T65: Journey parse and module
-**Group** G3 · **Deps** T40, T44, T45 · **Covers** matrix journey (subset, text design, numbers, ladder), journey-reject-01…07
+**Group** G3 · **Deps** T40, T44, T45, T86 · **Covers** matrix journey (subset, text design, numbers, ladder), journey-reject-01…07
 **Files:** create `core/diagrams/journey/parse.ts` (`Journey = { title, groups: { name: string | null; tasks: { name, score: Dec, raw, actors: string[] }[] }[] }`); replace T40's stub in `core/diagrams/journey/layout.ts` (export `journey`). Test: `tests/core/journey-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -124,6 +126,7 @@ test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a se
       - `hbar(eighths(score, dec(5), 10))`, padded to 10 cells, as caps in the group's ink (owner `t<i>`);
       - the score as written, right-aligned to S (value, owner `t<i>.v`);
       - two spaces, then the actors (label, owners `t<i>.a<k>`), with each `, ` separator drawn as caps.
+    - **Contract (T86):** `expect.bars` lists `{ owner: 't<i>', eighths, axis: 'h' }` for every task.
     - **Steps** (index §5): `natural` when `N + S + A + 16 ≤ cols`. `wrap`: actor lists wrap after commas to `cols − N − S − 16`. `oneActor`: one actor per row, with names wrapped to `cols − S − a − 16`. The bar and the score sit on the task's first row. A piece wider than its field fails `too-wide`.
 - [ ] **Done when:** `node --test tests/core/journey-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse and draw user journeys"`
@@ -160,12 +163,13 @@ test('A7: a section and its bars share a series color; scores carry the value ro
 | ok-07, -08 | `journey`, `section A`, `Plan: 3: Me`, `Plan: 4: Me`, `section B`, `Ship: 5: Me`; ok-01's body plus `accDescr: My day` |
 | reject-01…04 | `journey`, `section S`, then `Make tea: 6: Me`; `Make tea: high: Me`; `Make tea: 5`; `Do work: 1: Me, Me` |
 | reject-05…08 | the same with `Fix #12: 3: Me`; `Plan; review: 3: Me`; `journey`, `section Morning: early`, `A: 1: Me`; `%% expect 60 fallback`, `%% expect 120 natural`, `journey`, `section S`, a one-word 50-letter task name `: 3: Me` |
+| reject-09, -10 | `journey`, `section S`, then: `A: 3:` (an empty actor list); `A: 3: Me: Cat` (extra colons) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/journey/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/journey_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add journey fixtures and goldens"`
 
 ### T67: Gantt time
-**Group** G2 · **Deps** T43 · **Covers** matrix gantt `dateFormat` and `axisFormat` tokens, durations, naive time, tick steps; gantt-reject-02, -03, -09, -10, -11
+**Group** G2 · **Deps** T43 · **Covers** matrix gantt `dateFormat` and `axisFormat` tokens, durations, naive time, tick steps; gantt-reject-02, -03, -09, -10, -11, -18, -26
 **Files:** create `core/diagrams/gantt/time.ts` (index §4; `DateFmt` and `AxisFmt` are its token lists). Test: `tests/core/gantt-time_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -184,9 +188,9 @@ test('A4: axis tokens print fixed widths and English names; a date-free dateForm
   assert.deepEqual([formatAxis(t, A('%Y-%m-%d')), formatAxis(t, A('%y/%j %H:%M:%S.%L')), formatAxis(t, A('%a %e %b'))], ['2024-01-01', '24/001 08:05:09.007', 'Mon  1 Jan'])
   assert.deepEqual([A('%s'), A('%Y-%m-%d', false)], [{ reason: 'axis-format' }, { reason: 'axis-format' }])
 })
-test('A4: durations are whole ms; M, y, junk and fractions of a ms are null; tick steps follow the matrix', () => {
-  assert.deepEqual(['500ms', '30s', '2m', '1.5h', '1.5d', '1w', '0d'].map(parseDuration), [500, 30_000, 2 * MIN, 5_400_000, 129_600_000, 7 * D, 0])
-  for (const s of ['1M', '1y', '3dX', '1.0001ms', 'd', '1.5']) assert.equal(parseDuration(s), null, s)
+test('A4: durations are whole ms; M, y, junk, a fractional d or w, and fractions of a ms are null; tick steps follow the matrix', () => {
+  assert.deepEqual(['500ms', '30s', '2m', '1.5h', '2d', '1w', '0d'].map(parseDuration), [500, 30_000, 2 * MIN, 5_400_000, 2 * D, 7 * D, 0])
+  for (const s of ['1M', '1y', '3dX', '1.0001ms', 'd', '1.5', '1.5d', '0.5w']) assert.equal(parseDuration(s), null, s)
   assert.deepEqual([tickStep(30 * D, 60, 10), tickStep(30 * D, 35, 10), tickStep(23 * MIN, 60, 5), tickStep(510 * MIN, 43, 5), tickStep(1e6 * D, 10, 10)],
     [7 * D, 14 * D, 5 * MIN, 3 * 3_600_000, null])
 })
@@ -203,7 +207,7 @@ test('A4: durations are whole ms; M, y, junk and fractions of a ms are null; tic
     - The tokens are `%Y %y %m %d %e %H %M %S %L %j %b %a`; other text is literal. Any other `%` fails `axis-format`.
     - With `dated` false, only `%H %M %S %L` are allowed.
   - **`formatAxis`** uses UTC getters, so every token has a fixed width: `%e` space-padded, `%j` and `%L` 3 digits, `%b` and `%a` English.
-  - **`parseDuration`** matches `^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$` and computes with `Dec`. It is null unless the result is a whole number of ms.
+  - **`parseDuration`** matches `^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$` and computes with `Dec`. It is null unless the result is a whole number of ms, and null for a fractional `d` or `w`, which Mermaid's Day.js rounds to whole days (matrix amendment, fix cycle 1).
   - **`tickStep(m, w, l)`** returns the first matrix `STEPS` entry, in ms, with `cellOf(dec(step), dec(m), w) ≥ l + 1`, computed exactly, else null.
 - [ ] **Done when:** `node --test tests/core/gantt-time_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add gantt date formats, durations and tick steps"`
@@ -264,7 +268,7 @@ test('A5.errors: unsupported statements and bad dates, durations, ids, reference
 - [ ] **Commit:** `git commit -m "Parse gantt charts and resolve task times"`
 
 ### T69: Gantt module
-**Group** G4 · **Deps** T40, T44, T46, T47, T68 · **Covers** matrix gantt text design, numbers and ladder (timings in place; keyed; wrapped names), gantt-reject-13, -14
+**Group** G4 · **Deps** T40, T44, T46, T47, T68, T86 · **Covers** matrix gantt text design, numbers and ladder (timings in place; keyed; wrapped names), gantt-reject-13, -14
 **Files:** replace T40's stub in `core/diagrams/gantt/layout.ts` (export `gantt`). Test: `tests/core/gantt-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -302,13 +306,14 @@ test('A5.errors: a lone 0d milestone has M = 0 and falls back', () => assert.dee
       - **Name:** label, owner `t<i>`, padded to N.
       - **Timing:** the timing (value, owner `t<i>.t`) padded to T, or its key `fieldKey(i)` (label role, same owner).
       - **Field:** `hbar(eighths(end − start, M, W))` from cell `cellOf(start − t0, M, W)`. A milestone draws `◆` at `min(W − 1, cellOf(mid − t0, M, W))`, where `mid = (start + end)/2`.
+      - **Contract (T86):** the bar is owned by `t<i>`, and `expect.bars` lists `{ owner: 't<i>', eighths, axis: 'h' }` per task. A `0d` task or a milestone lists 0: a `◆` is a mark, not a bar.
     - The status, bar and `◆` caps are owned by `t<i>`. Their ink is `arrow` for crit, else `note` for done, else `decision` for active, else the section's series (index §5.2).
     - Keys and bars sit on the name's first row.
   - **Axis:**
     - `L` is the width of `formatAxis(t0)`, and `step = tickStep(M, W, L)`.
     - Ticks sit at `k·step ≤ M`, in cells `cellOf(k·step, M, W)`, labelled `formatAxis(t0 + k·step)`. With no step, only `t0` is labelled.
     - `axisRows(N + T + 5 or N + 5 + K, W, ticks, cols, 'axis')`.
-  - **Legend:** at the keyed steps, `withLegend` gets one row per task: `{ key: fieldKey(i), keyInk: 'label', owner: 't<i>.t:legend', parts: [{ text: timing, ink: 'value', owner: 't<i>.t:legend' }] }`.
+  - **Legend:** at the keyed steps, `withLegend` gets one row per task: `{ key: fieldKey(i), keyInk: 'label', item: 't<i>.t', cls: 'timing', parts: [{ text: timing, ink: 'value', owner: 't<i>.t' }] }`. The timing column draws the key with `cv.key`, owned by `t<i>.t`, and `keyable` lists every task's timing (T87).
 - [ ] **Done when:** `node --test tests/core/gantt-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw gantt charts with timings, bars, ticks and a keyed legend"`
 
@@ -359,7 +364,7 @@ test('A7: crit, done and active bars take the arrow, note and decision roles; ot
 | ok-02, -03 | the sketch: `title Release`, `section Build`, `Spec :crit, done, s, 2024-01-01, 10d`, `Code :active, after s, 20d`, `Ship :milestone, 2024-01-31, 0d`; the docs' `after b a` / `until b c` example (`apple :a, 2017-07-20, 1w`, `banana :crit, b, 2017-07-23, 1d`, `cherry :active, c, after b a, 1d`, `kiwi :d, 2017-07-20, until b c`) |
 | ok-04 | the docs' milestone example: `dateFormat HH:mm`, `axisFormat %H:%M`, `Initial milestone :milestone, m1, 17:49, 2m`, `Task A :10m`, `Task B :5m`, `Final milestone :milestone, m2, 18:08, 4m` |
 | ok-05 | `%% expect 120 natural`, `%% expect 80 keyed`, `%% expect 60 keyedWrap`, then the docs' syntax example without its `excludes` line and its `%%` notes: 4 sections, 17 tasks, a forward `until isadded` |
-| ok-06, -07 | `Both :active, done, 2024-01-01, 3d`, `Gate :crit, milestone, 2024-01-04, 2d`, `Doing :active, 2024-01-02, 2d`, `Plain :2024-01-03, 1d`; `Tick :2024-01-01, 500ms`, `Wait :30s`, `Cook :1.5h`, `Rest :1.5d`, `Mark :0d`, `section Later`, `Ship :1d` |
+| ok-06, -07 | `Both :active, done, 2024-01-01, 3d`, `Gate :crit, milestone, 2024-01-04, 2d`, `Doing :active, 2024-01-02, 2d`, `Plain :2024-01-03, 1d`; `Tick :2024-01-01, 500ms`, `Wait :30s`, `Cook :1.5h`, `Mark :0d`, `section Later`, `Ship :1d` |
 | ok-08, -09 | `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`, `Run :r, 2024-03-01T08:00:00.000, 2024-03-01T09:30:00.500`, `Rest :after r, 30m`; `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`, `Plan :p, 1/7/2024 9:0:0, 3/7/2024 17:30:0`, `Build :after p, 2d` |
 | ok-10, -11 | frontmatter `title: Plan` and `config:` / `gantt:` / `displayMode: compact`, then `todayMarker off`, `%% a comment`, `A :2024-01-01, 2d`, `B :1d`; `title 项目计划`, `section 设计`, `需求分析 :2024-01-01, 3d`, `编码 :5d` |
 | ok-12, -13 | `%% expect 60 natural widest 60`, `%% expect 59 keyed`, `Ship the release v1 :2024-01-01, 10d` (19 + 16 + 20 + 5 = 60); `%% expect 60 keyedWrap`, `Review the quarterly release plan with the team :2024-01-01, 3d` (the name wraps to 34 cells) |
@@ -369,6 +374,8 @@ test('A7: crit, done and active bars take the arrow, note and decision roles; ot
 | reject-06…09 | `A :a, after b, 1d`, `B :b, after a, 1d`; `A :2024-01-05, 2024-01-01`; `A :5d`; `A :2024-01-01, 1M` |
 | reject-10…13 | the docs' bar-chart example (`dateFormat X`, `axisFormat %s`); `dateFormat HH:mm`, `A :17:49, 2m` (the default `axisFormat`); the docs' `vert` example; `M :milestone, 2024-01-01, 0d` |
 | reject-14…17 | `%% expect 60 fallback`, `%% expect 120 natural`, a one-word 40-letter name `:2024-01-01, 3d`; then `A :2024-01-01, 1d` followed by `Call vendor :2d`, by `5% bonus :2d`, or by `2024-01-01 kickoff :1d` |
+| reject-18…22 | `gantt`, `dateFormat YYYY-MM-DD`, `A :a1, 2024-01-01, 3d`, then: `Rest :1.5d`; `includes 2024-01-06`; `weekday monday`; `weekend friday`; `tickInterval 1week` |
+| reject-23…27 | the same chart, then: `topAxis`; `inclusiveEndDates`; `todayMarker stroke-width:5px`; `B :1y`; `B :crit, b1, 2024-01-04, 3d, 4d` |
 
 Size ok-12, -13 and -15 with `node scripts/explain.ts FILE 60`.
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/gantt/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/gantt_test.ts tests/golden/golden_test.ts` passes.

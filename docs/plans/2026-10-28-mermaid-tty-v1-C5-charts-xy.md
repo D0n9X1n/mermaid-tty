@@ -49,7 +49,7 @@ test('A5.errors: point labels, a numeric x range, unquoted-text limits, repeats,
 - [ ] **Commit:** `git commit -m "Parse xycharts"`
 
 ### T72: xychart module
-**Group** G3 · **Deps** T40, T44, T46, T47, T71 · **Covers** matrix xychart text design, numbers and ladder; xychart-ok drawing; A3, A4.fit-ladder
+**Group** G4 · **Deps** T40, T44, T46, T47, T71, T86 · **Covers** matrix xychart text design, numbers and ladder; xychart-ok drawing; A3, A4.fit-ladder
 **Files:** replace T40's stub in `core/diagrams/xychart/layout.ts` (export `xychart`). Test: `tests/core/xychart-layout_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -103,12 +103,12 @@ test('A4: computed bounds print as exact decimals; a point sits in row max(1, �
     - The axis titles swap places. A legend lists the named series as `tag name`.
   - **Printing:** values as written; an explicit bound as written; a computed bound and the midpoint by `toExact`.
   - **Roles:** axes, ticks and rules `frame`; categories, tags and names `label`; tick labels and values `value`; bars and markers `s<k>`, by source order over all series.
-  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`.
+  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`; each bar `x<k>.b<j>`, so two bars of one series never share a run. `expect.bars` lists `{ owner: 'x<k>.b<j>', eighths, axis }` for every bar: axis `v` in a vertical chart, `h` in a horizontal one (T86).
 - [ ] **Done when:** `node --test tests/core/xychart-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw xycharts vertically and horizontally"`
 
 ### T73: xychart fixtures and goldens
-**Group** G4 · **Deps** T48, T72 · **Covers** every xychart-ok and xychart-reject fixture and the matrix's eighth-rows and ticks; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
+**Group** G5 · **Deps** T48, T72 · **Covers** every xychart-ok and xychart-reject fixture and the matrix's eighth-rows and ticks; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
 **Files:** create `fixtures/xychart/xychart-{ok-01…11,reject-01…13}.mmd` and `goldens/xychart/*.golden`. Test: `tests/golden/xychart_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -152,7 +152,7 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
 - [ ] **Commit:** `git commit -m "Add xychart fixtures and goldens"`
 
 ### T74: Quadrant parse and module
-**Group** G3 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07
+**Group** G4 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07
 **Files:** create `core/diagrams/quadrant/parse.ts`.
 - **Model:** `Quadrant = { title, x: [string, string | null] | null, y: [string, string | null] | null, quads: (string | null)[], points: { name, x: Num, y: Num }[], fields: { owner, text }[] }`.
 - `fields` lists the quadrant and x-axis texts in source order (an axis: left, then right).
@@ -204,14 +204,14 @@ test('A5.errors: point styles, bad coordinates, a lone -->, repeats and a keywor
       - The legend, in the source order of the statements: `key text` for fields, and `key name (x, y)` for points, with coordinates as written.
     - **Points:**
       - A point's column is `min(2q − 1, ⌊2q·x⌋)` and its row `min(9, ⌊10·y⌋)`, counted from the bottom; `Dec` math.
-      - A point whose key would sit in, or next to on its row, an existing key's cells joins the lowest such key. Otherwise it takes the next `pointKey`, drawn rightward from its cell as caps in `s1`, owned by `pt:<key>`.
+      - A point whose key would sit in, or next to on its row, an existing key's cells joins the lowest such key. Otherwise it takes the next `pointKey`. Keys are drawn after grouping, each once with `cv.key`, rightward from its first point's cell, in `s1`, owned by every point it stands for. Each point's legend row is `{ key, item: 'p<i>', cls: 'point' }`; a keyed field's row has its own owner as `item` and `cls: 'field'`. `keyable` lists every point and every field, so T87 checks each key in place, in the legend, and all or none.
       - A key that would run into the cross or the frame fails `key-collision`.
   - **Roles:** frame and cross `frame`; quadrant, axis and point-name texts and `↑↓` `label`; title `title`; coordinates `value`.
 - [ ] **Done when:** `node --test tests/core/quadrant-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse and draw quadrant charts with point keys"`
 
 ### T75: Quadrant fixtures and goldens
-**Group** G4 · **Deps** T48, T74 · **Covers** every quadrant-ok and quadrant-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
+**Group** G5 · **Deps** T48, T74 · **Covers** every quadrant-ok and quadrant-reject fixture; A4, A4.fit-ladder, A5.errors, A5 (coverage), A7
 **Files:** create `fixtures/quadrant/quadrant-{ok-01…10,reject-01…09}.mmd` and `goldens/quadrant/*.golden`. Test: `tests/golden/quadrant_test.ts`.
 - [ ] **Failing test:**
 ```ts
