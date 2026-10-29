@@ -134,3 +134,24 @@ test('A5.errors: a #…; entity falls back as entity; # and ; apart are text', (
 test('A1: Graph.title is the frontmatter title', () => {
   assert.deepEqual(P('---\ntitle: Order flow\n---\nflowchart LR\nA'), { dir: 'LR', title: 'Order flow', nodes: [N('A', 'rect', 'node', 0, 'A')], edges: [], clusters: [] })
 })
+
+// QA findings on @{…}: a quoted value's ; and }, an ignored key's value, and text left in the body.
+test('A1: a quoted @{…} value is one value: its ; , and } are text, in single quotes as in double', () => {
+  assert.deepEqual(P("flowchart TD\nA@{ label: 'x};B@{label:y' }").nodes, [N('A', 'rect', 'node', 0, 'x};B@{label:y')])
+  assert.deepEqual(P(`flowchart TD\nA@{ label: 'a;b}', shape: cyl, }; B@{ label: "c;d" }`).nodes,
+    [N('A', 'cylinder', 'node', 0, 'a;b}'), N('B', 'rect', 'node', 1, 'c;d')])
+})
+
+test('A1: an ignored @{…} key is read like any other, so pairs inside its quoted value are text', () => {
+  assert.deepEqual(P('flowchart TD\nA@{ ignored-key: "x, shape: diam, y" }').nodes, [N('A', 'rect', 'node', 0, 'A')])
+})
+
+test('A1: outside @{…} only "…" quotes, so an apostrophe is text and ; still ends the statement', () => {
+  assert.deepEqual(P("flowchart TD\nA[it's]; B[x]").nodes, [N('A', 'rect', 'node', 0, "it's"), N('B', 'rect', 'node', 1, 'x')])
+})
+
+test('A5.errors: an @{…} body that does not read whole as key: value pairs, each key once, fails syntax:<n>; so does one split over lines', () => {
+  const bad = ['A@{ label: "x" label: "y" }', 'A@{ label: "x", label: "y" }', 'A@{ shape }', 'A@{ , shape: cyl }',
+    'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }', 'A@{\n  shape: cyl\n}']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+})

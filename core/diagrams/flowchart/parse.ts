@@ -9,9 +9,6 @@ import { unsupported } from '../../width.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
-// A statement: a run of a line outside "…" that ; or the line's end closes. A " with
-// no partner runs to the end of the line.
-const STATEMENT = /(?:"[^"]*(?:"|$)|[^";])+/g
 // Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
 const ID = /^[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*/u
 // Each opener with each closer it pairs with, longest opener first. [/ and [\ pair
@@ -21,9 +18,10 @@ const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[
   ['((', '))', 'circle'], ['{{', '}}', 'hexagon'], ['[/', '/]', 'leanR'], ['[/', '\\]', 'trap'], ['[\\', '\\]', 'leanL'],
   ['[\\', '/]', 'trapInv'], ['(', ')', 'round'], ['[', ']', 'rect'], ['{', '}', 'diamond'], ['>', ']', 'asym'],
 ]
-// An @{…} pair, at the body's start or after a comma: a key, then a "…" or '…' value
-// (commas inside are text) or a plain one up to the next comma.
-const PAIR = /(?:^|,)\s*(\w+)\s*:\s*("[^"]*"|'[^']*'|[^,]*)/g
+// One key: value pair of an @{…} body, from lastIndex: a key, then a "…" or '…' value, whose
+// , ; { and } are text, or a bare one up to the next , { or }. A quote is one only where a
+// value starts, as in YAML: `it's ok` is a bare value.
+const PAIR = /\s*([\w-]+)\s*:\s*("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
 
 // A node as one mention writes it: shape and lines only if the mention gives them.
 type Mention = { id: string; end: number; shape?: Shape; lines?: string[] }
@@ -52,7 +50,49 @@ export function parseFlowchart(src: Source): Graph | Fail {
 
 // Each line's statements, trimmed, with the line's number; empty ones drop.
 function statements(src: Source): { n: number; text: string }[] {
-  return src.lines.flatMap(({ n, text }) => (text.match(STATEMENT) ?? []).map(s => ({ n, text: s.trim() })).filter(s => s.text))
+  return src.lines.flatMap(({ n, text }) => split(text).map(s => ({ n, text: s.trim() })).filter(s => s.text))
+}
+
+// A line's runs that ; or the line's end closes. A "…" is one span, and so is an @{…} whose
+// body reads whole, quotes and all; a " with no partner runs to the end of the line. Only
+// " quotes outside @{…}: A[it's] is an apostrophe.
+function split(line: string): string[] {
+  const runs: string[] = []
+  let start = 0
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') {
+      const close = line.indexOf('"', i + 1)
+      if (close < 0) break
+      i = close
+    } else if (line.startsWith('@{', i)) {
+      const d = data(line, i + 2)
+      if (d) i = d.end - 1
+    } else if (line[i] === ';') {
+      runs.push(line.slice(start, i))
+      start = i + 1
+    }
+  }
+  return [...runs, line.slice(start)]
+}
+
+// The pairs of the @{…} body that starts at i, in source order, and the index just past its
+// }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
+// spaces, then }; and each key once.
+function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
+  const pairs: [string, string][] = []
+  for (;;) {
+    PAIR.lastIndex = i
+    const m = PAIR.exec(text)
+    if (!m) break
+    const [, key = '', value = ''] = m
+    if (pairs.some(([k]) => k === key)) return null
+    pairs.push([key, value])
+    i = PAIR.lastIndex
+    if (text[i] !== ',') break
+    i++
+  }
+  i += /^\s*/.exec(text.slice(i))![0].length
+  return text[i] === '}' ? { pairs, end: i + 1 } : null
 }
 
 // Reads one statement into st and returns how far it read; the caller fails on any
@@ -72,10 +112,10 @@ function mention(text: string, at: number): Mention | Fail | null {
   if (id === undefined) return null
   at += id.length
   if (text.startsWith('@{', at)) {
-    const c = closer(text, at + 2, ['}'])
-    if (!c) return null
-    const m: Mention = { id, end: c.at + 1 }
-    for (const [, key, raw = ''] of text.slice(at + 2, c.at).matchAll(PAIR)) {
+    const d = data(text, at + 2)
+    if (!d) return null
+    const m: Mention = { id, end: d.end }
+    for (const [key, raw] of d.pairs) {
       // As YAML reads it: one pair of matching quotes, "…" or '…', is not part of the value.
       const value = raw.trim().replace(/^(["'])(.*)\1$/s, '$2')
       if (key === 'shape') m.shape = shapeFromName(value)
