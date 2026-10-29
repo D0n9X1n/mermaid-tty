@@ -52,10 +52,23 @@ const NAMED = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque
   navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
   powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey
   snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen`.split(/\s+/))
-// A box's leading color, then a space or the line end: a word (boxLabel checks it is named or transparent), #hex,
-// or a lowercase rgb(), rgba(), hsl() or hsla(). Mermaid reads the # of a #hex as a comment, so it draws box #abc G
-// untitled; the plan drops the color and titles the box G.
-const COLOR = /^(?:([a-zA-Z]+)|#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})|(?:rgba?|hsla?)\([^()]*\))(?:\s+|$)/
+// A box's leading color, then a space or the line end: a word (boxLabel checks it is named or transparent) or #hex.
+// Mermaid reads the # of a #hex as a comment, so it draws box #abc G untitled; the plan drops the color and titles the box G.
+const COLOR = /^(?:([a-zA-Z]+)|#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4}))(?:\s+|$)/
+// Not in the plan: the strict subset of rgb(), rgba(), hsl() and hsla() box colors. rgb() and rgba() take three integers
+// 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or turn, then two
+// percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts are space-separated.
+// Spaces are free inside the parentheses.
+const BYTE = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`
+const PERCENT = String.raw`(?:100(?:\.0+)?|[1-9]?\d(?:\.\d+)?|\.\d+)%`
+const ALPHA = String.raw`(?:1(?:\.0+)?|0?\.\d+|0|${PERCENT})`
+const HUE = String.raw`(?:\d+(?:\.\d+)?|\.\d+)(?:deg|grad|rad|turn)?`
+const SP = String.raw`[ \t]*`
+// Three parts, comma-separated with an optional , alpha, or space-separated with an optional / alpha.
+const parts = (a: string, b: string, c: string) =>
+  String.raw`(?:${a}${SP},${SP}${b}${SP},${SP}${c}(?:${SP},${SP}${ALPHA})?|${a}[ \t]+${b}[ \t]+${c}(?:${SP}/${SP}${ALPHA})?)`
+const COLOR_FN = new RegExp(String.raw`^(?:rgba?\(${SP}(?:${parts(BYTE, BYTE, BYTE)}|${parts(PERCENT, PERCENT, PERCENT)})` +
+  String.raw`|hsla?\(${SP}${parts(HUE, PERCENT, PERCENT)})${SP}\)$`)
 // A message: the sender's id, the first arrow (longest first) that starts the rest, an optional + or -, the
 // target's id, a colon and the text. Not in the plan: spaces may separate the parts, as in Mermaid's lexer.
 const FROM = new RegExp(String.raw`^(${ID})\s*`, 'u')
@@ -219,8 +232,15 @@ function message(t: string): Msg | null {
   return { kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(unwrap(to[3]!)), activate: to[1] === '+', deactivate: to[1] === '-' }
 }
 
-// A box's label: its text after a leading CSS color, which is not drawn; null if none is left.
+// A box's label: its text after a leading CSS color, which is not drawn; null if none is left. As in Mermaid, a lowercase
+// rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in the plan: Mermaid drops that color only if
+// the browser reads it as one, and else titles the box with the whole label, so one outside the strict subset fails box-color.
 function boxLabel(s: string): string | null {
+  if (/^(?:rgba?|hsla?)\(/.test(s)) {
+    const color = s.slice(0, s.lastIndexOf(')') + 1)
+    if (!COLOR_FN.test(color)) stop('box-color')
+    return s.slice(color.length) || null
+  }
   const c = COLOR.exec(s), name = c?.[1]?.toLowerCase()
   return (c && (name === undefined || name === 'transparent' || NAMED.has(name)) ? s.slice(c[0].length) : s) || null
 }

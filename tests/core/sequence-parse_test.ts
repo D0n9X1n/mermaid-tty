@@ -123,10 +123,28 @@ test('A2: a box label drops a leading CSS color: any of the 148 named colors in 
   // A color alone leaves no label, as does a bare box.
   assert.deepEqual(['Aqua', 'TRANSPARENT', '#abc', 'rgb(33,66,99)', 'hsla(10, 40%, 90%, 0.5)', ''].map(boxLabelOf), [null, null, null, null, null, null])
 })
-test('A2: a box label keeps a leading word that is not a whole CSS color: a color ends at a space or the line end, and rgb() and hsl() are lowercase', () => {
-  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'Red-team', 'currentColor Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team',
-    'rgb(1,2,3)Team', 'rgb(calc(1),2,3) Team']
+test('A2: a box label keeps a leading word that is not a whole CSS color: a named color ends at a space or the line end, and rgb() and hsl() are lowercase', () => {
+  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'Red-team', 'currentColor Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team']
   assert.deepEqual(kept.map(boxLabelOf), kept)
+})
+// Mermaid takes a box's color from a lowercase rgb(, rgba(, hsl( or hsla( to the label's last ), and drops it only if the
+// browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is dropped; any other falls back.
+test('A2: a box label drops a leading rgb(), rgba(), hsl() or hsla() color in the strict subset, up to its ), with or without a space after', () => {
+  const ok: [string, string][] = [['rgb(1,2,3) Team', 'Team'], ['rgb(1,2,3)Team', 'Team'], ['rgb(1 2 3 / 50%) Team', 'Team'], ['rgba(255,0,0,0.5) T', 'T'],
+    ['rgb(10%,20%,30%) T', 'T'], ['rgb( 0 , 255 , 0 ,.5 ) T', 'T'], ['rgb(100% 0% 12.5%/0.25) T', 'T'], ['hsl(120deg 50% 50%) T', 'T'],
+    ['hsl(120, 50%, 50%) T', 'T'], ['hsla(1turn,1%,1%,1) T', 'T'], ['hsl(.5turn 0% 100% / 50%) T', 'T'], ['hsl(3.14rad,1%,1%,0%) T', 'T'],
+    ['hsl(400grad 1% 1%) T', 'T'], ['red T', 'T']]
+  assert.deepEqual(ok.map(([t]) => [t, boxLabelOf(t)]), ok)
+})
+// The first is the QA repro: Mermaid titles that box rgb(nope) Team.
+test('A5.errors: a box label whose leading rgb(, rgba(, hsl( or hsla( does not open a color, up to the last ), fails box-color', () => {
+  const bad = ['rgb(nope) Team', 'hsl(red) T', 'rgb() T', 'rgb(calc(1),2,3) Team', 'rgb(1,2,3) Team (lead)', 'rgb(1,2,3 T']
+  assert.deepEqual(bad.map(t => [t, P(`box ${t}\nparticipant A\nend\nA->>A: hi`)]), bad.map(t => [t, { reason: 'box-color' }]))
+})
+test('A5.errors: a box label whose rgb(), rgba(), hsl() or hsla() color is outside the strict subset fails box-color: out of range, too few or many, mixed forms', () => {
+  const bad = ['rgb(256,0,0) T', 'rgb(101%,0%,0%) T', 'rgba(1,2,3,1.5) T', 'rgb(1,2) T', 'rgba(1,2,3,1,1) T', 'rgb(1,2,3%) T', 'rgb(1,2 3) T',
+    'rgb(1 2 3, 0.5) T', 'rgb(1.5,2,3) T', 'hsl(120px, 50%, 50%) T', 'hsl(120, 50, 50) T']
+  assert.deepEqual(bad.map(t => [t, P(`box ${t}\nparticipant A\nend\nA->>A: hi`)]), bad.map(t => [t, { reason: 'box-color' }]))
 })
 
 test('A2: par takes any number of and sections, critical of option sections, alt of else sections; a missing condition is null', () => {
