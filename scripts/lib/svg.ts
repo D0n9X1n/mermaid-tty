@@ -4,10 +4,10 @@ export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = 
 export type Styled = { text: string; fg: string; bg?: string; bold?: boolean };
 export type Glyph = { row: number; col: number; text: string; span: number };
 const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Segments each row's text whole, so a mark that begins a span joins the base before it. A grapheme belongs to the span
 // that holds its first code point, whose fg and bold it takes; col advances by its width.
-export function glyphCells(rows: Styled[][], width: (s: string) => number): Glyph[] {
+export function glyphCells(rows: { text: string }[][], width: (s: string) => number): Glyph[] {
   const out: Glyph[] = [];
   rows.forEach((row, r) => {
     const ends: number[] = [];
