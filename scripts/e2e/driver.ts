@@ -10,7 +10,7 @@ import type { Driver } from './env.ts'
 import { createScreen, type Cell } from './screen.ts'
 
 export type { Driver }
-export type Key = 'enter' | 'ctrl-o' | 'escape'
+export type Key = 'enter' | 'ctrl-o' | 'escape' | 'down'
 // A running session. Its reads are async: the tmux driver captures and parses a screen, and the pty driver first parses
 // all the output it has received. Under the tmux driver, a command the server does not answer within 2 s fails.
 export type Session = {
@@ -21,6 +21,8 @@ export type Session = {
   waitFor(re: RegExp, ms: number): Promise<string>
   cells(): Promise<Cell[][]>
   text(): Promise<string>
+  // What the screen is drawn from, colors as escape codes: the pty driver's whole output stream, or tmux's capture-pane -e.
+  ansi(): Promise<string>
   // The last text the program copied with OSC 52, or undefined before any.
   clipboard(): Promise<string | undefined>
   // Hangs the program up and, once it has exited or after 2 s, kills its process group (on Windows, its tree), so that no
@@ -33,8 +35,8 @@ export type Session = {
 export type SessionOptions = { driver: Driver; argv: string[]; cwd: string; env: Record<string, string> }
 
 const COLS = 100, ROWS = 40
-const PTY_KEYS: Record<Key, string> = { enter: '\r', 'ctrl-o': '\x0f', escape: '\x1b' }
-const TMUX_KEYS: Record<Key, string> = { enter: 'Enter', 'ctrl-o': 'C-o', escape: 'Escape' }
+const PTY_KEYS: Record<Key, string> = { enter: '\r', 'ctrl-o': '\x0f', escape: '\x1b', down: '\x1b[B' }
+const TMUX_KEYS: Record<Key, string> = { enter: 'Enter', 'ctrl-o': 'C-o', escape: 'Escape', down: 'Down' }
 
 export async function startSession(o: SessionOptions): Promise<Session> {
   return o.driver === 'pty' ? ptySession(o) : tmuxSession(o)
@@ -102,8 +104,8 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   // the root of its tree).
   const pgid = p.pid
   // parsed resolves once the screen has parsed the output received so far: the screen parses writes in order.
-  let parsed = Promise.resolve(), exited = false, stopping: Promise<void> | undefined
-  p.onData(d => { parsed = screen.write(d) })
+  let parsed = Promise.resolve(), exited = false, stopping: Promise<void> | undefined, stream = ''
+  p.onData(d => { stream += d; parsed = screen.write(d) })
   const exit = new Promise<void>(resolve => p.onExit(() => { exited = true; resolve() }))
   const read = async <T>(f: () => T) => { await parsed; return f() }
   const text = () => read(screen.text)
@@ -113,6 +115,7 @@ async function ptySession(o: SessionOptions): Promise<Session> {
     waitFor: (re, ms) => waitForText(text, re, ms),
     cells: () => read(screen.cells),
     text,
+    ansi: async () => stream,
     clipboard: () => read(screen.clipboard),
     stop: () => (stopping ??= end(() => { if (!exited) p.kill() }, ms => within(exit, ms).then(r => r !== LATE), () => killTree(pgid))),
   }
@@ -148,12 +151,12 @@ export function ptyCommand(argv: string[], platform: string, env: Record<string,
 }
 
 // The tmux driver's server, on a socket of its own, so that no other server's options or sessions apply.
-const SOCKET = `mtty-${process.pid}`
+export const TMUX_SOCKET = `mtty-${process.pid}`
 // The longest the driver waits for a tmux command; a server that has not answered by then is taken to hang.
 const CMD_MS = 2000
 // tmux on the server, under env -i with env alone: no variable of this process's reaches the server, whose environment
 // each pane inherits.
-const tmuxArgv = (env: Record<string, string>, args: string[]) => ['-i', ...Object.entries(env).map(([k, v]) => `${k}=${v}`), 'tmux', '-L', SOCKET, ...args]
+const tmuxArgv = (env: Record<string, string>, args: string[]) => ['-i', ...Object.entries(env).map(([k, v]) => `${k}=${v}`), 'tmux', '-L', TMUX_SOCKET, ...args]
 // Runs tmux and returns its stdout. Throws with its stderr when it fails, or saying so when it gets no answer.
 function tmux(env: Record<string, string>, args: string[]): string {
   const r = spawnSync('env', tmuxArgv(env, args), { encoding: 'utf8', timeout: CMD_MS, killSignal: 'SIGKILL' })
@@ -183,9 +186,10 @@ function tmuxSession(o: SessionOptions): Session {
   // these, recorded now, and looks up nothing.
   const server = Number(started[0]), pane = Number(started[1]), socket = started.slice(2).join(' ')
   // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
+  const ansi = (signal?: AbortSignal) => tmuxRead(o.env, ['capture-pane', '-p', '-e', '-t', 'mtty-e2e'], signal)
   const capture = async (signal?: AbortSignal) => {
     const screen = createScreen(COLS, ROWS)
-    await screen.write((await tmuxRead(o.env, ['capture-pane', '-p', '-e', '-t', 'mtty-e2e'], signal)).replace(/\n$/, '').replaceAll('\n', '\r\n'))
+    await screen.write((await ansi(signal)).replace(/\n$/, '').replaceAll('\n', '\r\n'))
     return screen
   }
   const text = async (signal?: AbortSignal) => (await capture(signal)).text()
@@ -196,6 +200,7 @@ function tmuxSession(o: SessionOptions): Session {
     waitFor: (re, ms) => waitForText(text, re, ms),
     cells: async () => (await capture()).cells(),
     text,
+    ansi: () => ansi(),
     clipboard: async () => {
       try { return await tmuxRead(o.env, ['show-buffer']) } catch (e) {
         if (e instanceof Error && e.message.endsWith('no buffers')) return undefined
