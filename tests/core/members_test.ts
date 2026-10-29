@@ -15,3 +15,8 @@ test('A3: ER columns align; only the comment wraps; a column blank in every row 
   assert.deepEqual(erRows('E', [{ type: 'int', name: 'n', keys: '', comment: '' }], null), [{ text: 'int n', role: 'label', align: 'left', fixed: true,
     cols: [{ text: 'int', role: 'label', id: 'E.a0.type', width: 3 }, { text: 'n', role: 'label', id: 'E.a0.name', width: 1 }] }])
 })
+// Helpers QA: column widths are terminal cells, so a CJK type is 4 wide and the next column starts after it.
+test('A3: ER columns are as wide as their text in terminal cells: 漢字 is 4, so int pads to 4', () => {
+  const rows = erRows('E', [{ type: '漢字', name: 'a', keys: '', comment: '' }, { type: 'int', name: 'b', keys: '', comment: '' }], null) as NodeRow[]
+  assert.deepEqual([rows[0]!.cols![0]!.width, rows.map(r => r.text)], [4, ['漢字 a', 'int  b']])
+})

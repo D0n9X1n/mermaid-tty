@@ -85,3 +85,10 @@ test('A4: stack carries a field Expect does not list yet, from the middle parts 
   assert.deepEqual(e.later, ['one', 'two'])
   assert.deepEqual(Object.keys(e).sort(), ['edgeLabels', 'edges', 'frames', 'labels', 'later'])
 })
+// Helpers QA: every entry of each part's expect arrays is carried, not only the first.
+test('A5.mutation-tests: stack carries every entry of a part, so a part with two labels and two members keeps both', () => {
+  const two = { ...part('a', 'x'), expect: { labels: [{ owner: 'a', text: 'x' }, { owner: 'a2', text: 'z' }], edges: [], edgeLabels: [], frames: ['F', 'G'],
+    members: [{ id: 'a.m0', parent: 'a' }, { id: 'a.m1', parent: 'a' }] } } as Drawing
+  const e = stack([two, part('b', 'y')], 10).expect
+  assert.deepEqual([e.labels.map(l => l.owner), e.frames, e.members?.map(m => m.id)], [['a', 'a2', 'b'], ['F', 'G'], ['a.m0', 'a.m1']])
+})

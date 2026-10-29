@@ -40,3 +40,8 @@ test('A4: a dropped label moves nothing: the next one still measures from the la
   assert.deepEqual(row(20, [L(0, 'ab'), L(1, 'abcdefgh'), L(4, 'y')]), [rule(0, 20, [0, 4]), 'ab  y'])   // nor to its farther one
   assert.deepEqual(row(10, [L(0, 'abc', 'right'), L(1, 'x')]), [rule(0, 10, [1]), ' x'])                // nor one that left the field
 })
+// Helpers QA: ticks are taken in input order, never re-sorted: after x at 6, y at 0 starts before x's end and drops.
+test('A4: ticks are taken in input order: a later tick to the left of a kept label drops', () => {
+  const d = axisRows(0, 8, [L(6, 'x'), L(0, 'y')], 8, 'ax')
+  assert.deepEqual(d.expect.labels, [{ owner: 'ax.t0', text: 'x' }]); assert.deepEqual(text(d), [rule(0, 8, [6]), '      x'])
+})
