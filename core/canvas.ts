@@ -5,15 +5,16 @@ import type { Ink } from './themes.ts'
 import type { Expect } from './validate.ts'
 import { width } from './width.ts'
 
-export type Kind = 'text' | 'cap' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'  // cont = 2nd cell of a W/F char
+export type Kind = 'text' | 'cap' | 'key' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'  // cont = 2nd cell of a W/F char; key = C's keyed-item key
 // On a line cell, the dirs one owner drew there; a cell's segs are OR-merged per owner in write order, their union its dirs.
 export type Seg = { owner: string; dirs: number }
-export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted'; segs?: readonly Seg[] }  // arms: per-arm weights 'urdl'
+export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted'; segs?: readonly Seg[]; legend?: true }  // arms: per-arm weights 'urdl'; legend: a key cell in a legend row
 export type Conflict = { row: number; col: number; had: string; by: string }  // had: owners[0] of the cell hit, or 'out-of-bounds'; by: owners[0] of the write
 export type Drawing = { columns: number; cells: (Cell | null)[][]; conflicts: readonly Conflict[]; expect: Expect }
 export type Canvas = {
   text(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], join?: Piece['join']): number  // columns used; owners[0] owns the text
   cap(r: number, c: number, s: string, role: Ink, owner: string): void
+  key(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], legend: boolean): number  // columns used
   fill(r: number, c: number, n: number, role: Ink, owner: string): void
   line(r: number, c: number, dirs: number, weight: 'light' | 'heavy' | 'dotted', role: Ink, owner: string): void
   arrow(r: number, c: number, ch: string, owner: string): void
@@ -26,7 +27,7 @@ export type Canvas = {
 // branch the light glyph (rule 12). Any other line draws the glyph of its arms, light and heavy arms meeting in their mixed glyph.
 const glyph = (dirs: number, arms: string, style: NonNullable<Cell['style']>): string => (style === 'dotted' ? junction(dirs, 'dotted') : boxGlyph(arms))
 
-// Frames and lifelines are background: a text, cap, fill, arrow or line write replaces them.
+// Frames and lifelines are background: a text, cap, key, fill, arrow or line write replaces them.
 const BACKGROUND: ReadonlySet<Kind> = new Set<Kind>(['frame', 'lifeline'])
 
 // Two cells' arms 'urdl' merged arm by arm, or null if one arm is claimed with two weights.
@@ -40,11 +41,11 @@ function mergeArms(a: string, b: string): string | null {
   return out
 }
 
-// Write policy: text, cap, fill, arrow and title cells are exclusive, so a later text, cap, fill, arrow or line write on one is a
-// Conflict, and the old cell stays. A line on a line merges arm by arm when shares(old owner, new owner) holds for any old owner;
-// unrelated owners may only cross straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two weights, or any other meeting,
-// is a Conflict. An arrow on an arrow of the same glyph merges owners when shares holds for any old owner. A frame or lifeline
-// draws only into empty cells, so on a drawn cell it is a no-op.
+// Write policy: text, cap, key, fill, arrow and title cells are exclusive, so a later text, cap, key, fill, arrow or line write
+// on one is a Conflict, and the old cell stays. A line on a line merges arm by arm when shares(old owner, new owner) holds for
+// any old owner; unrelated owners may only cross straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two weights, or
+// any other meeting, is a Conflict. An arrow on an arrow of the same glyph merges owners when shares holds for any old owner.
+// A frame or lifeline draws only into empty cells, so on a drawn cell it is a no-op.
 // shares: may two owners merge a line or arrow cell (default a === b).
 export function createCanvas(rows: number, cols: number, columns: number, shares: (a: string, b: string) => boolean = (a, b) => a === b): Canvas {
   const cells: (Cell | null)[][] = Array.from({ length: rows }, () => Array<Cell | null>(cols).fill(null))
@@ -83,6 +84,14 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
     cap(r, c, s, role, owner) {
       let col = c
       for (const ch of s) put(r, col++, { ch, role, kind: 'cap', owners: [owner], dirs: 0 })
+    },
+    // C: a keyed item's key, in place (legend false) or in its legend row. Exclusive like a cap, one cell per character, each
+    // owned by every owner given: a member's in-place key by [id, parent], an edge label's by [`${id}:label`, id].
+    key(r, c, s, role, owner, legend) {
+      const owners = [owner].flat()
+      let col = c
+      for (const ch of s) put(r, col++, { ch, role, kind: 'key', owners, dirs: 0, ...(legend ? { legend: true as const } : {}) })
+      return col - c
     },
     fill(r, c, n, role, owner) {
       for (let i = 0; i < n; i++) put(r, c + i, { ch: ' ', role, kind: 'fill', owners: [owner], dirs: 0 })

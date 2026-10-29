@@ -13,6 +13,8 @@ export type Expect = {
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]  // C: each bar; lanes: its width across the axis, default 1
   members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
+  keys?: readonly { key: string; item: string; cls: string }[]                           // C: each keyed item, its key and its class
+  keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
@@ -30,12 +32,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, then C's end labels, bars and member rows. null if none.
+// labels, frames, then C's end labels, bars, member rows and keys. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    endLabels(d, all) ?? bars(d, all) ?? members(d)
+    endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -101,10 +103,10 @@ function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   return [...reached]
 }
 
-// Whether x is a cell edge id's walk may step through: a line or arrow cell of the edge, or a text or cont cell of its own
-// label, owner `${id}:label`. A fill, cap or other text cell never is, even one the edge owns.
+// Whether x is a cell edge id's walk may step through: a line or arrow cell of the edge, or a text, cont or key cell of its
+// own label, owner `${id}:label`. A fill, cap or other text cell never is, even one the edge owns.
 const connects = (x: Cell, id: string): boolean =>
-  ((x.kind === 'line' || x.kind === 'arrow') && owns(x, id)) || ((x.kind === 'text' || x.kind === 'cont') && x.owners[0] === `${id}:label`)
+  ((x.kind === 'line' || x.kind === 'arrow') && owns(x, id)) || ((x.kind === 'text' || x.kind === 'cont' || x.kind === 'key') && x.owners[0] === `${id}:label`)
 
 // Each edge is connected: a walk over the cells that connect it, from its line or arrow cells next to from (a line there
 // must point at from), reaches a cell next to to. Each end mark is its own arrow cell of the edge beside its own node, and
@@ -148,7 +150,7 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
       const n = beside(d, p, s)
       const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => p.cell.owners.includes(id))) ||
         mine.some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
-          ((n.kind === 'text' || n.kind === 'cont') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
+          ((n.kind === 'text' || n.kind === 'cont' || n.kind === 'key') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
       if (!connected) return fail('line-dangling')
     }
   }
@@ -331,19 +333,61 @@ function bars(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: each listed member is drawn, owned by exactly its own id and its parent's: it has a cell, and every cell whose owners[0]
-// is its id has owners [id, parent]. Else member. With members set, every text cell with two distinct owners, the second no
+// is its id has owners [id, parent]. Else member. With members set, every text or key cell with two distinct owners, the second no
 // edge of expect.edges, is a listed { id: owners[0], parent: owners[1] }, so an omitted row fails member-unlisted. A drawing
-// that sets no members, as no A drawing does, has no row checked.
+// that sets no members, as no A drawing does, has no row checked. A keyed member's legend key, legend text and their
+// continuation rows are owned by [id] alone, and accepted; its in-place key keeps [id, parent], so its row still needs that
+// cell. A keyed ER comment's text lives only in its legend row.
 function members(d: Drawing): Fail | null {
   const listed = d.expect.members
   if (!listed) return null
   const cells = d.cells.flat().filter((x): x is Cell => !!x)
+  const keyed = new Set((d.expect.keys ?? []).map(k => k.item))
   for (const { id, parent } of listed) {
     const mine = cells.filter(x => x.owners[0] === id)
-    if (mine.length === 0 || mine.some(x => x.owners.length !== 2 || x.owners[1] !== parent)) return fail('member')
+    const row = (x: Cell) => x.owners.length === 2 && x.owners[1] === parent
+    const legend = (x: Cell) => keyed.has(id) && x.owners.length === 1 && (x.kind === 'key' ? x.legend === true : x.kind === 'text' || x.kind === 'cont')
+    if (!mine.some(row) || mine.some(x => !row(x) && !legend(x))) return fail('member')
   }
   const edges = new Set(d.expect.edges.map(e => e.id))
-  const unlisted = (x: Cell) => x.kind === 'text' && new Set(x.owners).size >= 2 && !edges.has(x.owners[1]!) &&
+  const unlisted = (x: Cell) => (x.kind === 'text' || x.kind === 'key') && new Set(x.owners).size >= 2 && !edges.has(x.owners[1]!) &&
     !listed.some(m => m.id === x.owners[0] && m.parent === x.owners[1])
   return cells.some(unlisted) ? fail('member-unlisted') : null
+}
+
+// C: a key run is a maximal row run of key cells with one owners[0], its owner, and one legend flag. Its owners are those of
+// all its cells, so a point key that several points own is a run of each. end is the column after it.
+type KeyRun = { owner: string; legend: boolean; owners: Set<string>; text: string; r: number; end: number }
+function keyRuns(all: readonly Spot[]): KeyRun[] {
+  const out: KeyRun[] = []
+  for (const { r, c, cell } of all) {                             // spots come row by row, left to right
+    if (cell.kind !== 'key') continue
+    const run = out.at(-1), legend = cell.legend === true
+    if (run?.r === r && run.end === c && run.owner === cell.owners[0] && run.legend === legend) {
+      run.text += cell.ch; run.end++; for (const o of cell.owners) run.owners.add(o)
+    } else out.push({ owner: cell.owners[0]!, legend, owners: new Set(cell.owners), text: cell.ch, r, end: c + 1 })
+  }
+  return out
+}
+
+// C: a keyed item's text is replaced in place by its key, and drawn once in its own legend row after that key. Of the runs
+// whose owners include an entry's item, exactly one is in place and one in the legend, else key-missing (fewer) or key-dup
+// (more), and both read its key, else key-mismatch. The legend run is bound to its row: one empty cell, then a text cell
+// whose owners[0] is the item, its legend text's start, else key-unbound; so the key at an item is the key in its own
+// legend row. Then a run whose owner is no entry's item is key-stray, and a keyable class with an entry for some of its
+// items but not all is key-partial. labels checks the legend text, which the item itself owns.
+function keys(d: Drawing, all: readonly Spot[]): Fail | null {
+  const runs = keyRuns(all), listed = d.expect.keys ?? [], items = new Set(listed.map(k => k.item))
+  for (const { key, item } of listed) {
+    const mine = runs.filter(x => x.owners.has(item)), here = mine.filter(x => !x.legend), there = mine.filter(x => x.legend)
+    if (here.length === 0 || there.length === 0) return fail('key-missing')
+    if (here.length > 1 || there.length > 1) return fail('key-dup')
+    if (here[0]!.text !== key || there[0]!.text !== key) return fail('key-mismatch')
+    const { r, end } = there[0]!, x = at(d, r, end + 1)
+    if (at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) return fail('key-unbound')
+  }
+  if (runs.some(x => !items.has(x.owner))) return fail('key-stray')
+  const keyable = d.expect.keyable ?? []
+  const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && items.has(a.item) !== items.has(b.item)))
+  return partial ? fail('key-partial') : null
 }

@@ -53,8 +53,8 @@ export function renderMermaid(source: string, o: Options): Rows | null {
 }
 
 // One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
-// fills, take that color as their background and onFill as their color; caps keep it as their color. Null colors are
-// omitted, so mono's spans carry none.
+// fills, take that color as their background and onFill as their color; caps and C's key cells keep it as their color.
+// Null colors are omitted, so mono's spans carry none.
 function cellSpan(cell: Cell, p: Palette): Span {
   const ink = (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
   const pill = p.fill && (cell.role === 'node' || cell.role === 'decision') && (cell.kind === 'text' || cell.kind === 'fill')
