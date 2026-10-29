@@ -90,7 +90,7 @@ test('A4.fit-ladder: the state ladder; notes too wide for their slot become keys
 - [ ] **Implement:**
   - **The module:** `parse = parseState`; `steps = m => graphSteps(m.graph.dir, true)`; `layout = (m, step, cols) => drawAt(o => build(m, o), m.graph.dir, step, cols, m.title)`.
   - **`build(m, { dir, keyed })`:** the graph with `dir`.
-    - Keyed: each note, in source order, gets `fieldKey(k)` as its text. Its legend row is `{ key, keyInk: 'note', item: '<note id>', cls: 'note', parts: [{ text: its lines joined by ' ', ink: 'note', owner: '<note id>' }] }`. The note's `key` draws in place (T50), and `keyable` lists every note (T87).
+    - Keyed: each note, in source order, gets `fieldKey(k)` as its text. Its legend row is `{ key, keyInk: 'note', item: '<note id>', cls: 'note', parts: [{ text: its lines joined by ' ', ink: 'note', owner: '<note id>' }] }`. The note's `key` draws in place, or, for a note `withNotes` turns into a node, as that node's key row (T51); `keyable` lists every note (T87).
     - Unkeyed: notes as written; `legend: []`. Notes wrap at `wrapAt` in layered (T51).
   - **Roles** (matrix): states `node`; `●`, `◉` and bars `node`; `◇` `decision`; composites `frame`; transition labels `label`, on their own rank (A's layout); notes `note`.
 - [ ] **Done when:** `node --test tests/core/state-layout_test.ts` passes.
@@ -226,6 +226,7 @@ test('A3: ends face their class: △ inheritance, ◆ composition, ◇ aggregati
 test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence, in source order', () => {
   const W = 'Supercalifragilisticexpialidocious', r = X(`direction LR\nA --> B : uses\nnote for B "${W}"`, 40)
   assert.equal(r.step, 'keyed'); assert.deepEqual(text(r.drawing).slice(-2), ['a uses', `b ${W}`])
+  assert.ok(r.drawing.cells.flat().some((c: any) => c?.kind === 'key' && c.ch === 'b' && c.owners[0] === 'note0' && !c.legend))   // the class note node draws its key (B4)
 })
 ```
 - [ ] **Run** `node --test tests/core/class-layout_test.ts` → FAIL: `TypeError: Cannot read properties of undefined (reading 'cells')` (the stub).
@@ -236,7 +237,7 @@ test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence,
     - **Notes:** each is a `plain` node in the `note` role, id `note<k>`, with left-aligned `note` rows. A `note for X` note adds the edge `{ id: '<note>:link', from: note, to: X, style: 'dotted', tail: 'none', head: 'none', label: null, minlen: 1 }`.
     - **Relations:** each is an edge `r<k>` with its style, ends, label, `tailLabel` and `headLabel` (role `label`), `minlen` 1.
     - **Namespaces:** each is a cluster titled with its label.
-    - **Keyed:** relation labels and notes, in source order, take `fieldKey(k)`. Their legend rows' items are `r<k>:label` (`cls: 'label'`) and `note<k>` (`cls: 'note'`), in the `label` and `note` inks, each owned by its item. A label sets `labelKey` and a note `key` (T50), and `keyable` lists every label and note, so each class is keyed all or none (T87).
+    - **Keyed:** relation labels and notes, in source order, take `fieldKey(k)`. Their legend rows' items are `r<k>:label` (`cls: 'label'`) and `note<k>` (`cls: 'note'`), in the `label` and `note` inks, each owned by its item. A label sets `labelKey`, and a note node's rows become one `key: true` row holding its key (T51), and `keyable` lists every label and note, so each class is keyed all or none (T87).
   - **Color:** member rows are in the `label` role and are not filled (T50), so in a color theme only the header rows are.
 - [ ] **Done when:** `node --test tests/core/class-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Lay out class diagrams on the graph ladder"`
@@ -357,6 +358,7 @@ test('A3: an entity pill with aligned attribute rows; cardinality at each end; a
   const r = X(['CAR ||--o{ DRIVER : "is driven by"', 'CAR {', '  string registrationNumber PK "the plate"', '  int seats', '}', 'DRIVER |o..|| LICENSE : may'].join('\n'))
   const t = text(r.drawing), reg = t.find(l => l.includes('registrationNumber'))!, seats = t.find(l => l.includes('seats'))!
   assert.match(reg, /string registrationNumber PK the plate/); assert.equal(reg.indexOf('registrationNumber'), seats.indexOf('seats'))
+  assert.deepEqual(r.drawing.expect.members.filter((m: any) => m.id.startsWith('CAR.a1.')).map((m: any) => m.id), ['CAR.a1.type', 'CAR.a1.name'])   // seats has no key or comment cell, so none is listed (B2)
   assert.deepEqual(ends(r.drawing), ['1', '0..*', '0..1', '1']); assert.match(t.join('\n'), /┆/); assert.match(t.join('\n'), /is driven by/)
 })
 test('A4.fit-ladder: at keyed, comments and relation labels share one key sequence; cardinality is never keyed', () => {
@@ -371,7 +373,7 @@ test('A4.fit-ladder: at keyed, comments and relation labels share one key sequen
     - **Entities:** each is a `rect` node in the `node` role. Its rows are the centered label, then `erRows(id, attrs, wrapAt)`.
     - **Relations:** each is an edge `r<k>`, solid or dotted, with tail and head `none`, label `''` → null, `tailLabel = left`, `headLabel = right` and `endRole: 'arrow'` (the matrix: cardinality replaces the crow's foot).
     - **Subgraphs:** each is a cluster `{ id, title: title ?? id, dir, nodes: entities, clusters: subgraphs }`.
-  - **Keyed:** each `keyable` item, in order, gets `fieldKey(k)` in place: the comment column's text, or the edge label. Its legend row's item is `<owner>` itself (`cls` `comment` or `label`), in the `note` ink for a comment and the `label` ink for a label. The column sets `key` and the label `labelKey` (T50), and `keyable` lists them all (T87). Cardinality is never keyed.
+  - **Keyed:** each `keyable` item, in order, gets `fieldKey(k)` in place: the comment column's text, or the edge label. Its legend row's item is `<owner>` itself (`cls` `comment` or `label`), in the `note` ink for a comment and the `label` ink for a label. The column sets `key` and the label `labelKey` (T51); `keyable` lists them all (T87). A keyed comment's in-place key is owned by `[<column id>, <entity>]`, a listed member; its legend key and text by `[<column id>]` alone, which T86 and T87 accept (B3). Cardinality is never keyed.
 - [ ] **Done when:** `node --test tests/core/er-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Lay out ER diagrams on the graph ladder"`
 

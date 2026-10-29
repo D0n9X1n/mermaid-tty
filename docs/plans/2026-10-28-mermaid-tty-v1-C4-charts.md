@@ -77,7 +77,7 @@ test('A7: bars take series colors by source order, so sorting keeps them; values
 | ok-03, -04 | `pie`, `"A" : 15`, `"B" : 1`; `pie`, `'Apples' : 2.5`, `"Pears" : 2.5`, `"Plums" : 0.75` (equal values keep source order) |
 | ok-05, -06 | `pie showData title Snacks`, `%% a comment`, `"Chips" : 3`, `"Nuts" : 1`; `pie`, `title Solo`, `"Only" : 7` (one slice fills the field: 100.0%) |
 | ok-07 | `pie title 宠物`, `"狗" : 386`, `"猫" : 85`, `"鼠" : 15` |
-| ok-08 | `%% expect 60 natural widest 60`, `%% expect 59 wrap`, `pie`, a 41-cell label of several words `: 1`, `"b" : 1` (N + W + V + P + 3 = 41 + 10 + 1 + 5 + 3) |
+| ok-08 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 wrap`, `pie`, a 41-cell label of several words `: 1`, `"b" : 1` (N + W + V + P + 3 = 41 + 10 + 1 + 5 + 3) |
 | ok-09, -10 | `%% expect 60 wrap`, `pie`, a 52-cell label of several words `: 1`, `"b" : 1`; ok-01's body plus `accTitle: Pets` |
 | reject-01…03 | `pie`, `"Dogs" : 0`; `pie`, `"Dogs" : -5`; `pie`, `"Dogs" : 386`, `"Dogs" : 85` |
 | reject-04…06 | `pie`, `Dogs : 386`; `pie title Empty` (no slices); `%% expect 60 fallback`, `%% expect 120 natural`, `pie`, a one-word 50-letter label `: 1` |
@@ -158,7 +158,7 @@ test('A7: a section and its bars share a series color; scores carry the value ro
 |---|---|
 | ok-01, -02 | the docs example (`title My working day`; `section Go to work`: Make tea 5, Go upstairs 3, Do work 1 `Me, Cat`; `section Go home`: Go downstairs 5, Sit down 5); `journey`, `section Scores`, `A: 2.5: Me`, `B: 4.75: Me` |
 | ok-03, -04 | `journey`, `%% a comment`, `title Morning`, `Wake up: 3: Me` (before any section), `section Commute`, `Drive: 2: Me, Dog`; `journey`, `title 我的一天`, `section 上班`, `泡茶: 5: 我`, `工作: 1: 我, 猫` |
-| ok-05 | `%% expect 60 natural widest 60`, `%% expect 59 wrap`, `journey`, `section S`, `Water the garden: 4: Margaret, Benjamin, Charles` (N + S + A + 16 = 16 + 1 + 27 + 16) |
+| ok-05 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 wrap`, `journey`, `section S`, `Water the garden: 4: Margaret, Benjamin, Charles` (N + S + A + 16 = 16 + 1 + 27 + 16) |
 | ok-06 | `%% expect 60 oneActor`, `journey`, `section S`, `Review the quarterly plan: 4: Me, Supercalifragilisticexpialidocious` (wrap's field is 18 < 34; one actor per row with names wrapped to 9 cells is 60 wide) |
 | ok-07, -08 | `journey`, `section A`, `Plan: 3: Me`, `Plan: 4: Me`, `section B`, `Ship: 5: Me`; ok-01's body plus `accDescr: My day` |
 | reject-01…04 | `journey`, `section S`, then `Make tea: 6: Me`; `Make tea: high: Me`; `Make tea: 5`; `Do work: 1: Me, Me` |
@@ -367,7 +367,7 @@ test('A7: crit, done and active bars take the arrow, note and decision roles; ot
 | ok-06, -07 | `Both :active, done, 2024-01-01, 3d`, `Gate :crit, milestone, 2024-01-04, 2d`, `Doing :active, 2024-01-02, 2d`, `Plain :2024-01-03, 1d`; `Tick :2024-01-01, 500ms`, `Wait :30s`, `Cook :1.5h`, `Mark :0d`, `section Later`, `Ship :1d` |
 | ok-08, -09 | `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`, `Run :r, 2024-03-01T08:00:00.000, 2024-03-01T09:30:00.500`, `Rest :after r, 30m`; `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`, `Plan :p, 1/7/2024 9:0:0, 3/7/2024 17:30:0`, `Build :after p, 2d` |
 | ok-10, -11 | frontmatter `title: Plan` and `config:` / `gantt:` / `displayMode: compact`, then `todayMarker off`, `%% a comment`, `A :2024-01-01, 2d`, `B :1d`; `title 项目计划`, `section 设计`, `需求分析 :2024-01-01, 3d`, `编码 :5d` |
-| ok-12, -13 | `%% expect 60 natural widest 60`, `%% expect 59 keyed`, `Ship the release v1 :2024-01-01, 10d` (19 + 16 + 20 + 5 = 60); `%% expect 60 keyedWrap`, `Review the quarterly release plan with the team :2024-01-01, 3d` (the name wraps to 34 cells) |
+| ok-12, -13 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 keyed`, `Ship the release v1 :2024-01-01, 10d` (19 + 16 + 20 + 5 = 60); `%% expect 60 keyedWrap`, `Review the quarterly release plan with the team :2024-01-01, 3d` (the name wraps to 34 cells) |
 | ok-14, -15 | ok-01's body plus `click a1 href "https://example.com"`; `%% expect 120 natural`, `%% expect 80 natural`, `%% expect 60 keyed`, `dateFormat YYYY-MM-DD HH:mm`, `axisFormat %H:%M`, `Load trucks :l, 2024-03-01 08:00, 2024-03-01 11:30`, `Drive :d, after l, 2024-03-01 15:00`, `Unload :after d, 90m` |
 | ok-16 | `%% expect 42 keyed`, then 27 tasks `t01`…`t27`, each `:2024-01-01, 1d` |
 | reject-01…05 | `A :2024-01-01, 1d`, `excludes weekends`; `A :2024-01-01, 3dX`; `A :2014-1-1, 1d`; `A :a1, 2024-01-01, 1d`, `B :a1, 2024-01-02, 1d`; `A :a1, after zz, 1d` |

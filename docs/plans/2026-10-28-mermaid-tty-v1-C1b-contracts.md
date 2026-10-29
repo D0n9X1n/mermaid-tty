@@ -29,16 +29,24 @@ test("A5.mutation-tests: an end label sits at its own end, strictly; a C triangl
 })
 const bar = (cells: string, eighths: number, extra: Partial<Expect> = {}): Drawing => { const c = createCanvas(1, 8, 8); c.cap(0, 0, cells, 's1', 'x0')
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], bars: [{ owner: 'x0', eighths, axis: 'h' }], ...extra }) }
-test('A5.mutation-tests: a bar draws exactly its eighths; zero draws nothing; no stray bar cell', () => {
+test('A5.mutation-tests: a bar draws exactly its eighths; zero draws nothing, and only zero; no stray bar cell', () => {
   assert.equal(validate(bar('██▌', 20)), null); assert.equal(validate(bar('', 0)), null)
-  for (const [cells, e] of [['██▌', 21], ['█', 0], ['▌█', 12]] as const) assert.deepEqual(validate(bar(cells, e)), { reason: 'bar' }, cells)
+  for (const [cells, e] of [['██▌', 21], ['█', 0], ['▌█', 12], ['', 20]] as const) assert.deepEqual(validate(bar(cells, e)), { reason: 'bar' }, cells)
   assert.deepEqual(validate(bar('██▌', 20, { bars: [] })), { reason: 'bar-stray' })
+})
+const vbar = (lanes: readonly (readonly string[])[], eighths: number): Drawing => { const c = createCanvas(2, 4, 4)
+  lanes.forEach((cells, k) => cells.forEach((g, r) => { if (g) c.cap(r, k, g, 's1', 'x0.b0') }))
+  return c.toDrawing({ labels: [], edges: [], edgeLabels: [], bars: [{ owner: 'x0.b0', eighths, axis: 'v', lanes: 2 }] }) }
+test('A5.mutation-tests: a positive bar with its cells deleted, a lane missing or a lane short fails; nothing passes vacuously', () => {
+  assert.equal(validate(vbar([['▄', '█'], ['▄', '█']], 12)), null)                 // two lanes, each █ then ▄ bottom up: 8 + 4
+  for (const lanes of [[['', ''], ['', '']], [['▄', '█'], ['', '']], [['▄', '█'], ['▂', '█']]]) assert.deepEqual(validate(vbar(lanes, 12)), { reason: 'bar' }, String(lanes))
 })
 const member = (owners: string[]): Drawing => { const c = createCanvas(1, 6, 6); c.text(0, 0, '+name', 'label', owners)
   return c.toDrawing({ labels: [{ owner: owners[0]!, text: '+name' }], edges: [], edgeLabels: [], members: [{ id: 'U.m0', parent: 'U' }] }) }
-test("A5.mutation-tests: a member row is owned by exactly its own id and its parent's", () => {
+test("A5.mutation-tests: a member row is owned by exactly its own id and its parent's, and every drawn member row is listed", () => {
   assert.equal(validate(member(['U.m0', 'U'])), null)
   for (const o of [['U.m0', 'V'], ['U.m0'], ['W.m0', 'U']]) assert.deepEqual(validate(member(o)), { reason: 'member' }, o.join())
+  assert.deepEqual(validate({ ...member(['U.m0', 'U']), expect: { ...member(['U.m0', 'U']).expect, members: [] } }), { reason: 'member-unlisted' })   // its entry omitted
 })
 ```
 - [ ] **Run** `node --test tests/core/validate-c_test.ts` → FAIL: `Expected values to be strictly deep-equal` (`validate` returns null for the swapped labels).
@@ -46,15 +54,15 @@ test("A5.mutation-tests: a member row is owned by exactly its own id and its par
   - **Built on A:** end marks use A's per-end-mark contract, `Expect.edges[].ends: { node, glyph }[]`, which fails `end-misplaced`. Frames use A's `Expect.frames` (`frame-broken`). C re-specifies neither. C adds `△▷▽◁` to A's pointing glyphs (`POINT`), so a triangle must point at its node; `◆`, `◇`, `o` and `x` have no point.
   - **Types:**
     - `Expect.edges[]` gains `endLabels?: readonly { node: string; owner: string }[]`, a C extension. The owner is `${id}:tail` or `${id}:head`, named by the true end, even on a reversed edge.
-    - `Expect` gains `bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v' }[]` and `members?: readonly { id: string; parent: string }[]`.
+    - `Expect` gains `bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]` and `members?: readonly { id: string; parent: string }[]`.
   - **Order:** `validate` appends `?? endLabels(d, all) ?? bars(d, all) ?? members(d)` after A's last check. A's checks (`ends`, `frames`, `label-blank-line`, `crossing-ambiguous`) run first and are not edited. Every new field is optional, and A has no bar cells. So A's drawings check exactly as before.
   - **`endLabels`:** a node's terminal is the edge's line or arrow cells beside it. The owner needs a cell within Chebyshev distance 1 of its node's terminal, and strictly nearer it than the edge's other terminal; a tie fails. Else `end-label`. The text is checked by `labels`.
   - **`bars`:**
     - Bar cells are cap cells drawn in a bar glyph: `▏…█` on axis h, `▁…▇█` on axis v.
-    - For each listed bar, each row (h) or column (v) of its cells (owners[0] === owner) is one run. It reads full `█` cells, then at most one partial glyph, left to right (h) or bottom to top (v). Each run sums to `eighths`: `█` counts 8, and a partial counts its index + 1.
-    - Zero means no cell. Any mismatch fails `bar`.
+    - A bar's runs are the maximal row runs (h) or column runs (v) of cap cells whose owners[0] is its owner. Each run reads full `█` cells, then at most one partial glyph, left to right (h) or bottom to top (v), and sums to `eighths`: `█` counts 8, and a partial counts its index + 1.
+    - The count is exact, never vacuous: a bar with `eighths > 0` has exactly `lanes ?? 1` runs, its width across the axis as drawn (2 for a vertical xychart bar). A bar with `eighths` 0 has no cell. Deleted cells, a missing or split lane, or any other mismatch fail `bar` (cycle 2).
     - A bar cell whose owners[0] is not a listed owner fails `bar-stray`.
-  - **`members`:** each `{ id, parent }` has at least one cell whose owners[0] is id. Every such cell's owners are exactly `[id, parent]`, else `member`.
+  - **`members`:** each listed `{ id, parent }` has at least one cell whose owners are exactly `[id, parent]`, and every cell whose owners[0] is id has those owners, else `member`. Only drawn members are listed: a blank ER column draws no cell, so T50 does not list it (finding 7). T87 accepts a keyed member's legend cells, owned by `[id]` alone (finding 8). When `members` is set, every text or key cell with two distinct owners whose second is not an edge in `expect.edges` must be listed as `{ id: owners[0], parent: owners[1] }`, else `member-unlisted`, so an omitted row fails (B6).
 - [ ] **Done when:**
   - `node --test tests/core/validate-c_test.ts tests/core/validate_test.ts` passes;
   - `node scripts/typecheck.ts` passes;
@@ -94,6 +102,14 @@ test('A5.mutation-tests: each key is drawn once at its item and once in the lege
   ] as const
   for (const [drawn, keys, reason] of cases) assert.deepEqual(validate(keyed(drawn, keys)), { reason }, reason)
 })
+test('A5.mutation-tests: a legend key is bound to its own row, so swapping whole legend key cells between rows fails', () => {
+  const rows = (k1: string, k2: string): Drawing => { const c = createCanvas(3, 12, 12), own = (k: string) => (k === 'a' ? 'n1' : 'n2')
+    c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, 6, 'b', 'note', 'n2', false)
+    c.key(1, 0, k1, 'note', own(k1), true); c.text(1, 2, 'memo', 'note', 'n1'); c.key(2, 0, k2, 'note', own(k2), true); c.text(2, 2, 'other', 'note', 'n2')
+    return c.toDrawing({ labels: [{ owner: 'n1', text: 'memo' }, { owner: 'n2', text: 'other' }], edges: [], edgeLabels: [], keys: K,
+      keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] }) }
+  assert.equal(validate(rows('a', 'b')), null); assert.deepEqual(validate(rows('b', 'a')), { reason: 'key-unbound' })   // b memo / a other
+})
 test("A5.mutation-tests: an edge label's key cell carries its edge like the label's text", () => {
   const draw = (key: boolean): Drawing => {
     const c = createCanvas(7, 8, 8); c.text(0, 2, 'A', 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'e0')
@@ -105,6 +121,13 @@ test("A5.mutation-tests: an edge label's key cell carries its edge like the labe
       keys: [{ key: 'a', item: 'e0:label', cls: 'label' }], keyable: [{ item: 'e0:label', cls: 'label' }] })
   }
   assert.equal(validate(draw(true)), null); assert.deepEqual(validate(draw(false)), { reason: 'edge-disconnected' })
+})
+test('A5.mutation-tests: a keyed member keeps its in-place key with its parent; its legend cells are owned by it alone', () => {
+  const draw = (owners: string[]): Drawing => { const c = createCanvas(2, 10, 10)
+    c.key(0, 0, 'a', 'note', owners, false); c.key(1, 0, 'a', 'note', 'U.c0', true); c.text(1, 2, 'pk', 'note', 'U.c0')
+    return c.toDrawing({ labels: [{ owner: 'U.c0', text: 'pk' }], edges: [], edgeLabels: [], members: [{ id: 'U.c0', parent: 'U' }],
+      keys: [{ key: 'a', item: 'U.c0', cls: 'comment' }], keyable: [{ item: 'U.c0', cls: 'comment' }] }) }
+  assert.equal(validate(draw(['U.c0', 'U'])), null); assert.deepEqual(validate(draw(['U.c0'])), { reason: 'member' })
 })
 ```
 - [ ] **Run** `node --test tests/core/validate-keys_test.ts` → FAIL: `TypeError: c.key is not a function`.
@@ -119,8 +142,10 @@ test("A5.mutation-tests: an edge label's key cell carries its edge like the labe
     - `validate` appends `?? keys(d, all)` after `members`.
     - **`keys`:** a run is a maximal row run of key cells with one owners[0] and one `legend` flag.
       - For each entry, the runs whose owners include its item must be exactly one in place and one in the legend. Fewer fails `key-missing`, more `key-dup`; either run reading other than `key` fails `key-mismatch`.
+      - **Binding (cycle 2):** the legend run must be followed, on its row, by one empty cell and then a text cell whose owners[0] is the item, the start of its legend text. Else `key-unbound`. So the key at the item equals the key in that item's own legend row, and swapping legend key cells between rows fails.
       - Then a run that no entry's item owns fails `key-stray`.
       - Then each `cls` in `keyable` must have an entry for all of its items or for none, else `key-partial`.
+    - **Keyed members (finding 8):** for an item that is also a listed member, `members` accepts its cells owned by `[id]` alone: its legend key, its legend text and their continuation rows. Its in-place key stays owned by `[id, parent]`, so its member row still needs that cell. A keyed ER comment's text lives only in its legend row (T61).
     - A point key owned by several points is one in-place run for each of them. The item's legend text is checked by `labels`: a legend row's text is owned by the item itself.
 - [ ] **Done when:**
   - `node --test tests/core/validate-keys_test.ts tests/core/validate-c_test.ts tests/core/validate_test.ts tests/core/canvas_test.ts` passes;
@@ -144,6 +169,7 @@ const rec = (paths: string[], verdict: 'pass' | 'fail' = 'pass', scope = 'vr-C-r
 test('A5.errors: a Tier 2 type passes the gate only with a vr-C-<type> pass record that hashes every ok fixture and golden', () => {
   assert.deepEqual(tier2Problems('radar', ALL, [rec(ALL)], read), [])
   assert.deepEqual(tier2Problems('radar', ALL, [rec(ALL.slice(1))], read), ['vr-C-radar: fixtures/radar/radar-ok-01.mmd'])  // a fixture not listed
+  assert.equal(tier2Problems('radar', ALL, [rec(ALL.slice(0, 1)), rec(ALL.slice(1))], read).length, 1)   // a fixture-only and a golden-only record do not add up
   for (const records of [[rec([])], [], [rec(ALL, 'fail')], [rec(ALL, 'pass', 'vr-C-sankey')]])        // empty table, no record, fail, other scope
     assert.equal(tier2Problems('radar', ALL, records, read).length, 2)
   assert.equal(tier2Problems('radar', ALL, [rec(ALL)], p => (p.endsWith('.mmd') ? 'radar-beta\n' : read(p))).length, 1)  // a stale hash
@@ -160,8 +186,8 @@ test('A5.errors: TIER2_PASSED lists exactly the Tier 2 types that pass the gate 
   - `repoRecords()`: every `docs/reviews/*.md` through `parseRecord`. A record that does not parse is dropped, so the gate fails closed; `check-review-hashes.ts` reports the parse error itself.
   - `tier2Problems(t, files, records, read = readRepo)`:
     - with no files, it returns `['vr-C-<t>: no ok fixtures']`;
-    - otherwise, keep the records with scope `vr-C-<t>` and verdict pass;
-    - return `requirePass(kept, { ['vr-C-' + t]: files })` and then `checkRecords(kept, read)`.
+    - otherwise, each record with scope `vr-C-<t>` and verdict pass is checked alone: its problems are `requirePass([r], { ['vr-C-' + t]: files })`, then `checkRecords([r], read)`;
+    - it returns `[]` when one record has none; else the fewest problems of any record, the first on a tie; else, with no such record, `requirePass([], …)`. One record must list every ok fixture and every golden, with matching hashes; records never add up (cycle 2).
     - `readRepo` reads bytes from the repo root, or gives null.
   - T48's `GATED_DIRS` adds each type in `TIER2_PASSED`, so an enabled Tier 2 type's goldens are checked like Tier 1's.
 - [ ] **Done when:** `node --test tests/scripts/check-tier2_test.ts tests/core/registry-tiers_test.ts` passes.

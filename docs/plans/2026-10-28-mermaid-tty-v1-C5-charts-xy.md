@@ -103,7 +103,7 @@ test('A4: computed bounds print as exact decimals; a point sits in row max(1, �
     - The axis titles swap places. A legend lists the named series as `tag name`.
   - **Printing:** values as written; an explicit bound as written; a computed bound and the midpoint by `toExact`.
   - **Roles:** axes, ticks and rules `frame`; categories, tags and names `label`; tick labels and values `value`; bars and markers `s<k>`, by source order over all series.
-  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`; each bar `x<k>.b<j>`, so two bars of one series never share a run. `expect.bars` lists `{ owner: 'x<k>.b<j>', eighths, axis }` for every bar: axis `v` in a vertical chart, `h` in a horizontal one (T86).
+  - **Owners:** values `x<k>.v<j>`; plot marks `x<k>:mark`; each bar `x<k>.b<j>`, so two bars of one series never share a run. `expect.bars` lists `{ owner: 'x<k>.b<j>', eighths, axis, lanes }` for every bar: axis `v` in a vertical chart, `h` in a horizontal one, and `lanes` its drawn width across the axis (T86).
 - [ ] **Done when:** `node --test tests/core/xychart-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw xycharts vertically and horizontally"`
 
@@ -141,7 +141,7 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
 | ok-05 | the docs palette example (line, bar, bar, line; quoted axis titles; `plotColorPalette` ignored) |
 | ok-06 | `xychart horizontal`, `title Revenue`, `x-axis Quarter [2023, 2024]`, `y-axis 0 --> 100`, `bar Online [40, 55]`, `bar Retail [30, 35]`, `line Target [50, 60]` |
 | ok-07, -08 | `xychart vertical`, `x-axis Month`, `y-axis Units`, `bar [0, 4, 7]`; `title "销售额"`, `x-axis ["一月", "二月"]`, `bar "线上" [3, 5]`, `line "目标" [4, 6]` |
-| ok-09 | `%% expect 60 natural widest 60`, `%% expect 59 horizontal`, `x-axis [mon1, tue1, wed1, thu1, fri1, sat1, sun1, mon2, tue2, wed2, thu2]`, `y-axis 0 --> 100`, `bar [10, 20, 30, 40, 50, 60, 70, 80, 90, 99, 5]` (4 + 1 + 11 · 5 = 60) |
+| ok-09 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 horizontal`, `x-axis [mon1, tue1, wed1, thu1, fri1, sat1, sun1, mon2, tue2, wed2, thu2]`, `y-axis 0 --> 100`, `bar [10, 20, 30, 40, 50, 60, 70, 80, 90, 99, 5]` (4 + 1 + 11 · 5 = 60) |
 | ok-10, -11 | `%% expect 60 wrap`, `xychart-beta horizontal`, `x-axis ["a fairly long first category name that wraps twice", short]`, `bar [1, 2]` (a 50-cell category); ok-01's body plus `accTitle: Sales` |
 | reject-01…04 | the docs point-label example (`line [540 "PaLM", …]`); 12 categories with an 11-value `bar`; `y-axis 0 --> 100`, `bar [120]`; the docs `bar [2.3, 45, .98, -3.4]` |
 | reject-05…08 | `x-axis 0 --> 100`, `bar [1]`; `title Sales Revenue`, `bar [1]`; `x-axis Q1 [a, b]`, `bar [1, 2]`; `x-axis [barley, wheat]`, `bar [1, 2]` |

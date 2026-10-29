@@ -119,7 +119,7 @@ test('A7: the root fills with the node role; a top-level branch colors its subtr
 | ok-03, -04 | `Root`, `  [No id]`, `  (Round no id)`, `  q["text with (brackets)"]`; `Root`, `  Parent<br/>two lines`, `    Child one`, `    Child two` |
 | ok-05, -06 | the docs "unclear indentation" example; frontmatter `title: Plans`, then `mindmap`, `%% a comment`, a blank line, `Root`, `  A` |
 | ok-07, -08 | `Root`, `  Same`, `  Same`; `根`, `  分支一`, `    叶子`, `  分支二` |
-| ok-09 | `%% expect 60 natural widest 60`, `%% expect 59 compact`, then a tree whose natural layout is exactly 60 wide and whose compact layout is narrower |
+| ok-09 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 compact`, then a tree whose natural layout is exactly 60 wide and whose compact layout is narrower |
 | ok-10…12 | `%% expect 60 compact`, `%% expect 60 wrap`, `%% expect 60 outline`: trees sized so that each step is the first to fit at 60 |
 | ok-13, -14 | frontmatter `config:` / `mindmap:` / `colorBy: depth`, then ok-01's body; ok-01's body plus a `:::urgent` line after `B` |
 | reject-01…03 | `Root`, `  A`, `  ::icon(fa fa-book)`; `Root`, `Other` (a second root); `Root`, `  id[Square)` |
@@ -264,7 +264,7 @@ test('A7: each lane takes a series color for its glyphs and name; tags take the 
 | ok-06 | `gitGraph BT:`, `commit`, `branch dev`, `commit`, `checkout main`, `merge dev`. This fixture draws `BT:`, the header that changes the drawing; T79 pins `gitGraph:`, `LR:` and `TB:` |
 | ok-07 | `title Release log`, `%% a comment`, `commit msg: "init"`, `branch "hotfix"`, `commit "fix typo"`, `checkout main`, `branch feature/x.y`, `commit`, `checkout main`, `merge feature/x.y` |
 | ok-08, -09 | `branch dev` before main's first commit, `commit`, `checkout main`, `commit`, `merge dev` (no fork, as main's head was empty); `commit id: "初始"`, `branch "功能"`, `commit id: "新功能" tag: "版本1"`, `checkout main`, `merge "功能"` |
-| ok-10, -11 | `%% expect 60 natural widest 60`, `%% expect 59 wrap`, `commit msg: "…"` with a 58-cell message of several words (2 + 58 = 60); ok-02's body plus `accTitle: Log` |
+| ok-10, -11 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 wrap`, `commit msg: "…"` with a 58-cell message of several words (2 + 58 = 60); ok-02's body plus `accTitle: Log` |
 | ok-12…15 | ok-03's body under `gitGraph:`, under `gitGraph LR:` and under `gitGraph TB:`; ok-04's body with `cherry-pick id: "A" tag: "picked"` (an explicit tag replaces `cherry-pick:A`) |
 | reject-01…04 | `commit`, `checkout nope`; `commit`, `branch develop`, `checkout main`, `merge develop`; `branch develop`, `branch develop`; the docs MetroLine example (commit id `Boston` twice) |
 | reject-05…07 | `commit`, `branch b`, `commit`, `checkout main`, `merge b id: "m"`, `branch c`, `commit`, `cherry-pick id: "m"`; `commit type: BOLD`; `%% expect 60 fallback`, `%% expect 80 natural`, then 30 × (`branch b<i>`, `commit`, `checkout main`): 31 lanes put the label column at 62 |
@@ -390,7 +390,7 @@ test('A7: without sections each period takes the next series color; disableMulti
 | ok-05, -06 | `2001`, `2002 : a`, `2002 : b` (a period without events; two periods with the same text); `timeline TD`, `2002 : LinkedIn`, `2004 : Facebook : Google` |
 | ok-07, -08 | frontmatter `title: Milestones`, then `timeline LR`, `%% a comment`, `2002 : LinkedIn`, `2004 : Facebook`; frontmatter `config:` / `timeline:` / `disableMulticolor: true`, then ok-01's body |
 | ok-09 | `title 社交媒体`, `2002 : 领英`, `2004 : 脸书 : 谷歌` |
-| ok-10 | `%% expect 60 natural widest 60`, `%% expect 59 tight`, then `2001 : Planning`, `2002 : Research`, `2003 : Building`, `2004 : Testing`, `2005 : Shipping it` (pills 10 + 10 + 10 + 9 + 13 = 52, plus four gaps of 2) |
+| ok-10 | `%% expect 60 natural widest 60`, `%% expect 61 natural`, `%% expect 59 tight`, then `2001 : Planning`, `2002 : Research`, `2003 : Building`, `2004 : Testing`, `2005 : Shipping it` (pills 10 + 10 + 10 + 9 + 13 = 52, plus four gaps of 2) |
 | ok-11, -12 | `%% expect 60 wrap`, `2001 : the first long event of several short words`, `2002 : ` the same event (each pill 45 cells; two columns need 92); `%% expect 60 lrToTd`, `2001 : Construction`, `2002 : Introduction`, `2003 : Announcement`, `2004 : Distribution`, `2005 : Construction` (wrap caps a column at 11, narrower than a 12-letter word) |
 | ok-13 | ok-01's body plus `accTitle: History` |
 | ok-14 | `2001年 : 创立`, `2002年 : 扩张` (CJK period labels) |

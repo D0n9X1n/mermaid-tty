@@ -86,28 +86,29 @@ test('A5: frontmatter config scalars become dotted keys; other top-level keys ar
     { 'mindmap.colorBy': 'depth', 'timeline.disableMulticolor': 'true' })
   assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
   assert.deepEqual((readSource('pie\n"a" : 1') as Source).config, {})
+  assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: trunk\t# note\n    x: a#b'), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'a#b' })   // a tab-# comment; a # inside a word
 })
 test('A5.errors: a config block outside the strict YAML subset falls back', () => {
   const bad = ['config:\n  pie: { textPosition: 0.5 }', 'config:\n  themeVariables:\n    - a', 'config:\n  pie:\n    k: [1, 2]',
     'config:\n  a: &x 1', 'config:\n  a: *x', 'config:\n  a: !!str 1', 'config:\n  a: |\n    text', 'config:\n  a: >\n    text',
     'config:\n  a: one\n    two', 'config:\n  a: 1\n  a: 2', 'config:\n\tmindmap:', 'config:\n  a: "open', 'config:\n    a: 1\n  b: 2',
-    'config:\n  a:', 'config:\n  a: b: c', 'config:\n  a: "x\\q"']
+    'config:\n  a:', 'config:\n  a: b: c', 'config:\n  a: "x\\q"', 'config:\n  gitGraph.mainBranchName: fake']
   for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
 })
 ```
 - [ ] **Run** `node --test tests/core/source-config_test.ts` → FAIL: `Expected values to be strictly deep-equal` (`config` is `undefined`).
 - [ ] **Implement** in `core/source.ts`:
   - **The block:** the unindented line `config:` opens it, and the next unindented line ends it. Other top-level keys keep A's reader, and the `title:` rule is unchanged.
-  - **Lines:** blank lines and lines whose first non-space is `#` are skipped. Every other line must be `<spaces><key>:` or `<spaces><key>: <scalar>`, where a key matches `[A-Za-z_][\w.-]*`. A tab in any frontmatter line's leading whitespace fails, as before.
+  - **Lines:** blank lines and lines whose first non-space is `#` are skipped. Every other line must be `<spaces><key>:` or `<spaces><key>: <scalar>`, where a key matches `[A-Za-z_][\w-]*`: a key containing `.` falls back, never read as a nested path (cycle 2). A tab in any frontmatter line's leading whitespace fails, as before.
   - **Nesting:** keep a stack of open mappings, each with its indent.
     - A key with no value opens a mapping, and the next line must be deeper.
     - Any other line's indent must equal an open mapping's indent, which closes the deeper ones.
     - A key repeated in one mapping fails.
   - **Scalars** stay strings, set at `config[[...keys, key].join('.')]`:
-    - **Plain:** must not start with `[ ] { } , & * ! | > % @ # ' "`, a backtick, or `- `. It ends at ` #`, is trimmed, and must not contain `: `.
+    - **Plain:** must not start with `[ ] { } , & * ! | > % @ # ' "`, a backtick, or `- `. It ends at the first `#` preceded by a space or a tab, is trimmed, and must not contain `: `.
     - **Double-quoted:** one line; `\"` and `\\` are its only escapes.
     - **Single-quoted:** one line; `''` is one `'`.
-    - After a quoted scalar, only spaces and a ` #` comment may follow.
+    - After a quoted scalar, only spaces or tabs may follow, then optionally a comment: a `#` after a space or a tab.
   - **Errors:** anything else fails `frontmatter`. That includes a flow map or list, a sequence, an anchor, an alias, a tag, a block scalar, a multi-line scalar, a key with no value and no children, and bad indentation. A's pipeline already turns `frontmatter` into a fallback.
   - **Default:** `config` is `{}` when there is no frontmatter.
 - [ ] **Done when:**
@@ -229,6 +230,11 @@ test('A4: a title wraps at columns; stack keeps the parts in order and validates
 })
 test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', () =>
   assert.deepEqual(validate(stack([part('a', 'x'), part('a', 'x')], 10)), { reason: 'label-dup' }))
+test("A4: stack keeps every expect field, A's frames included, so a heading over a framed drawing keeps its frame listed", () => {
+  const framed = { ...part('b', 'y'), expect: { ...part('b', 'y').expect, frames: ['S'] } } as Drawing
+  const d = stack([heading('Title', 'title', 'title', 10) as Drawing, framed], 10)
+  assert.deepEqual((d.expect as any).frames, ['S']); assert.deepEqual(d.expect.labels.map(l => l.owner), ['title', 'b'])
+})
 ```
 - [ ] **Run** `node --test tests/core/sheet_test.ts` → FAIL: `Cannot find module …/core/charts/sheet.ts`.
 - [ ] **Implement:**
@@ -237,14 +243,14 @@ test('A5.mutation-tests: one owner drawn in two stacked parts is a duplicate', (
     - `expect` is `{ labels: [{ owner, text: labelLines(text).join('\n') }], edges: [], edgeLabels: [] }`: the text as drawn, so a `<br/>` title validates. The `title` role is drawn bold (A's `toRows`).
   - **`stack`:**
     - Concatenate the parts' rows, padding each row with `null` to the widest part.
-    - Shift each part's conflicts by its row offset, and concatenate the parts' `labels`, `edges` and `edgeLabels`.
+    - Shift each part's conflicts by its row offset. `expect` concatenates, in part order, every array field any part's `expect` has, by name: A's `labels`, `edges` (with their `ends` and `endLabels`), `edgeLabels` and `frames`, and C's `bars`, `members`, `keys` and `keyable`. A field no part has stays absent, so nothing is dropped (cycle 2).
     - `columns` is the argument, so `fitLadder`'s check holds, and `validate` catches an overlong row.
 - [ ] **Done when:** `node --test tests/core/sheet_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add chart headings and part stacking"`
 
 ### T46: Legend
 **Group** G3 · **Deps** T45, T87 · **Covers** matrix common rule 7 (keys, wrapping, all or none), spec C rules 4 and 6, fix-cycle finding 1, A5.mutation-tests
-**Files:** create `core/charts/legend.ts`; modify `core/charts/sheet.ts` (`stack` carries the contract fields). Test: `tests/core/legend_test.ts`.
+**Files:** create `core/charts/legend.ts`. Test: `tests/core/legend_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
@@ -279,6 +285,7 @@ test('A5.mutation-tests: withLegend lists every key, so a key missing in place, 
     - The item is the keyed thing's own id, such as a note, `r3:label` or `t2.t`. No `:legend` owner exists.
   - **`legendRows`**, for each row:
     - Draw the key with `cv.key(r, 0, key, keyInk, item, true)`. The text starts at `start = width(key) + 1`.
+    - The first part is owned by `item`, so T87's binding holds: the key, one blank, then the item's text.
     - The parts' words pack greedily into `columns − start` cells, with one space between parts. Continuation rows indent to `start`.
     - A word wider than the field fails `word-too-wide`.
     - Each part's first piece has no join, so it starts its own instance; a continuation carries its wrap join.
@@ -288,7 +295,7 @@ test('A5.mutation-tests: withLegend lists every key, so a key missing in place, 
     - A Fail passes through.
     - With rows, it gives `stack([d, legendRows(rows, columns)], columns)`; otherwise it gives d.
     - It always appends `rows.map(r => ({ key: r.key, item: r.item, cls: r.cls }))` to `expect.keys`, and `keyable` to `expect.keyable`. So T87 checks the in-place keys the body drew.
-  - **`stack`** (T45) also concatenates the optional `bars`, `members`, `keys` and `keyable`. `edges[].ends` travel with their edge.
+  - **`stack`** (T45) already carries every `expect` field by name, so `withLegend` adds only `keys` and `keyable`.
 - [ ] **Done when:** `node --test tests/core/legend_test.ts tests/core/sheet_test.ts tests/core/validate-keys_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add field and point keys and keyed legend rows"`
 
@@ -333,9 +340,10 @@ const W = [60, 80, 120], X = (s: string, w: number) => explain(s, { columns: w, 
 const MATRIX = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8')
 for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
   const ids = readdirSync(`fixtures/${type}`).filter(f => f.endsWith('.mmd')).map(f => f.slice(0, -4)).sort()
-  test(`A5: ${type} coverage rows cite exactly its fixtures, and each ladder fixture carries its expect lines`, () => {
+  test(`A5: ${type} coverage rows cite exactly its fixtures, and each ladder fixture's expect lines cover exactly its LADDER widths`, () => {
     assert.deepEqual(coverageOf(MATRIX, type, ids), [])
-    for (const id of LADDER[type] ?? []) assert.ok(ids.includes(id) && expectLines(fx(id)).length > 0, id)
+    for (const [id, widths] of Object.entries(LADDER).filter(([k]) => k.startsWith(`${type}-`))) { assert.ok(ids.includes(id), id)
+      assert.deepEqual([...new Set(expectLines(fx(id)).map(e => e.cols))].sort((a, b) => a - b), widths, id) }
   })
   for (const id of ids) {
     const src = fx(id), lines = expectLines(src)
@@ -385,16 +393,11 @@ test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as
 - [ ] **Run** `node --test tests/golden/c-golden_test.ts` → FAIL: `Cannot find module …/tests/golden/c-lib.ts`.
 - [ ] **Implement `c-lib.ts`:**
   - **`GATED_DIRS`:** the 11 Tier 1 fixture folders, then each type in `TIER2_PASSED` (T88). Each is also its Coverage type name. A type is checked from the task that adds its fixture folder; each type's fixtures land in one task.
-  - **`LADDER: Readonly<Record<string, readonly string[]>>`** lists the fixtures that must carry `%% expect` lines:
-    - state-ok-18…22, class-ok-24…28, er-ok-18…22;
-    - gantt-ok-02, -04, -05, -12, -13, -15, -16 and gantt-reject-14;
-    - pie-ok-08, -09 and pie-reject-06;
-    - xychart-ok-09, -10 and xychart-reject-12;
-    - quadrant-ok-08, -09 and quadrant-reject-09;
-    - journey-ok-05, -06 and journey-reject-08;
-    - mindmap-ok-09…12 and mindmap-reject-06;
-    - gitGraph-ok-10 and gitGraph-reject-07;
-    - timeline-ok-10…12 and timeline-reject-07.
+  - **`LADDER: Readonly<Record<string, readonly number[]>>`** maps each ladder fixture to the exact sorted widths its `%% expect` lines must cover, so dropping any line fails (cycle 2). A boundary fixture covers fit −1, 0 and +1; a reject ladder covers its fallback width and the width it first fits at:
+    - [59, 60, 61]: state-ok-18, class-ok-24, er-ok-18, gantt-ok-12, pie-ok-08, journey-ok-05, xychart-ok-09, mindmap-ok-09, gitGraph-ok-10, timeline-ok-10; [58, 59, 60]: quadrant-ok-08;
+    - [60]: state-ok-19…22, class-ok-25…28, er-ok-19…22, gantt-ok-13, pie-ok-09, journey-ok-06, xychart-ok-10, quadrant-ok-09, mindmap-ok-10…12, timeline-ok-11, -12;
+    - [60, 80, 120]: gantt-ok-05, -15; [42]: gantt-ok-16; [18]: quadrant-reject-09;
+    - [60, 120]: gantt-reject-14, pie-reject-06, journey-reject-08, xychart-reject-12; [60, 80]: mindmap-reject-06, gitGraph-reject-07, timeline-reject-07.
   - **`expectLines`** reads `^%% expect (\d+) (\w+)(?: widest (\d+))?$`, omitting `widest` when it is absent.
   - **`fx(id)`** reads `fixtures/<id less -(ok|reject)-NN>/<id>.mmd`.
   - **`borderRows(d)`:** for each owner named in any text or `cont` cell's owners, every row holding that owner's `cap` or `fill` cell must hold one of its text cells. Owners with no text, such as marks, bars, connectors and point keys, pass; a `key` cell is neither cap nor fill.

@@ -188,7 +188,7 @@ export function tickStep(m: number, w: number, l: number): number | null // the 
 // core/graph/model.ts and sizes.ts (T49): optional fields only, so A's graphs and goldens are unchanged
 export type Mark = 'start' | 'end' | 'choice' | 'bar'                    // ● ◉ ◇, and ━ (┃ across): a glyph node with no label
 export type Col = { text: string; role: Role; id: string; width: number; join?: Piece['join']; key?: string }  // one aligned member column; key: drawn in its place
-export type NodeRow = { text: string; role: Role; align: 'center' | 'left'; id?: string
+export type NodeRow = { text: string; role: Role; align: 'center' | 'left'; id?: string; key?: true
   fixed?: boolean; indent?: number; join?: Piece['join']; cols?: readonly Col[] }  // fixed: built by members.ts, never re-wrapped
 export type Note = { id: string; text: string; side: 'left' | 'right'; key?: string }  // a state note; its text keeps its <br> breaks
 export type GNode = { id: string; shape: Shape; role: Role; rows: NodeRow[]; order: number; mark?: Mark; span?: number; note?: Note }
@@ -198,7 +198,7 @@ export type GEdge = { id: string; from: string; to: string; style: 'solid' | 'do
 export type GCluster = { id: string; title: string | null; dir: Dir | null; nodes: string[]; clusters: string[]; frameless?: boolean }
 export function nodeSize(n: GNode, wrapAt: number | null, across?: boolean): Size | Fail  // mark 1×1; bar 1×span (span×1 across)
 // core/graph/notes.ts (T51)
-export function withNotes(g: Graph): Graph         // LR/RL: each note becomes a note node and a dotted, headless edge; TB/BT notes: layoutGraph (Placed.notes)
+export function withNotes(g: Graph): Graph         // LR/RL: each note becomes a note node (a keyed note: one key row) and a dotted, headless edge; TB/BT notes: layoutGraph (Placed.notes)
 // core/graph/members.ts (T52)
 export type Member = { text: string; method: boolean }                   // display text: '+name(p) : int', 'id$'
 export type Attr = { type: string; name: string; keys: string; comment: string }
@@ -214,7 +214,7 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
 // parseQuadrant parseMindmap parseGitGraph parseTimeline. Modules: state classDiagram er pie journey gantt xychart quadrant mindmap gitGraph timeline.
 // core/validate.ts (T86, T87): optional Expect fields; A's drawings list none, so they check as before
 //   Expect.edges[].endLabels?: { node; owner }[] (T86) extends A's per-end marks, ends: { node; glyph }[]; frames: A's Expect.frames
-//   bars?: { owner; eighths; axis: 'h' | 'v' }[]   members?: { id; parent }[]   keys?: { key; item; cls }[]   keyable?: { item; cls }[]
+//   bars?: { owner; eighths; axis: 'h' | 'v'; lanes? }[]   members?: { id; parent }[]   keys?: { key; item; cls }[]   keyable?: { item; cls }[]
 // core/canvas.ts (T87): Kind gains 'key', Cell gains legend?: true, and key(r, c, s, role, owner: string | readonly string[], legend: boolean): number
 // scripts/check-tier2.ts (T88)
 export function tier2Files(t: string): string[]                       // each ok fixture, then its golden
@@ -222,7 +222,7 @@ export function tier2Problems(t: string, files: readonly string[], records: read
 export function repoRecords(): ReviewRecord[]
 // tests/golden/c-lib.ts (T48): test-only helpers
 export const GATED_DIRS: readonly string[]  // the 11 Tier 1 fixture folders, then each TIER2_PASSED type (T88)
-export const LADDER: Readonly<Record<string, readonly string[]>>  // the fixtures that must carry %% expect lines (T48)
+export const LADDER: Readonly<Record<string, readonly number[]>>  // each ladder fixture's exact expect widths (T48)
 export type ExpectLine = { cols: number; step: Step | 'fallback'; widest?: number }
 export function expectLines(src: string): ExpectLine[]                  // each '%% expect <cols> <step|fallback> [widest <n>]'
 export function fx(id: string): string                                  // a fixture's source, by id
@@ -338,7 +338,7 @@ export function vrun(d: Drawing, col: number, base: number): number     // eight
 | T48 | C golden harness | G2 | T20, T40, T42 | C1 |
 | T49 | Graph model and sizes | G1 | — | C2 |
 | T50 | Route and draw: marks, columns, ends, end labels | G2 | T17, T18, T49, T86 | C2 |
-| T51 | Side notes, frameless regions, dividers | G3 | T50 | C2 |
+| T51 | Side notes, frameless regions, dividers; keyed text | G3 | T50, T87 | C2 |
 | T52 | Member rows | G2 | T49 | C2 |
 | T53 | Graph ladder; flowchart moves onto it | G4 | T19, T46, T51 | C2 |
 | T54 | State parse | G2 | T49 | C3 |
@@ -380,7 +380,7 @@ export function vrun(d: Drawing, col: number, base: number): number     // eight
 ```mermaid
 flowchart LR
   T12 & T19 --> T40 --> T88
-  T86 --> T87 --> T46
+  T86 --> T87 --> T46 & T51
   T20 & T40 & T42 --> T48
   T42 & T43 --> T44
   T45 --> T46

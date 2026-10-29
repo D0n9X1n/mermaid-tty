@@ -26,7 +26,7 @@ test('A3: fixed member rows keep their width under wrapAt; the header still wrap
 ```
 - [ ] **Run** `node --test tests/core/graph-c-model_test.ts` → FAIL: `Expected values to be strictly deep-equal` (an empty mark sizes as `{ rows: 0, cols: 4 }`).
 - [ ] **Implement:**
-  - **`model.ts`:** add `Mark`, `Col`, `Note`, the `NodeRow` fields `fixed`, `indent`, `join` and `cols`, the `GNode` fields `mark`, `span` and `note`, the `End` values `triangle`, `diamond` and `odiamond`, the `GEdge` fields `tailLabel`, `headLabel`, `endRole` and `labelKey`, `Note.key`, `Col.key`, and `GCluster.frameless`, exactly as in index §4. All are optional.
+  - **`model.ts`:** add `Mark`, `Col`, `Note`, the `NodeRow` fields `fixed`, `indent`, `join`, `cols` and `key` (a key row, T51), the `GNode` fields `mark`, `span` and `note`, the `End` values `triangle`, `diamond` and `odiamond`, the `GEdge` fields `tailLabel`, `headLabel`, `endRole` and `labelKey`, `Note.key`, `Col.key`, and `GCluster.frameless`, exactly as in index §4. All are optional.
   - **`nodeSize(n, wrapAt, across = false)`:**
     - A mark `start`, `end` or `choice` is `{ rows: 1, cols: 1 }`. A `bar` is `{ rows: 1, cols: span }`, or `{ rows: span, cols: 1 }` when `across`, so layered's `ext()` always gives it `cross = span`.
     - A `fixed` row, or a row with `cols`, is one piece and never wraps. Its width is `indent + width(text)`, or `indent + Σ col.width + (cols − 1)`.
@@ -36,7 +36,7 @@ test('A3: fixed member rows keep their width under wrapAt; the header still wrap
 - [ ] **Commit:** `git commit -m "Extend the graph model with marks, member columns, notes and class ends"`
 
 ### T50: Route and draw: marks, member columns, class ends, end labels
-**Group** G2 · **Deps** T17, T18, T49, T86 · **Covers** fix-cycle findings 1, 2, 5 and 8; state marks (`●`, `◉`, `◇`, the fork bar), class ends (matrix class text design), ER and class cardinality beside its end, ER column alignment, rule 12 glyphs
+**Group** G2 · **Deps** T17, T18, T49, T86 · **Covers** fix-cycle findings 2, 5 and 8; cycle-2 B1, B2, B6; state marks (`●`, `◉`, `◇`, the fork bar), class ends (matrix class text design), ER and class cardinality beside its end, ER column alignment, rule 12 glyphs
 **Files:** modify `core/graph/route.ts`, `core/graph/draw.ts`, `core/graph/chains.ts`, `core/graph/layered.ts`. Test: `tests/core/graph-c-draw_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -54,22 +54,26 @@ test('A3: marks draw one glyph and no label; class ends and cardinality draw at 
   assert.deepEqual([d.expect.edges[1]!.ends, d.expect.edges[2]!.ends], [[{ node: 'A', glyph: '△' }], [{ node: 'A', glyph: '◆' }]])   // A's per-end marks
   assert.deepEqual(d.expect.edges[2]!.endLabels, [{ node: 'C', owner: 'e2:head' }])
 })
-test('A3: member columns align; a column cell is owned by its own id, then the node', () => {
-  const gr = g('TB', ['C>D']), cols = (k: number, type: string, name: string) => [{ text: type, role: 'label', id: `C.a${k}.type`, width: 6 },
-    { text: name, role: 'label', id: `C.a${k}.name`, width: 5 }] as NodeRow['cols']
-  gr.nodes[0]!.rows = [{ text: 'CAR', role: 'node', align: 'center' }, { text: 'string id', role: 'label', align: 'left', fixed: true, cols: cols(0, 'string', 'id') },
-    { text: 'int seats', role: 'label', align: 'left', fixed: true, cols: cols(1, 'int', 'seats') }]
+test('A3: member columns align; a column cell is owned by its own id, then the node; every drawn column and fixed row is listed', () => {
+  const gr = g('TB', ['C>D']), cols = (k: number, type: string, name: string, note: string) => [{ text: type, role: 'label', id: `C.a${k}.type`, width: 6 },
+    { text: name, role: 'label', id: `C.a${k}.name`, width: 5 }, { text: note, role: 'note', id: `C.a${k}.note`, width: 2 }] as NodeRow['cols']
+  gr.nodes[0]!.rows = [{ text: 'CAR', role: 'node', align: 'center' }, { text: 'string id pk', role: 'label', align: 'left', fixed: true, cols: cols(0, 'string', 'id', 'pk') },
+    { text: 'int seats', role: 'label', align: 'left', fixed: true, cols: cols(1, 'int', 'seats', '') }]
+  gr.nodes[1]!.rows = [{ text: 'D', role: 'node', align: 'center' }, ...['+run()', '+eat()'].map((text, k) => ({ text, role: 'label', align: 'left', fixed: true, id: `D.m${k}` }) as NodeRow)]
   const d = D(gr), t = text(d); assert.equal(validate(d), null)
   const r1 = t.find(l => l.includes('string id'))!, r2 = t.find(l => l.includes('int    seats'))!; assert.equal(r1.indexOf(' id'), r2.indexOf(' seats'))
   assert.ok(d.cells.flat().some(c => c?.kind === 'text' && c.ch === 's' && c.owners[0] === 'C.a1.name' && c.owners.includes('C')))
-  assert.deepEqual(d.expect.members, ['a0.type', 'a0.name', 'a1.type', 'a1.name'].map(k => ({ id: `C.${k}`, parent: 'C' })))
+  assert.deepEqual(d.expect.members, [...['a0.type', 'a0.name', 'a0.note', 'a1.type', 'a1.name'].map(k => ({ id: `C.${k}`, parent: 'C' })),
+    { id: 'D.m0', parent: 'D' }, { id: 'D.m1', parent: 'D' }])   // a1's blank note draws no cell, so it is not listed; every fixed row is
 })
 test('A4: an end label gets room beside its end, and a reversed edge lists its true ends', () => {
   const one = g('TB', ['A>B']); Object.assign(one.edges[0]!, { head: 'none', headLabel: '0..*' })
   const d = D(one); assert.equal(d.conflicts.length, 0); assert.equal(validate(d), null); assert.match(text(d).join('\n'), /0\.\.\*/)
-  const cyc = g('TB', ['A>B', 'B>A']); Object.assign(cyc.edges[1]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
-  const c = D(cyc); assert.equal(validate(c), null)
-  assert.deepEqual([c.expect.edges[1]!.ends, c.expect.edges[1]!.endLabels], [[{ node: 'B', glyph: '◆' }], [{ node: 'A', owner: 'e1:head' }]])
+  for (const dir of ['TB', 'BT', 'LR', 'RL'] as const) {   // a back edge can leave A on row 0 or column 0; its label must still fit
+    const cyc = g(dir, ['A>B', 'B>A']); Object.assign(cyc.edges[1]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
+    const c = D(cyc); assert.equal(c.conflicts.length, 0, dir); assert.equal(validate(c), null, dir)
+    assert.deepEqual([c.expect.edges[1]!.ends, c.expect.edges[1]!.endLabels], [[{ node: 'B', glyph: '◆' }], [{ node: 'A', owner: 'e1:head' }]], dir)
+  }
 })
 ```
 - [ ] **Run** `node --test tests/core/graph-c-draw_test.ts` → FAIL: `Expected values to be strictly deep-equal` with `{ reason: 'edge-disconnected' }`: an empty mark draws nothing yet, so no route touches it.
@@ -93,15 +97,12 @@ test('A4: an end label gets room beside its end, and a reversed edge lists its t
     - `tailLabel` sits beside the route's first cell, and `headLabel` beside the cell before its end: right of a vertical run, above a horizontal one.
     - Each is in `endRole ?? 'label'`, owned by `${edge}:tail` or `${edge}:head`, and listed in both `expect.labels` and `expect.edgeLabels`, so the label adjacency rule holds.
     - Two labels that need one cell are a canvas Conflict, so the ladder moves on, as the matrix requires.
-    - **Room (finding 8):** `chains.ts` gives an edge with an end label `minlen ≥ 2`, so its two ends never share a gap row. `layered.ts` reserves the widest end label + 1 cells:
-      - in TB and BT, after each node with an end-labelled port, and at the canvas's right side;
-      - in LR and RL, in that rank gap, plus one top row.
-      So a label beside the last node is never out of bounds.
+    - **Room (finding 8; cycle 2: every direction):** `chains.ts` gives an edge with an end label `minlen ≥ 2`, so its two ends never share a gap row. `layered.ts` widens the gap beside an end-labelled port by the widest end label + 1 cells, so a label rarely meets a neighbour.
+    - Before it creates the canvas, `draw.ts` computes each end label's box beside its terminal from the routes. The canvas grows on any side a box overruns; a top or left overrun shifts the whole graph down or right, below the title row. So no label is out of bounds in any direction, even beside a node a back edge leaves on row 0. A box that meets another cell is a Conflict, and the ladder moves on.
     - **Reversed edges:** `chains.ts` swaps `tailLabel` and `headLabel` with `tail` and `head`. `draw.ts` names each label by its true end: on a `reversed` edge, the drawn tail's label is `${edge}:head`.
   - **`expect` contracts:**
     - Each end mark is listed on A's per-end-mark contract, `ends: { node, glyph }[]`, at its true node, as A's draw lists arrows; `end-misplaced` checks it. Each end label is listed in T86's `endLabels` as `{ node, owner }`, its owner named by the true end.
-    - Each `cols` column id, and each `fixed` row's `id`, is listed in `expect.members` with `parent: node.id`.
-  - **Keyed text (T87):** an edge with `labelKey` draws `cv.key` where its label goes, owned by `[${edge}:label, edge]`. A note with `key` draws it in the note's place, and a column with `key` in the column's place, each owned like the text it replaces. That text is not listed in `expect.labels`, since its legend row lists it. `chains.ts` sizes a keyed label by its key.
+    - Each `cols` column, and each `fixed` row with an `id`, that draws a cell is listed in `expect.members` as `{ id, parent: node.id }`, in drawing order: node by node, row by row, column by column. A blank value draws no cell and is not listed (cycle 2). `members` is set whenever the graph draws a column or a fixed row, so T86's `member-unlisted` catches an omitted one (B6).
   - **`expect.edges` heads:** each end's glyph, tail first.
 - [ ] **Done when:**
   - `node --test tests/core/graph-c-draw_test.ts tests/core/draw_test.ts tests/core/route_test.ts tests/core/validate-c_test.ts` passes;
@@ -109,8 +110,8 @@ test('A4: an end label gets room beside its end, and a reversed edge lists its t
 - [ ] **Commit:** `git commit -m "Draw marks, member columns, class ends and end labels"`
 
 ### T51: Side notes, frameless regions, dividers
-**Group** G3 · **Deps** T50 · **Covers** fix-cycle finding 9; state notes (matrix: dim, borderless, a `┄` connector), state regions (stacked, split by `┄` rows, `┆` in LR/RL), class `note for`, index §5.10
-**Files:** create `core/graph/notes.ts`; modify `core/graph/layered.ts`, `core/graph/draw.ts`. Test: `tests/core/graph-notes_test.ts`.
+**Group** G3 · **Deps** T50, T87 · **Covers** fix-cycle finding 9; cycle-2 B4 and B5 (keyed text); state notes (matrix: dim, borderless, a `┄` connector), state regions (stacked, split by `┄` rows, `┆` in LR/RL), class `note for`, index §5.10
+**Files:** create `core/graph/notes.ts`; modify `core/graph/layered.ts`, `core/graph/draw.ts`, `core/graph/chains.ts`, `core/graph/route.ts`. Test: `tests/core/graph-notes_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
@@ -133,6 +134,15 @@ test('A3: a note in an LR composite under a TB root becomes a note node inside i
   const w = withNotes(gr), link = w.edges.at(-1)!; assert.deepEqual(w.clusters[0]!.nodes, ['a', 'b', 'a:note']); assert.deepEqual([link.from, link.to], ['a', 'a:note'])
   const d = D(gr), t = text(d), col = (s: string) => t.find(l => l.includes(s))!.indexOf(s)
   assert.equal(validate(d), null); assert.ok(col('[ b ]') > col('[ a ]') + 4, t.join('\n'))   // drawn TB, b would sit under a
+})
+test('A5.mutation-tests: a keyed edge label routes through its one-cell key box, not its text footprint', () => {
+  const gr = g('TB', ['A>B|one<br>two']); gr.edges[0]!.labelKey = 'a'
+  assert.deepEqual(validate(D(gr)), { reason: 'key-stray' })   // connected; the key is stray only because no legend lists it here
+})
+test("A3: a note withNotes turns into a node keeps its key as the node's one key row", () => {
+  const lr = g('LR', ['A>B']); lr.nodes[0]!.note = { id: 'A:note', text: 'memo', side: 'left', key: 'a' }
+  assert.deepEqual((withNotes(lr) as any).nodes[2].rows, [{ text: 'a', role: 'note', align: 'left', key: true }])
+  const d = D(lr); assert.ok(d.cells.flat().some(c => c?.kind === 'key' && c.ch === 'a' && c.owners[0] === 'A:note')); assert.deepEqual(validate(d), { reason: 'key-stray' })
 })
 test('A3: frameless regions stack inside one frame, split by a dashed row; they draw no frame of their own', () => {
   const gr = g('TB', ['a>b', 'c>d'])
@@ -166,7 +176,11 @@ test('A3: frameless regions stack inside one frame, split by a dashed row; they 
     - A frameless cluster draws no frame and is not listed in A's `expect.frames`; its parent is. A divider stays inside the parent's border, so `frame-broken` holds.
     - Between two consecutive frameless children of one cluster, draw a divider of `cap` cells in the `frame` role, owned by `${parent}:div<k>`. It is `┄` across the parent's inner width on the gap's middle row (TB/BT), or `┆` down the gap's middle column (LR/RL).
     - Caps are not lines, so the tangle and edge checks ignore dividers.
-- [ ] **Done when:** `node --test tests/core/graph-notes_test.ts tests/core/graph-c-draw_test.ts tests/core/layered_test.ts` passes.
+  - **Keyed text (moved from T50; cycle 2):**
+    - An edge with `labelKey` draws `cv.key` where its label goes, owned by `[${edge}:label, edge]`. `chains.ts` sizes its label item by the key, and A's `labelInk()` (`route.ts`) takes the routing footprint and waypoint from that key box, never from the replaced text, so the route meets the key (B5).
+    - A note with `key` draws it in the note's place, and a column with `key` in the column's place, each owned like the text it replaces. That text is not in `expect.labels`, since its legend row lists it.
+    - A keyed note that `withNotes` turns into a node keeps its key: the node gets one `{ text: key, role: 'note', align: 'left', key: true }` row, which `draw.ts` draws with `cv.key`, owned by the note id. A class note node (T58) is keyed the same way (B4).
+- [ ] **Done when:** `node --test tests/core/graph-notes_test.ts tests/core/graph-c-draw_test.ts tests/core/layered_test.ts tests/core/route_test.ts` passes, and `node scripts/check.ts A4` passes with A's goldens unchanged, since `route.ts` changed.
 - [ ] **Commit:** `git commit -m "Place side notes and draw frameless regions with dividers"`
 
 ### T52: Member rows
