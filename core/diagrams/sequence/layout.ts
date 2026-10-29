@@ -28,10 +28,11 @@ type Label = Expect['labels'][number]
 type Edge = Expect['edges'][number]
 type EdgeLabel = Expect['edgeLabels'][number]
 type Pill = ReturnType<typeof pill>
-// What both passes read: the pills, each participant's index, each message, note and frame's number among its kind, and
-// each message and note's label text and wrapped pieces.
+// What both passes read: the pills, each participant's index, each message, note and frame's number among its kind,
+// each message and note's label text and wrapped pieces, and the columns from each lifeline to the right border of the
+// box it ends (rb) and to the left border of the box it starts (lb), 0 for none.
 type Ctx = { seq: Seq; pad: number; pills: Pill[]; at: ReadonlyMap<string, number>; no: ReadonlyMap<Item, number>
-  text: ReadonlyMap<Item, string>; pcs: ReadonlyMap<Item, Piece[]> }
+  text: ReadonlyMap<Item, string>; pcs: ReadonlyMap<Item, Piece[]>; rb: number[]; lb: number[] }
 
 // A label's pieces: each <br> line wrapped at wrapAt (null: unwrapped), each later line's first piece joined by '\n'.
 // null if a word is wider than wrapAt.
@@ -63,21 +64,43 @@ function drawPill(cv: Canvas, row: number, c: number, p: Participant): void {
   cv.fill(row, c + width(l) + 1 + n, 1, 'node', p.id); cv.cap(row, c + width(l) + 2 + n, r, 'node', p.id)
 }
 
-// Numbers each message, note and frame among its kind in source order, a frame before its contents, and wraps each
-// message's and note's label, a message's after its autonumber. A Fail if a word is wider than wrapAt.
+// Numbers each message, note and frame among its kind in source order, a frame before its contents, wraps each
+// message's and note's label, a message's after its autonumber, and finds each box's borders. A Fail for a box with no
+// participants, an autonumber, start or step that is not a safe integer, or a word wider than wrapAt.
 function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
+  if (seq.boxes.some(b => b.ids.length === 0)) return fail('empty-box')
   const no = new Map<Item, number>(), text = new Map<Item, string>(), pcs = new Map<Item, Piece[]>()
   const count = { msg: 0, note: 0, frame: 0 }, num = seq.autonumber
-  const walk = (items: readonly Item[]): boolean => items.every(it => {
-    if (it.kind === 'frame') { no.set(it, count.frame++); return it.sections.every(s => walk(s.items)) }
-    if (it.kind !== 'msg' && it.kind !== 'note') return true
-    const i = count[it.kind]++, t = it.kind === 'msg' && num ? `${num.start + i * num.step}. ${it.text}` : it.text
-    const ps = pieces(t, wrapAt)
-    no.set(it, i); text.set(it, t); if (ps) pcs.set(it, ps)
-    return ps !== null
-  })
-  if (!walk(seq.items)) return fail('too-wide')
-  return { seq, pad, pills: seq.participants.map(pill), at: new Map(seq.participants.map((p, i) => [p.id, i])), no, text, pcs }
+  if (num && !(Number.isSafeInteger(num.start) && Number.isSafeInteger(num.step))) return fail('autonumber')
+  // False if a number is not a safe integer; wide, if a label has a word wider than wrapAt. Every number is checked
+  // whatever the wrap, so each step falls back for the same reason.
+  let wide = false
+  const walk = (items: readonly Item[]): boolean => {
+    for (const it of items) {
+      if (it.kind === 'frame') {
+        no.set(it, count.frame++)
+        if (!it.sections.every(s => walk(s.items))) return false
+        continue
+      }
+      if (it.kind !== 'msg' && it.kind !== 'note') continue
+      const i = count[it.kind]++, n = it.kind === 'msg' && num ? num.start + i * num.step : null
+      if (n !== null && !Number.isSafeInteger(n)) return false
+      const t = n === null ? it.text : `${n}. ${it.text}`, ps = pieces(t, wrapAt)
+      no.set(it, i); text.set(it, t); if (ps) pcs.set(it, ps); else wide = true
+    }
+    return true
+  }
+  if (!walk(seq.items)) return fail('autonumber')
+  if (wide) return fail('too-wide')
+  const pills = seq.participants.map(pill), at = new Map(seq.participants.map((p, i) => [p.id, i]))
+  // A box's borders stand 2 columns beyond its pills; a one-member box's right one beyond its title too, as draw puts it.
+  const rb = pills.map(() => 0), lb = pills.map(() => 0)
+  for (const b of seq.boxes) {
+    const a = Math.min(...b.ids.map(id => at.get(id)!)), z = Math.max(...b.ids.map(id => at.get(id)!))
+    lb[a] = pills[a]!.left + 2
+    rb[z] = pills[z]!.right + 2 + (a === z ? Math.max(0, width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right) : 0)
+  }
+  return { seq, pad, pills, at, no, text, pcs, rb, lb }
 }
 
 // A run of lifelines lo..hi, with l and r frame borders stacked at its ends.
@@ -94,12 +117,28 @@ const titles = (f: Frame): string[] => [f.type === 'rect' ? '' : f.sections[0]!.
 // A box's first and last member lifelines, or null if it has none.
 const members = (c: Ctx, ids: readonly string[]): [number, number] | null =>
   ids.length ? [Math.min(...ids.map(id => c.at.get(id)!)), Math.max(...ids.map(id => c.at.get(id)!))] : null
+// A bound of a message label's stretch: a lifeline (tie) and a column offset from it; cut marks a box border.
+type Bound = { tie: number; off: number; cut: boolean }
+// Where a message from lifeline f to t centers its label: its run cut at each box border it crosses, its end at a
+// created target cap columns short of the lifeline; of those pieces, the first from the sender that a gap can widen.
+function stretch(c: Ctx, f: number, t: number, cap: number): [Bound, Bound] {
+  const lo = Math.min(f, t), hi = Math.max(f, t), bs: Bound[] = [{ tie: lo, off: t < f ? cap : 0, cut: false }]
+  for (let g = lo; g < hi; g++) {
+    if (c.rb[g]) bs.push({ tie: g, off: c.rb[g]!, cut: true })
+    if (c.lb[g + 1]) bs.push({ tie: g + 1, off: -c.lb[g + 1]!, cut: true })
+  }
+  bs.push({ tie: hi, off: t > f ? -cap : 0, cut: false })
+  const ks = bs.slice(1).flatMap((b, k) => (b.tie > bs[k]!.tie ? [k] : [])), k = t > f ? ks[0]! : ks.at(-1)!
+  return [bs[k]!, bs[k + 1]!]
+}
 
 // Each lifeline's column. The gap between neighbours is the largest of their pill halves + 2 (+ 2 per box border between
 // them), the widest label of a message spanning only that gap + pad, and 2 × the frame borders between them + 1; a
 // message spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 + its
-// width + pad / 2 right of its lifeline; a note left or right of a lifeline needs its box + 3 on that side; a message to a
-// created participant needs the half of its pill facing the sender too; a frame or box title fits between its borders.
+// width + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right of a
+// lifeline needs its box + 3 on that side; a message to a created participant needs the half of its pill facing the
+// sender too; a message crossing a box border needs its label's stretch to hold it + 2 blanks; a frame or box title fits
+// between its borders.
 function measure(c: Ctx): number[] {
   const { pills, at, pad } = c, last = pills.length - 1
   const need = pills.slice(1).map((p, i) => pills[i]!.right + p.left + 2)
@@ -127,9 +166,13 @@ function measure(c: Ctx): number[] {
     }
     if (it.kind !== 'msg') return null
     const f = at.get(it.from)!, t = at.get(it.to)!, w = widest(c.pcs.get(it)!)
-    const cap = born.delete(it.to) && f !== t ? (t > f ? pills[t]!.left : pills[t]!.right) : 0
-    if (f !== t) spread(Math.min(f, t), Math.max(f, t), w + pad + cap)
-    else if (f < last) spread(f, f + 1, w + 2 + pad / 2)
+    // A created target's pill: the half facing the sender, or a self-message's right half, which its loop starts beyond.
+    const cap = born.delete(it.to) ? (t > f ? pills[t]!.left : pills[t]!.right) : 0
+    if (f === t) { if (f < last) spread(f, f + 1, w + 2 + cap + pad / 2) } else {
+      // The stretch holds the label + pad - 1 blanks, and at least 2 where a box border bounds it, one each side.
+      const [p, q] = stretch(c, f, t, cap), n = w + Math.max(pad - 1, p.cut || q.cut ? 2 : 0)
+      spread(p.tie, q.tie, n + 1 + p.off - q.off)
+    }
     return { lo: Math.min(f, t), hi: Math.max(f, t), l: 0, r: 0 }
   }
   // A frame's borders stack two columns beyond its contents' (every lifeline's, if it has none).
@@ -175,25 +218,29 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     fore.push((cv, dx) => drawPill(cv, r, col + dx, p)); touch(col, col + c.pills[i]!.w - 1)
   }
   // A message: its label rows, then its line row, or a self-message's ─┐ and ◄┘ rows. A created target's pill sits on
-  // the line row, and the line stops at its cap.
+  // the line row: a line stops at its cap, and a self-message's loop starts beyond its right cap.
   const message = (m: Msg) => {
     const id = `m${c.no.get(m)!}`, ps = c.pcs.get(m)!, top = row, line = row + ps.length, weight = m.line === 'dotted' ? 'dotted' : 'light'
-    const t = c.at.get(m.to)!, xf = xs[c.at.get(m.from)!]!, xt = xs[t]!, right = xt > xf, make = pending.delete(m.to) && xf !== xt
+    const f = c.at.get(m.from)!, t = c.at.get(m.to)!, xf = xs[f]!, xt = xs[t]!, right = xt > xf, make = pending.delete(m.to)
     const head = HEAD[m.head]?.[right ? 0 : 1] ?? null, tail = m.tail === 'arrow' ? (xt < xf ? '►' : '◄') : null
     const seg = (r: number, col: number, dirs: number, end: string | null): Op =>
       end ? (cv, dx) => cv.arrow(r, col + dx, end, id) : (cv, dx) => cv.line(r, col + dx, dirs, weight, 'edge', id)
+    const cap = make ? (right ? c.pills[t]!.left : c.pills[t]!.right) : 0
     if (xf !== xt) {
-      const cap = make ? (right ? c.pills[t]!.left : c.pills[t]!.right) : 0
       const a = right ? xf + 1 : xt + cap + 1, b = right ? xt - cap - 1 : xf - 1
       for (let col = a; col <= b; col++) fore.push(seg(line, col, 10, col === (right ? b : a) ? head : col === (right ? a : b) ? tail : null))
       touch(a - 1, b + 1)
-      stack(top, ps, w => a + Math.floor((b - a + 1 - w) / 2), 'label', `${id}:label`)
-      if (make) { born.set(m.to, line); pillAt(t, line) }
+      // The label centers in its stretch: between the lifelines, or between the box borders and lifelines bounding it.
+      const [p, q] = stretch(c, f, t, cap), from = xs[p.tie]! + p.off, to = xs[q.tie]! + q.off
+      stack(top, ps, w => from + 1 + Math.floor((to - from - 1 - w) / 2), 'label', `${id}:label`)
     } else {
-      fore.push(seg(line, xf + 1, 10, tail), seg(line, xf + 2, 12, null), seg(line + 1, xf + 2, 9, null), seg(line + 1, xf + 1, 10, head))
-      touch(xf, xf + 2)
-      stack(top, ps, () => xf + 2, 'label', `${id}:label`)
+      // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline.
+      fore.push(seg(line, xf + cap + 1, 10, tail), seg(line, xf + cap + 2, 12, null), seg(line + 1, xf + cap + 2, 9, null))
+      for (let col = xf + 1; col <= xf + cap + 1; col++) fore.push(seg(line + 1, col, 10, col === xf + 1 ? head : null))
+      touch(xf, xf + cap + 2)
+      stack(top, ps, () => xf + cap + 2, 'label', `${id}:label`)
     }
+    if (make) { born.set(m.to, line); pillAt(t, line) }
     const end = line + (xf === xt ? 1 : 0)
     for (const d of doomed) died.set(d, end)
     doomed.clear(); row = end + 1

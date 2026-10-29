@@ -2,6 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { sequence } from '../../core/diagrams/sequence/layout.ts'; import { parseSequence } from '../../core/diagrams/sequence/parse.ts'
 import { readSource, type Source } from '../../core/source.ts'; import { validate } from '../../core/validate.ts'
 import { lookup } from '../../core/registry.ts'; import { text } from './graph-fixture.ts'; import { fitLadder } from '../../core/fit.ts'
+import { explain } from '../../core/render.ts'; import { readdirSync, readFileSync } from 'node:fs'
 const L = (t: string) => sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as any
 test('A2: base design: caps, lifelines, solid and dotted, self-message, activation, note', () => {
   const d = L('actor U as User\nparticipant S as Server\nU->>+S: req\nS-->>-U: res\nS->>S: self\nNote over U,S: both')
@@ -107,4 +108,52 @@ test('A2: a message line and its label replace the lifelines they cross', () => 
   const d = L('participant A\nparticipant B\nparticipant C\nA->>C: far')
   assert.equal(validate(d), null)
   assert.deepEqual(text(d), ['[ A ] [ B ] [ C ]', '  │    far    │', '  │──────────►│'])
+})
+const X = (t: string, w = 60) => explain(`sequenceDiagram\n${t}`, { columns: w, theme: 'mono' }) as any
+test('A2: a participant a self-message creates has its pill on that message\'s row and its lifeline below it', () => {
+  const r = X('A->>A: before\ncreate participant B\nB->>B: init')
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(text(r.drawing), ['[ A ]', '  │ before', '  │─┐', '  │◄┘', '  │             init', '  │       [ B ]─┐', '  │         │◄──┘'])
+})
+test('A2: create falls back unless the next message is sent to the created participant', () => {
+  for (const t of ['create participant B\nA->>C: x\nA->>B: y', 'create participant B\nB->>A: x']) assert.deepEqual(X(t), { reason: 'create' }, t)
+})
+test('A2: autonumber falls back when a number, its start or its step is not a safe integer', () => {
+  assert.equal(X('autonumber 9007199254740989\nA->>B: a\nA->>B: b\nA->>B: c').step, 'natural')
+  for (const t of ['autonumber 9007199254740991\nA->>B: a\nA->>B: b\nA->>B: c', 'autonumber 1 9007199254740992\nA->>B: a', 'autonumber 9007199254740993\nA->>B: a'])
+    assert.deepEqual(X(t), { reason: 'autonumber' }, t)
+})
+test('A2: a box with no participants falls back', () => assert.deepEqual(X('box Lost\nend\nA->>B: hi'), { reason: 'empty-box' }))
+test('A2: a leftward cross, dotted or solid, puts its x beside the recipient on the left', () => {
+  const d = L('participant A\nparticipant B\nB--xA: d\nB-xA: s')
+  assert.equal(validate(d), null)
+  assert.deepEqual(text(d).slice(1), ['  │  d  │', '  │x┄┄┄┄│', '  │  s  │', '  │x────│'])
+})
+test('A2: a message label crossing a box border sits between two borders, never on one', () => {
+  const d = L('box G\nparticipant A\nend\nA->>B: a longer label')
+  assert.equal(validate(d), null)
+  assert.deepEqual(text(d), ['┌─G─────┐', '│ [ A ] │               [ B ]', '│   │   │ a longer label  │', '│   │────────────────────►│', '└───────┘'])
+})
+// Each label cell (text, cont, fill or cap) on another owner's frame border, or beside one of its sides.
+function touching(d: any): string[] {
+  const rects = new Map<string, number[]>(), out: string[] = []
+  d.cells.forEach((row: any[], y: number) => row.forEach((c: any, x: number) => {
+    if (c?.kind !== 'frame') return
+    const b = rects.get(c.owners[0]) ?? [y, y, x, x]
+    rects.set(c.owners[0], [Math.min(b[0]!, y), Math.max(b[1]!, y), Math.min(b[2]!, x), Math.max(b[3]!, x)])
+  }))
+  d.cells.forEach((row: any[], y: number) => row.forEach((c: any, x: number) => {
+    if (!['text', 'cont', 'fill', 'cap'].includes(c?.kind)) return
+    for (const [o, [t, b, l, r]] of rects) {
+      const on = y === t || y === b ? x >= l! && x <= r! : y > t! && y < b! && [l!, r!].some(k => Math.abs(x - k) <= 1)
+      if (on && o !== c.owners[0]) out.push(`${c.owners[0]} r${y} c${x} on ${o}`)
+    }
+  }))
+  return out
+}
+test('A2: no sequence golden draws a label on a frame border or beside one of its sides', () => {
+  for (const f of readdirSync('fixtures/sequence').filter(f => f.includes('-ok-'))) for (const w of [60, 80, 120]) {
+    const r = explain(readFileSync(`fixtures/sequence/${f}`, 'utf8'), { columns: w, theme: 'mono' }) as any
+    assert.deepEqual(touching(r.drawing), [], `${f}@${w}`)
+  }
 })
