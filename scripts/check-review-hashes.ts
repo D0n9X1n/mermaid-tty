@@ -78,9 +78,16 @@ function filesTable(path: string, lines: string[]): ReviewFile[] | { error: stri
   return files
 }
 
+// Raw HTML: a < that opens a tag (<table>), a closing tag (</td>), a comment or declaration (<!-- -->) or a
+// processing instruction (<?x ?>). A record is plain prose, list items and the one Files table: raw HTML could show a
+// reader files the check never reads, or hide rows it does.
+const RAW_HTML = /<[A-Za-z/!?]/
+
 // The record in text, found at path, or { error } naming the first way it breaks the record format.
 export function parseRecord(path: string, text: string): ReviewRecord | { error: string } {
   const lines = text.split(/\r?\n/)
+  const raw = lines.find(l => RAW_HTML.test(l))
+  if (raw) return { error: `${path}: raw HTML ${JSON.stringify(raw)}` }
   const end = lines.indexOf('---', 1)
   if (lines[0] !== '---' || end < 0) return { error: `${path}: no front matter between --- lines` }
   const keys: string[] = [], meta: Record<string, string> = {}

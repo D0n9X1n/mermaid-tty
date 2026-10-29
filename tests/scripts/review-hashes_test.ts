@@ -256,3 +256,20 @@ test('VR.reviewers: a single-column table outside ## Files fails the record, wit
 // A --- alone on a line is a thematic break, not a table's delimiter row.
 test('VR.reviewers: ## Notes holding only prose, a --- rule alone on a line among it, still passes', () =>
   assert.deepEqual(parseRecord('r.md', withNotes('The PM read the a | b labels.', '', '---', '', 'The palettes tell the roles apart.')), parsed('r.md')))
+
+// The error for a line of raw HTML.
+const html = (line: string) => ({ error: `r.md: raw HTML ${JSON.stringify(line)}` })
+
+// A record is plain prose, list items and the one Files table: raw HTML could show a reader files the check never reads.
+test('VR.reviewers: an HTML table under ## Notes fails the record', () => {
+  for (const tag of ['<table>', '<TABLE>'])
+    assert.deepEqual(parseRecord('r.md', withNotes(tag, `<tr><td>absent</td><td>${Z}</td></tr>`, '</table>')), html(tag))
+})
+
+test('VR.reviewers: an HTML comment, a lone closing tag or a processing instruction fails the record', () => {
+  for (const line of [`<!-- | absent | ${Z} | -->`, '</details>', '<?x absent ?>'])
+    assert.deepEqual(parseRecord('r.md', withNotes('Notes.', line)), html(line))
+})
+
+test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes', () =>
+  assert.deepEqual(parseRecord('r.md', withNotes('The PM read a < b, 1<2, x <= y and b <- a.')), parsed('r.md')))
