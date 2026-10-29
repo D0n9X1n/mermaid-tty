@@ -230,7 +230,8 @@ test('A5.errors: every drawn label is checked: alias, message, note, condition, 
     [`alt ${zwj}\nA->>B: x\nend`, 'U+200D'], [`alt ok\nA->>B: x\nelse ${vs16}\nA->>B: y\nend`, 'U+FE0F'], [`box ${zwj}\nparticipant A\nend`, 'U+200D'],
     [`box Aqua ${vs16}\nparticipant A\nend`, 'U+FE0F'], [`title ${zwj}\nA->>B: x`, 'U+200D']]
   assert.deepEqual(bad.map(([t]) => [t, P(t)]), bad.map(([t, u]) => [t, { reason: `unsupported-char ${u}` }]))
-  assert.deepEqual(parseSequence(readSource(`---\ntitle: ${zwj}\n---\nsequenceDiagram\nA->>B: x`) as Source), { reason: 'unsupported-char U+200D' })
+  // readSource checks a frontmatter title for every diagram type, so the title fails there, before parseSequence.
+  assert.deepEqual(readSource(`---\ntitle: ${zwj}\n---\nsequenceDiagram\nA->>B: x`), { reason: 'unsupported-char U+200D' })
   // A rect color is not drawn, so it is not checked.
   assert.deepEqual(P(`rect ${zwj}\nA->>B: x\nend`).items, [frame('rect', [null, [msg('A', 'B', 'x')]])])
 })

@@ -109,3 +109,34 @@ test('A8.cache: render returns the rows renderMermaid draws, in the given theme,
   assert.deepEqual(r.render(FC, { columns: 80, theme: 'mono' }), renderMermaid(FC, { columns: 80, theme: 'mono' }))
   assert.deepEqual(r.render(FC, { columns: 8 }), explain(FC, { columns: 8 }))
 })
+
+// Columns must be a positive safe integer. JSON.stringify keys ±Infinity and NaN alike, as null.
+const BAD_COLUMNS = [0, -1, 1.5, NaN, Infinity, -Infinity, 2 ** 53]
+test('A5.errors: explain fails bad-columns, before any other check, unless columns is a positive safe integer', () => {
+  for (const columns of BAD_COLUMNS) assert.deepEqual(explain('pie', { columns }), { reason: 'bad-columns' }, String(columns))
+  assert.equal(renderMermaid(FC, { columns: Infinity }), null)
+})
+test('A8.cache: one renderer gives what a fresh explain gives at Infinity, then at -Infinity (the null-key collision)', () => {
+  const r = createRenderer(), s = 'flowchart TD\nA'
+  for (const columns of [Infinity, -Infinity]) assert.deepEqual(r.render(s, { columns }), explain(s, { columns }), String(columns))
+})
+test('A8.cache: render refuses bad columns uncached, whatever inner would draw, and passes the Fail to onMiss', () => {
+  let calls = 0; const r = createRenderer(64, (s, o) => { calls++; return explain(s, { ...o, columns: 80 }) }), seen: Fail[] = []
+  for (const columns of BAD_COLUMNS) assert.deepEqual(r.render(FC, { columns }, f => seen.push(f)), { reason: 'bad-columns' }, String(columns))
+  assert.deepEqual([calls, r.size, seen.length], [0, 0, BAD_COLUMNS.length])
+})
+
+test('A5.errors: a frontmatter title with U+200D falls back: renderMermaid returns null, and explain says why', () => {
+  const s = '---\ntitle: "x‍y"\n---\nflowchart TD\nA'
+  assert.equal(renderMermaid(s, O), null)
+  assert.deepEqual(explain(s, O), { reason: 'unsupported-char U+200D' })
+})
+
+test('A8.cache: with no capacity given, a renderer keeps 64 entries, and evicts the least recently used at the 65th', () => {
+  let calls = 0; const r = createRenderer(undefined, (s, o) => { calls++; return explain(s, o) })
+  for (let i = 0; i < 64; i++) r.render(`flowchart TD\nN${i}`, O)
+  for (let i = 0; i < 64; i++) r.render(`flowchart TD\nN${i}`, O)
+  assert.deepEqual([calls, r.size], [64, 64])
+  r.render('flowchart TD\nN64', O); r.render('flowchart TD\nN0', O)
+  assert.deepEqual([calls, r.size], [66, 64])
+})

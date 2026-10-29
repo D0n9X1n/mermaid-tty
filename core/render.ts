@@ -1,7 +1,7 @@
 // The render entry point (plan A §6, T19): a fence body to colored rows, or null to fall back to its source.
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
-import { isFail } from './fail.ts'
+import { fail, isFail } from './fail.ts'
 import type { Step } from './fit.ts'
 import { fitLadder } from './fit.ts'
 import { createLru } from './lru.ts'
@@ -16,15 +16,25 @@ export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: 
 export type Rows = Span[][]
 export type Options = { columns: number; theme?: string }
 
-// The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail wins.
+// Whether columns is a width a drawing can have: a positive safe integer.
+const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
+
+// The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail wins,
+// after 'bad-columns' when o.columns is not drawable. explain never throws: a throw below it is a bug, which falls back as
+// 'internal-error'.
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
-  const src = readSource(source)
-  if (isFail(src)) return src
-  const mod = lookup(src.header)
-  if (isFail(mod)) return mod
-  const model = mod.parse(src)
-  if (isFail(model)) return model
-  return fitLadder(mod, model, o.columns)
+  if (!drawable(o.columns)) return fail('bad-columns')
+  try {
+    const src = readSource(source)
+    if (isFail(src)) return src
+    const mod = lookup(src.header)
+    if (isFail(mod)) return mod
+    const model = mod.parse(src)
+    if (isFail(model)) return model
+    return fitLadder(mod, model, o.columns)
+  } catch {
+    return fail('internal-error')
+  }
 }
 
 // The rows inner draws of source, in o's theme ('default' when none is given), or its Fail.
@@ -75,12 +85,18 @@ export function toRows(d: Drawing, p: Palette): Rows {
 }
 
 // A renderer that caches each source's rows, or its Fail, in an LRU of capacity entries keyed by the source, the columns
-// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit.
+// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit. Columns that are not drawable
+// fail 'bad-columns' uncached, so every key is lossless: JSON.stringify would key ±Infinity and NaN alike, as null.
 export function createRenderer(capacity = 64, inner: typeof explain = explain):
   { render(s: string, o: Options, onMiss?: (f: Fail) => void): Rows | Fail; readonly size: number } {
   const cache = createLru<string, Rows | Fail>(capacity)
   return {
     render(s, o, onMiss) {
+      if (!drawable(o.columns)) {
+        const refused = fail('bad-columns')
+        onMiss?.(refused)
+        return refused
+      }
       const key = JSON.stringify([s, o.columns, o.theme])
       const hit = cache.get(key)
       if (hit !== undefined) return hit

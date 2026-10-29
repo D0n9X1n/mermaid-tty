@@ -1,4 +1,5 @@
 import { fail, type Fail } from './fail.ts'
+import { unsupported } from './width.ts'
 
 // What a parser reads from a fence body (matrix, Common rules 2 and 3): the
 // header line, the frontmatter title, and the remaining lines as written, with
@@ -7,7 +8,9 @@ export type Source = { header: string; title: string | null; lines: readonly { n
 
 // Fails with 'directive' (a `%%{` line, or `%%` after text outside double
 // quotes), 'frontmatter' (no closing `---`), 'title' (a second frontmatter
-// title) or 'empty' (no header, or nothing after it).
+// title), 'unsupported-char U+XXXX' (a title character no terminal draws
+// reliably, checked here for every diagram type) or 'empty' (no header, or
+// nothing after it).
 export function readSource(text: string): Source | Fail {
   // The only line-ending normalization in the pipeline.
   const all = text.replace(/\r\n?/g, '\n').split('\n')
@@ -23,6 +26,8 @@ export function readSource(text: string): Source | Fail {
       if (title !== null) return fail('title')
       title = line.slice('title:'.length).trim().replace(/^(["'])(.*)\1$/, '$2')
     }
+    const bad = title === null ? null : unsupported(title)
+    if (bad) return fail(`unsupported-char ${bad}`)
     start = end + 1
   }
   const kept: { n: number; text: string }[] = []

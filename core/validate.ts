@@ -144,10 +144,11 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// No row is wider than the budget, measured as the terminal shows it: an empty cell is a space, a cont cell adds nothing,
-// and trailing spaces drop.
+// No row is wider than the budget, measured exactly as toRows emits it: an empty cell is a space, a cont cell adds nothing,
+// a drawn cell counts whatever its ch, a space included, and only trailing empty cells drop.
 function rows(d: Drawing): Fail | null {
-  const shown = (row: readonly (Cell | null)[]) => row.map(x => (!x ? ' ' : x.kind === 'cont' ? '' : x.ch)).join('').replace(/ +$/, '')
+  const shown = (row: readonly (Cell | null)[]) =>
+    row.slice(0, row.findLastIndex(x => !!x) + 1).map(x => (!x ? ' ' : x.kind === 'cont' ? '' : x.ch)).join('')
   return d.cells.some(row => width(shown(row)) > d.columns) ? fail('row-too-wide') : null
 }
 

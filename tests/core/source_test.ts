@@ -63,3 +63,9 @@ test('A5.errors: %% outside double quotes falls back on any line, the header inc
   const inputs = ['flowchart TD\nA["x"]%%', 'flowchart TD\nA[""] --> B %% see "notes"', `flowchart TD\nA['50%% off']`, 'flowchart TD %% x\nA']
   assert.deepEqual(inputs.map(t => [t, readSource(t)]), inputs.map(t => [t, { reason: 'directive' }]))
 })
+
+test('A5.errors: a frontmatter title with an unsupported character fails unsupported-char, whatever the diagram type', () => {
+  assert.deepEqual(readSource('---\ntitle: "x‍y"\n---\nflowchart TD\nA'), { reason: 'unsupported-char U+200D' })
+  assert.deepEqual(readSource('---\ntitle: a‍b\n---\nsequenceDiagram\nA->>B: hi'), { reason: 'unsupported-char U+200D' })
+  assert.equal((readSource('---\ntitle: 读取配置\n---\nflowchart TD\nA') as Source).title, '读取配置')
+})

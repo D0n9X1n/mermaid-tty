@@ -11,13 +11,16 @@ import { unsupported } from '../../width.ts'
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
 // Where Mermaid's lexer finds a direction statement: anywhere in a line, which it then reads whole as that
-// statement. DIR_LINE: a line that is only one, with spaces and one ; after it.
-const DIR_IN = /direction\s+(?:TB|BT|RL|LR|TD)/
+// statement; global, for matchAll. DIR_LINE: a line that is only one, with spaces and one ; after it.
+const DIR_IN = /direction\s+(?:TB|BT|RL|LR|TD)/g
 const DIR_LINE = /^direction\s+(TB|BT|RL|LR|TD)\s*;?$/
 // As Mermaid's lexer reads them: an accTitle: or accDescr: statement, whose value runs to the line's end, and the
-// opener of an accDescr {…} block, whose text runs to its first }, across lines. Both draw nothing.
-const ACC_LINE = /^acc(?:Title|Descr)\s*:/
-const ACC_BLOCK = /^accDescr\s*\{/
+// opener of an accDescr {…} block, whose text runs to its first }, across lines. Both draw nothing. Sticky: matchAt
+// tries each where a statement starts.
+const ACC_LINE = /acc(?:Title|Descr)\s*:/y
+const ACC_BLOCK = /accDescr\s*\{/y
+// One space, as trim reads spaces.
+const SPACE = /\s/
 // A styling statement, which draws nothing: classDef, class, style, linkStyle or click, then a space.
 const DIRECTIVE = /^(?:classDef|class|style|linkStyle|click)\s/
 // Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
@@ -100,32 +103,47 @@ export function parseFlowchart(src: Source): Graph | Fail {
 // Reads trimmed source line n into st: null, or why it fails. In an open accDescr {…} block, the line is text up to its
 // first }, after which it reads on. As Mermaid's lexer reads them, an accTitle: or accDescr: statement runs to the line's
 // end and accDescr { opens a block, wherever a statement starts; and elsewhere, a line where it finds `direction X` is only
-// that statement: there, it sets the innermost open subgraph's direction, TD as TB.
+// that statement: there, it sets the innermost open subgraph's direction, TD as TB. Where a block closes, the rest of the
+// line reads as a line of its own. One pass, left to right, from p: no recursion, so a line of many blocks cannot overflow
+// the stack, and time linear in the line's length.
 function line(t: string, st: State, n: number): Fail | null {
-  if (st.descr !== null) {
-    const brace = t.indexOf('}')
-    if (brace < 0) return null
-    st.descr = null
-    return line(t.slice(brace + 1).trim(), st, n)
-  }
-  if (!ACC_LINE.test(t) && !ACC_BLOCK.test(t) && DIR_IN.test(t)) {
-    const d = DIR_LINE.exec(t)?.[1], b = st.open.at(-1)
-    if (d === undefined || !b) return fail('syntax')
-    b.cluster.dir = (d === 'TD' ? 'TB' : d) as Dir
-    return null
-  }
-  const runs = split(t)
-  for (const [i, run] of runs.entries()) {
-    const s = run.trim()
-    if (ACC_LINE.test(s)) return null
-    if (ACC_BLOCK.test(s)) {
-      st.descr = n
-      return line(runs.slice(i).join(';').trim().replace(ACC_BLOCK, '').trim(), st, n)
+  // The start of the line's last direction X: the rest of the line from p has one iff lastDir >= p. No match of DIR_IN
+  // can overlap another, so matchAll finds every start.
+  let lastDir = -1
+  for (const m of t.matchAll(DIR_IN)) lastDir = m.index!
+  // fresh: p starts the line, or the rest of it after a block closed, where a direction X makes the rest one statement.
+  let p = 0, fresh = true
+  for (;;) {
+    if (st.descr !== null) {
+      const brace = t.indexOf('}', p)
+      if (brace < 0) return null
+      st.descr = null
+      p = skipSpace(t, brace + 1)
+      fresh = true
+      continue
     }
+    if (p >= t.length) return null
+    if (fresh && matchAt(ACC_LINE, t, p) < 0 && matchAt(ACC_BLOCK, t, p) < 0 && lastDir >= p) {
+      const d = DIR_LINE.exec(t.slice(p))?.[1], b = st.open.at(-1)
+      if (d === undefined || !b) return fail('syntax')
+      b.cluster.dir = (d === 'TD' ? 'TB' : d) as Dir
+      return null
+    }
+    fresh = false
+    // The run from p: an accTitle: or accDescr: statement ends the line; an accDescr { opens a block, read from p on.
+    const q = skipSpace(t, p)
+    if (matchAt(ACC_LINE, t, q) >= 0) return null
+    const open = matchAt(ACC_BLOCK, t, q)
+    if (open >= 0) {
+      st.descr = n
+      p = skipSpace(t, open)
+      continue
+    }
+    const end = runEnd(t, p), s = t.slice(p, end).trim()
     const f = s ? stmt(s, st) : null
     if (f) return f
+    p = end + 1
   }
-  return null
 }
 
 // Reads one statement into st: a styling directive or an id@{…} of a known edge, which draw nothing; `end`; a subgraph
@@ -195,26 +213,33 @@ function graph(dir: Dir, title: string | null, st: State): Graph {
   return { dir, title, nodes, edges: st.edges, clusters: st.clusters }
 }
 
-// A line's runs that ; or the line's end closes. A "…" is one span, and so is an @{…} whose
-// body reads whole, quotes and all; a " with no partner runs to the end of the line. Only
+// The end of the run that starts at i in line: the index of the ; that closes it, or the line's length. A "…" is one
+// span, and so is an @{…} whose body reads whole, quotes and all; a " with no partner runs to the end of the line. Only
 // " quotes outside @{…}: A[it's] is an apostrophe.
-function split(line: string): string[] {
-  const runs: string[] = []
-  let start = 0
-  for (let i = 0; i < line.length; i++) {
+function runEnd(line: string, i: number): number {
+  for (; i < line.length; i++) {
     if (line[i] === '"') {
       const close = line.indexOf('"', i + 1)
-      if (close < 0) break
+      if (close < 0) return line.length
       i = close
     } else if (line.startsWith('@{', i)) {
       const d = data(line, i + 2)
       if (d) i = d.end - 1
-    } else if (line[i] === ';') {
-      runs.push(line.slice(start, i))
-      start = i + 1
-    }
+    } else if (line[i] === ';') return i
   }
-  return [...runs, line.slice(start)]
+  return line.length
+}
+
+// The index just past sticky re's match at i in text, or -1 when it does not match there.
+function matchAt(re: RegExp, text: string, i: number): number {
+  re.lastIndex = i
+  return re.test(text) ? re.lastIndex : -1
+}
+
+// The first index from i in text that is not a space, or text's length.
+function skipSpace(text: string, i: number): number {
+  while (i < text.length && SPACE.test(text[i]!)) i++
+  return i
 }
 
 // The pairs of the @{…} body that starts at i, in source order, and the index just past its
