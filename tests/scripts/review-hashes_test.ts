@@ -123,10 +123,11 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
   assert.throws(() => expandGlobs(['goldens/*.golden'], dir), { message: 'unsupported glob "goldens/*.golden": use a path or <dir>/**' })
 })
 
-// The seed: vr-A needs a passing record for every golden and for the palettes. Plan B adds its scopes here.
-test('VR.passes: docs/reviews/required.json requires a vr-A pass for every golden and for core/themes.ts', () =>
+// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two folders, so
+// C's goldens never reopen A's review. Plan B adds its scopes here.
+test("VR.passes: docs/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () =>
   assert.deepEqual(JSON.parse(readFileSync(fileURLToPath(new URL('../../docs/reviews/required.json', import.meta.url)), 'utf8')),
-    { 'vr-A': ['goldens/**', 'core/themes.ts'] }))
+    { 'vr-A': ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts'] }))
 
 const SCRIPT = fileURLToPath(new URL('../../scripts/check-review-hashes.ts', import.meta.url))
 // The CLI, run with args in cwd.

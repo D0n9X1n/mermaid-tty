@@ -24,11 +24,12 @@ test('goldenOf writes each width as text rows then role rows, cont as ~, right-t
   assert.equal(goldenOf([[60, d], [80, d]]), '@60\n中─\n ►\n@60 roles\nN~2\n a\n@80\n中─\n ►\n@80 roles\nN~2\n a\n')
 })
 
-test('goldenOf codes every ink, uppercase on a text cell and lowercase on a drawn one', () => {
+// Plan C T48: series source text codes as !@#$%^&*, so the glyph scan never reads it as a drawn series glyph 1–8.
+test('goldenOf codes every ink, uppercase on a text cell (series text !@#$%^&*) and lowercase on a drawn one', () => {
   const inks: Ink[] = ['node', 'decision', 'edge', 'arrow', 'label', 'frame', 'note', 'title', 'value', 's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8']
   const c = createCanvas(2, inks.length, 80)
   inks.forEach((ink, i) => { c.text(0, i, 'x', ink, 'T'); c.cap(1, i, '|', ink, 'C') })
-  assert.equal(goldenOf([[60, c.toDrawing(EXPECT)]]), `@60\n${'x'.repeat(17)}\n${'|'.repeat(17)}\n@60 roles\nNDEALFOTV12345678\nndealfotv12345678\n`)
+  assert.equal(goldenOf([[60, c.toDrawing(EXPECT)]]), `@60\n${'x'.repeat(17)}\n${'|'.repeat(17)}\n@60 roles\nNDEALFOTV!@#$%^&*\nndealfotv12345678\n`)
 })
 
 test('goldenGlyphs flags drawn and series glyphs that are not allow-listed, by file and line, and skips source text', () => {
