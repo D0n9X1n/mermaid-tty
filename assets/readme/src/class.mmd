@@ -1,0 +1,8 @@
+classDiagram
+    class Renderer {
+      +draw(source) Drawing
+    }
+    class Validator {
+      +check(drawing) Fail
+    }
+    Renderer --> Validator : every drawing

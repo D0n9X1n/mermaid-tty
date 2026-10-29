@@ -28,6 +28,12 @@ Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows. Start a new Clau
 
 ![A sequence diagram drawn by mermaid-tty](assets/readme/sequence.svg)
 
+| | |
+|---|---|
+| ![A mindmap drawn by mermaid-tty](assets/readme/mindmap.svg) | ![A gitGraph drawn by mermaid-tty](assets/readme/gitgraph.svg) |
+| ![A gantt chart drawn by mermaid-tty](assets/readme/gantt.svg) | ![A class diagram drawn by mermaid-tty](assets/readme/class.svg) |
+| ![A pie chart drawn by mermaid-tty](assets/readme/pie.svg) | |
+
 ## Supported diagrams
 
 v1.0.0 draws these 13 types, within each type's supported syntax:

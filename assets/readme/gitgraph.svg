@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="168" viewBox="0 0 140 168" role="img" aria-label="gitgraph">
+<rect width="140" height="168" rx="10" fill="#1e1f26"/>
+<circle cx="22" cy="14" r="5" fill="#ff5f57"/>
+<circle cx="40" cy="14" r="5" fill="#febc2e"/>
+<circle cx="58" cy="14" r="5" fill="#28c840"/>
+<g transform="translate(16 44)" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="15">
+<text x="0" y="14" fill="#b1b9f9">╷</text>
+<text x="36" y="14" fill="#b1b9f9">m</text>
+<text x="45" y="14" fill="#b1b9f9">a</text>
+<text x="54" y="14" fill="#b1b9f9">i</text>
+<text x="63" y="14" fill="#b1b9f9">n</text>
+<text x="0" y="32" fill="#b1b9f9">●</text>
+<text x="36" y="32" fill="#ffffff">i</text>
+<text x="45" y="32" fill="#ffffff">n</text>
+<text x="54" y="32" fill="#ffffff">i</text>
+<text x="63" y="32" fill="#ffffff">t</text>
+<text x="0" y="50" fill="#4eba65">├</text>
+<text x="9" y="50" fill="#4eba65">─</text>
+<text x="18" y="50" fill="#4eba65">╮</text>
+<text x="36" y="50" fill="#4eba65">f</text>
+<text x="45" y="50" fill="#4eba65">e</text>
+<text x="54" y="50" fill="#4eba65">a</text>
+<text x="63" y="50" fill="#4eba65">t</text>
+<text x="72" y="50" fill="#4eba65">u</text>
+<text x="81" y="50" fill="#4eba65">r</text>
+<text x="90" y="50" fill="#4eba65">e</text>
+<text x="0" y="68" fill="#b1b9f9">│</text>
+<text x="18" y="68" fill="#4eba65">●</text>
+<text x="36" y="68" fill="#ffffff">d</text>
+<text x="45" y="68" fill="#ffffff">r</text>
+<text x="54" y="68" fill="#ffffff">a</text>
+<text x="63" y="68" fill="#ffffff">w</text>
+<text x="0" y="86" fill="#b1b9f9">│</text>
+<text x="18" y="86" fill="#4eba65">●</text>
+<text x="36" y="86" fill="#ffffff">t</text>
+<text x="45" y="86" fill="#ffffff">e</text>
+<text x="54" y="86" fill="#ffffff">s</text>
+<text x="63" y="86" fill="#ffffff">t</text>
+<text x="0" y="104" fill="#b1b9f9">◉</text>
+<text x="9" y="104" fill="#4eba65">─</text>
+<text x="18" y="104" fill="#4eba65">┘</text>
+<text x="36" y="104" fill="#505050">[</text>
+<text x="45" y="104" fill="#505050">v</text>
+<text x="54" y="104" fill="#505050">1</text>
+<text x="63" y="104" fill="#505050">.</text>
+<text x="72" y="104" fill="#505050">0</text>
+<text x="81" y="104" fill="#505050">.</text>
+<text x="90" y="104" fill="#505050">0</text>
+<text x="99" y="104" fill="#505050">]</text>
+</g>
+</svg>
