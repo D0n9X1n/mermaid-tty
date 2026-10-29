@@ -20,12 +20,13 @@ test('A1: registry keywords; ENABLED is exactly A', () => {
 
 // A fake type whose model is its own ladder: each step, and what its layout draws at the budget it is given: a one-row
 // label n cells wide; the label xxx with an arrow written over its first cell ('clash'); a label one cell wider than the
-// budget on a canvas that declares 5 columns more ('liar'); or a Fail. calls logs each layout.
-type Rung = readonly [Step, number | 'clash' | 'liar' | Fail]
-function draw(what: number | 'clash' | 'liar' | Fail, columns: number): Drawing | Fail {
+// budget on a canvas that declares 5 columns more ('liar'); the label xxx on a canvas that declares 5 columns fewer
+// ('short'); or a Fail. calls logs each layout.
+type Rung = readonly [Step, number | 'clash' | 'liar' | 'short' | Fail]
+function draw(what: Rung[1], columns: number): Drawing | Fail {
   if (typeof what === 'object') return what
-  const n = what === 'clash' ? 3 : what === 'liar' ? columns + 1 : what
-  const t = 'x'.repeat(n), c = createCanvas(1, 12, what === 'liar' ? columns + 5 : columns)
+  const n = what === 'clash' || what === 'short' ? 3 : what === 'liar' ? columns + 1 : what
+  const t = 'x'.repeat(n), c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
   c.text(0, 0, t, 'node', 'A')
   if (what === 'clash') c.arrow(0, 0, '►', 'A')
   return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [] })
@@ -50,6 +51,12 @@ test('A4.fit-ladder: a drawing whose columns differ from the budget is skipped, 
   assert.deepEqual([liar.columns, liar.cells[0]!.filter(x => x !== null).length, validate(liar)], [15, 11, null])
   assert.deepEqual(fit([['natural', 'liar'], ['tight', 9]], 10), { step: 'tight', drawing: draw(9, 10) })
   assert.deepEqual(fit([['natural', 11], ['tight', 'liar']], 10), { reason: 'columns-mismatch' })
+})
+test('A4.fit-ladder: a drawing that declares fewer columns than the budget is skipped as columns-mismatch too, though validate accepts it', () => {
+  const short = draw('short', 10) as Drawing
+  assert.deepEqual([short.columns, validate(short)], [5, null])
+  assert.deepEqual(fit([['natural', 11], ['tight', 'short']], 10), { reason: 'columns-mismatch' })
+  assert.deepEqual(fit([['natural', 'short'], ['tight', 9]], 10), { step: 'tight', drawing: draw(9, 10) })
 })
 test('A4.fit-ladder: steps run in the order the type lists them, each at the full budget, until the first fits', () => {
   const calls: [Step, number][] = []
@@ -93,10 +100,19 @@ test('A1: an enabled type is unregistered until its module registers, then looku
   assert.deepEqual([lookup('sequenceDiagram'), lookup('pie'), lookup('flowchart-elk TD')],
     [{ reason: 'unregistered:sequence' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }])
 })
+test('A1: registering a second module of a type replaces the first, so lookup returns the second', () => {
+  const first = stub('flowchart'), second = stub('flowchart')
+  register(first)
+  register(second)
+  assert.equal(lookup('flowchart TD'), second)
+})
 test('A1: the keyword is the first whitespace-separated token of the header, less one trailing colon', () => {
   const headers = ['sequenceDiagram:', 'pie: title x', 'pie\ttitle x', 'flowchart-elk: TD', 'stateDiagram-v2::']
   assert.deepEqual(headers.map(h => lookup(h)),
     [{ reason: 'unregistered:sequence' }, { reason: 'disabled:pie' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }, { reason: 'unknown-type' }])
+})
+test('A1: whitespace before the keyword is skipped, so a header with leading spaces still names its type', () => {
+  assert.deepEqual(lookup('  pie'), { reason: 'disabled:pie' })
 })
 test('A1: an empty header, a keyword in the wrong case and an Object.prototype name are each an unknown type', () => {
   const headers = ['', 'GRAPH TD', 'sequencediagram', 'toString', 'constructor x', 'hasOwnProperty:', '__proto__']
