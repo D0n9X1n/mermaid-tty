@@ -43,8 +43,9 @@ const WEIGHT = { solid: 'light', thick: 'heavy', dotted: 'dotted' } as const
 // cols at its offset, the widths before it plus a gap cell each, owned by [col.id, node], a keyed col its key in its place;
 // then fill to capR. Its fill takes
 // the row's role, its caps the node's; a blank part draws no cell. A part joins as given, else below the first row with '\n'.
+// Each member part's first drawn cell, from b's top-left, goes in places, so the validator binds it there.
 function fixedRow(cv: Canvas, b: Box, r: number, caps: readonly [string, string], role: Role, node: string, x: NodeRow,
-  owners: readonly string[], below: boolean): void {
+  owners: readonly string[], below: boolean, places: Map<string, { r: number; c: number }>): void {
   const [l, rt] = caps, start = b.col + width(l) + 1 + (x.indent ?? 0), end = b.col + b.cols - width(rt)
   const parts = x.cols ? x.cols.map((c, j) => ({ ...c, owners: [c.id, node], at: x.cols!.slice(0, j).reduce((s, p) => s + p.width + 1, 0) }))
     : [{ text: x.text, role: x.role, owners, join: x.join, at: 0, key: undefined }]
@@ -52,6 +53,7 @@ function fixedRow(cv: Canvas, b: Box, r: number, caps: readonly [string, string]
   let c = b.col + width(l)
   for (const part of parts.filter(p => p.text.trim() !== '')) {
     cv.fill(r, c, start + part.at - c, x.role, node)
+    if (part.owners.length > 1 && !places.has(part.owners[0]!)) places.set(part.owners[0]!, { r: r - b.row, c: start + part.at - b.col })
     c = start + part.at + (part.key !== undefined ? cv.key(r, start + part.at, part.key, part.role, part.owners, false)
       : cv.text(r, start + part.at, part.text, part.role, part.owners, part.join ?? (below ? '\n' : undefined)))
   }
@@ -63,11 +65,12 @@ function fixedRow(cv: Canvas, b: Box, r: number, caps: readonly [string, string]
 // and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'. A fixed row,
 // or a row of columns, draws as fixedRow; a key row is its key, unwrapped, drawn as a key.
 type Line = { text: string; role: Role; owners: readonly string[]; row?: NodeRow }
-function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, owner: string, rows: readonly Line[], textOnly = false): void {
+function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, owner: string, rows: readonly Line[], textOnly = false,
+  places = new Map<string, { r: number; c: number }>()): void {
   const max = b.cols - width(caps[0]) - width(caps[1]) - 2
   let r = b.row
   for (const [k, line] of rows.entries()) {
-    if (line.row?.fixed || line.row?.cols) { fixedRow(cv, b, r++, caps, role, owner, line.row, line.owners, k > 0); continue }
+    if (line.row?.fixed || line.row?.cols) { fixedRow(cv, b, r++, caps, role, owner, line.row, line.owners, k > 0, places); continue }
     const flush = line.row?.align === 'left'
     if (line.row?.key) { row(cv, b, r++, caps, { text: line.text, join: '' }, role, line.role, owner, line.owners, true, flush); continue }
     const pieces: Piece[] = wrap(line.text, max) ?? [{ text: line.text, join: '' }]
@@ -172,13 +175,14 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
   // pieces, each joined by its join, else '\n', are one label. A blank column or fixed row draws no cell and is not listed.
   // Each column, and each row with its own id, that draws a cell is a member, in drawing order.
   const across = p.graph.dir === 'LR' || p.graph.dir === 'RL', members = new Map<string, string>()
+  const places = new Map<string, { r: number; c: number }>()
   const shown = (s: string) => s.trim() !== ''
   for (const n of p.graph.nodes) {
     const b = at(p.boxes.get(n.id))
     const side = () => { if (n.note) note(cv, b, at(p.notes?.get(n.note.id)), n.note, labels) }   // a mark's note too
     if (n.mark) { if (b) mark(cv, b, n, across); side(); continue }
     const rows = n.rows.map(x => ({ text: x.text, role: x.role, owners: [...new Set([x.id ?? n.id, n.id])], row: x }))
-    if (b) lines(cv, b, CAPS[n.shape], n.role, n.id, rows)
+    if (b) lines(cv, b, CAPS[n.shape], n.role, n.id, rows, false, places)
     const texts = new Map<string, string>()
     const add = (owner: string, text: string, join?: string) => texts.set(owner, texts.has(owner) ? texts.get(owner)! + (join ?? '\n') + text : text)
     for (const { row: x, owners } of rows) {
@@ -221,7 +225,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
     if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
   const made = cv.toDrawing({ labels, edges, edgeLabels, frames,
-    ...(members.size > 0 ? { members: [...members].map(([id, parent]) => ({ id, parent })) } : {}) })
+    ...(members.size > 0 ? { members: [...members].map(([id, parent]) => ({ id, parent, ...(places.has(id) ? { place: places.get(id)! } : {}) })) } : {}) })
   // An end label that meets other text on its row, end to end, would read as one with it: a Conflict, as an overlap is.
   const meets = [...tags.values()].flat().flatMap(l => (l.at ? [-1, width(l.text)].flatMap(k => {
     const r = l.at!.r + dy, c = l.at!.c + dx + k, had = made.cells[r]?.[c]

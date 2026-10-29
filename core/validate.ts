@@ -13,7 +13,7 @@ export type Expect = {
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]  // C: each bar; lanes: its width across the axis, default 1; at: its base cell
-  members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
+  members?: readonly { id: string; parent: string; place?: { r: number; c: number } }[]  // C: each drawn member row or column; place: its first cell, from its pill's top-left
   keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
   order?: readonly { ids: readonly string[]; column: boolean }[]                         // C: owners drawn in this row order
@@ -36,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys, order, glyphs and row labels, then lifelines and node labels in their pills. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? lifelines(all) ?? inPills(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -455,6 +455,24 @@ function members(d: Drawing): Fail | null {
   return cells.some(unlisted) ? fail('member-unlisted') : null
 }
 
+// C: each placed member is bound to its place in its own pill, the box of the cap, fill and frame cells its parent draws as
+// owners[0]. Every cell it draws in its row, owners [id, parent], lies in that box, else member-outside; its first, in reading
+// order, is place from the box's top-left, else member-misplaced. place is relative, so compaction, which never cuts a pill's
+// rows or columns, keeps it; and a member on another's row, out of source order, or off its left edge is misplaced.
+function memberPlaces(d: Drawing, all: readonly Spot[]): Fail | null {
+  for (const { id, parent, place } of d.expect.members ?? []) {
+    if (!place) continue
+    const box = all.filter(p => (p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && p.cell.owners[0] === parent)
+    const mine = all.filter(p => p.cell.owners[0] === id && p.cell.owners[1] === parent)
+    if (box.length === 0 || mine.length === 0) return fail('member-outside')
+    const top = Math.min(...box.map(p => p.r)), bottom = Math.max(...box.map(p => p.r))
+    const left = Math.min(...box.map(p => p.c)), right = Math.max(...box.map(p => p.c))
+    if (mine.some(p => p.r < top || p.r > bottom || p.c < left || p.c > right)) return fail('member-outside')
+    if (mine[0]!.r !== top + place.r || mine[0]!.c !== left + place.c) return fail('member-misplaced')
+  }
+  return null
+}
+
 // C: a key run is a maximal row run of key cells with one owners[0], its owner, and one legend flag. Its owners are those of
 // all its cells, so a point key that several points own is a run of each. c is its first column, and end the column after it.
 type KeyRun = { owner: string; legend: boolean; owners: Set<string>; text: string; r: number; c: number; end: number }
@@ -571,6 +589,30 @@ function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
     const m = at[i]!, next = at[i + 1]?.r ?? d.cells.length, ps = owners.flatMap(text)   // spots run in reading order
     if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) return fail('label-unbound')
     if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) return fail('label-unbound')
+  }
+  return null
+}
+
+// C: a side note reads as its node's only beside its link, the cap cells `${id}:link` draws. Its text and cont cells, owner
+// id, start on the link's row, each row from one column, and sit against the link: right of it, the first cell just past
+// it; left of it, the widest row's last cell just before it. Else note-unbound. Compaction never cuts a column between
+// them, which the widest row fills. A keyed note, whose text is its legend row's, is bound by keys instead; a link of line
+// cells is an edge's, checked as one.
+function notes(all: readonly Spot[]): Fail | null {
+  const text = new Map<string, Spot[]>(), link = new Map<string, Spot[]>()
+  for (const p of all) {
+    const o = p.cell.owners[0]!
+    if (p.cell.kind === 'text' || p.cell.kind === 'cont') text.set(o, [...(text.get(o) ?? []), p])
+    else if (p.cell.kind === 'cap' && o.endsWith(':link')) link.set(o.slice(0, -5), [...(link.get(o.slice(0, -5)) ?? []), p])
+  }
+  for (const [id, ls] of link) {
+    const ps = text.get(id)
+    if (!ps || all.some(p => p.cell.kind === 'key' && p.cell.owners[0] === id)) continue
+    const lo = Math.min(...ls.map(p => p.c)), hi = Math.max(...ls.map(p => p.c)), c0 = ps[0]!.c   // spots run in reading order
+    const aligned = ps.every((p, j) => j === 0 || p.r !== ps[j - 1]!.r || p.c > ps[j - 1]!.c) &&
+      ps.every((p, j) => (j > 0 && p.r === ps[j - 1]!.r) || p.c === c0)
+    const against = c0 > hi ? c0 === hi + 1 : Math.max(...ps.map(p => p.c)) === lo - 1
+    if (ps[0]!.r !== ls[0]!.r || !aligned || !against) return fail('note-unbound')
   }
   return null
 }

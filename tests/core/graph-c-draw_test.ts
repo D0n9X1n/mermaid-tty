@@ -21,8 +21,10 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
   const d = D(gr), t = text(d); assert.equal(validate(d), null)
   const r1 = t.find(l => l.includes('string id'))!, r2 = t.find(l => l.includes('int    seats'))!; assert.equal(r1.indexOf(' id'), r2.indexOf(' seats'))
   assert.ok(d.cells.flat().some(c => c?.kind === 'text' && c.ch === 's' && c.owners[0] === 'C.a1.name' && c.owners.includes('C')))
-  assert.deepEqual(d.expect.members, [...['a0.type', 'a0.name', 'a0.note', 'a1.type', 'a1.name'].map(k => ({ id: `C.${k}`, parent: 'C' })),
-    { id: 'D.annot', parent: 'D' }, { id: 'D.m0', parent: 'D' }, { id: 'D.m1', parent: 'D' }])   // a1's blank note draws no cell, so it is not listed; every row with an id is, «annot» included
+  // Each fixed row or column is placed, from its pill's top-left: a column at its offset, the widths before it and a gap cell each.
+  const C = ([k, r, c]: [string, number, number]) => ({ id: `C.${k}`, parent: 'C', place: { r, c } })
+  assert.deepEqual(d.expect.members, [...([['a0.type', 1, 2], ['a0.name', 1, 9], ['a0.note', 1, 15], ['a1.type', 2, 2], ['a1.name', 2, 9]] as const).map(C),
+    { id: 'D.annot', parent: 'D' }, { id: 'D.m0', parent: 'D', place: { r: 2, c: 2 } }, { id: 'D.m1', parent: 'D', place: { r: 3, c: 2 } }])   // a1's blank note draws no cell, so it is not listed; every row with an id is, «annot» included, unplaced as it is centered
 })
 test('A4: an end label gets room beside its end, and a reversed edge lists its true ends', () => {
   const one = g('TB', ['A>B']); Object.assign(one.edges[0]!, { head: 'none', headLabel: '0..*' })
@@ -150,5 +152,5 @@ test('A3: a keyed column draws its key in its place, owned by [col id, node]: a 
   const d = D(gr), t = text(d).join('\n'); assert.deepEqual(validate(d), { reason: 'key-stray' })
   assert.match(t, /string id    k/); assert.doesNotMatch(t, /comment/); assert.ok(!d.expect.labels.some(l => l.owner === 'C.a0.note'))
   assert.ok(d.cells.flat().some(c => c?.kind === 'key' && c.ch === 'k' && c.owners.join() === 'C.a0.note,C'))
-  assert.deepEqual(d.expect.members, ['type', 'name', 'note'].map(k => ({ id: `C.a0.${k}`, parent: 'C' })))
+  assert.deepEqual(d.expect.members, ([['type', 2], ['name', 9], ['note', 15]] as const).map(([k, c]) => ({ id: `C.a0.${k}`, parent: 'C', place: { r: 1, c } })))
 })
