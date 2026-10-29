@@ -41,8 +41,8 @@ test('A5.common: headers and keywords are case-sensitive and whole; styling and 
     const s = readSource(`${h}\nA`); assert.deepEqual('reason' in s ? s : parseEr(s), { reason: 'header' }, h)
   }
   for (const body of ['Endpoint', 'subgraphs', 'END', 'Classroom', 'stylesheet', 'Direction LR', 'direction lr', 'directions', 'Subgraph s\nA\nend', 'accTitle',
-    'Click A', 'A ||--|| B : "direction LR"']) assert.deepEqual(P(body), { reason: 'syntax:2' }, body)
-  const m = P(['style A fill:#f9f', 'classDef foo fill:#f00;', 'class A foo', 'click A call cb()', 'accTitle: Orders', 'accDescr: All orders', 'accDescr {',
+    'Click A', 'click A call cb()', 'A ||--|| B : "direction LR"']) assert.deepEqual(P(body), { reason: 'syntax:2' }, body)   // Mermaid's ER grammar has no click
+  const m = P(['style A fill:#f9f', 'classDef foo fill:#f00;', 'class A foo', 'accTitle: Orders', 'accDescr: All orders', 'accDescr {',
     '  many lines', '}', 'A:::foo ||--|| B:::bar,baz : x', 'C:::foo', 'p[Person]:::foo {', '  int id', '}'].join('\n'))
   assert.deepEqual([m.entities.map((e: any) => e.id), m.relations.length, m.entities[3].attrs.length], [['A', 'B', 'C', 'p'], 1, 1])
   const s = readSource('---\ntitle: Orders\n---\nerDiagram\nA'), t = 'reason' in s ? s : parseEr(s) as any

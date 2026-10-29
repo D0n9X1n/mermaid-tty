@@ -54,7 +54,7 @@ const DIRECTION = /^direction\s+(TB|BT|LR|RL)$/
 // Where Mermaid's lexer finds a direction statement: in any case, anywhere in a line, which it then reads whole as one.
 const DIRECTION_ANY = /direction\s+(?:TB|BT|RL|LR)/i
 // Styling, which draws nothing; accTitle: and accDescr:, whose text runs to the line's end; accDescr {, to its first }.
-const IGNORED = /^(?:style|classDef|class|click)\s/
+const IGNORED = /^(?:style|classDef|class)\s/   // no click: Mermaid's ER grammar has none, so a click line is a syntax error there
 const ACC = /^acc(?:Title|Descr)\s*:/
 const ACC_BLOCK = /^accDescr\s*\{/
 // A keyword where a line starts, in any case, alone or starting a longer word: it is only its own statement (common rule 5).
