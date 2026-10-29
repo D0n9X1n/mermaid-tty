@@ -1,19 +1,27 @@
 // node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
 // which has no Node and no DOM. In each .ts and .tsx file it flags process, Buffer, document, window,
-// require(, eval(, new Function and import(, and each import or export … from specifier that is not a
-// relative .ts or .tsx path; a type-only claude-code import is erased, so it is allowed. It also flags a
-// dependencies key in package.json, since nothing is installed. Prints each problem as `file:line token`
-// and exits 1 when there is any.
+// globalThis, Reflect, require, eval, Function outside a type position, import( and a \u escape outside
+// literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
+// path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
+// package.json, since nothing is installed. Prints each problem as `file:line token` and exits 1 when
+// there is any.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isMain } from './lib/is-main.ts'
 
+// Each forbidden token, and the pattern that finds it in lexed code. eval and require are bare words, so
+// (0, eval)(s) and const r = require are found. Function is found as a value: called, read from, or not
+// after :, as, satisfies or <, where it is a type. No name in our code needs a \u escape, which can spell
+// any of them.
 const TOKENS: [string, RegExp][] = [
-  ['process', /\bprocess\b/g], ['require(', /\brequire\s*\(/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g],
-  ['window', /\bwindow\b/g], ['eval(', /\beval\s*\(/g], ['new Function', /\bnew\s+Function\b/g], ['import(', /\bimport\s*\(/g],
+  ['process', /\bprocess\b/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g], ['window', /\bwindow\b/g],
+  ['globalThis', /\bglobalThis\b/g], ['Reflect', /\bReflect\b/g], ['require', /\brequire\b/g], ['eval', /\beval\b/g],
+  ['Function', /\bFunction(?=\s*[(.])|(?<!(?::|\bas|\bsatisfies|<)\s*)\bFunction\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
 ]
 // The words after which a / starts a regex literal rather than a division.
 const BEFORE_REGEX = new Set(['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw', 'case', 'do', 'else', 'yield', 'await'])
+// The words whose ( opens a statement head: after its ), a / starts a regex literal, as in if (s) /x/.test(s).
+const CONTROL = new Set(['if', 'for', 'while'])
 
 // An import or export … from specifier: the offset of its opening quote, and its text.
 type Specifier = { at: number; text: string }
@@ -27,13 +35,14 @@ function before(out: string[]): { char: string; word: string } {
   return { char: out[i] ?? '', word }
 }
 
-// Whether a / after out starts a regex literal: it does after an operator, punctuation, a keyword such as
-// return, or nothing; after a value (a name, a number, ), ], } or a literal's closing quote) it divides.
-// A regex right after the ) of if (…) is read as a division, so its text is scanned as code: a rare form.
-function regexStarts(out: string[]): boolean {
+// Whether a / after out starts a regex literal. It divides after a value: a name or number that is not a
+// keyword such as return; a ) unless it closes the head of if, for or while (headClosed); a ]; or the < of
+// a JSX closing tag. Anywhere else, after }, an operator, punctuation, a keyword or nothing, it starts one.
+function regexStarts(out: string[], headClosed: boolean): boolean {
   const { char, word } = before(out)
   if (word) return BEFORE_REGEX.has(word)
-  return !/[)\]}'"`]/.test(char)
+  if (char === ')') return headClosed
+  return !/[\]<]/.test(char)
 }
 
 // The index of the quote that closes the string literal opened at i, or of the line break or end of code
@@ -61,12 +70,14 @@ function closeRegex(code: string, i: number): number {
 // code with each comment, and the text of each string, regex and template literal, blanked: one space per
 // code unit, line breaks kept, so offsets and lines stay aligned. The code inside each ${…} is kept: depth
 // counts the { open in the current substitution, and subs holds the outer ones' counts, so the } that
-// closes a substitution is told from a nested one. A regex literal is a pattern, not a use of a global,
-// so its text is blanked like a string's: /process/ is not flagged. The specifiers are returned apart,
-// blanked in the text too, to be checked as imports rather than scanned for tokens.
+// closes a substitution is told from a nested one. heads holds, for each open (, whether it opens the
+// head of if, for or while, and headClosed whether the last ) closed one. A regex literal is a pattern,
+// not a use of a global, so its text is blanked like a string's: /process/ is not flagged. The
+// specifiers are returned apart, blanked in the text too, to be checked as imports rather than scanned
+// for tokens.
 function lex(code: string): { text: string; specifiers: Specifier[] } {
-  const out: string[] = [], specifiers: Specifier[] = [], subs: number[] = []
-  let i = 0, depth = 0
+  const out: string[] = [], specifiers: Specifier[] = [], subs: number[] = [], heads: boolean[] = []
+  let i = 0, depth = 0, headClosed = false
   // Copies code from i up to end, kept or blanked, and moves i there.
   const take = (end: number, keep: boolean) => { for (; i < end; i++) out.push(keep || code[i] === '\n' ? code[i]! : ' ') }
   // From the ` or } at i, blanks template text up to the closing `, or up to a ${ that opens a substitution.
@@ -90,12 +101,18 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
       take(i + 1, true); take(end, false)
       if (code[end] === c) take(end + 1, true)
     } else if (c === '`') template()
-    else if (c === '/' && regexStarts(out)) {
+    else if (c === '/' && regexStarts(out, headClosed)) {
       const end = closeRegex(code, i)
       take(i + 1, true)
       if (end >= 0) { take(end, false); take(end + 1, true) }
     } else if (c === '}' && depth === 0 && subs.length) { depth = subs.pop()!; template() }
-    else { if (c === '{') depth++; else if (c === '}') depth--; take(i + 1, true) }
+    else {
+      if (c === '{') depth++
+      else if (c === '}') depth--
+      else if (c === '(') heads.push(CONTROL.has(before(out).word))
+      else if (c === ')') headClosed = heads.pop() ?? false
+      take(i + 1, true)
+    }
   }
   return { text: out.join(''), specifiers }
 }

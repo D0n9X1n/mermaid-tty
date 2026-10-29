@@ -29,7 +29,7 @@ const RULES: [string, [string, string[]][]][] = [
   ['a block comment is blanked, and keeps its lines', [
     ['/* require( */', []],
     ['x = a / b /* require( */', []],
-    ['/* a\n process */\nrequire(x)', ['3 require(']]]],
+    ['/* a\n process */\nrequire(x)', ['3 require']]]],
   ['an escaped quote or backtick ends no literal, and an escaped backslash escapes no quote', [
     ["const s = 'it\\'s require('", []],
     ['const s = "a \\" require(" + "b"', []],
@@ -65,6 +65,42 @@ const RULES: [string, [string, string[]][]][] = [
     ["import 'node:fs'", ["1 import 'node:fs'"]],
     ['import {\n  a,\n} from "lodash"', ["3 import 'lodash'"]],
     ["import { p } from './process.ts'", []]]],
+  // A / starts a regex unless it follows a value: a name or number that is not a keyword such as return,
+  // a ) that does not close the head of if, for or while, a ], or the < of a JSX closing tag.
+  ['a / after a value divides; after if (…), }, a keyword or an operator it starts a regex literal, whose quotes, backticks and [/] open nothing', [
+    ["if (true) /\"/.test('x'); process.cwd();", ['1 process']],
+    ["if (s) /'/.test(s); process.x", ['1 process']],
+    ['while (s) /`/.test(s)\nprocess.x', ['2 process']],
+    ['for (;;) /[/"]/.test(s); process.x', ['1 process']],
+    ["function f() {}\n/'/.test(s); process.x", ['2 process']],
+    ["if (a) b(); else /'/.test(s); process.x", ['1 process']],
+    ['const t = a / b / c; x = d / process.e / f', ['1 process']],
+    ['const r = (a + b) / process.y / 2', ['1 process']],
+    ['if (f(x) / process.y) z()', ['1 process']],
+    ['const r = x[0] / process.y / 10', ['1 process']],
+    ['<Text>a</Text><Text>{process.cwd()}</Text>', ['1 process']]]],
+  ['a \\u escape outside literals and comments is flagged, since no name in our code needs one', [
+    ['\\u0070rocess.cwd()', ['1 \\u']],
+    ['const p = pro\\u0063ess.env', ['1 \\u']],
+    ["const s = '\\u0070rocess' // \\u0070rocess", []],
+    ['const r = /\\u{1F600}/u, t = `\\u0070 ${n}`', []]]],
+  ['globalThis and Reflect are flagged as words', [
+    ["globalThis['proc' + 'ess'].cwd()", ['1 globalThis']],
+    ["const g = Reflect.get(globalThis, 'process')", ['1 Reflect', '1 globalThis']],
+    ["const s = 'globalThis Reflect' // Reflect.get(globalThis)", []],
+    ['const reflection = isReflected(myGlobalThis)', []]]],
+  ['eval and require are flagged as bare words, so indirect eval and aliasing are found', [
+    ['(0, eval)(s)', ['1 eval']],
+    ['const e = eval, r = require', ['1 eval', '1 require']],
+    ["const s = 'eval require' /* eval(s) require(x) */", []],
+    ['evaluate(required, myeval, requireX)', []]]],
+  ['Function is flagged as a value, but not in a type position: after :, as, satisfies or <, and neither called nor read from', [
+    ['const F = Function', ['1 Function']],
+    ["Function('return this')()", ['1 Function']],
+    ['if (f instanceof Function) g()', ['1 Function']],
+    ["const t = { k: Function('x'), p: Function.prototype }", ['1 Function', '1 Function']],
+    ['function run(cb: Function, xs: Array<Function>): Function { return cb as Function }', []],
+    ["const s = 'Function' // new Function(s)", []]]],
 ]
 for (const [rule, cases] of RULES)
   test(`A8.portability: ${rule}`, () => { for (const [s, want] of cases) assert.deepEqual(scanSource(s), want, s) })
