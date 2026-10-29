@@ -24,7 +24,7 @@ The repository root is the plugin root: the marketplace entry in `.claude-plugin
 
 There is no build step and no runtime dependency. The root `package.json` has no dependencies, and Claude Code and Node 24 or later run the TypeScript as it is. Only the docs tooling (`scripts/docs/`) and the end-to-end harness (`scripts/e2e/`) install packages, each from its own lockfile.
 
-`scripts/check-portable.ts` keeps `core/` and `hooks/` runnable in the engine's module sandbox, which has no Node and no DOM. Imports must be relative `.ts` or `.tsx` paths, apart from type-only `claude-code` imports. The code may not use `process`, `Buffer`, `document`, `window`, `require`, `eval`, `new Function` or dynamic `import()`. The check also fails if `package.json` has a `dependencies` key.
+`scripts/check-portable.ts` keeps `core/` and `hooks/` runnable in the engine's module sandbox, which has no Node and no DOM. Imports must be relative `.ts` or `.tsx` paths, apart from type-only `claude-code` imports. The scanner rejects `process`, `Buffer`, `document`, `window`, `globalThis`, `Reflect`, `require`, `eval`, `Function`, `constructor`, dynamic `import()` and Unicode escapes outside literals/comments. The check also fails if `package.json` has a `dependencies` key.
 
 To try a checkout without installing it, load it for one session from the repository root:
 
@@ -46,16 +46,19 @@ node scripts/render-gallery.ts
 node scripts/check-ci-coverage.ts
 ```
 
-- `bash scripts/check.sh` is the must-pass suite, under `set -euo pipefail`. It runs `claude plugin validate .`, then `claude plugin test .` (the mods kit tests), then `node scripts/check.ts all`: every Node test under `tests/`, then the portability, benchmark, fresh-clone, corpus, gallery, tangle, review-verdict and palette checks.
+- `bash scripts/check.sh` is the must-pass suite, under `set -euo pipefail`. It runs `claude plugin validate .`, then `claude plugin test .` (the mods kit tests), then `node scripts/check.ts all`: every `tests/**/*_test.ts`, then the portability, benchmark, fresh-clone, corpus, gallery, tangle, review-verdict and palette checks. It does not discover `scripts/tests/` or docs specs; CI runs those separately.
 - `npm ci --prefix scripts/e2e` installs the end-to-end harness's pinned packages. `node scripts/e2e/run.ts` runs the harness: real Claude Code, in a pseudo-terminal, against a mock Messages API, with no account or secret.
-- `node scripts/render-gallery.ts` renders the gallery, every golden, as SVG for visual review.
+- `node scripts/render-gallery.ts` renders non-reject flowchart and sequence fixtures at 60 and 80 columns under `nord`, plus CJK and six-theme sheets, as SVG for visual review. It does not yet include every diagram type's goldens.
 - `node scripts/check-ci-coverage.ts` fails if an acceptance check has no CI step.
 
 For a faster loop:
 
 | Command | What it does |
 |---|---|
-| `node --test` | The Node tests alone. No install needed. |
+| `node --test` | All automatically discovered Node tests, including `scripts/tests/*_test.ts`; no install needed. Docs specs use a separate command. |
+| `node scripts/typecheck.ts` | Checks `core/` with pinned TypeScript; includes hooks when the generated Claude Code types are present. Uses the npx cache, not a build step. |
+| `node scripts/check-review-hashes.ts` | Verifies recorded review hashes; add `--require-pass` to require passing coverage of `docs/reviews/required.json`. |
+| `node --test 'scripts/tests/*.docs-spec.ts'` | Docs-tooling tests, after installing `scripts/docs` dependencies. |
 | `node scripts/check.ts <ID>` | One acceptance check's steps, such as `A4` or `A8.portability`. |
 | `node scripts/explain.ts FILE COLS` | How the fit ladder draws `FILE`'s diagram at `COLS` columns: the step it took and the rows, or the reason it falls back. |
 | `node scripts/smoke.ts` | Draws a flowchart fixture at 80 columns under `nord`. |
@@ -65,12 +68,12 @@ For a faster loop:
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request and every push to `main`, on `ubuntu-latest`, `macos-latest` and `windows-latest`. Each runner sets up Node 24 and installs a pinned Claude Code from npm.
+`.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.308 installed from npm.
 
-- **check**, on all three OSes: `scripts/check.sh`, the docs checks, the wiki publisher's tests, and a local-marketplace install: `claude plugin marketplace add ./`, then `claude plugin install mermaid-tty@mermaid-tty`, after which the plugin must show in `claude plugin list`.
-- **e2e**, on all three OSes: the end-to-end harness, once with the default mapping, once per curated theme, and once with truecolor unavailable, where the diagram rows must carry 256-color codes.
-- **Gallery:** the gallery is rendered as SVG and uploaded as a build artifact, for visual review.
-- **Scheduled run:** a scheduled job runs the end-to-end harness against each newly published Claude Code version, so a change to the mods API is caught early.
+- **check**, on all three OSes: bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version.
+- **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
+- **gallery**, on Ubuntu only: renders the SVG gallery and uploads it as a build artifact for visual review.
+- **Compatibility gap at HEAD:** the release specification requires a scheduled A9 run for each newly published Claude Code version, but no scheduled workflow is checked in yet. Current CI tests the pinned version only.
 
 Every step that runs a `.sh` script uses `shell: bash`, which is Git Bash on Windows, and every script runs under `set -euo pipefail`. So any failing command fails the job, the native Windows `claude plugin validate .` and `claude plugin test .` included. Actions are pinned by commit SHA.
 
@@ -78,7 +81,7 @@ Every step that runs a `.sh` script uses `shell: bash`, which is Git Bash on Win
 
 ## Images and icon
 
-Every README image is an SVG that `scripts/render-svg.ts` renders from `core/`: real renderer output, never a screenshot. After a change that affects them, regenerate them:
+The README diagrams are SVGs that `scripts/render-svg.ts` renders from `core/`, never screenshots. The "before" image shows the raw Mermaid source instead. After a change that affects them, regenerate them:
 
 ```sh
 node scripts/render-svg.ts --readme
@@ -120,16 +123,17 @@ flowchart LR
 
 ## Release
 
-1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `docs/reviews/required.json`, and every reviewed file must still match its recorded SHA-256.
-2. Write the release notes by hand. They must contain both install commands:
+1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `docs/reviews/required.json`, and every reviewed file must still match its recorded SHA-256. Re-review changed files; translation review is not replaced by the wiki checker.
+2. Write `docs/release-notes/v<version>.md` by hand and merge it before tagging. It must contain both install commands:
 
    ```sh
    claude plugin marketplace add D0n9X1n/mermaid-tty
    claude plugin install mermaid-tty@mermaid-tty
    ```
 
-3. Publish a GitHub Release with those notes, on a new tag: `v` and the version, such as `v1.0.0`.
-4. The tag runs `.github/workflows/release.yml`. It checks that the tag matches the version in `plugin.json` and that the notes contain both install commands. Then it installs the plugin from the GitHub marketplace into a fresh config, and runs the end-to-end harness on the installed copy.
-5. Check that the `publish-wiki` run on `main` succeeded, and that the wiki shows the pages. GitHub creates a wiki's repository only when its first page is saved in the web UI. If the run couldn't clone the wiki, save one page there, then re-run the workflow.
+3. **Publish the wiki first.** Wait for `publish-wiki` to succeed on the exact `main` commit to be tagged, and check the published pages. GitHub creates a wiki's repository only after its first page is saved in the web UI. If cloning fails, save one page there, then re-run the workflow.
+4. Push a tag equal to `v` plus the plugin version, such as `v1.0.0`, on that commit. Do not create the GitHub Release manually: the tag workflow creates it.
+5. `.github/workflows/release.yml` checks the tag and committed notes, requires a successful wiki-publish run for that SHA, and compares the published wiki with `wiki/`. Only then does it create the GitHub Release and check the published notes.
+6. The workflow installs from the GitHub marketplace into a fresh config, checks the listed version, and runs A9 with `--installed`, `--claude-version 2.1.308` and `--scenario all` against that installed copy. A published release alone does not mean this final verification passed.
 
 Don't make the tag with `claude plugin tag`: it makes a tag such as `mermaid-tty--v1.0.0`, which doesn't start with `v`, so `release.yml` doesn't run.

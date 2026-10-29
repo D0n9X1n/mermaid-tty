@@ -2,9 +2,9 @@
 
 [Chinese (Simplified)](Home-zh-CN)
 
-mermaid-tty is a Claude Code mod that redraws the `mermaid` code blocks in Claude's replies as flat, colored box-drawing diagrams, right in the terminal.
+mermaid-tty is a Claude Code mod (plugin) that redraws closed `mermaid` code blocks in Claude's replies as flat, colored box-drawing diagrams, right in the terminal.
 
-- **Zero install.** No runtime dependencies and no build step: Claude Code loads the checked-in TypeScript as it is.
+- **No extra install step.** Install the plugin, and Claude Code loads the checked-in TypeScript as it is: no runtime dependencies and no build step.
 - **Exact width.** One width function measures every label and row, so CJK labels line up and every row fits the terminal.
 - **Source kept.** Only the drawing changes. The stored reply keeps the exact Mermaid source, so `/copy` copies it and `/mermaid-tty source` shows it.
 - **Fails closed.** A validator checks every drawing. When mermaid-tty can't draw a diagram exactly, you see the original code block, unchanged.
