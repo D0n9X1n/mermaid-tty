@@ -9,11 +9,18 @@ const F = (t: string): Drawing => flowchart.layout(parseFlowchart(readSource(`fl
 const S = (t: string): Drawing => sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro: the edge label's row runs through both sides of S0.
-test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {
+// QA's repro, whose edge label's row once ran through both sides of S0: the router now keeps the label off S0's border, so it
+// validates. The validator half of the finding, a label drawn on a border, is pinned on a hand-built frame below.
+test('A5.mutation-tests: QA\'s cluster-border repro now draws its label off the border and validates', () => {
   const d = F('BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1')
   assert.deepEqual(d.expect.frames, ['S0', 'S1'])
-  assert.equal(validate(d)?.reason, 'frame-broken', show(d))
+  assert.equal(validate(d), null, show(d))
+})
+test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {
+  const label = (r: number, col: number) => framed(c => { straight(c); c.text(r, col, 'L', 'label', 'L1') }, ['F'], [{ owner: 'L1', text: 'L' }])
+  assert.equal(validate(label(3, 6))?.reason, 'frame-broken')   // on the right border
+  assert.equal(validate(label(5, 4))?.reason, 'frame-broken')   // on the bottom border
+  assert.equal(validate(label(3, 5)), null)                     // inside, beside the border: the frame stays closed
 })
 // A sits outside S and B inside, so A→B must cross S's border; each title sits on its top border.
 test('A5.mutation-tests: a cluster an edge crosses straight, its title on its top border, passes', () => {

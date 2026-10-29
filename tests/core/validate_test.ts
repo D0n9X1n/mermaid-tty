@@ -298,9 +298,9 @@ test('A5.mutation-tests: a crossing that hides a third edge turning inside it fa
   c.line(3, 5, 10, 'light', 'edge', 'B>E')
   c.arrow(3, 6, '►', 'B>E')
   const d = c.toDrawing({ labels: ['B', 'D', 'E'].map(owner => ({ owner, text: owner })), edgeLabels: [], edges: [
-    { id: 'B>D', from: 'B', to: 'D', heads: ['▼'] },
-    { id: 'E>E', from: 'E', to: 'E', heads: ['►'] },
-    { id: 'B>E', from: 'B', to: 'E', heads: ['►'] },
+    { id: 'B>D', from: 'B', to: 'D', ends: [{ node: 'D', glyph: '▼' }] },
+    { id: 'E>E', from: 'E', to: 'E', ends: [{ node: 'E', glyph: '►' }] },
+    { id: 'B>E', from: 'B', to: 'E', ends: [{ node: 'E', glyph: '►' }] },
   ] })
   assert.deepEqual(d.cells[3]![3]!.segs, [
     { owner: 'B>D', dirs: 5 }, { owner: 'E>E', dirs: 10 }, { owner: 'B>E', dirs: 3 },
