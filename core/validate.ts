@@ -275,17 +275,23 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
 const cheb = (p: Spot, q: Spot): number => Math.max(Math.abs(p.r - q.r), Math.abs(p.c - q.c))
 const gap = (ps: readonly Spot[], qs: readonly Spot[]): number => ps.reduce((m, p) => qs.reduce((n, q) => Math.min(n, cheb(p, q)), m), Infinity)
 
-// C: each end label sits at its own end. A node's terminal is the edge's line or arrow cells beside it. The label's cells,
-// taken together, come within distance 1 of its node's terminal, and strictly nearer it than the other end's terminal. A
-// tie fails: a label that spans the edge, or any end label of a self-loop, whose two terminals are one. labels checks its text.
+// C: each end label names its own edge and end unambiguously. A node's terminal is the edge's line or arrow cells beside it.
+// The label's cells, taken together, come within distance 1 of its node's terminal, and strictly nearer it than every rival:
+// the edge's other terminal, and every line or arrow cell the edge does not own. And no cell of its terminal within distance
+// 1 of the label is another edge's too. So a tie fails: a label that spans the edge, sits between parallel edges, or ends a
+// self-loop, whose two terminals are one; and so does a label on a stem two edges share, a fan-out's or a fan-in's, which
+// keeps every glyph when its owners swap. labels checks its text.
 function endLabels(d: Drawing, all: readonly Spot[]): Fail | null {
+  const lines = all.filter(p => p.cell.kind === 'line' || p.cell.kind === 'arrow')
   for (const e of d.expect.edges) {
     if (!e.endLabels) continue
-    const route = all.filter(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && owns(p.cell, e.id))
+    const route = lines.filter(p => owns(p.cell, e.id)), others = lines.filter(p => !owns(p.cell, e.id))
     const terminal = (node: string) => route.filter(p => SIDES.some(s => owns(beside(d, p, s), node)))
     for (const { node, owner } of e.endLabels) {
-      const mine = all.filter(p => owns(p.cell, owner)), near = gap(mine, terminal(node))
-      if (!(near <= 1 && near < gap(mine, terminal(node === e.from ? e.to : e.from)))) return fail('end-label')
+      const mine = all.filter(p => owns(p.cell, owner)), own = terminal(node), near = gap(mine, own)
+      const rivals = [...terminal(node === e.from ? e.to : e.from), ...others]
+      const shared = own.some(p => p.cell.owners.some(o => o !== e.id) && gap(mine, [p]) <= 1)
+      if (!(near <= 1 && near < gap(mine, rivals)) || shared) return fail('end-label')
     }
   }
   return null

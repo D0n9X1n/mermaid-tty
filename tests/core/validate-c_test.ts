@@ -45,6 +45,40 @@ test('A5.mutation-tests: an end label comes within 1 of its own terminal, and as
   assert.deepEqual(validate(span('1', 3)), { reason: 'end-label' })         // two from its terminal, though the nearer one
   assert.deepEqual(validate(span('zero..*', 0)), { reason: 'end-label' })   // it spans the edge: as near B's terminal as A's
 })
+// QA's repro: a at (0,5); e0 to b at (6,1) and e1 to c at (6,9) share a stem down column 5 to row 3, then branch. '1' at (1,4)
+// is e0's end label at A and '*' at (1,6) e1's, or, swapped, the other way round. A tail is a fan-out, ▼ at b and c; a head
+// the reversed fan-in, one ▲ at a that both own.
+function fan(end: 'tail' | 'head', swap: boolean): Drawing {
+  const c = createCanvas(7, 11, 11, () => true), out = end === 'tail', [l, r] = swap ? ['e1', 'e0'] : ['e0', 'e1']
+  c.text(0, 5, 'a', 'node', 'A'); c.text(6, 1, 'b', 'node', 'B'); c.text(6, 9, 'c', 'node', 'C')
+  for (const [e, k, s] of [['e0', 1, -1], ['e1', 9, 1]] as const) {
+    if (out) c.line(1, 5, 5, 'light', 'edge', e); else c.arrow(1, 5, '▲', e)
+    c.line(2, 5, 5, 'light', 'edge', e); c.line(3, 5, s < 0 ? 9 : 3, 'light', 'edge', e)
+    for (let i = 5 + s; i !== k; i += s) c.line(3, i, 10, 'light', 'edge', e)
+    c.line(3, k, s < 0 ? 6 : 12, 'light', 'edge', e); c.line(4, k, 5, 'light', 'edge', e)
+    if (out) c.arrow(5, k, '▼', e); else c.line(5, k, 5, 'light', 'edge', e)
+  }
+  c.text(1, 4, '1', 'label', `${l}:${end}`); c.text(1, 6, '*', 'label', `${r}:${end}`)
+  const rel = (id: string, n: string) => ({ id, from: out ? 'A' : n, to: out ? n : 'A', ends: [{ node: out ? n : 'A', glyph: out ? '▼' : '▲' }],
+    endLabels: [{ node: 'A', owner: `${id}:${end}` }] })
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'C', text: 'c' }, { owner: `${l}:${end}`, text: '1' },
+    { owner: `${r}:${end}`, text: '*' }], edges: [rel('e0', 'B'), rel('e1', 'C')],
+    edgeLabels: [{ owner: `e0:${end}`, edge: 'e0' }, { owner: `e1:${end}`, edge: 'e1' }], frames: [] })
+}
+test('A5.mutation-tests: an end label on a stem two edges share names neither: a fan-out or a reversed fan-in fails, either way round', () => {
+  for (const end of ['tail', 'head'] as const) for (const swap of [false, true]) assert.deepEqual(validate(fan(end, swap)), { reason: 'end-label' }, `${end} ${swap}`)
+})
+// [ A ] over [ B ], joined by parallel edges e0 down column 3 and e1 down column 5; e0's tail label '1' at (1, j), for A.
+function parallel(j: number): Drawing {
+  const c = createCanvas(5, 9, 9); c.text(0, 2, '[ A ]', 'node', 'A'); c.text(4, 2, '[ B ]', 'node', 'B'); c.text(1, j, '1', 'label', 'e0:tail')
+  for (const [e, k] of [['e0', 3], ['e1', 5]] as const) { c.line(1, k, 5, 'light', 'edge', e); c.line(2, k, 5, 'light', 'edge', e); c.arrow(3, k, '▼', e) }
+  return c.toDrawing({ labels: [{ owner: 'A', text: '[ A ]' }, { owner: 'B', text: '[ B ]' }, { owner: 'e0:tail', text: '1' }],
+    edges: [{ id: 'e0', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }], endLabels: [{ node: 'A', owner: 'e0:tail' }] },
+      { id: 'e1', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [{ owner: 'e0:tail', edge: 'e0' }], frames: [] })
+}
+test("A5.mutation-tests: an end label between parallel stems is as near the other edge and fails; on its own stem's outer side it passes", () => {
+  assert.deepEqual(validate(parallel(4)), { reason: 'end-label' }); assert.equal(validate(parallel(2)), null)
+})
 const bar = (cells: string, eighths: number, extra: Partial<Expect> = {}): Drawing => { const c = createCanvas(1, 8, 8); c.cap(0, 0, cells, 's1', 'x0')
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], frames: [], bars: [{ owner: 'x0', eighths, axis: 'h' }], ...extra }) }
 test('A5.mutation-tests: a bar draws exactly its eighths; zero draws nothing, and only zero; no stray bar cell', () => {
@@ -68,6 +102,17 @@ test('A5.mutation-tests: only bar glyphs make a bar; a split lane, lanes apart, 
   for (const [cells, e] of [['█ █', 16], ['██▄', 16], ['██▄', 20], ['▌▌', 12]] as const) assert.deepEqual(validate(bar(cells, e)), { reason: 'bar' }, `${cells} ${e}`)
   assert.deepEqual(validate(vbar([['▄', '█'], ['', ''], ['▄', '█']], 12)), { reason: 'bar' })   // its two lanes two columns apart
   assert.deepEqual(validate(bar('', 20, { bars: [{ owner: 'x0', eighths: 20, axis: 'h', lanes: 0 }] })), { reason: 'bar' })   // no lane
+})
+// Eighths 1 to 15 as this test's own tables draw them: full cells, then the partial, left to right (h) or bottom up (v). Each
+// partial must read as its own eighth, so moving any partial within core's tables fails.
+test('A5.mutation-tests: every bar partial reads its own eighth, 1 to 15 on either axis', () => {
+  const H = [...'▏▎▍▌▋▊▉'], V = [...'▁▂▃▄▅▆▇']
+  for (let e = 1; e < 16; e++) {
+    const full = Math.floor(e / 8), p = e % 8
+    assert.equal(validate(bar('█'.repeat(full) + (p ? H[p - 1]! : ''), e)), null, `h ${e}`)
+    const lane = [...(p ? [V[p - 1]!] : []), ...Array<string>(full).fill('█')]   // top to bottom
+    assert.equal(validate(vbar([lane, lane], e)), null, `v ${e}`)
+  }
 })
 const member = (owners: string[]): Drawing => { const c = createCanvas(1, 6, 6); c.text(0, 0, '+name', 'label', owners)
   return c.toDrawing({ labels: [{ owner: owners[0]!, text: '+name' }], edges: [], edgeLabels: [], frames: [], members: [{ id: 'U.m0', parent: 'U' }] }) }
