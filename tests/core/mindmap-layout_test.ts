@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'
+import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'; import { validate } from '../../core/validate.ts'; import { mindmap } from '../../core/diagrams/mindmap/layout.ts'; import { parseMindmap } from '../../core/diagrams/mindmap/parse.ts'; import { readSource } from '../../core/source.ts'
 const X = (body: string, columns: number) => explain(`mindmap\n${body}`, { columns, theme: 'mono' }) as any
 test("A3: the root is leftmost; the first child shares its parent's row; the rest hang off a │ trunk", () =>
   assert.deepEqual(text(X('Root\n  A\n    B\n    C', 80).drawing), [' Root ─── A ─┬─ B', ' '.repeat(13) + '└─ C']))
@@ -40,14 +40,63 @@ const cell = (d: any, s: string) => {
 test('A3: colorBy branch inks each top-level subtree the next series; depth inks each depth; a connector takes its child\'s', () => {
   const S = 'Root\n  A\n    A1\n  Bee\n    B1', d = X(S, 80).drawing
   assert.deepEqual(['Root', 'A ', 'A1', 'Bee', 'B1', '┬', '└', '───'].map(s => cell(d, s)),
-    ['node m0', 's1 m1', 's1 m2', 's2 m3', 's2 m4', 's1 m1:link', 's2 m3:link', 's1 m2:link'])
+    ['node m0', 's1 m1', 's1 m2', 's2 m3', 's2 m4', 's1 m1:link,m3:link', 's2 m3:link', 's1 m2:link'])
   const e = explain(`---\nconfig:\n  mindmap:\n    colorBy: depth\n---\nmindmap\n${S}`, { columns: 80, theme: 'mono' }).drawing
   assert.deepEqual(['Root', 'A ', 'A1', 'Bee', 'B1'].map(s => cell(e, s)), ['node m0', 's1 m1', 's2 m2', 's1 m3', 's2 m4'])
-  assert.deepEqual(d.expect, { labels: ['Root', 'A', 'A1', 'Bee', 'B1'].map((t, k) => ({ owner: `m${k}`, text: t })), edges: [], edgeLabels: [], frames: [] })
+  const edges = [[0, 1], [1, 2], [0, 3], [3, 4]].map(([f, t]) => ({ id: `m${t}:link`, from: `m${f}`, to: `m${t}`, ends: [] }))
+  assert.deepEqual(d.expect, { labels: ['Root', 'A', 'A1', 'Bee', 'B1'].map((t, k) => ({ owner: `m${k}`, text: t })), edges, edgeLabels: [], frames: [] })
 })
 test('A4.fit-ladder: wrap tries 24 before narrower widths; the outline tries its labels unwrapped first', () => {
   assert.deepEqual([X('Root\n  aaaa bbbb cccc dddd eeee ffff', 30).step, ...text(X('Root\n  aaaa bbbb cccc dddd eeee ffff', 30).drawing)],
     ['wrap', ' Root ─── aaaa bbbb cccc dddd', '          eeee ffff'])
   const L = 'Abcdefghijklmnopqrstuvwxyz0123', r = X(`Root\n  ${L}\n  B`, 34)
   assert.deepEqual([r.step, ...text(r.drawing)], ['outline', ' Root', `├─ ${L}`, '└─ B'])
+})
+
+// Parentage is checked: each link is an expected edge the validator traces, so pills moved under another parent fail.
+const L = (body: string, step: string, columns: number) => mindmap.layout(parseMindmap(readSource(`mindmap\n${body}`) as any) as any, step as any, columns) as any
+// A clone of d with the complete cells owned by a and b exchanged, ownership and expect kept; null if their shapes differ.
+function swap(d: any, a: string, b: string): any {
+  const cells = d.cells.map((row: any[]) => [...row]), of = (o: string) => d.cells.flatMap((row: any[], r: number) =>
+    row.flatMap((x: any, c: number) => (x?.owners[0] === o ? [{ r, c, x }] : [])))
+  const p = of(a), q = of(b), rel = (s: any[]) => s.map(y => `${y.r - s[0].r},${y.c - s[0].c}`).join()
+  if (p.length === 0 || rel(p) !== rel(q)) return null
+  p.forEach((y: any, i: number) => { cells[q[i].r][q[i].c] = y.x; cells[y.r][y.c] = q[i].x })
+  return { ...d, cells }
+}
+const STEPS = ['natural', 'compact', 'wrap', 'outline'], WIDTHS = [30, 40, 60, 80, 120]
+test('validate: the QA swap, X and Y exchanged between A and B, fails at every step and width', () => {
+  const seen = new Set<string>()
+  for (const step of STEPS) for (const cols of WIDTHS) {
+    const d = L('Root\n  A\n    X\n  B\n    Y', step, cols)
+    if (d.cells === undefined) continue
+    seen.add(step); assert.equal(validate(d), null, `${step} ${cols}`)
+    assert.notEqual(validate(swap(d, 'm2', 'm4')), null, `${step} ${cols}`)
+  }
+  assert.deepEqual([...seen], STEPS)
+})
+test('validate: a child moved onto a sibling\'s trunk fails, tree and outline', () => {
+  const S = 'Root\n  A\n    A1\n    A2\n  B\n    B1\n    B2'
+  for (const [step, cols] of [['natural', 80], ['compact', 80], ['outline', 80]] as const) {
+    const d = L(S, step, cols)
+    assert.equal(validate(d), null); assert.notEqual(validate(swap(d, 'm3', 'm5')), null, step)
+    assert.notEqual(validate(swap(d, 'm2', 'm6')), null, step)
+  }
+})
+test('validate: every swap of two same-shaped pills with different parents fails', () => {
+  const S = ['Root\n  A\n    X\n  B\n    Y', 'Root\n  A\n    A1\n    A2\n  B\n    B1\n    B2', 'R\n  a\n    b\n      c\n  d\n    e\n  f',
+    'R\n  aa\n    x<br/>y\n    p\n  bb\n    q\n    z<br/>w\n  cc', 'R\n  a\n    b\n    c\n      d\n  e\n    f\n      g']
+  let n = 0
+  for (const s of S) for (const step of STEPS) for (const cols of [16, 24, 40, 80]) {
+    const d = L(s, step, cols)
+    if (d.cells === undefined) continue
+    const ids = d.expect.labels.map((l: any) => l.owner), parent = new Map(d.expect.edges.map((e: any) => [e.to, e.from]))
+    assert.equal(parent.size, ids.length - 1, 'each child declares its parent link')
+    for (const a of ids) for (const b of ids) {
+      if (a >= b || parent.get(a) === parent.get(b)) continue
+      const m = swap(d, a, b)
+      if (m) { n++; assert.notEqual(validate(m), null, `${s} ${step} ${cols} ${a}<>${b}`) }
+    }
+  }
+  assert.ok(n > 50, `${n} mutants`)
 })

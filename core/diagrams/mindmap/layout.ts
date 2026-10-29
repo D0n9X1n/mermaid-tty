@@ -1,6 +1,7 @@
 // The mindmap module (plan C T77; matrix, mindmap): the root leftmost, each child group to its parent's right, the first
 // child on its parent's first row and the rest on a │ trunk; narrower, the groups pack, the labels wrap, then an indented
-// outline. Connectors are caps owned by m<k>:link, so the edge checks pass over them. It registers itself on import.
+// outline. Each connector is the line cells of an edge m<k>:link from node k's parent to it, which the validator traces, so
+// a node drawn under the wrong parent fails. It registers itself on import.
 import { createCanvas, type Canvas, type Drawing } from '../../canvas.ts'
 import { CAPS } from '../../caps.ts'
 import { heading, stack } from '../../charts/sheet.ts'
@@ -56,8 +57,13 @@ function drawPill(cv: Canvas, { p, r, c }: At): void {
   })
 }
 
-// A connector piece s at (r, c), into child p: in p's ink, owned by p's link.
-const con = (cv: Canvas, r: number, c: number, s: string, p: Pill): void => cv.cap(r, c, s, p.ink, link(p))
+// The link into child p, as line cells (r, c, dirs): in p's ink, owned by p's link, so the validator traces it from p's
+// parent to p. Siblings' links share their trunk cells, which merge into ┬, │ and ├.
+const con = (cv: Canvas, p: Pill, path: readonly (readonly [number, number, number])[]): void =>
+  path.forEach(([r, c, dirs]) => cv.line(r, c, dirs, 'light', p.ink, link(p)))
+// The cells (r, c, dirs) of a straight run from (r, c): n cells across (10, ─) or down (5, │).
+const across = (r: number, c: number, n: number) => Array.from({ length: n }, (_, i) => [r, c + i, 10] as const)
+const down = (r: number, c: number, n: number) => Array.from({ length: n }, (_, i) => [r + i, c, 5] as const)
 
 // The tree: the root at (0, 0); each child group starts 3 columns past its column, the first child on its parent's first
 // row under ─── or ─┬─, the rest under ├─ or └─ on a │ trunk below the ┬, each after the subtrees above it. natural: a
@@ -72,15 +78,13 @@ function tree(cv: Canvas | null, root: Pill, step: 'natural' | 'compact'): numbe
     if (cv) drawPill(cv, { p, r, c })
     right = Math.max(right, c + p.width)
     const e = c + p.width, kc = step === 'natural' ? start[p.depth + 1]! : e + 3, t = kc - 2
-    let rr = r, prev = r
+    let rr = r
     p.kids.forEach((kid, i) => {
-      if (cv && i === 0) con(cv, r, e, p.kids.length === 1 ? '─'.repeat(kc - e) : '─'.repeat(t - e) + '┬─', kid)
-      if (cv && i > 0) {
-        for (let x = prev + 1; x < rr; x++) con(cv, x, t, '│', kid)
-        con(cv, rr, t, kid.next ? '├─' : '└─', kid)
-      }
+      // ─── into a lone child; else ─┬─ into the first, and ─┐, the │ trunk, └─ into each later one.
+      if (cv) con(cv, kid, p.kids.length === 1 || i === 0 ? across(r, e, kc - e)
+        : [...across(r, e, t - e), [r, t, 12], ...down(r + 1, t, rr - r - 1), [rr, t, 3], [rr, t + 1, 10]])
       place(kid, rr, kc)
-      prev = rr; rr += kid.sub
+      rr += kid.sub
     })
   }
   place(root, 0, 0)
@@ -91,18 +95,14 @@ function tree(cv: Canvas | null, root: Pill, step: 'natural' | 'compact'): numbe
 // │ or blank per ancestor below the root, by whether a sibling follows it, then ├─ or └─, a continuation row │ or blank.
 function outline(cv: Canvas | null, root: Pill): number {
   let right = 0, r = 0
+  const below = new Map<Pill, number>()                 // each pill's first row past its own rows
   const visit = (p: Pill): void => {
     const c = p.depth === 0 ? 0 : 3 * (p.depth - 1) + 2
-    if (cv) {
-      for (let a = p.parent; a && a.depth > 0; a = a.parent) {
-        if (a.next) for (let j = 0; j < p.rows.length; j++) con(cv, r + j, 3 * (a.depth - 1), '│', a.next)
-      }
-      if (p.depth > 0) {
-        con(cv, r, c - 2, p.next ? '├─' : '└─', p)
-        if (p.next) for (let j = 1; j < p.rows.length; j++) con(cv, r + j, c - 2, '│', p.next)
-      }
-      drawPill(cv, { p, r, c })
-    }
+    // The link: from the row below its parent, │ down its column to └─ on its own row; a later sibling's makes it ├ and the
+    // │ beside this subtree's rows.
+    if (cv && p.parent) con(cv, p, [...down(below.get(p.parent)!, c - 2, r - below.get(p.parent)!), [r, c - 2, 3], [r, c - 1, 10]])
+    if (cv) drawPill(cv, { p, r, c })
+    below.set(p, r + p.rows.length)
     right = Math.max(right, c + p.width); r += p.rows.length
     p.kids.forEach(visit)
   }
@@ -120,9 +120,13 @@ function draw(m: Mindmap, form: 'natural' | 'compact' | 'outline', max: number, 
   if (w > columns) return fail('too-wide')
   const all: Pill[] = [], gather = (p: Pill): void => { all.push(p); p.kids.forEach(gather) }
   gather(root)
-  const cv = createCanvas(form === 'outline' ? all.reduce((s, p) => s + p.rows.length, 0) : root.sub, w, columns)
+  // Each child's link, an edge from its parent with no end mark; siblings' links, and only theirs, may share a line cell.
+  const kids = all.filter(p => p.parent), from = new Map(kids.map(p => [link(p), `m${p.parent!.node.k}`]))
+  const shares = (a: string, b: string) => from.has(a) && from.get(a) === from.get(b)
+  const cv = createCanvas(form === 'outline' ? all.reduce((s, p) => s + p.rows.length, 0) : root.sub, w, columns, shares)
   lay(cv)
-  const body = cv.toDrawing({ labels: all.map(p => ({ owner: `m${p.node.k}`, text: p.node.lines.join('\n') })), edges: [], edgeLabels: [], frames: [] })
+  const edges = kids.map(p => ({ id: link(p), from: from.get(link(p))!, to: `m${p.node.k}`, ends: [] }))
+  const body = cv.toDrawing({ labels: all.map(p => ({ owner: `m${p.node.k}`, text: p.node.lines.join('\n') })), edges, edgeLabels: [], frames: [] })
   if (m.title === null) return body
   const head = heading(m.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
