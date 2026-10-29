@@ -88,7 +88,13 @@ test('CI preserves every interim check and runs all A9 scenarios on each OS', ()
 test('release checks tag, notes and wiki before publication; tests the fresh installed copy afterwards', () => {
   const w = readWorkflow('release.yml', read('.github/workflows/release.yml')).value as any, job = w.jobs.release;
   assert.equal(job['runs-on'], 'ubuntu-latest');
-  assert.equal(job.env.CLAUDE_CONFIG_DIR, '${{ runner.temp }}/claude-config');
+  // The runner context is not allowed in job-level env (GitHub rejects the file), so the first step sets it.
+  assert.equal(job.env.CLAUDE_CONFIG_DIR, undefined);
+  assert.equal(job.steps[0].run, 'echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-config" >> "$GITHUB_ENV"');
+  for (const [name, wf] of [['ci.yml', 'ci.yml'], ['release.yml', 'release.yml'], ['publish-wiki.yml', 'publish-wiki.yml']] as const) {
+    const y = readWorkflow(name, read(`.github/workflows/${wf}`)).value as any
+    for (const [id, j] of Object.entries<any>(y.jobs)) assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${name} ${id}: runner context in job env`)
+  }
   const ids = job.steps.map((s: any) => s.id).filter(Boolean);
   const order = ['release-tag', 'release-notes', 'release-wiki-run', 'release-wiki', 'release-publish', 'release-notes-published', 'release-install', 'release-e2e'];
   assert.deepEqual(ids.filter((id: string) => order.includes(id)), order);

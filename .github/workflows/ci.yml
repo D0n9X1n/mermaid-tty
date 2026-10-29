@@ -42,8 +42,6 @@ jobs:
         run: node --test 'scripts/tests/*.docs-spec.ts'
         env:
           GH_TOKEN: ${{ github.token }}
-      - id: docs
-        run: node scripts/check-docs.ts
       - id: wiki-publish-test
         shell: bash
         run: bash scripts/test-wiki-publish.sh
@@ -58,6 +56,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - id: review-hashes
         run: node scripts/check-review-hashes.ts
+      # Last, so a red docs check (README content lands late) never skips the gates above.
+      - id: docs
+        run: node scripts/check-docs.ts
 
   e2e:
     name: e2e (${{ matrix.os }})
