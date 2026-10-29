@@ -43,6 +43,9 @@ const PASS: Row[] = [
   ['testNs.test', 'namespace test', '() => { assert.ok(1) }'],
   ["require('node:test')", 'required test', '() => { assert.ok(1) }'],
   ["process.getBuiltinModule('node:test')", 'getBuiltinModule test', '() => { assert.ok(1) }'],
+  // node:assert's Assert, from Node 24.6, however reached: its instances' assertions count.
+  ...(typeof assert.Assert === 'function' ? [['test', 'Assert', '() => { new Assert().ok(1) }'], ['test', 'assert.Assert', '() => { new assert.Assert().ok(1) }'],
+    ['test', 'assert.strict.Assert', '() => { new assert.strict.Assert().ok(1) }'], ['test', 'strict Assert', '() => { new strictNs.Assert().ok(1) }']] as Row[] : []),
 ]
 const FAIL: Row[] = [
   ['test', 'none', '() => {}'],
@@ -60,7 +63,7 @@ const FAIL: Row[] = [
 ]
 const call = ([how, name, rest]: Row) => `${how}('${name}'${rest ? `, ${rest}` : ''})`
 const FIXTURE = ["import test, { describe, it } from 'node:test'", "import * as testNs from 'node:test'",
-  "import assert, { ok, equal, strict } from 'node:assert'", "import * as assertNs from 'node:assert'",
+  "import assert, { ok, equal, strict, Assert } from 'node:assert'", "import * as assertNs from 'node:assert'",
   "import strictDefault, { deepEqual as strictDeepEqual } from 'node:assert/strict'", "import * as strictNs from 'node:assert/strict'",
   "import bare from 'assert'", "import bareStrict from 'assert/strict'", "import { createRequire } from 'node:module'",
   'const require = createRequire(import.meta.url)', ...PASS.map(call), ...FAIL.map(call), ''].join('\n')

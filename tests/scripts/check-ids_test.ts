@@ -150,7 +150,16 @@ for (const [what, tests] of UNASSERTING)
       const r = check(dir, 'A1')
       assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.match(r.stdout, /error: 'no assertion executed'/)
     }))
-// Tests that execute an assertion where a static scan sees none, or in a child only. Each passes. [what, other files, the tests]
+// Accepted: an EventEmitterAsyncResource runs its listeners in the async context it was made in, so a node:assert call in
+// a listener of one made outside the test counts for no test (count.ts). Such a test must assert in its own flow too.
+test('A8.validation: @nt fails on a test whose only assertion is in a listener of an EventEmitterAsyncResource made outside it', () =>
+  scratch({ 'tests/a_test.ts': nodeTest("import { EventEmitterAsyncResource } from 'node:events'", "const events = new EventEmitterAsyncResource({ name: 'A1' })",
+    "test('A1: x', () => { events.on('go', () => { assert.ok(1) }); events.emit('go') })") }, dir => {
+    const r = check(dir, 'A1')
+    assert.equal(r.status, 1); assert.match(r.stdout, /^not ok \d+ - A1: x$/m); assert.match(r.stdout, /error: 'no assertion executed'/)
+  }))
+// Tests that execute an assertion where a static scan sees none, in a child only, under t.plan, or after the function
+// returns a thenable or another realm's promise. Each passes. [what, other files, the tests]
 const ASSERTING: [string, Record<string, string>, string][] = [
   ['an assert in a helper module', { 'tests/helpers.ts': "import assert from 'node:assert/strict'\nexport const same = (a: unknown, b: unknown) => assert.deepEqual(a, b)\n" },
     "import { same } from './helpers.ts'\ntest('A1: x', () => { same([1], [1]) })"],
@@ -161,10 +170,25 @@ const ASSERTING: [string, Record<string, string>, string][] = [
   ['describe and it', {}, "describe('A1: x', () => { it('works', () => { assert.ok(1) }) })"],
   ['a parent whose only asserts are in its children', {}, "test('A1: x', async t => { await t.test('child', () => { assert.ok(1) }) })"],
   ['the tests a loop registers', {}, "for (const n of [1, 2]) test(`A1: loop ${n}`, () => { assert.ok(n) })"],
+  ['t.plan, then t.assert', {}, "test('A1: plan', t => { t.plan(1); t.assert.equal('hello'.length, 5) })"],
+  ['a t.plan met by one t.assert call and one subtest', {}, "test('A1: x', async t => { t.plan(2); t.assert.ok(1); await t.test('child', () => { assert.ok(1) }) })"],
+  ['a returned thenable', {}, "test('A1: x', () => ({ then(resolve) { setTimeout(() => { assert.ok(1); resolve() }, 1) } }))"],
+  ["another realm's promise", {}, "import { runInNewContext } from 'node:vm'\n" +
+    "test('A1: x', () => runInNewContext('new Promise(r => setTimeout(r, 1))', { setTimeout }).then(() => { assert.ok(1) }))"],
 ]
 for (const [what, files, tests] of ASSERTING)
   test(`A8.validation: @nt passes a test that executes an assertion: ${what}`, () =>
     scratch({ ...files, 'tests/a_test.ts': nodeTest(tests) }, dir => {
+      const r = check(dir, 'A1')
+      assert.equal(r.status, 0, r.stdout); assert.doesNotMatch(r.stdout, /^not ok/m)
+    }))
+// node:assert's Assert, from Node 24.6: an instance's assertion counts whether the instance has it, as a strict one has
+// equal, or inherits it, as each inherits deepStrictEqual; and the options reach node's Assert.
+test("A8.validation: @nt passes a test that executes an assertion: an Assert instance's own or inherited method, configured or not",
+  { skip: typeof assert.Assert !== 'function' && 'no Assert in this Node' }, () =>
+    scratch({ 'tests/a_test.ts': nodeTest("import { Assert } from 'node:assert'",
+      "test('A1: inherited', () => { new Assert({ skipPrototype: true }).deepStrictEqual({ a: 1 }, { a: 1 }) })",
+      "test('A1: own', () => { new Assert().equal(1, 1) })", "test('A1: configured', () => { new Assert({ strict: false }).equal(1, '1') })") }, dir => {
       const r = check(dir, 'A1')
       assert.equal(r.status, 0, r.stdout); assert.doesNotMatch(r.stdout, /^not ok/m)
     }))
