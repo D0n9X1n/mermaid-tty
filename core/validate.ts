@@ -22,10 +22,10 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d, checked in order: labels, edges, conflicts, row widths, edge labels. null if none.
+// The first broken invariant of d: labels, edges, dangling lines, conflicts, row widths, edge labels. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all)
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -121,6 +121,24 @@ function edges(d: Drawing, all: readonly Spot[]): Fail | null {
     for (const head of heads) {
       const s = aim(head, [e.from, e.to])!
       if (degree(at(d, head.r - s.dr, head.c - s.dc)) >= JUNCTION) return fail('head-on-junction')
+    }
+  }
+  return null
+}
+
+function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
+  const edges = new Map(d.expect.edges.map(e => [e.id, e]))
+  for (const p of all) {
+    if (p.cell.kind !== 'line') continue
+    const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
+    if (mine.length === 0) continue
+    if (degree(p.cell) < 2) return fail('line-dangling')
+    for (const s of SIDES.filter(s => p.cell.dirs & s.bit)) {
+      const n = beside(d, p, s)
+      const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => p.cell.owners.includes(id))) ||
+        mine.some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
+          ((n.kind === 'text' || n.kind === 'cont') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
+      if (!connected) return fail('line-dangling')
     }
   }
   return null

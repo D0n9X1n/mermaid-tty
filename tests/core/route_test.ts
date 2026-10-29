@@ -5,6 +5,9 @@ import type { Placed } from '../../core/graph/layered.ts'
 import { routeGraph } from '../../core/graph/route.ts'
 import type { Route } from '../../core/graph/route.ts'
 import { g } from './graph-fixture.ts'
+import { drawGraph } from '../../core/graph/draw.ts'
+import { validate } from '../../core/validate.ts'
+import { explain } from '../../core/render.ts'
 
 const R = (dir: 'TB' | 'LR', e: string[]) => routeGraph(layoutGraph(g(dir, e), {
   rankGap: 3, nodeGap: 4, wrapAt: null,
@@ -12,6 +15,131 @@ const R = (dir: 'TB' | 'LR', e: string[]) => routeGraph(layoutGraph(g(dir, e), {
 const linked = (r: Route) => r.cells.every((c, i) => !i ||
   Math.abs(c.r - r.cells[i - 1]!.r) + Math.abs(c.c - r.cells[i - 1]!.c) === 1)
 const at = (r: Route) => new Set(r.cells.map(c => `${c.r},${c.c}`))
+
+test('A1: shared end groups never hide arrow-on-bend conflicts', () => {
+  const graph = g('TB', ['A>E', 'A>E'])
+  graph.edges[0]!.tail = 'arrow'
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  for (const r of rs) for (const other of rs.filter(s => s !== r)) {
+    assert.ok(r.ends.every(h => !at(other).has(`${h.r},${h.c}`)))
+  }
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
+
+test('A1: even-width faces allocate distinct ports to every group', () => {
+  const graph = g('LR', ['C>D', 'C>E'], { C: 'C<br/>more' })
+  graph.edges[0]!.tail = 'arrow'
+  const p = layoutGraph(graph, { rankGap: 8, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  assert.notEqual(rs[0]!.ends[0]!.r, rs[1]!.cells[0]!.r)
+  assert.equal(rs[0]!.ends[0]!.c, rs[1]!.cells[0]!.c)
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+  const repro = g('LR', ['C>D|no way', 'C>D'], { C: 'C<br/>more' })
+  repro.edges[0]!.tail = 'arrow'
+  const q = layoutGraph(repro, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const routes = routeGraph(q)
+  assert.ok(!Array.isArray(routes) || routes[0]!.ends[0]!.r !== routes[1]!.cells[0]!.r)
+})
+
+test('A1: side-entry splices never retrace a cell or create a one-arm spur', () => {
+  const graph = g('BT', ['B>A'], { B: 'B long name' })
+  graph.edges[0]!.tail = 'arrow'
+  graph.clusters = [
+    { id: 'S1', nodes: ['B'], title: null, dir: null, clusters: [] },
+    { id: 'S3', nodes: ['A'], title: 'a much longer title', dir: null, clusters: [] },
+  ]
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.equal(at(rs[0]!).size, rs[0]!.cells.length)
+  assert.ok(rs[0]!.cells.every(c => [3, 5, 6, 9, 10, 12].includes(c.dirs)))
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
+
+test('A1: side-entry splices preserve all dummy and label waypoints in order', () => {
+  const graph = g('TB', ['D>E', 'B>E'])
+  Object.assign(graph.edges[1]!, { tail: 'arrow', minlen: 3 })
+  graph.clusters = [{ id: 'S2', nodes: ['B'], title: null, dir: null, clusters: [] }]
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  const r = rs.find(r => r.edge === 'e1')!, waypoints = [...p.boxes].filter(([id]) => id.startsWith('e1#'))
+    .sort((a, b) => a[1].row - b[1].row)
+  let previous = -1
+  for (const [, b] of waypoints) {
+    const index = r.cells.findIndex(c => c.r === b.row && c.c === b.col)
+    assert.ok(index > previous)
+    previous = index
+  }
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
+
+test('A1: related routes cannot put a junction behind another head', () => {
+  const graph = g('TB', ['A>B', 'A>C'])
+  const p: Placed = { graph, frames: new Map(), rows: 9, cols: 14, boxes: new Map([
+    ['A', { row: 0, col: 5, rows: 1, cols: 5 }], ['B', { row: 5, col: 5, rows: 1, cols: 5 }],
+    ['C', { row: 8, col: 0, rows: 1, cols: 5 }],
+  ]), bands: [{ block: null, axis: 'row', from: 0, to: 2 }, { block: null, axis: 'row', from: 7, to: 8 }] }
+  const result = routeGraph(p)
+  if (!Array.isArray(result)) { assert.equal(result.reason, 'route-conflict'); return }
+  assert.equal(validate(drawGraph(p, result, 120)), null)
+})
+
+test('A1: labelled forks, horizontal cycles, mixed styles and self-loops render', () => {
+  for (const [dir, specs] of [
+    ['TB', ['A>B|yes', 'A>C|no']], ['LR', ['A>B', 'B>A']],
+    ['TB', ['A=>B', 'A>C']], ['TB', ['A>A']],
+  ] as const) {
+    const p = layoutGraph(g(dir, [...specs]), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+    const before = [...p.boxes].map(([id, b]) => [id, { ...b }])
+    const rs = routeGraph(p)
+    assert.ok(Array.isArray(rs), `${dir} ${specs}`)
+    assert.equal(validate(drawGraph(p, rs, 80)), null, `${dir} ${specs}`)
+    assert.equal(validate(drawGraph(p, rs, 120)), null, `${dir} ${specs}`)
+    assert.deepEqual([...p.boxes], before)
+    for (const r of rs) { assert.ok(linked(r)); assert.equal(at(r).size, r.cells.length) }
+  }
+})
+
+test('A1: aligned one-to-one chains use centered straight ports', () => {
+  const graph = g('TB', ['A>B', 'B>C'])
+  graph.clusters = [{ id: 'S', title: '处理', dir: null, nodes: ['A', 'B'], clusters: [] }]
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  for (const r of rs) assert.ok(r.cells.every(c => c.dirs === 5))
+  assert.equal(validate(drawGraph(p, rs, 80)), null)
+})
+
+test('A1: one-column offsets keep the head aligned with the source port', () => {
+  const p = layoutGraph(g('TB', ['A>B']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const b = p.boxes.get('B')!
+  const q = { ...p, cols: p.cols + 1, boxes: new Map(p.boxes).set('B', { ...b, col: b.col + 1 }) }
+  const rs = routeGraph(q)
+  assert.ok(Array.isArray(rs))
+  assert.ok(rs[0]!.cells.every(c => c.dirs === 5))
+  assert.equal(rs[0]!.cells[0]!.c, rs[0]!.ends[0]!.c)
+})
+
+test('A1: CJK labelled LR branches render without switching direction', () => {
+  const source = 'flowchart LR\nA[读取配置] --> B{有效?}\nB -->|是| C[启动]\nB -->|否| D[报错]'
+  const result = explain(source, { columns: 80 })
+  assert.ok(!('reason' in result))
+  assert.ok(result.step === 'natural' || result.step === 'tight')
+  assert.equal(validate(result.drawing), null)
+})
+
+test('A1: mixed back-directed labels route without channel conflicts', () => {
+  const graph = g('BT', ['N0>N1', 'N0>N2', 'N0.>N3', 'N1.>N4', 'N4>N5', 'N1>N6', 'N4.>N6|成功', 'N0=>N6|成功'],
+    { N0: '读取<br/>配置' })
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
 
 test('A1: a fan-out shares its stem; unrelated routes share no cell', () => {
   const [ab, ac, de] = R('TB', ['A>B', 'A>C', 'D>E']).map(at)
@@ -254,14 +382,20 @@ test('A1: a back-edge side entry fails when both side stems are blocked', () => 
 
 test('A1: distinct port groups cannot occupy the same face cell', () => {
   const p = layoutGraph(g('LR', ['A>B', 'A=>C']), { rankGap: 5, nodeGap: 4, wrapAt: null }) as Placed
-  assert.deepEqual(routeGraph(p), { reason: 'route-conflict' })
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.notDeepEqual(rs[0]!.cells[0], rs[1]!.cells[0])
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
 test('A1: unrelated routes cannot share a one-cell obstacle passage', () => {
   const p = layoutGraph(g('TB', ['A>C', 'B>D']), { rankGap: 8, nodeGap: 4, wrapAt: null }) as Placed
   const boxes = new Map(p.boxes).set('left-wall', { row: 4, col: 0, rows: 1, cols: 2 })
     .set('right-wall', { row: 4, col: 3, rows: 1, cols: p.cols - 3 })
-  assert.deepEqual(routeGraph({ ...p, boxes }), { reason: 'route-conflict' })
+  const q = { ...p, boxes }, rs = routeGraph(q)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.equal(validate(drawGraph(q, rs, 120)), null)
+  assert.ok(![...at(rs[0]!)].some(k => at(rs[1]!).has(k)))
 })
 
 test('A1: obstacle detours preserve mandatory dummy waypoints', () => {
@@ -284,7 +418,13 @@ test('A1: crossings cannot turn the cell behind a head into a junction', () => {
     ['C', { row: 2, col: 0, rows: 1, cols: 3 }], ['D', { row: 8, col: 8, rows: 1, cols: 3 }],
   ])
   const p = { graph, boxes, frames: new Map(), rows: 9, cols: 11 }
-  assert.deepEqual(routeGraph(p), { reason: 'route-conflict' })
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  for (const r of rs) for (const h of r.ends) {
+    const stem = r.cells.find(c => Math.abs(c.r - h.r) + Math.abs(c.c - h.c) === 1)!
+    const dirs = rs.flatMap(s => s.cells).filter(c => c.r === stem.r && c.c === stem.c).reduce((d, c) => d | c.dirs, 0)
+    assert.ok([5, 10].includes(dirs))
+  }
 })
 
 test('A1: routing is deterministic with ties in source order', () => {

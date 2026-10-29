@@ -4,6 +4,7 @@ import type { Fail } from '../fail.ts'
 import { width } from '../width.ts'
 import { gaps } from './gaps.ts'
 import type { Box, Placed } from './layered.ts'
+import type { GEdge } from './model.ts'
 
 export type Route = { edge: string; cells: readonly { r: number; c: number; dirs: number }[]
   ends: readonly { r: number; c: number; ch: string }[]; style: 'solid' | 'dotted' | 'thick' }
@@ -49,7 +50,234 @@ function detour(path: Point[], blocked: (c: Point) => boolean, p: Placed, pinned
   return path
 }
 
+// May extend rows/cols for exterior routing lanes; node, label and frame boxes never move.
 export function routeGraph(p: Placed): Route[] | Fail {
+  const fast = channelsRoute(p)
+  if (Array.isArray(fast)) return fast
+  const searched = searchRoutes(p)
+  return Array.isArray(searched) ? searched : searchRoutes(p, true)
+}
+
+type Port = { at: Point; face: number; group: string }
+const steps = [{ r: -1, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }, { r: 0, c: -1 }]
+const move = (p: Point, d: number): Point => ({ r: p.r + steps[d]!.r, c: p.c + steps[d]!.c })
+const back = (d: number) => (d + 2) % 4
+const bits = [1, 2, 4, 8]
+type SearchCell = Point & { direction: number; previous: number }
+
+// Weighted Manhattan search with directional states and a shared expansion budget. Never exponential.
+function findPath(start: Port, end: Port, blocked: (c: Point) => boolean,
+  allowed: (c: Point, dirs: number) => boolean, rows: number, cols: number, budget: { left: number }): Point[] | null {
+  const queue: SearchCell[] = [{ ...start.at, direction: start.face, previous: -1 }]
+  const seen = new Uint8Array(rows * cols * 4)
+  seen[(start.at.r * cols + start.at.c) * 4 + start.face] = 1
+  const heap: { index: number; cost: number }[] = []
+  const costs = [0]
+  const put = (index: number) => {
+    const c = queue[index]!, entry = { index, cost: costs[index]! + 2 * (Math.abs(c.r - end.at.r) + Math.abs(c.c - end.at.c)) }
+    let i = heap.length
+    heap.push(entry)
+    while (i > 0) { const parent = (i - 1) >> 1; if (heap[parent]!.cost <= entry.cost) break; heap[i] = heap[parent]!; i = parent }
+    heap[i] = entry
+  }
+  const take = () => {
+    const out = heap[0]!.index, last = heap.pop()!
+    if (heap.length) {
+      let i = 0
+      while (i * 2 + 1 < heap.length) {
+        let child = i * 2 + 1
+        if (child + 1 < heap.length && heap[child + 1]!.cost < heap[child]!.cost) child++
+        if (heap[child]!.cost >= last.cost) break
+        heap[i] = heap[child]!; i = child
+      }
+      heap[i] = last
+    }
+    return out
+  }
+  put(0)
+  let found = -1
+  while (heap.length && budget.left-- > 0) {
+    const i = take(), c = queue[i]!
+    if (c.r === end.at.r && c.c === end.at.c && allowed(c, bits[back(c.direction)]! | bits[end.face]!)) { found = i; break }
+    const dx = end.at.c - c.c, dy = end.at.r - c.r
+    const choices = Math.abs(dx) > Math.abs(dy) ? [dx > 0 ? 1 : 3, dy > 0 ? 2 : 0, c.direction, 0, 1, 2, 3]
+      : [dy > 0 ? 2 : 0, dx > 0 ? 1 : 3, c.direction, 0, 1, 2, 3]
+    for (const d of choices.filter((d, i, a) => a.indexOf(d) === i && d !== back(c.direction))) {
+      const n = move(c, d), key = (n.r * cols + n.c) * 4 + d
+      if (n.r < 0 || n.c < 0 || n.r >= rows || n.c >= cols || seen[key] || blocked(n) ||
+        !allowed(c, bits[back(c.direction)]! | bits[d]!)) continue
+      seen[key] = 1
+      queue.push({ ...n, direction: d, previous: i })
+      costs.push(costs[i]! + 1 + (d === c.direction ? 0 : 0.25))
+      put(queue.length - 1)
+    }
+  }
+  if (found < 0) return null
+  const path: Point[] = []
+  for (let i = found; i >= 0; i = queue[i]!.previous) path.push({ r: queue[i]!.r, c: queue[i]!.c })
+  return path.reverse()
+}
+
+function searchRoutes(p: Placed, constrainedFirst = false): Route[] | Fail {
+  const edges = p.graph.edges.filter(e => e.style !== 'invisible').sort((a, b) => a.order - b.order)
+  if (constrainedFirst) edges.sort((a, b) => Number(b.tail !== 'none') - Number(a.tail !== 'none') ||
+    Number(b.label !== null) - Number(a.label !== null) || b.minlen - a.minlen || a.order - b.order)
+  const routes: Route[] = [], ports = new Map<string, Point>(), budget = { left: 2500 }
+  type Used = { dirs: number; from: string; to: string; ch?: string }
+  const occupied = new Map<string, Used[]>(), protectedCells = new Set<string>()
+  const boxCells = new Map<string, string[]>(), borders = new Map<string, number>()
+  for (const [id, b] of p.boxes) for (let r = b.row; r < b.row + b.rows; r++) for (let c = b.col; c < b.col + b.cols; c++) {
+    const key = `${r},${c}`; boxCells.set(key, [...(boxCells.get(key) ?? []), id])
+  }
+  for (const b of p.frames.values()) for (let r = b.row; r < b.row + b.rows; r++) for (let c = b.col; c < b.col + b.cols; c++) {
+    const d = border({ r, c }, b); if (d) borders.set(`${r},${c}`, (borders.get(`${r},${c}`) ?? 0) | d)
+  }
+  const titleCells = new Set<string>()
+  for (const n of p.graph.clusters) {
+    const b = p.frames.get(n.id)
+    if (b && n.title !== null) for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) titleCells.add(`${b.row},${c}`)
+  }
+  const title = (c: Point) => titleCells.has(keyOf(c))
+  const candidates = (id: string, style: string, mark: string, preferred: number): Port[] => {
+    const b = p.boxes.get(id) ?? p.frames.get(id)
+    if (!b) return []
+    const out: Port[] = []
+    for (const face of [preferred, (preferred + 1) % 4, (preferred + 3) % 4, back(preferred)]) {
+      const size = face % 2 ? b.rows : b.cols
+      const group = `${id}:${face}:${style}:${mark}`, fixed = ports.get(group)
+      const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) => Math.abs(a - (size >> 1)) - Math.abs(b - (size >> 1)) || b - a)
+      for (const i of slots) {
+        const at = face === 0 ? { r: b.row - 1, c: b.col + i } : face === 1 ? { r: b.row + i, c: b.col + b.cols }
+          : face === 2 ? { r: b.row + b.rows, c: b.col + i } : { r: b.row + i, c: b.col - 1 }
+        if (at.r < 0 || at.c < 0 || title(at) || fixed && keyOf(fixed) !== keyOf(at)) continue
+        if ([...ports].some(([g, c]) => g !== group && keyOf(c) === keyOf(at))) continue
+        out.push({ at, face, group })
+      }
+    }
+    return out
+  }
+  const tryRoute = (e: GEdge, source: Port, target: Port): Route | null => {
+    const blocked = (c: Point) => title(c) || (boxCells.get(keyOf(c)) ?? []).some(id => !id.startsWith(`${e.id}#`))
+    const related = (u: Used) => u.from === source.group || u.to === target.group
+    const masks = new Map<string, number>()
+    const allowed = (c: Point, dirs: number) => {
+      const key = keyOf(c)
+      let mask = masks.get(key)
+      if (mask === undefined) {
+        mask = 0
+        const d = borders.get(key), protectedCell = protectedCells.has(key), used = occupied.get(key) ?? []
+        for (const arms of [3, 5, 6, 9, 10, 12]) if ((d === undefined || d === arms) && used.every(u => !u.ch && (
+          related(u) ? (!protectedCell || [5, 10].includes(u.dirs | arms))
+            : !protectedCell && (u.dirs === 5 && arms === 10 || u.dirs === 10 && arms === 5)))) mask |= 1 << arms
+        masks.set(key, mask)
+      }
+      return (mask & (1 << dirs)) !== 0
+    }
+    const glyph = (mark: string, face: number) => mark === 'circle' ? 'o' : mark === 'cross' ? 'x' : ['▼', '◄', '▲', '►'][face]!
+    const markOK = (port: Port, mark: string) => !blocked(port.at) && [...p.frames.values()].every(b => !border(port.at, b)) &&
+      (occupied.get(keyOf(port.at)) ?? []).every(u => mark !== 'none' && u.ch === glyph(mark, port.face) && related(u))
+    if (e.tail !== 'none' && !markOK(source, e.tail) || e.head !== 'none' && !markOK(target, e.head)) return null
+    const start = e.tail === 'none' ? source.at : move(source.at, source.face)
+    const end = e.head === 'none' ? target.at : move(target.at, target.face)
+    const usable = (c: Point) => [3, 5, 6, 9, 10, 12].some(d => allowed(c, d))
+    if (blocked(start) || blocked(end) || start.r < 0 || start.c < 0 || end.r < 0 || end.c < 0) return null
+    for (const [c, port, mark] of [[start, source, e.tail], [end, target, e.head]] as const) {
+      const n = move(c, port.face)
+      if (mark !== 'none' && (n.r < 0 || n.c < 0 || blocked(n) || !allowed(c, port.face % 2 ? 10 : 5))) return null
+    }
+    for (const [c, port, mark] of [[start, source, e.tail], [end, target, e.head]] as const) {
+      if (mark !== 'none' && (occupied.get(keyOf(c)) ?? []).some(u => u.ch ||
+        ![5, 10].includes(u.dirs | (port.face % 2 ? 10 : 5)))) return null
+    }
+    const maxR = Math.max(p.rows, start.r + 4, end.r + 4), maxC = Math.max(p.cols, start.c + 4, end.c + 4)
+    const direction = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
+    const points = [...p.boxes].filter(([id]) => id.startsWith(`${e.id}#`))
+      .sort((a, b) => Number(a[0].split('#').at(-1)) - Number(b[0].split('#').at(-1)))
+      .map(([, b]) => ({ r: b.row, c: b.col }))
+    const label = p.boxes.get(`${e.id}:label`)
+    if (label) {
+      const point = direction % 2 ? { r: label.row + label.rows, c: label.col + (label.cols >> 1) }
+        : { r: label.row + (label.rows >> 1), c: label.col + label.cols }
+      points.push(point)
+      points.sort((a, b) => direction === 0 ? b.r - a.r : direction === 1 ? a.c - b.c : direction === 2 ? a.r - b.r : b.c - a.c)
+    }
+    const path: Point[] = [], used = new Set<string>(), stops = [...points, end]
+    let current = start, incoming = source.face
+    const pointKeys = new Set(points.map(keyOf)), startKey = keyOf(start), endKey = keyOf(end)
+    const sourceKey = keyOf(source.at), targetKey = keyOf(target.at)
+    for (const [i, stop] of stops.entries()) {
+      const future = new Set(stops.slice(i + 1).map(keyOf))
+      if (!usable(current) || !usable(stop)) return null
+      const last = i === stops.length - 1, outgoing = last ? back(target.face) : direction
+      const part = findPath({ ...source, at: current, face: incoming }, { ...target, at: stop, face: outgoing },
+        c => { const key = keyOf(c); return blocked(c) || used.has(key) || (e.tail !== 'none' && key === sourceKey) ||
+          (e.head !== 'none' && key === targetKey) || future.has(key) },
+        (c, dirs) => { const key = keyOf(c); return allowed(c, dirs) && (e.tail === 'none' || key !== startKey || dirs === (source.face % 2 ? 10 : 5)) &&
+          (e.head === 'none' || key !== endKey || dirs === (target.face % 2 ? 10 : 5)) &&
+          (!pointKeys.has(key) || dirs === (direction % 2 ? 10 : 5)) },
+        Math.max(maxR, current.r + 3, stop.r + 3), Math.max(maxC, current.c + 3, stop.c + 3), budget)
+      if (!part) return null
+      path.push(...(i === 0 ? part : part.slice(1)))
+      for (const c of part.slice(0, -1)) used.add(keyOf(c))
+      current = stop; incoming = outgoing
+    }
+    if (new Set(path.map(keyOf)).size !== path.length) return null
+    const before = e.tail === 'none' ? move(source.at, back(source.face)) : source.at
+    const after = e.head === 'none' ? move(target.at, back(target.face)) : target.at
+    const cells = path.map((c, i) => ({ ...c, dirs: arm(c, path[i - 1] ?? before) | arm(c, path[i + 1] ?? after) }))
+    if (cells.some(c => ![3, 5, 6, 9, 10, 12].includes(c.dirs))) return null
+    for (const other of routes) {
+      const common = new Set<string>()
+      for (let i = 0; i < Math.min(cells.length, other.cells.length); i++) {
+        if (keyOf(cells[i]!) !== keyOf(other.cells[i]!)) break
+        common.add(keyOf(cells[i]!))
+      }
+      for (let i = 1; i <= Math.min(cells.length, other.cells.length); i++) {
+        if (keyOf(cells.at(-i)!) !== keyOf(other.cells.at(-i)!)) break
+        common.add(keyOf(cells.at(-i)!))
+      }
+      const theirs = new Map(other.cells.map(c => [keyOf(c), c.dirs]))
+      if (cells.some(c => { const d = theirs.get(keyOf(c)); return d !== undefined && !common.has(keyOf(c)) &&
+        !(c.dirs === 5 && d === 10 || c.dirs === 10 && d === 5) })) return null
+    }
+    const ends = []
+    if (e.tail !== 'none') ends.push({ ...source.at, ch: glyph(e.tail, source.face) })
+    if (e.head !== 'none') ends.push({ ...target.at, ch: glyph(e.head, target.face) })
+    p.rows = Math.max(p.rows, ...[...cells, ...ends].map(c => c.r + 1))
+    p.cols = Math.max(p.cols, ...[...cells, ...ends].map(c => c.c + 1))
+    return { edge: e.id, style: e.style as Route['style'], cells, ends }
+  }
+  const preferred = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
+  for (const e of edges) {
+    const sources = candidates(e.from, e.style, e.tail, preferred)
+    const targets = candidates(e.to, e.style, e.head, back(preferred))
+    let result: { route: Route; source: Port; target: Port } | null = null
+    for (const source of sources) {
+      for (const target of targets) {
+        if (budget.left <= 0) return fail('route-conflict')
+        if (keyOf(source.at) === keyOf(target.at)) continue
+        const route = tryRoute(e, source, target)
+        if (route) { result = { route, source, target }; break }
+      }
+      if (result) break
+    }
+    if (!result) return fail('route-conflict')
+    const { route, source, target } = result
+    routes.push(route)
+    ports.set(source.group, source.at); ports.set(target.group, target.at)
+    for (const c of [...route.cells, ...route.ends]) {
+      const key = keyOf(c), list = occupied.get(key) ?? []
+      list.push({ dirs: 'dirs' in c ? c.dirs : 0, ch: 'ch' in c ? c.ch : undefined,
+        from: source.group, to: target.group })
+      occupied.set(key, list)
+    }
+    if (e.tail !== 'none') protectedCells.add(keyOf(move(source.at, source.face)))
+    if (e.head !== 'none') protectedCells.add(keyOf(move(target.at, target.face)))
+  }
+  return routes.sort((a, b) => p.graph.edges.find(e => e.id === a.edge)!.order - p.graph.edges.find(e => e.id === b.edge)!.order)
+}
+
+function channelsRoute(p: Placed): Route[] | Fail {
   const edges = p.graph.edges.filter(e => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   let across = p.graph.dir === 'LR' || p.graph.dir === 'RL'
   let sign = p.graph.dir === 'BT' || p.graph.dir === 'RL' ? -1 : 1
@@ -65,20 +293,28 @@ export function routeGraph(p: Placed): Route[] | Fail {
     const index = keys.indexOf(`${style}:${end}`)
     const size = across ? b.rows : b.cols, low = across ? b.row : b.col
     if (keys.length > size) return NaN
-    const offset = source ? (size >> 1) + (index % 2 ? 1 : -1) * Math.ceil(index / 2)
-      : Math.floor((index + 1) * size / (keys.length + 1))
+    const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) =>
+      Math.abs(a - (size >> 1)) - Math.abs(b - (size >> 1)) || b - a)
+    const offset = source ? slots[index]! : Math.floor((index + 1) * size / (keys.length + 1))
     if (source) {
       const face = sign === 1 ? (across ? b.col + b.cols : b.row + b.rows) : -(across ? b.col : b.row) + 1
       const candidates = Array.from({ length: size }, (_, i) => low + i)
         .sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) || a - b)
       return candidates.find(x => !titleCell(point(face, x))) ?? low + offset
     }
-    const blocked = new Set(edges.filter(e => !peers.some(n => n.from === e.from))
+    const blocked = new Set(edges.filter(e => !peers.some(n => n.from === e.from) && e.from !== id && e.to !== id)
+      .filter(e => { const a = p.boxes.get(e.from) ?? p.frames.get(e.from)!;
+        const target = p.boxes.get(peers[0]!.from) ?? p.frames.get(peers[0]!.from)!;
+        return across ? a.col === target.col : a.row === target.row })
       .map(e => port(e.from, true, e.style, e.tail)))
     const candidates = Array.from({ length: size }, (_, i) => low + i)
       .sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) || a - b)
     const face = sign === 1 ? (across ? b.col : b.row) : -(across ? b.col + b.cols - 1 : b.row + b.rows - 1)
     const clear = (x: number) => [1, 2, 3].every(d => ![...p.boxes.values()].some(b => inside(point(face - d, x), b)))
+    if (peers.length === 1 && keys.length === 1) {
+      const e = peers[0]!, x = port(e.from, true, e.style, e.tail)
+      if (Math.abs(x - low - offset) <= 1 && x >= low && x < low + size && !blocked.has(x) && clear(x)) return x
+    }
     return candidates.find(x => !blocked.has(x) && clear(x)) ?? candidates.find(clear) ?? low + offset
   }
   const rawGaps = gaps(p), tracks = new Map<string, Map<string, number>>()
@@ -108,6 +344,8 @@ export function routeGraph(p: Placed): Route[] | Fail {
       const low = sign === 1 ? (across ? label.col : label.row)
         : -(across ? label.col + label.cols - 1 : label.row + label.rows - 1)
       const x = (across ? label.row + label.rows : label.col + label.cols)
+      if (across) p.rows = Math.max(p.rows, x + 1)
+      else p.cols = Math.max(p.cols, x + 1)
       waypoints.push({ m: low, x }, { m: low + (across ? label.cols : label.rows), x })
       waypoints.sort((a, b) => a.m - b.m)
     }
@@ -166,6 +404,15 @@ export function routeGraph(p: Placed): Route[] | Fail {
     }
     const pinned = new Set(waypoints.map(d => keyOf(point(d.m, d.x))))
     if (!detour(path, c => titleCell(c) || obstacles.some(b => inside(c, b)), p, pinned)) return fail('route-conflict')
+    if (path.some(c => c.r < 0 || c.c < 0 || c.r >= p.rows || c.c >= p.cols)) return fail('route-conflict')
+    if (new Set(path.map(keyOf)).size !== path.length || path.some((c, i) => i > 0 &&
+      Math.abs(c.r - path[i - 1]!.r) + Math.abs(c.c - path[i - 1]!.c) !== 1)) return fail('route-conflict')
+    let visited = -1
+    for (const waypoint of waypoints) {
+      const index = path.findIndex(c => keyOf(c) === keyOf(point(waypoint.m, waypoint.x)))
+      if (index <= visited) return fail('route-conflict')
+      visited = index
+    }
     if (e.head !== 'none') path.pop()
     if (e.tail !== 'none') path.shift()
     const before = e.tail === 'none' ? point(start - 1, sx) : tail
@@ -186,15 +433,27 @@ export function routeGraph(p: Placed): Route[] | Fail {
     for (const other of routes) {
       const edge = edges.find(n => n.id === other.edge)!
       const related = e.style === edge.style && (e.from === edge.from && e.tail === edge.tail || e.to === edge.to && e.head === edge.head)
-      if (related) continue
       const occupied = new Map(other.cells.map(c => [keyOf(c), c.dirs]))
-      for (const c of cells) {
-        const d = occupied.get(keyOf(c))
-        const protectedStem = [...ends, ...other.ends].some(h => Math.abs(h.r - c.r) + Math.abs(h.c - c.c) === 1)
-        if (d !== undefined && (protectedStem || !(d === 5 && c.dirs === 10 || d === 10 && c.dirs === 5))) return fail('route-conflict')
-      }
       if (ends.some(c => occupied.has(keyOf(c))) || other.ends.some(c => cells.some(n => keyOf(c) === keyOf(n)))) {
         return fail('route-conflict')
+      }
+      const common = new Set<string>()
+      if (related) {
+        if (e.from === edge.from && e.tail === edge.tail) for (let i = 0; i < Math.min(cells.length, other.cells.length); i++) {
+          if (keyOf(cells[i]!) !== keyOf(other.cells[i]!)) break
+          common.add(keyOf(cells[i]!))
+        }
+        if (e.to === edge.to && e.head === edge.head) for (let i = 1; i <= Math.min(cells.length, other.cells.length); i++) {
+          if (keyOf(cells.at(-i)!) !== keyOf(other.cells.at(-i)!)) break
+          common.add(keyOf(cells.at(-i)!))
+        }
+      }
+      for (const c of cells) {
+        const d = occupied.get(keyOf(c))
+        if (d === undefined) continue
+        const protectedStem = [...ends, ...other.ends].some(h => Math.abs(h.r - c.r) + Math.abs(h.c - c.c) === 1)
+        if (protectedStem && ![5, 10].includes(d | c.dirs)) return fail('route-conflict')
+        if (!common.has(keyOf(c)) && !(d === 5 && c.dirs === 10 || d === 10 && c.dirs === 5)) return fail('route-conflict')
       }
     }
     routes.push({ edge: e.id, cells, ends, style: e.style as Route['style'] })

@@ -6,6 +6,48 @@ function two(t1 = 'a', t2 = 'b'): Drawing {
   return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', heads: ['▼'] }], edgeLabels: [] })
 }
 const cut = (d: Drawing, r: number, c: number) => { d.cells[r]![c] = null; return d }
+
+test('A3: edge-owned one-arm spurs fail line-dangling even when the edge connects', () => {
+  const d = two()
+  d.cells[1]![0] = { ch: '╶', kind: 'line', role: 'edge', owners: ['A>B'], dirs: 2 }
+  assert.equal(validate(d)?.reason, 'line-dangling')
+  const connected = two()
+  connected.cells[1]![2] = { ...connected.cells[1]![2]!, dirs: 1 }
+  assert.equal(validate(connected)?.reason, 'line-dangling')
+})
+
+test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', () => {
+  const d = two()
+  d.cells[1]![0] = { ch: '─', kind: 'line', role: 'edge', owners: ['A>B'], dirs: 10 }
+  assert.equal(validate(d)?.reason, 'line-dangling')
+  d.cells[1]![0] = { ...d.cells[1]![0]!, owners: ['frame'] }
+  assert.equal(validate(d), null)
+  d.cells[1]![0] = { ...d.cells[1]![0]!, owners: ['frame', 'A>B'] }
+  assert.equal(validate(d)?.reason, 'line-dangling')
+  const wrongOwner = two()
+  wrongOwner.cells[1]![3] = { ch: '─', kind: 'line', role: 'edge', owners: ['other'], dirs: 10 }
+  wrongOwner.cells[1]![2] = { ...wrongOwner.cells[1]![2]!, dirs: 7 }
+  wrongOwner.cells[2]![2] = { ...wrongOwner.cells[1]![2]!, ch: '│', dirs: 5 }
+  wrongOwner.expect = { ...wrongOwner.expect, edges: [{ id: 'A>B', from: 'A', to: 'B', heads: [] }] }
+  assert.equal(validate(wrongOwner)?.reason, 'line-dangling')
+  const loop = two()
+  const line = (dirs: number, owners = ['A>B']) => ({ ch: '─', kind: 'line' as const, role: 'edge' as const, owners, dirs })
+  // A disconnected loop has two arms per cell: valid arms first, then one missing reciprocal bit.
+  loop.cells[0]![4] = line(6)
+  loop.cells[0]![5] = line(12)
+  loop.cells[1]![4] = line(3)
+  loop.cells[1]![5] = line(9)
+  assert.equal(validate(loop), null)
+  loop.cells[0]![5] = line(5)
+  assert.equal(validate(loop)?.reason, 'line-dangling')
+  loop.cells[0]![5] = line(12, ['foreign'])
+  assert.equal(validate(loop)?.reason, 'line-dangling')
+  loop.cells[0]![5] = line(4, ['frame'])
+  loop.cells[0]![4] = line(6, ['A>B', 'frame'])
+  loop.cells[1]![5] = line(9, ['A>B', 'frame'])
+  assert.equal(validate(loop)?.reason, 'line-dangling')
+})
+
 test('A5.mutation-tests: each broken invariant fails', () => {
   assert.equal(validate(two()), null)
   assert.equal(validate(cut(two(), 0, 2))?.reason, 'label-missing')
