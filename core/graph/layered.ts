@@ -83,21 +83,46 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   for (const e of graph.edges) {
     const label = boxes.get(`${e.id}:label`), a = boxes.get(e.from), b = boxes.get(e.to)
     if (!label || !a || !b || e.reversed || [...boxes.keys()].some(id => id.startsWith(`${e.id}#`))) continue
-    const source = across ? a.row + (a.rows >> 1) : a.col + (a.cols >> 1)
-    const target = across ? b.row + (b.rows >> 1) : b.col + (b.cols >> 1)
+    const source = across ? a.row + ((a.rows - 1) >> 1) : a.col + ((a.cols - 1) >> 1)
+    const target = across ? b.row + ((b.rows - 1) >> 1) : b.col + ((b.cols - 1) >> 1)
     const single = graph.edges.filter(n => n.from === e.from && n.style !== 'invisible').length === 1
     const cross = (single && Math.abs(source - target) <= 1 ? source : target) - ((across ? label.rows : label.cols) >> 1)
     const candidate = across ? { ...label, row: cross } : { ...label, col: cross }
     const overlaps = [...boxes].some(([id, n]) => id !== `${e.id}:label` && candidate.row < n.row + n.rows &&
       n.row < candidate.row + candidate.rows && candidate.col < n.col + n.cols && n.col < candidate.col + candidate.cols)
-    if (cross >= 0 && !overlaps) boxes.set(`${e.id}:label`, candidate)
+    const frameConflict = [...frames.values()].some(f => {
+      const within = (b: Box) => b.row > f.row && b.col > f.col && b.row + b.rows < f.row + f.rows && b.col + b.cols < f.col + f.cols
+      const intersects = candidate.row < f.row + f.rows && f.row < candidate.row + candidate.rows &&
+        candidate.col < f.col + f.cols && f.col < candidate.col + candidate.cols
+      return within(label) ? !within(candidate) : intersects
+    })
+    if (cross >= 0 && !overlaps && !frameConflict) boxes.set(`${e.id}:label`, candidate)
   }
-  let outside = Math.max(...[...boxes, ...frames].map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
-  for (const e of graph.edges.filter(e => e.reversed && e.label !== null)) {
+  for (const e of graph.edges.filter(e => !e.reversed && e.label !== null)) {
     const label = boxes.get(`${e.id}:label`)
     if (!label) continue
-    boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
-    outside += (across ? label.rows : label.cols) + 2
+    const axis = across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)
+    for (const [id, b] of boxes) if (id.startsWith(`${e.id}#`)) {
+      const candidate = across ? { ...b, row: axis } : { ...b, col: axis }
+      const overlap = [...boxes].some(([other, n]) => other !== id && candidate.row < n.row + n.rows && n.row < candidate.row + candidate.rows &&
+        candidate.col < n.col + n.cols && n.col < candidate.col + candidate.cols)
+      const crossesFrame = [...frames.values()].some(f => {
+        const within = (b: Box) => b.row > f.row && b.col > f.col && b.row + b.rows < f.row + f.rows && b.col + b.cols < f.col + f.cols
+        return within(b) !== within(candidate) || candidate.row >= f.row && candidate.row < f.row + f.rows &&
+          candidate.col >= f.col && candidate.col < f.col + f.cols && !within(candidate)
+      })
+      if (!overlap && !crossesFrame) boxes.set(id, candidate)
+    }
+  }
+  let outside = Math.max(...[...boxes, ...frames].map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
+  for (const e of graph.edges.filter(e => e.reversed)) {
+    const label = boxes.get(`${e.id}:label`)
+    const lane = outside + (label ? (across ? label.rows : label.cols) >> 1 : 0)
+    for (const [id, b] of boxes) if (id.startsWith(`${e.id}#`)) {
+      boxes.set(id, across ? { ...b, row: lane } : { ...b, col: lane })
+    }
+    if (label) boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
+    outside += (label ? across ? label.rows : label.cols : 1) + 2
   }
   const rows = Math.max(across ? p.wide : p.long, ...[...boxes.values()].map(b => b.row + b.rows))
   const cols = Math.max(across ? p.long : p.wide, ...[...boxes.values()].map(b => b.col + b.cols))

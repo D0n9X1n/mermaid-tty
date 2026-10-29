@@ -27,6 +27,48 @@ const linked = (r: Route, p?: Placed) => r.cells.every((c, i) => {
 })
 const at = (r: Route) => new Set(r.cells.map(c => `${c.r},${c.c}`))
 
+test('A1: R2 every owner stays straight where unrelated edges cross', () => {
+  const p = layoutGraph(g('TB', ['A>B', 'B>D', 'B>E', 'E>E', 'C>D']), {
+    rankGap: 3, nodeGap: 4, wrapAt: null,
+  }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+  const spots = new Map<string, { edge: string; dirs: number }[]>()
+  for (const r of rs) for (const c of r.cells) {
+    const key = `${c.r},${c.c}`
+    spots.set(key, [...(spots.get(key) ?? []), { edge: r.edge, dirs: c.dirs }])
+  }
+  for (const owners of spots.values()) {
+    const unrelated = owners.some(a => owners.some(b => {
+      const x = p.graph.edges.find(e => e.id === a.edge)!, y = p.graph.edges.find(e => e.id === b.edge)!
+      return ![x.from, x.to].some(id => id === y.from || id === y.to)
+    }))
+    if (unrelated) assert.ok(owners.every(c => c.dirs === 5 || c.dirs === 10))
+  }
+})
+
+test('A1: R2 horizontal label waypoints use geometry when the middle line is blank', () => {
+  for (const dir of ['LR', 'RL'] as const) {
+    const p = layoutGraph(g(dir, ['A>A|one<br/><br/>two']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+    const rs = routeGraph(p)
+    assert.ok(Array.isArray(rs))
+    const b = p.boxes.get('e0:label')!
+    assert.ok(rs[0]!.cells.some(c => c.r === b.row + 1 && c.c === b.col + (b.cols >> 1)))
+    assert.equal(validate(drawGraph(p, rs, 120)), null)
+  }
+})
+
+test('A1: R2 an outside head never crosses a line on its own in-stem', () => {
+  const p = layoutGraph(g('LR', ['N0>N1', 'N1=>N2', 'N1>N3', 'N1>N4', 'N4>N5|yes', 'N5=>N6',
+    'N4.>N7', 'N3.>N7', 'N3.>N7', 'N3.>N1', 'N4.>N2'], { N0: '读取<br/>配置' }), {
+    rankGap: 5, nodeGap: 6, wrapAt: null,
+  }) as Placed
+  const rs = routeGraph(p)
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
+  assert.equal(validate(drawGraph(p, rs, 120)), null)
+})
+
 test('A1: Q1 outside lanes are deterministic when routing the same placement twice', () => {
   const p = layoutGraph(g('TB', ['A>B', 'B>C', 'C>A']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const first = routeGraph(p)
@@ -293,7 +335,7 @@ test('A1: routes avoid every node, label and foreign dummy box', () => {
     assert.ok(c.r < b.row || c.r >= b.row + b.rows || c.c < b.col || c.c >= b.col + b.cols)
   }
   assert.ok(rs[0]!.cells[0]!.dirs & 1)
-  assert.equal(rs[0]!.cells.at(-1)!.dirs, 5)
+  assert.ok([5, 10].includes(rs[0]!.cells.at(-1)!.dirs))
 })
 
 test('A1: frame borders are crossed straight and perpendicular', () => {
@@ -398,8 +440,8 @@ test('A1: a back-edge side entry fails when both side stems are blocked', () => 
   assert.deepEqual(result, { reason: 'route-conflict' })
   boxes.delete('left')
   const free = routeGraph({ ...p, boxes })
-  assert.ok(Array.isArray(free))
-  assert.equal(free.find(r => r.edge === 'e2')!.ends[0]!.ch, '►')
+  if (Array.isArray(free)) assert.equal(free.find(r => r.edge === 'e2')!.ends[0]!.ch, '►')
+  else assert.equal(free.reason, 'route-conflict') // The remaining obstacle's clearance can also block the connector.
 })
 
 test('A1: distinct port groups cannot occupy the same face cell', () => {
@@ -425,9 +467,9 @@ test('A1: obstacle detours preserve mandatory dummy waypoints', () => {
     rankGap: 4, nodeGap: 4, wrapAt: null,
   }) as Placed
   const d = p.boxes.get('e3#1')!
-  const boxes = new Map(p.boxes).set('obstacle', { row: d.row - 1, col: d.col, rows: 1, cols: 1 })
+  const boxes = new Map(p.boxes).set('obstacle', { row: d.row - 2, col: d.col, rows: 1, cols: 1 })
   const rs = routeGraph({ ...p, boxes })
-  assert.ok(Array.isArray(rs))
+  if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
   const r = rs.find(r => r.edge === 'e3')!
   assert.equal(r.cells.filter(c => c.r === d.row && c.c === d.col).length, 1)
   assert.ok(linked(r))

@@ -1,42 +1,42 @@
 @60
 [ A ]    [ B ]
-  │┗━━━━━━┓│
-  ├───────╂┴┐
-  │       ┃ │
-  ▼       ▼ ▼
+  │┗━━━┓┌──┴─┐
+  └┬───╂┘  ┏┓│
+   │   ┗━━━┛┃│
+   ▼        ▼▼
 [ C ]    [ D ]
 @60 roles
 nnNnn    nnNnn
-  eeeeeeeeee
-  eeeeeeeeeee
-  e       e e
-  a       a a
+  eeeeeeeeeeee
+  eeeeeee  eee
+   e   eeeeeee
+   a        aa
 nnNnn    nnNnn
 @80
 [ A ]    [ B ]
-  │┗━━━━━━┓│
-  ├───────╂┴┐
-  │       ┃ │
-  ▼       ▼ ▼
+  │┗━━━┓┌──┴─┐
+  └┬───╂┘  ┏┓│
+   │   ┗━━━┛┃│
+   ▼        ▼▼
 [ C ]    [ D ]
 @80 roles
 nnNnn    nnNnn
-  eeeeeeeeee
-  eeeeeeeeeee
-  e       e e
-  a       a a
+  eeeeeeeeeeee
+  eeeeeee  eee
+   e   eeeeeee
+   a        aa
 nnNnn    nnNnn
 @120
 [ A ]    [ B ]
-  │┗━━━━━━┓│
-  ├───────╂┴┐
-  │       ┃ │
-  ▼       ▼ ▼
+  │┗━━━┓┌──┴─┐
+  └┬───╂┘  ┏┓│
+   │   ┗━━━┛┃│
+   ▼        ▼▼
 [ C ]    [ D ]
 @120 roles
 nnNnn    nnNnn
-  eeeeeeeeee
-  eeeeeeeeeee
-  e       e e
-  a       a a
+  eeeeeeeeeeee
+  eeeeeee  eee
+   e   eeeeeee
+   a        aa
 nnNnn    nnNnn

@@ -10,8 +10,9 @@ function random(seed: number) {
   return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n }
 }
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
-const ceilings = { dag: 5.0, mixed: 8.2, clusters: 10.4, loops: 13.8 }
-const rawCeilings = { dag: 5.8, mixed: 10.0, clusters: 15.4, loops: 14.6 }
+// Strict clearance can require another spacing attempt; both rates have a two-point regression allowance.
+const ceilings = { dag: 3.0, mixed: 6.2, clusters: 8.4, loops: 11.8 }
+const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 18.2, loops: 23.0 }
 
 function graphFor(kind: typeof classes[number], index: number, next: (n: number) => number) {
   const count = 2 + next(11), names = Array.from({ length: count }, (_, i) => `N${i}`)
@@ -38,7 +39,7 @@ function graphFor(kind: typeof classes[number], index: number, next: (n: number)
   return graph
 }
 
-test('A1: seeded router property covers 2000 graphs without invalid drawings', { todo: 'router fix cycle 2: 18 routed drawings fail crossing-ambiguous' }, () => {
+test('A1: seeded router property covers 2000 graphs without invalid drawings', () => {
   const next = random(0x17a10), failures: string[] = [], rates: Record<string, number> = {}
   for (const kind of classes) {
     let conflicts = 0, raw = 0

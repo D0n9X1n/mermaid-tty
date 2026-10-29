@@ -275,7 +275,36 @@ function drawn(gr: Graph): Drawing {
 }
 // QA's repro: the ┼ under B holds B→D straight down, E's self-loop straight across, and B→E turning inside it.
 test('A5.mutation-tests: a crossing that hides a third edge turning inside it fails crossing-ambiguous', () => {
-  const d = drawn(g('TB', ['A>B', 'B>D', 'B>E', 'E>E', 'C>D']))
+  const c = createCanvas(8, 8, 80, () => true)
+  c.text(0, 3, 'B', 'node', 'B')
+  c.text(6, 3, 'D', 'node', 'D')
+  c.text(3, 7, 'E', 'node', 'E')
+  for (let r = 1; r <= 4; r++) c.line(r, 3, 5, 'light', 'edge', 'B>D')
+  c.arrow(5, 3, '▼', 'B>D')
+  for (let r = 4; r <= 6; r++) {
+    c.line(r, 7, 5, 'light', 'edge', 'E>E')
+    c.line(r, 0, 5, 'light', 'edge', 'E>E')
+  }
+  c.line(7, 7, 9, 'light', 'edge', 'E>E')
+  for (let col = 1; col <= 6; col++) c.line(7, col, 10, 'light', 'edge', 'E>E')
+  c.line(7, 0, 3, 'light', 'edge', 'E>E')
+  c.line(3, 0, 6, 'light', 'edge', 'E>E')
+  for (let col = 1; col <= 5; col++) c.line(3, col, 10, 'light', 'edge', 'E>E')
+  c.arrow(3, 6, '►', 'E>E')
+  c.line(1, 3, 5, 'light', 'edge', 'B>E')
+  c.line(2, 3, 5, 'light', 'edge', 'B>E')
+  c.line(3, 3, 3, 'light', 'edge', 'B>E')
+  c.line(3, 4, 10, 'light', 'edge', 'B>E')
+  c.line(3, 5, 10, 'light', 'edge', 'B>E')
+  c.arrow(3, 6, '►', 'B>E')
+  const d = c.toDrawing({ labels: ['B', 'D', 'E'].map(owner => ({ owner, text: owner })), edgeLabels: [], edges: [
+    { id: 'B>D', from: 'B', to: 'D', heads: ['▼'] },
+    { id: 'E>E', from: 'E', to: 'E', heads: ['►'] },
+    { id: 'B>E', from: 'B', to: 'E', heads: ['►'] },
+  ] })
+  assert.deepEqual(d.cells[3]![3]!.segs, [
+    { owner: 'B>D', dirs: 5 }, { owner: 'E>E', dirs: 10 }, { owner: 'B>E', dirs: 3 },
+  ])
   assert.equal(validate(d)?.reason, 'crossing-ambiguous', text(d).join('\n'))
 })
 // A hand-drawn grid: nodes [id, row, col, owners?] drawn as their id; marks [edge, row, col, a line's dirs or a head glyph];
