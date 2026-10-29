@@ -1,9 +1,11 @@
 // B5, every PR: scripts/test-local-install.sh, run for real by bash, with a scratch bin first on PATH that holds a strict fake
-// claude and, in one case, a fake cygpath. The caller's CLAUDE_CONFIG_DIR is a sentinel dir with one marker file. Each test
+// claude and, in one case, a fake cygpath. The caller's CLAUDE_CONFIG_DIR is a sentinel dir with one marker file. Each run
 // checks the script's output and what it did, never how a path is spelled: the add → install → list calls the fake claude
 // logged, each finding in the dir it was handed the markers of the calls before it, and no others; that the sentinel still
 // holds exactly its marker, which a call handed any alias of the sentinel breaks; that a watch on the sentinel saw no change
 // during the run, not even one undone before the run ended; and that TMPDIR, a fresh empty dir for each run, is empty after it.
+// Runs miss a dir left outside TMPDIR, where macOS's bare mktemp -d puts it, so the last test reads the script's own text: its
+// one temp allocation, explicitly under TMPDIR, and its one trap, which removes it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -160,4 +162,11 @@ test('local install: the trap removes the mktemp dir, not the form of it cygpath
   assert.deepEqual(r.sentinel, SENTINEL);
   assert.deepEqual(r.changes, []);
   assert.deepEqual(r.left, []);
+});
+// The script's own text, outside comments (each from a # at a line's start or after a space; the script has no # in quotes):
+// the lines naming mktemp, mkdir, tempfile or trap are exactly its one temp allocation, explicitly under TMPDIR, and its trap.
+test("local install: the script's one temp allocation is under TMPDIR, and its one trap removes it", () => {
+  const code = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').split('\n').map((l) => l.replace(/(^|\s)#.*/, '').trim());
+  assert.deepEqual(code.filter((l) => /\b(mktemp|mkdir|tempfile|trap)\b/.test(l)),
+    ['tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")"', `trap 'rm -rf "$tmp"' EXIT`]);
 });
