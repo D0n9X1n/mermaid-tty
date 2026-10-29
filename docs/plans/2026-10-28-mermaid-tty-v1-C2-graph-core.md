@@ -26,7 +26,7 @@ test('A3: fixed member rows keep their width under wrapAt; the header still wrap
 ```
 - [ ] **Run** `node --test tests/core/graph-c-model_test.ts` → FAIL: `Expected values to be strictly deep-equal` (an empty mark sizes as `{ rows: 0, cols: 4 }`).
 - [ ] **Implement:**
-  - **`model.ts`:** add `Mark`, `Col`, `Note`, the `NodeRow` fields `fixed`, `indent`, `join` and `cols`, the `GNode` fields `mark`, `span` and `note`, the `End` values `triangle`, `diamond` and `odiamond`, the `GEdge` fields `tailLabel`, `headLabel` and `endRole`, and `GCluster.frameless`, exactly as in index §4. All are optional.
+  - **`model.ts`:** add `Mark`, `Col`, `Note`, the `NodeRow` fields `fixed`, `indent`, `join` and `cols`, the `GNode` fields `mark`, `span` and `note`, the `End` values `triangle`, `diamond` and `odiamond`, the `GEdge` fields `tailLabel`, `headLabel`, `endRole` and `labelKey`, `Note.key`, `Col.key`, and `GCluster.frameless`, exactly as in index §4. All are optional.
   - **`nodeSize(n, wrapAt, across = false)`:**
     - A mark `start`, `end` or `choice` is `{ rows: 1, cols: 1 }`. A `bar` is `{ rows: 1, cols: span }`, or `{ rows: span, cols: 1 }` when `across`, so layered's `ext()` always gives it `cross = span`.
     - A `fixed` row, or a row with `cols`, is one piece and never wraps. Its width is `indent + width(text)`, or `indent + Σ col.width + (cols − 1)`.
@@ -36,8 +36,8 @@ test('A3: fixed member rows keep their width under wrapAt; the header still wrap
 - [ ] **Commit:** `git commit -m "Extend the graph model with marks, member columns, notes and class ends"`
 
 ### T50: Route and draw: marks, member columns, class ends, end labels
-**Group** G2 · **Deps** T17, T18, T49 · **Covers** state marks (`●`, `◉`, `◇`, the fork bar), class ends (matrix class text design), ER and class cardinality beside its end, ER column alignment, rule 12 glyphs
-**Files:** modify `core/graph/route.ts`, `core/graph/draw.ts`. Test: `tests/core/graph-c-draw_test.ts`.
+**Group** G2 · **Deps** T17, T18, T49, T86 · **Covers** fix-cycle findings 1, 2, 5 and 8; state marks (`●`, `◉`, `◇`, the fork bar), class ends (matrix class text design), ER and class cardinality beside its end, ER column alignment, rule 12 glyphs
+**Files:** modify `core/graph/route.ts`, `core/graph/draw.ts`, `core/graph/chains.ts`, `core/graph/layered.ts`. Test: `tests/core/graph-c-draw_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
@@ -51,6 +51,9 @@ test('A3: marks draw one glyph and no label; class ends and cardinality draw at 
   Object.assign(gr.edges[1]!, { tail: 'triangle', head: 'none' }); Object.assign(gr.edges[2]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
   const d = D(gr), t = text(d).join('\n'); assert.equal(validate(d), null)
   assert.deepEqual([...t].filter(c => '●◉'.includes(c)), ['●', '◉']); assert.match(t, /△/); assert.match(t, /◆/); assert.match(t, /0\.\.\*/)
+  assert.deepEqual(d.expect.edges[1]!.ends, [{ node: 'A', mark: 'triangle' }, { node: 'B', mark: 'none' }])
+  assert.deepEqual(d.expect.edges[2]!.ends, [{ node: 'A', mark: 'diamond' }, { node: 'C', mark: 'none', label: '0..*' }])
+  assert.equal(d.expect.edges[0]!.ends, undefined)          // a plain edge lists no ends, so A's expects do not change
 })
 test('A3: member columns align; a column cell is owned by its own id, then the node', () => {
   const gr = g('TB', ['C>D']), cols = (k: number, type: string, name: string) => [{ text: type, role: 'label', id: `C.a${k}.type`, width: 6 },
@@ -60,6 +63,14 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
   const d = D(gr), t = text(d); assert.equal(validate(d), null)
   const r1 = t.find(l => l.includes('string id'))!, r2 = t.find(l => l.includes('int    seats'))!; assert.equal(r1.indexOf(' id'), r2.indexOf(' seats'))
   assert.ok(d.cells.flat().some(c => c?.kind === 'text' && c.ch === 's' && c.owners[0] === 'C.a1.name' && c.owners.includes('C')))
+  assert.deepEqual(d.expect.members, ['a0.type', 'a0.name', 'a1.type', 'a1.name'].map(k => ({ id: `C.${k}`, parent: 'C' })))
+})
+test('A4: an end label gets room beside its end, and a reversed edge lists its true ends', () => {
+  const one = g('TB', ['A>B']); Object.assign(one.edges[0]!, { head: 'none', headLabel: '0..*' })
+  const d = D(one); assert.equal(d.conflicts.length, 0); assert.equal(validate(d), null); assert.match(text(d).join('\n'), /0\.\.\*/)
+  const cyc = g('TB', ['A>B', 'B>A']); Object.assign(cyc.edges[1]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
+  const c = D(cyc); assert.equal(validate(c), null)
+  assert.deepEqual(c.expect.edges[1]!.ends, [{ node: 'B', mark: 'diamond' }, { node: 'A', mark: 'none', label: '0..*' }])
 })
 ```
 - [ ] **Run** `node --test tests/core/graph-c-draw_test.ts` → FAIL: `Expected values to be strictly deep-equal` with `{ reason: 'edge-disconnected' }`: an empty mark draws nothing yet, so no route touches it.
@@ -83,12 +94,23 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
     - `tailLabel` sits beside the route's first cell, and `headLabel` beside the cell before its end: right of a vertical run, above a horizontal one.
     - Each is in `endRole ?? 'label'`, owned by `${edge}:tail` or `${edge}:head`, and listed in both `expect.labels` and `expect.edgeLabels`, so the label adjacency rule holds.
     - Two labels that need one cell are a canvas Conflict, so the ladder moves on, as the matrix requires.
+    - **Room (finding 8):** `chains.ts` gives an edge with an end label `minlen ≥ 2`, so its two ends never share a gap row. `layered.ts` reserves the widest end label + 1 cells:
+      - in TB and BT, after each node with an end-labelled port, and at the canvas's right side;
+      - in LR and RL, in that rank gap, plus one top row.
+      So a label beside the last node is never out of bounds.
+    - **Reversed edges:** `chains.ts` swaps `tailLabel` and `headLabel` with `tail` and `head`. `draw.ts` names each label by its true end: on a `reversed` edge, the drawn tail's label is `${edge}:head`.
+  - **`expect` contracts (T86):**
+    - An edge with a C end mark (`triangle`, `diamond`, `odiamond`) or an end label lists `ends`: `[true tail, true head]`, each `{ node, mark }` plus `label` when it has one. A plain edge lists none, so flowchart and state expects do not change.
+    - Each `cols` column id, and each `fixed` row's `id`, is listed in `expect.members` with `parent: node.id`.
+  - **Keyed text (T87):** an edge with `labelKey` draws `cv.key` where its label goes, owned by `[${edge}:label, edge]`. A note with `key` draws it in the note's place, and a column with `key` in the column's place, each owned like the text it replaces. That text is not listed in `expect.labels`, since its legend row lists it. `chains.ts` sizes a keyed label by its key.
   - **`expect.edges` heads:** each end's glyph, tail first.
-- [ ] **Done when:** `node --test tests/core/graph-c-draw_test.ts tests/core/draw_test.ts tests/core/route_test.ts` passes.
+- [ ] **Done when:**
+  - `node --test tests/core/graph-c-draw_test.ts tests/core/draw_test.ts tests/core/route_test.ts tests/core/validate-c_test.ts` passes;
+  - `node scripts/check.ts A4` passes, with A's goldens unchanged.
 - [ ] **Commit:** `git commit -m "Draw marks, member columns, class ends and end labels"`
 
 ### T51: Side notes, frameless regions, dividers
-**Group** G3 · **Deps** T50 · **Covers** state notes (matrix: dim, borderless, a `┄` connector), state regions (stacked, split by `┄` rows, `┆` in LR/RL), class `note for`, index §5.10
+**Group** G3 · **Deps** T50 · **Covers** fix-cycle finding 9; state notes (matrix: dim, borderless, a `┄` connector), state regions (stacked, split by `┄` rows, `┆` in LR/RL), class `note for`, index §5.10
 **Files:** create `core/graph/notes.ts`; modify `core/graph/layered.ts`, `core/graph/draw.ts`. Test: `tests/core/graph-notes_test.ts`.
 - [ ] **Failing test:**
 ```ts
@@ -106,6 +128,13 @@ test('A3: a TB note sits beside its state, joined by ┄; an LR note becomes a n
   assert.deepEqual(w.edges.map(e => [e.from, e.to, e.style, e.tail, e.head]), [['A', 'B', 'solid', 'none', 'arrow'], ['A:note', 'A', 'dotted', 'none', 'none']])
   assert.equal(validate(D(lr)), null)
 })
+test('A3: a note in an LR composite under a TB root becomes a note node inside it; the composite stays sealed and LR', () => {
+  const gr = g('TB', ['a>b']); gr.clusters = [{ id: 'S', title: 'S', dir: 'LR', nodes: ['a', 'b'], clusters: [] }]
+  gr.nodes[0]!.note = { id: 'a:note', text: 'memo', side: 'right' }
+  const w = withNotes(gr), link = w.edges.at(-1)!; assert.deepEqual(w.clusters[0]!.nodes, ['a', 'b', 'a:note']); assert.deepEqual([link.from, link.to], ['a', 'a:note'])
+  const d = D(gr), t = text(d), col = (s: string) => t.find(l => l.includes(s))!.indexOf(s)
+  assert.equal(validate(d), null); assert.ok(col('[ b ]') > col('[ a ]') + 4, t.join('\n'))   // drawn TB, b would sit under a
+})
 test('A3: frameless regions stack inside one frame, split by a dashed row; they draw no frame of their own', () => {
   const gr = g('TB', ['a>b', 'c>d'])
   gr.edges.push({ id: 'S:chain0', from: 'r1', to: 'r2', style: 'invisible', tail: 'none', head: 'none', label: null, minlen: 1, order: 2 })
@@ -119,9 +148,10 @@ test('A3: frameless regions stack inside one frame, split by a dashed row; they 
 - [ ] **Run** `node --test tests/core/graph-notes_test.ts` → FAIL: `Cannot find module …/core/graph/notes.ts`.
 - [ ] **Implement:**
   - **`withNotes(g)`:**
-    - TB and BT: `g` is returned unchanged.
-    - LR and RL: each noted node gets a note node `{ id: note.id, shape: 'plain', role: 'note', rows: labelLines(text)` as left-aligned `note` rows`, order: nodes.length + k }` and an edge `{ id: `${note.id}:link`, style: 'dotted', tail: 'none', head: 'none', label: null, minlen: 1 }`.
-    - The edge runs note → node for `left` in LR and for `right` in RL, and node → note otherwise. The node loses its `note`.
+    - It is pure. Each noted node's effective direction is the `dir` of its nearest sealed ancestor cluster that has one, else `g.dir`. Sealed is A's rule (`clusterTree`), computed before notes are added.
+    - Effective TB and BT: the node keeps its `note`, which layered places beside it.
+    - Effective LR and RL: the node gets a note node `{ id: note.id, shape: 'plain', role: 'note', rows: labelLines(text)` as left-aligned `note` rows`, order: nodes.length + k }` and an edge `{ id: `${note.id}:link`, style: 'dotted', tail: 'none', head: 'none', label: null, minlen: 1 }`.
+    - The edge runs note → node for `left` in LR and for `right` in RL, and node → note otherwise. The node loses its `note`, and the note node joins the innermost cluster that lists the node. So the link never crosses a border, and a sealed composite stays sealed (finding 9).
   - **`layered.ts` notes (TB, BT):**
     - A noted node's unit grows on its note's side by `noteW + 3` cells: the widest note line, one space and `┄┄`. Note lines wrap at `wrapAt`, like labels.
     - Its main extent is the larger of its rows and its note's lines.
@@ -179,17 +209,18 @@ test('A3: ER columns align; only the comment wraps; a column blank in every row 
 - [ ] **Commit:** `git commit -m "Build class and ER member rows"`
 
 ### T53: Graph ladder; flowchart moves onto it
-**Group** G4 · **Deps** T19, T46, T51 · **Covers** the state/class/ER ladder (index §5), A4.fit-ladder, DRY (flowchart's loop moves here)
+**Group** G4 · **Deps** T19, T46, T51 · **Covers** the state/class/ER ladder (index §5), A4.fit-ladder, DRY (flowchart's loop moves here), fix-cycle findings 1 and 7
 **Files:** create `core/graph/ladder.ts`; modify `core/diagrams/flowchart/layout.ts`. Test: `tests/core/ladder_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { graphSteps, drawAt, type Build } from '../../core/graph/ladder.ts'; import { validate } from '../../core/validate.ts'
 import type { Drawing } from '../../core/canvas.ts'; import { g, text } from './graph-fixture.ts'
+const keyable = [{ item: 'e0:label', cls: 'label' }]
 const build: Build = ({ dir, keyed }) => {
-  const gr = g(dir, ['A>B|uses', 'B>C']); if (!keyed) return { graph: gr, legend: [] }
-  gr.edges[0]!.label = 'a'
-  return { graph: gr, legend: [{ key: 'a', keyInk: 'label', owner: 'e0:label:legend', parts: [{ text: 'uses', ink: 'label', owner: 'e0:label:legend' }] }] }
+  const gr = g(dir, ['A>B|uses', 'B>C']); if (!keyed) return { graph: gr, legend: [], keyable }
+  gr.edges[0]!.labelKey = 'a'
+  return { graph: gr, legend: [{ key: 'a', keyInk: 'label', item: 'e0:label', cls: 'label', parts: [{ text: 'uses', ink: 'label', owner: 'e0:label' }] }], keyable }
 }
 test('A4.fit-ladder: graph steps; lrToTd only for LR and RL; keyed last', () => {
   assert.deepEqual(graphSteps('TB', false), ['natural', 'tight', 'wrap'])
@@ -200,17 +231,24 @@ test('A4.fit-ladder: drawAt stacks the title, the graph and the legend; keyed LR
   const at = (s: string) => text(k).findIndex(l => l.includes(s))
   assert.equal(validate(n), null); assert.equal(text(n)[0], 'My graph'); assert.equal(n.columns, 80)
   assert.equal(validate(k), null); assert.ok(at('[ A ]') < at('[ B ]') && at('[ B ]') < at('[ C ]')); assert.equal(text(k).at(-1), 'a uses')
+  assert.deepEqual(k.expect.keys, [{ key: 'a', item: 'e0:label', cls: 'label' }])
 })
 ```
 - [ ] **Run** `node --test tests/core/ladder_test.ts` → FAIL: `Cannot find module …/core/graph/ladder.ts`.
 - [ ] **Implement:**
   - **`graphSteps(dir, keyable)`:** `['natural', 'tight', 'wrap']`, plus `'lrToTd'` for LR and RL, plus `'keyed'` when keyable.
   - **`drawAt`:**
-    - **Spacing:** `natural` uses A's natural row and every other step the tight row (plan A §7), each for the direction drawn.
+    - **Spacing:** `SPACING` moves here from flowchart's `layout.ts`, which re-exports it, so `flowchart-layout_test.ts` imports it unchanged.
+      - `natural`, `tight` and `wrap` use their own rows, exactly as A's flowchart layout does; `lrToTd` and `keyed` use the `wrap` row.
+      - Each row is for the direction drawn. `drawAt` maps the step to a row itself, so nothing indexes `SPACING` by a wide `Step`, and T40's guard goes.
+    - **Route conflicts (finding 7):** each try lays out at 0, then 2, then 4 extra cells of rank and node gap, as A's Q1 rule does. Only a `route-conflict` retries; any other Fail returns at once.
     - **Direction:** `lrToTd` and `keyed` draw LR as TB and RL as BT; the other steps keep `dir`.
     - **wrapAt tries:** `[null]` for natural and tight; `[24, 20, 16, 12, 8]` for wrap; `[null, 24, 20, 16, 12, 8]` for lrToTd and keyed. Only `keyed` builds with `keyed: true`.
-    - **Each try:** `build` → `withNotes` → `layoutGraph` → `routeGraph` → `drawGraph(…, columns)` → `stack([heading(title), d], columns)` when there is a title → `withLegend(…, legend, columns)`.
+    - **Each try:** `build` → `withNotes` → `layoutGraph` → `routeGraph` → `drawGraph(…, columns)` → `stack([heading(title), d], columns)` when there is a title → `withLegend(…, legend, columns, keyable)`.
     - It returns the first drawing that `validate` accepts, else the last Fail.
-  - **Flowchart:** `steps = g => graphSteps(g.dir, false)`, and `layout = (g, step, cols) => drawAt(({ dir }) => ({ graph: { ...g, dir }, legend: [] }), g.dir, step, cols, null)`. Flowchart keeps its title inside the graph, where T18 draws it, so its goldens do not change.
-- [ ] **Done when:** `node --test tests/core/ladder_test.ts tests/golden/golden_test.ts` passes, and `git diff --stat goldens/` is empty.
+  - **Flowchart:** `steps = g => graphSteps(g.dir, false)`, and `layout = (g, step, cols) => drawAt(({ dir }) => ({ graph: { ...g, dir }, legend: [], keyable: [] }), g.dir, step, cols, null)`. Flowchart keeps its title inside the graph, where T18 draws it, so its goldens do not change.
+- [ ] **Done when:**
+  - `node --test tests/core/ladder_test.ts tests/core/flowchart-layout_test.ts tests/golden/golden_test.ts` passes, both Q1 tests included;
+  - `node scripts/typecheck.ts` passes;
+  - `git diff --stat goldens/` is empty.
 - [ ] **Commit:** `git commit -m "Move the graph ladder into graph/ladder.ts and run flowchart on it"`
