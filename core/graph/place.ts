@@ -9,7 +9,10 @@ import { addSpacers, pathOf, spans } from './strips.ts'
 
 // A rectangle along the axes: its start and size across the ranks (cross, wide) and along them (main, long).
 export type Rect = { cross: number; main: number; wide: number; long: number }
-export type Placement = { edges: GEdge[]; rects: Map<string, Rect>; strips: Map<string, Rect>; wide: number; long: number }
+// bands: each rank's band along the main axis, its start and size: as tall as its tallest item, or as a title grew it.
+export type Placement = {
+  edges: GEdge[]; rects: Map<string, Rect>; strips: Map<string, Rect>; bands: { main: number; long: number }[]; wide: number; long: number
+}
 
 // outer: each strip at this level and the strip around it, or null. fit: a strip's least frame width, for its title. The
 // title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle band.
@@ -47,5 +50,5 @@ export function place(units: readonly Unit[], edges: readonly GEdge[], labels: R
     strips.set(c, { cross: x.get(LEFT(c))!, main: top, wide: x.get(RIGHT(c))! - x.get(LEFT(c))! + 1, long: bottom - top + 1 })
   }
   const wide = Math.max(0, ...[...rects.values(), ...strips.values()].map(r => r.cross + r.wide))
-  return { edges: level.edges, rects, strips, wide, long: length }
+  return { edges: level.edges, rects, strips, bands: heights.map((h, k) => ({ main: tops[k]!, long: h })), wide, long: length }
 }

@@ -146,3 +146,12 @@ test('A1: in LR a title runs along the ranks, so a strip too short for it grows 
   const p = layoutGraph(x, S) as Placed
   assert.deepEqual([p.frames.get('s'), p.boxes.get('A'), p.cols], [{ row: 0, col: 5, rows: 5, cols: 18 }, { row: 2, col: 13, rows: 1, cols: 5 }, 23])
 })
+test('A1: every frame is at least its title + 4 wide, with an empty or null title and for an empty cluster, in all four directions', () => {
+  for (const dir of ['TB', 'BT', 'LR', 'RL'] as const) for (const title of ['', null]) {
+    const x = g(dir, []), y = g(dir, ['A>B'])
+    x.clusters.push({ id: 'e', title, dir: null, nodes: [], clusters: [] })
+    y.clusters.push({ id: 'm', title, dir: null, nodes: ['A'], clusters: [] }, { id: 'e', title, dir: null, nodes: [], clusters: [] })
+    const p = layoutGraph(x, S) as Placed, q = layoutGraph(y, S) as Placed, rows = dir === 'TB' || dir === 'BT' ? 2 : 4
+    assert.deepEqual([p.frames.get('e'), p.cols, q.frames.get('e')!.cols, q.frames.get('m')!.cols >= 4], [{ row: 0, col: 0, rows, cols: 4 }, 4, 4, true])
+  }
+})

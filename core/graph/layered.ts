@@ -12,7 +12,11 @@ import { width } from '../width.ts'
 
 export type Box = { row: number; col: number; rows: number; cols: number }
 export type Spacing = { rankGap: number; nodeGap: number; wrapAt: number | null }
-export type Placed = { graph: Graph; boxes: ReadonlyMap<string, Box>; frames: ReadonlyMap<string, Box>; rows: number; cols: number }
+// A level's rank band along its main axis, rows or columns from to to: block is null for the top level, else the sealed
+// cluster laid out on its own. Placed.bands lists each level's in order; gaps() reads the gaps between them.
+export type Band = { block: string | null; axis: 'row' | 'col'; from: number; to: number }
+export type Placed = { graph: Graph; boxes: ReadonlyMap<string, Box>; frames: ReadonlyMap<string, Box>; rows: number; cols: number
+  bands?: readonly Band[] }
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
 
@@ -24,7 +28,7 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   const across = g.dir === 'LR' || g.dir === 'RL', pr = across ? 2 : 1, pc = across ? 1 : 2  // a block's margin
   const ext = (z: Size): Extent => (across ? { cross: z.rows, main: z.cols } : { cross: z.cols, main: z.rows })
   const t = clusterTree(g), top = (x: string) => !ancestors(t.parent, x).some(c => t.sealed.has(c))
-  const fit = new Map(g.clusters.filter(c => c.title).map(c => [c.id, width(c.title!) + 4] as const))  // ┌─title─┐
+  const fit = new Map(g.clusters.map(c => [c.id, width(c.title ?? '') + 4] as const))  // ┌─title─┐, and ┌──┐ with none
   if (g.edges.some(e => [e.from, e.to].some(x => t.byId.has(x) && !t.sealed.has(x)))) return fail('cluster-edge')
   const units: Unit[] = [], subs = new Map<string, Placed>(), last = Math.max(-1, ...g.nodes.map(n => n.order))
   for (const n of g.nodes.filter(n => top(n.id))) {
@@ -51,10 +55,14 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   const outer = new Map(g.clusters.filter(c => !t.sealed.has(c.id) && top(c.id)).map(c => [c.id, t.parent.get(c.id) ?? null] as const))
   const p = place(units, free, labels, outer, s, fit, across)
   // LR swaps the axes; BT and RL mirror the main one.
+  const at = (main: number, long: number) => (g.dir === 'BT' || g.dir === 'RL' ? p.long - main - long : main)
   const box = (r: Rect): Box => {
-    const m = g.dir === 'BT' || g.dir === 'RL' ? p.long - r.main - r.long : r.main
+    const m = at(r.main, r.long)
     return across ? { row: r.cross, col: m, rows: r.wide, cols: r.long } : { row: m, col: r.cross, rows: r.long, cols: r.wide }
   }
+  const axis = across ? 'col' : 'row'
+  const bands: Band[] = p.bands.map(({ main, long }) => ({ block: null, axis, from: at(main, long), to: at(main, long) + long - 1 }))
+  bands.sort((a, b) => a.from - b.from)
   const boxes = new Map<string, Box>(), frames = new Map<string, Box>()
   for (const [id, r] of p.rects) {
     const b = box(r), sub = subs.get(id)
@@ -63,10 +71,14 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
     const dc = pc + ((b.cols - sub.cols - 2 * pc) >> 1)  // content centred in a frame widened for its title
     for (const [k, v] of sub.boxes) boxes.set(k, shift(v, b.row + pr, b.col + dc))
     for (const [k, v] of sub.frames) frames.set(k, shift(v, b.row + pr, b.col + dc))
+    for (const n of sub.bands ?? []) {
+      const d = n.axis === 'row' ? b.row + pr : b.col + dc
+      bands.push({ ...n, block: n.block ?? id, from: n.from + d, to: n.to + d })
+    }
   }
   for (const [id, r] of p.strips) frames.set(id, box(r))
   // Each edge as drawn: a back edge, here or in a block, reversed with its ends swapped.
   const drawn = new Map<string, GEdge>([...p.edges, ...[...subs.values()].flatMap(x => x.graph.edges)].map(e => [e.id, e]))
   const graph = { ...g, edges: g.edges.map(e => drawn.get(e.id) ?? e) }
-  return { graph, boxes, frames, rows: across ? p.wide : p.long, cols: across ? p.long : p.wide }
+  return { graph, boxes, frames, rows: across ? p.wide : p.long, cols: across ? p.long : p.wide, bands }
 }
