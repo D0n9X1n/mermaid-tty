@@ -1,0 +1,48 @@
+# Interim CI until plan B's T8 lands the full ci.yml: every automatic check that exists today, on all three OSes.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: git config --global user.name ci && git config --global user.email ci@users.noreply.github.com
+      - run: npm install -g @anthropic-ai/claude-code@2.1.308
+      - run: node --test
+      - run: npm ci --prefix scripts/docs && node --test 'scripts/tests/*.docs-spec.ts'
+      - run: claude plugin validate .
+      - run: claude plugin test .
+      - run: bash scripts/test-wiki-publish.sh
+      - run: bash scripts/test-local-install.sh
+  # The e2e package (node-pty, @xterm/headless) must install and load on every OS before the e2e job can run there.
+  e2e-deps:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --prefix scripts/e2e
+      - run: cd scripts/e2e && node -e "import('node-pty').then(m => console.log('node-pty spawn:', typeof m.spawn))"
