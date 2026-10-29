@@ -32,3 +32,9 @@ test("A4: a row packs its parts' words one space apart: a null-owner part is cap
   assert.deepEqual([d.cells[1]![9]!.kind, d.cells[1]![9]!.role, d.cells[1]![9]!.owners], ['cap', 'note', ['t1.t']])
   assert.deepEqual([d.cells[1]![11]!.join, d.cells[2]![2]!.join, d.cells[3]![2]!.join, d.cells[4]![2]!.join], [undefined, ' ', undefined, ''])
 })
+// T46/T63 QA: keyable reaches expect, so a class keyed for only some of its items fails key-partial.
+test('A5.mutation-tests: withLegend lists keyable, so a half-keyed class fails key-partial', () => {
+  const keyable = [{ item: 't1.t', cls: 'timing' }, { item: 't2.t', cls: 'timing' }]
+  const d = withLegend(body([['a', 't1.t']]), [row('a', 't1.t', 'one')], 12, keyable) as Drawing
+  assert.deepEqual(d.expect.keyable, keyable); assert.deepEqual(validate(d), { reason: 'key-partial' })
+})
