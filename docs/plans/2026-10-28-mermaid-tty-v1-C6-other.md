@@ -233,7 +233,7 @@ test('A4.fit-ladder: labels wrap at the label column; too many lanes fall back',
   - **`wrap`:** labels wrap to `cols − 2·lanes`. A word wider than that, or a lane wider than `cols`, fails `too-wide`.
   - **Inks:** lane k, in creation order, takes `s<(k mod 8) + 1>`.
   - **Title:** `heading(title)`.
-- **Note (PM, T80):** a lane draws only the arms it has on the end row, so the test above expects `◉─┘`, `◉─┐` (BT) and `◉─┴─┘`, not `◉─┤`/`◉─┼─┤`; links drawn with cells are `expect.edges`, adjacent commits are pinned by `expect.order`, and unclear fork points or merged heads fail `link-ambiguous`.
+- **Note (PM, T80):** a lane draws only the arms it has on the end row, so the test above expects `◉─┘`, `◉─┐` (BT), not `◉─┤`. Corrected (G2, cross-family review): `◉─┴─┘` read as lane `a` joining the merge. A lane a connector crosses on its last row, with no node there, ends a row before (`╵`, `╷` in BT, or its node; a fork corner then turns no further, `├─╴`), and the connector runs over the empty column: `│ ╵ ●` / `◉───┘`. A lane that runs on keeps `┼`; links drawn with cells are `expect.edges`, adjacent commits are pinned by `expect.order`, and unclear fork points or merged heads fail `link-ambiguous`.
 - [ ] **Done when:** `node --test tests/core/gitGraph-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Draw gitGraphs as lanes with forks, merges and crossings"`
 

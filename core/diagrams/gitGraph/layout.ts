@@ -120,15 +120,34 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
     const nx = nodes.get(b)!.find(i => (bt ? rowOf(i) < y : rowOf(i) > y))
     return nx === undefined || L.parent.get(nx) === null ? `lane:${b}` : `r${nx}`
   }
+  // Each connector's row and the columns strictly between its ends, which it crosses.
+  const spans = g.events.flatMap((e, i) => {
+    const f = e.kind === 'start' ? L.fork.get(e.branch) : L.merged.get(i)
+    if (f === null || f === undefined) return []
+    const a = col.get(lane(f))!, c = col.get(e.branch)!
+    return [{ y: rowOf(i), lo: Math.min(a, c), hi: Math.max(a, c) }]
+  })
+  // The row lane b's line ends on: the end row, or, while a connector crosses b there and no node of b sits there, the
+  // row before, so a crossed lane with nothing after it never meets the connector in a ┴ that reads as a join.
+  const last = new Map(lanes.map(b => {
+    const c = col.get(b)!, s = start.get(b)!, at = new Set(nodes.get(b)!.map(rowOf))
+    let y = end
+    while (y !== s && !at.has(y) && spans.some(p => p.y === y && p.lo < c && c < p.hi)) y += bt ? 1 : -1
+    return [b, y] as const
+  }))
   const x = 2 * lanes.length, wide = Math.max(x - 1, ...blocks.flat(2).map(q => x + q.at + width(q.text)))
   const cv = createCanvas(h, wide, columns, () => true), corners: [number, number, number][] = []
   // A connector on row y owned by o, in ink k: a tee arm at lane f, ─ between, and at lane b, for a fork (fork: its start
-  // event), a corner turning forward; lane f's line from row y0, its link's other node, is o's too.
+  // event), a corner turning forward (unless b's line ends on its start row); lane f's line from row y0, its link's other
+  // node, is o's too.
   const connect = (y: number, f: string, b: string, k: Ink, o: string, y0: number, fork: number | null): void => {
     const cf = col.get(f)!, cb = col.get(b)!, d = cb > cf ? 2 : -2
     cv.line(y, cf, d > 0 ? RIGHT : LEFT, 'light', k, o)
     for (let c = cf + d / 2; c !== cb; c += d / 2) cv.line(y, c, LEFT | RIGHT, 'light', k, o)
-    if (fork !== null) { cv.line(y, cb, (d > 0 ? LEFT : RIGHT) | fwd, 'light', k, o); corners.push([y, cb, fork]) }
+    if (fork !== null) {
+      const on = last.get(b) === y && y !== end ? 0 : fwd
+      cv.line(y, cb, (d > 0 ? LEFT : RIGHT) | on, 'light', k, o); corners.push([y, cb, fork])
+    }
     for (let r = Math.min(y0, y) + 1; r < Math.max(y0, y); r++) cv.line(r, cf, UP | DOWN, 'light', ink.get(f)!, o)
   }
   for (const [i, e] of g.events.entries()) {
@@ -140,12 +159,12 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
     if (hd !== undefined) connect(rowOf(i), lane(hd), e.branch, ink.get(lane(hd))!, `m${i}`, rowOf(hd), null)
   }
   for (const b of lanes) {
-    const at = new Set(nodes.get(b)!.map(rowOf)), s = start.get(b)!
-    for (let y = Math.min(s, end); y <= Math.max(s, end); y++) {
+    const at = new Set(nodes.get(b)!.map(rowOf)), s = start.get(b)!, e = last.get(b)!
+    for (let y = Math.min(s, e); y <= Math.max(s, e); y++) {
       if (y === s || at.has(y)) continue
       // A lane's stretch with no link (after its last node, or before an unforked first one) is no edge but lane:<b>, which
       // a crossing cell records beside the connector's edge, so the validator checks every arm its glyph shows.
-      cv.line(y, col.get(b)!, y === end ? back : UP | DOWN, 'light', ink.get(b)!, owner(b, y))
+      cv.line(y, col.get(b)!, y === e ? back : UP | DOWN, 'light', ink.get(b)!, owner(b, y))
     }
   }
   const glyphs: { owner: string; ch: string }[] = [], caps: [number, string][] = []

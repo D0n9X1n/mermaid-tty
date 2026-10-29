@@ -5,8 +5,8 @@ Release log
 ├─╮   hotfix
 │ ●   fix typo
 ├─┼─╮ feature/x.y
-│ │ ●
-◉─┴─┘
+│ ╵ ●
+◉───┘
 @60 roles
 TTTTTTTTTTT
 1     !!!!
@@ -23,8 +23,8 @@ Release log
 ├─╮   hotfix
 │ ●   fix typo
 ├─┼─╮ feature/x.y
-│ │ ●
-◉─┴─┘
+│ ╵ ●
+◉───┘
 @80 roles
 TTTTTTTTTTT
 1     !!!!
@@ -41,8 +41,8 @@ Release log
 ├─╮   hotfix
 │ ●   fix typo
 ├─┼─╮ feature/x.y
-│ │ ●
-◉─┴─┘
+│ ╵ ●
+◉───┘
 @120 roles
 TTTTTTTTTTT
 1     !!!!

@@ -3,13 +3,16 @@ import { explain } from '../../core/render.ts'; import { text } from './graph-fi
 const X = (body: string, columns = 80, h = 'gitGraph') => explain(`${h}\n${body}`, { columns, theme: 'mono' }) as any
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'
 test('A3: one row per event; lanes 2 cells apart; main opens with ╷; a fork ├─╮; a merge ◉─┤; one label column; BT flips', () => {
-  assert.deepEqual(text(X(LOG).drawing), ['╷   main', '●   a', '├─╮ dev', '│ ● b', '◉─┘ m'])   // PM: a lane that ends draws only its real arms (┘, ┴), not ┤ ┼
+  assert.deepEqual(text(X(LOG).drawing), ['╷   main', '●   a', '├─╮ dev', '│ ● b', '◉─┘ m'])   // PM: a lane that ends draws only its real arms (┘), not ┤
   assert.equal(text(X(LOG + ' type: NORMAL').drawing).at(-1), '●─┘ m')   // an explicit NORMAL merge is not the default ◉
   assert.deepEqual(text(X(LOG, 80, 'gitGraph BT:').drawing), ['◉─┐ m', '│ ● b', '├─╯ dev', '●   a', '╵   main'])
 })
-test('A3: a connector that crosses a lane draws ┼', () => {
-  const t = text(X('commit\nbranch a\ncommit\ncheckout main\nbranch b\ncommit\ncheckout main\nmerge b').drawing).join('\n')
-  assert.match(t, /├─┼─╮ b/); assert.match(t, /◉─┴─┘/)
+test('A3: a connector that crosses a lane draws ┼; a lane it would end on ends a row before, so it never looks joined', () => {
+  const AB = 'commit\nbranch a\ncommit\ncheckout main\nbranch b\ncommit\ncheckout main\n'
+  assert.deepEqual(T(AB + 'merge b').slice(-3), ['├─┼─╮ b', '│ ╵ ●', '◉───┘'])
+  assert.deepEqual(T(AB + 'merge b', 80, 'gitGraph BT:').slice(0, 3), ['◉───┐', '│ ╷ ●', '├─┼─╯ b'])
+  assert.deepEqual(T(AB + 'branch c\ncommit\ncheckout main\nmerge c').slice(-3), ['├─┼─┼─╮ c', '│ ╵ ╵ ●', '◉─────┘'])
+  assert.deepEqual(T(AB + 'branch c').slice(-3), ['├─┼─╮   b', '│ ╵ ●', '└─────╮ c'])
 })
 test('A4.fit-ladder: labels wrap at the label column; too many lanes fall back', () => {
   const long = `commit msg: "${'word '.repeat(12).trim()}"`

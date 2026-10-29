@@ -1,17 +1,19 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
 const X = (body: string, columns = 80) => (explain(`gitGraph\n${body}`, { columns, theme: 'mono' }) as any).drawing
-// Rows: ╷ main, ● root, ├─╮ a, │ ● a1, ├─┼─╮ b, │ │ ● b1, ◉─┴─┘ m. Lane a runs on past a1 with no link, under both connectors.
+// Rows: ╷ main, ● root, ├─╮ a, │ ● a1, ├─┼─╮ b, │ ╵ ● b1, ◉───┘ m. Lane a runs on past a1 with no link, under b's fork, and
+// ends a row before the merge, which runs over its empty column.
 const CROSS = 'commit id: "root"\nbranch a\ncommit id: "a1"\ncheckout main\nbranch b\ncommit id: "b1"\ncheckout main\nmerge b id: "m"'
 
-test('A3: a connector over a lane records both arms: the lane is an owner of the crossing cell', () => {
+test('A3: a connector over a lane records both arms: the lane is an owner of the crossing cell; a lane that ends is not crossed', () => {
   const d = X(CROSS)
   assert.equal(validate(d), null)
-  assert.deepEqual([d.cells[4][2].ch, d.cells[4][2].dirs, d.cells[6][2].ch, d.cells[6][2].dirs], ['┼', 15, '┴', 11])
-  assert.deepEqual(d.cells[6][2].segs, [{ owner: 'm6', dirs: 10 }, { owner: 'lane:a', dirs: 1 }])
+  assert.deepEqual([d.cells[4][2].ch, d.cells[4][2].dirs, d.cells[6][2].ch, d.cells[6][2].dirs], ['┼', 15, '─', 10])
+  assert.ok(d.cells[4][2].segs.some((x: any) => x.owner === 'lane:a'))
+  assert.deepEqual([d.cells[5][2].ch, d.cells[6][2].segs], ['╵', [{ owner: 'm6', dirs: 10 }]])
 })
 test('A5.mutation-tests: a crossing glyph that is not what its arms draw fails line-glyph', () => {
-  for (const [r, chs] of [[6, '─┼┬'], [4, '─┴┬']] as const) for (const ch of chs) {
+  for (const [r, chs] of [[6, '┴┼┬'], [4, '─┴┬']] as const) for (const ch of chs) {
     const d = structuredClone(X(CROSS)); d.cells[r][2] = { ...d.cells[r][2], ch }
     assert.deepEqual(validate(d), { reason: 'line-glyph' }, `${r} ${ch}`)
   }
