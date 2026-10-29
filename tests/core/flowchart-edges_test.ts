@@ -110,3 +110,22 @@ test('A5.errors: an edge label fails as a node label does: markdown-string, enti
     ['A -->|a\u{200D}b| B', 'unsupported-char U+200D'], ['A -. a\u{200D}b .-> B', 'unsupported-char U+200D']] as const
   assert.deepEqual(bad.map(([s]) => [s, P(`flowchart TD\n${s}`)]), bad.map(([s, r]) => [s, { reason: r }]))
 })
+
+test('A5.errors: a tail mark whose head is not its partner fails syntax:<n>, as Mermaid draws only the head: <--o, o-->, x--o, <---', () => {
+  const bad = ['A <--o B', 'A <--x B', 'A o--> B', 'A o--x B', 'A x--o B', 'A x--> B', 'A <--- B', 'A o--- B', 'A x==> B', 'A <-.-o B', 'A e1@o--x B']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+})
+test('A1: a tail mark with its partner head draws both ends: <-->, o--o, x--x', () => {
+  assert.deepEqual(['A <--> B', 'A o--o B', 'A x--x B', 'A --o B', 'A --x B', 'A --> B'].map(s => k(E(s)[0])),
+    ['solid arrow arrow ', 'solid circle circle ', 'solid cross cross ', 'solid none circle ', 'solid none cross ', 'solid none arrow '])
+})
+test('A1: minlen is capped at 10, as Mermaid caps an edge length', () => {
+  const want = [['---------->', 9], ['----------->', 10], ['------------>', 10], ['-------------------->', 10], ['-.........->', 9],
+    ['-..........->', 10], ['-...........->', 10], ['=============', 10], ['~~~~~~~~~~~~~~', 10], ['-- t ------------>', 10]] as const
+  assert.deepEqual(want.map(([l]) => [l, E(`A ${l} B`)[0].minlen]), want)
+})
+
+test('A1: an edge label blank once its one enclosing "…" is stripped and it is trimmed is no label: label is null', () => {
+  const src = ['A -->|""| B', 'A -->|  | B', 'A -->|" "| B', 'A -->|| B', 'A -- "" --> B', 'A --  --> B', 'A -. " " .-> B', 'A == "" ==> B']
+  assert.deepEqual(src.map(s => [s, E(s)[0].label]), src.map(s => [s, null]))
+})

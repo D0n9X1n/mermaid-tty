@@ -1,17 +1,32 @@
-// Reads a flowchart's header, nodes, shapes, labels and links (plan A, T13, T14 and §7)
-// into the graph model. A statement it cannot read whole fails, so the fence draws as source.
+// Reads a flowchart's header, nodes, shapes, labels, links and subgraphs (plan A, T13, T14, T15 and §7) into the
+// graph model; its styling and accessibility directives draw nothing. A statement it cannot read whole fails, so the
+// fence draws as source.
 import { shapeFromName, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
-import type { Dir, End, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
+import type { Dir, End, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
 import { labelLines } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
+// Where Mermaid's lexer finds a direction statement: anywhere in a line, which it then reads whole as that
+// statement. DIR_LINE: a line that is only one, with spaces and one ; after it.
+const DIR_IN = /direction\s+(?:TB|BT|RL|LR|TD)/
+const DIR_LINE = /^direction\s+(TB|BT|RL|LR|TD)\s*;?$/
+// As Mermaid's lexer reads them: an accTitle: or accDescr: statement, whose value runs to the line's end, and the
+// opener of an accDescr {…} block, whose text runs to its first }, across lines. Both draw nothing.
+const ACC_LINE = /^acc(?:Title|Descr)\s*:/
+const ACC_BLOCK = /^accDescr\s*\{/
+// A styling statement, which draws nothing: classDef, class, style, linkStyle or click, then a space.
+const DIRECTIVE = /^(?:classDef|class|style|linkStyle|click)\s/
 // Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
 const NAME = String.raw`[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*`
 const ID = new RegExp(`^${NAME}`, 'u')
+// A subgraph header: subgraph and spaces, then an id and what follows it, or a "title" alone.
+const SUBGRAPH = new RegExp(String.raw`^subgraph +(?:(${NAME}) *(.*)|("[^"]*"))$`, 'u')
+// A :::name class at lastIndex, after a node's id or shape. It draws nothing.
+const CLASS = new RegExp(String.raw`:::${NAME}`, 'uy')
 // A link in its basic form at lastIndex, with the spaces around it: an optional id@, then a
 // tail mark, a line (two or more - or =, or - dots -) and a head mark, each mark optional;
 // or three or more ~, with no marks. One |label| may follow (any "…" in it whole). Too short
@@ -23,6 +38,10 @@ const LINK = new RegExp(String.raw`\s*(?:(${NAME})@)?(?:([<ox])?(-{2,}|={2,}|-\.
 const TEXT = String.raw`((?:"[^"]*"|[^"])*?)`
 const TEXTS = [String.raw`--${TEXT}(-{2,})([>ox])?`, String.raw`==${TEXT}(={2,})([>ox])?`, String.raw`-\.${TEXT}(-?\.+-)([>ox])?`]
   .map(form => new RegExp(String.raw`\s*(?:(${NAME})@)?${form}\s*`, 'uy'))
+// The head mark each tail mark pairs with: Mermaid draws both ends only of <…>, o…o and x…x.
+const PARTNER: Readonly<Record<string, string>> = { '<': '>', o: 'o', x: 'x' }
+// Mermaid caps an edge's length at 10.
+const MAX_MINLEN = 10
 // The & between two nodes of a group, spaces around it: Mermaid reads A&B as one id.
 const AMP = /\s+&\s+/y
 // Each opener with each closer it pairs with, longest opener first. [/ and [\ pair
@@ -37,36 +56,143 @@ const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[
 // value starts, as in YAML: `it's ok` is a bare value.
 const PAIR = /\s*([\w-]+)\s*:\s*("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
 
-// A node as one mention writes it: shape and lines only if the mention gives them.
-type Mention = { id: string; end: number; shape?: Shape; lines?: string[] }
-// A node as the statements so far declare it.
-type Decl = { id: string; shape: Shape; lines: string[]; order: number }
+// A node as one mention writes it: shape and lines only if the mention gives them; data if it has an @{…}.
+type Mention = { id: string; end: number; shape?: Shape; lines?: string[]; data?: true }
+// A node as the statements so far declare it; bare while no mention has given it a shape, a label or an @{…}.
+type Decl = { id: string; shape: Shape; lines: string[]; bare: boolean }
 // A link as one statement writes it: what its edges draw, its id@ if it has one, and how far it reads.
 type Link = { id?: string; end: number; style: GEdge['style']; tail: End; head: End; label: string | null; minlen: number }
-// What the statements so far have declared: nodes by id, in first-mention order, and edges in source order.
-type State = { nodes: Map<string, Decl>; edges: GEdge[] }
+// An open subgraph: its cluster, and each id its block mentions, in order: its statements' nodes and the subgraphs closed in it.
+type Block = { cluster: GCluster; ids: string[] }
+// What the statements so far declare: nodes by id, in first-mention order; edges in source order; clusters in the order their
+// subgraphs open; the subgraphs still open, innermost last; the cluster that took each id a closed subgraph's block mentions;
+// and the line of an accDescr { whose } has not come, else null.
+type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; open: Block[]; parent: Map<string, string>; descr: number | null }
 
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
-// whole), or a label's 'markdown-string', 'entity' or 'unsupported-char U+XXXX'.
+// whole), 'unclosed-subgraph', 'id-collision' (an edge id that a node, a cluster or an earlier edge also has),
+// or a label's 'markdown-string', 'entity' or 'unsupported-char U+XXXX'.
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
   if (!head) return fail('header')
   const dir = (head[3] === undefined || head[3] === 'TD' ? 'TB' : head[3]) as Dir
-  const st: State = { nodes: new Map(), edges: [] }
-  for (const { n, text } of statements(src)) {
-    const end = statement(text, st)
-    if (isFail(end)) return end
-    // Text left on a statement fails, with the statement's source line.
-    if (end < text.length) return fail(`syntax:${n}`)
+  const st: State = { nodes: new Map(), edges: [], clusters: [], open: [], parent: new Map(), descr: null }
+  for (const { n, text } of src.lines) {
+    const f = line(text.trim(), st, n)
+    // A step that fails 'syntax' fails with its statement's source line.
+    if (f) return f.reason === 'syntax' ? fail(`syntax:${n}`) : f
   }
-  return { dir, title: src.title, nodes: [...st.nodes.values()].map(node), edges: st.edges, clusters: [] }
+  // An accDescr { with no } fails with its line.
+  if (st.descr !== null) return fail(`syntax:${st.descr}`)
+  if (st.open.length > 0) return fail('unclosed-subgraph')
+  const g = graph(dir, src.title, st)
+  // An edge id that a node, a cluster or an earlier edge has would give two drawn things one owner, whichever came first.
+  const ids = new Set([...g.nodes, ...g.clusters].map(x => x.id))
+  for (const e of g.edges) {
+    if (ids.has(e.id)) return fail('id-collision')
+    ids.add(e.id)
+  }
+  return g
 }
 
-// Each line's statements, trimmed, with the line's number; empty ones drop.
-function statements(src: Source): { n: number; text: string }[] {
-  return src.lines.flatMap(({ n, text }) => split(text).map(s => ({ n, text: s.trim() })).filter(s => s.text))
+// Reads trimmed source line n into st: null, or why it fails. In an open accDescr {…} block, the line is text up to its
+// first }, after which it reads on. As Mermaid's lexer reads them, an accTitle: or accDescr: statement runs to the line's
+// end and accDescr { opens a block, wherever a statement starts; and elsewhere, a line where it finds `direction X` is only
+// that statement: there, it sets the innermost open subgraph's direction, TD as TB.
+function line(t: string, st: State, n: number): Fail | null {
+  if (st.descr !== null) {
+    const brace = t.indexOf('}')
+    if (brace < 0) return null
+    st.descr = null
+    return line(t.slice(brace + 1).trim(), st, n)
+  }
+  if (!ACC_LINE.test(t) && !ACC_BLOCK.test(t) && DIR_IN.test(t)) {
+    const d = DIR_LINE.exec(t)?.[1], b = st.open.at(-1)
+    if (d === undefined || !b) return fail('syntax')
+    b.cluster.dir = (d === 'TD' ? 'TB' : d) as Dir
+    return null
+  }
+  const runs = split(t)
+  for (const [i, run] of runs.entries()) {
+    const s = run.trim()
+    if (ACC_LINE.test(s)) return null
+    if (ACC_BLOCK.test(s)) {
+      st.descr = n
+      return line(runs.slice(i).join(';').trim().replace(ACC_BLOCK, '').trim(), st, n)
+    }
+    const f = s ? stmt(s, st) : null
+    if (f) return f
+  }
+  return null
+}
+
+// Reads one statement into st: a styling directive or an id@{…} of a known edge, which draw nothing; `end`; a subgraph
+// header; or nodes and links read whole. null, or why it fails.
+function stmt(s: string, st: State): Fail | null {
+  if (DIRECTIVE.test(s) || edgeData(s, st)) return null
+  if (s === 'end') return closeSubgraph(st)
+  // Mermaid's lexer reads subgraph as a keyword even where a longer word starts with it.
+  if (s.startsWith('subgraph')) return openSubgraph(s, st)
+  const end = statement(s, st)
+  if (isFail(end)) return end
+  return end < s.length ? fail('syntax') : null
+}
+
+// Whether s is only id@{…}, its body read whole, for an id an edge already has. Mermaid then sets that edge's animation or
+// curve, which this renderer does not draw, and adds no node.
+function edgeData(s: string, st: State): boolean {
+  const id = ID.exec(s)?.[0]
+  return id !== undefined && st.edges.some(e => e.id === id) && s.startsWith('@{', id.length) && data(s, id.length + 2)?.end === s.length
+}
+
+// Opens the subgraph header s declares: `subgraph id`, `subgraph id [title]` (title "…" or not), or `subgraph "title"`, whose
+// title is also its id. null, or why it fails: 'syntax' for any other form, a blank title, or an id that a subgraph or a
+// node with a shape, a label or an @{…} already has; or the title's label Fail.
+function openSubgraph(s: string, st: State): Fail | null {
+  const m = SUBGRAPH.exec(s)
+  if (!m) return fail('syntax')
+  const [, name, rest = '', quoted] = m
+  const c = rest.startsWith('[') ? closer(rest, 1, [']']) : null
+  if (rest && c?.at !== rest.length - 1) return fail('syntax')
+  const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name)
+  if (isFail(title)) return title
+  const id = name ?? title, d = st.nodes.get(id)
+  if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) return fail('syntax')
+  const cluster: GCluster = { id, title, dir: null, nodes: [], clusters: [] }
+  st.clusters.push(cluster)
+  st.open.push({ cluster, ids: [] })
+  return null
+}
+
+// Closes the innermost open subgraph. As in Mermaid's flowDb, it takes each id its block mentions that no subgraph closed
+// before it took, but its own; and its id joins the block it closed in. null, or 'syntax' for an `end` with nothing open,
+// or a cluster it would take that holds it.
+function closeSubgraph(st: State): Fail | null {
+  const b = st.open.pop()
+  if (!b) return fail('syntax')
+  const id = b.cluster.id
+  for (const m of b.ids) {
+    if (m === id || st.parent.has(m)) continue
+    for (let p: string | undefined = id; p !== undefined; p = st.parent.get(p)) if (p === m) return fail('syntax')
+    st.parent.set(m, id)
+  }
+  st.open.at(-1)?.ids.push(id)
+  return null
+}
+
+// The graph st declares. Each id a cluster took is a member cluster if a subgraph has it, else a member node. A node whose
+// id a cluster has is that cluster, as an edge end, and no node; order counts the nodes that remain.
+function graph(dir: Dir, title: string | null, st: State): Graph {
+  const ids = new Set(st.clusters.map(c => c.id))
+  for (const [m, p] of st.parent) {
+    const c = st.clusters.find(k => k.id === p)!
+    if (ids.has(m)) c.clusters.push(m)
+    else c.nodes.push(m)
+  }
+  const nodes = [...st.nodes.values()].filter(d => !ids.has(d.id)).map(node)
+  return { dir, title, nodes, edges: st.edges, clusters: st.clusters }
 }
 
 // A line's runs that ; or the line's end closes. A "…" is one span, and so is an @{…} whose
@@ -137,24 +263,27 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
   for (;;) {
     const m = mention(text, at)
     if (m === null || isFail(m)) return m
-    declare(st, m)
+    const f = declare(st, m)
+    if (f) return f
     ids.push(m.id)
+    st.open.at(-1)?.ids.push(m.id)
     AMP.lastIndex = m.end
     if (!AMP.test(text)) return { ids, end: m.end }
     at = AMP.lastIndex
   }
 }
 
-// The link at `at`: a basic form, or else a text form. null if none starts there; its
-// label's Fail if that fails.
+// The link at `at`: a basic form, or else a text form. null if none starts there, or if its tail mark has no partner head
+// (<…>, o…o, x…x): Mermaid draws only the head of <--o, o--> or <---. Its label's Fail if that fails.
 function link(text: string, at: number): Link | Fail | null {
   LINK.lastIndex = at
   const b = LINK.exec(text)
   if (b) {
     const [, id, tail, line, head, tildes = '', raw] = b
+    if (tail !== undefined && head !== PARTNER[tail]) return null
     const s = stroke(line ?? tildes, head)
     if (s.minlen > 0) {
-      const lbl = raw === undefined ? null : label(raw)
+      const lbl = raw === undefined ? null : edgeLabel(raw)
       if (isFail(lbl)) return lbl
       return { id, end: LINK.lastIndex, ...s, tail: endOf(tail), head: endOf(head), label: lbl }
     }
@@ -166,19 +295,19 @@ function link(text: string, at: number): Link | Fail | null {
     const [, id, raw = '', line = '', head] = t
     const s = stroke(line, head)
     if (s.minlen < 1) return null
-    const lbl = label(raw)
+    const lbl = edgeLabel(raw)
     if (isFail(lbl)) return lbl
     return { id, end: form.lastIndex, ...s, tail: 'none', head: endOf(head), label: lbl }
   }
   return null
 }
 
-// What a link's line draws: = thick, a dot dotted, ~ invisible, - solid; and minlen, 1 plus
-// the line's length over its form's base: -- or == with a head, --- or === without, ~~~, or one dot.
+// What a link's line draws: = thick, a dot dotted, ~ invisible, - solid; and minlen, 1 plus the line's length over its
+// form's base (-- or == with a head, --- or === without, ~~~, or one dot), at most MAX_MINLEN.
 function stroke(line: string, head?: string): { style: GEdge['style']; minlen: number } {
-  if (line.includes('.')) return { style: 'dotted', minlen: line.replace(/[^.]/g, '').length }
+  if (line.includes('.')) return { style: 'dotted', minlen: Math.min(MAX_MINLEN, line.replace(/[^.]/g, '').length) }
   const style = line[0] === '=' ? 'thick' : line[0] === '~' ? 'invisible' : 'solid'
-  return { style, minlen: line.length - (head ? 1 : 2) }
+  return { style, minlen: Math.min(MAX_MINLEN, line.length - (head ? 1 : 2)) }
 }
 
 // The end a mark draws: < or > an arrow, o a circle, x a cross; no mark, none.
@@ -198,8 +327,8 @@ function connect(st: State, from: string[], to: string[], l: Link): void {
   }
 }
 
-// A node at `at`: its id, then at most one bracket shape or @{…}. null if no id
-// starts there, or its opener has no closer.
+// A node at `at`: its id, then at most one bracket shape or @{…}; a :::name class may follow the id or its shape.
+// null if no id starts there, or its opener has no closer.
 function mention(text: string, at: number): Mention | Fail | null {
   const id = ID.exec(text.slice(at))?.[0]
   if (id === undefined) return null
@@ -207,7 +336,7 @@ function mention(text: string, at: number): Mention | Fail | null {
   if (text.startsWith('@{', at)) {
     const d = data(text, at + 2)
     if (!d) return null
-    const m: Mention = { id, end: d.end }
+    const m: Mention = { id, end: d.end, data: true }
     for (const [key, raw] of d.pairs) {
       // As YAML reads it: one pair of matching quotes, "…" or '…', is not part of the value.
       const value = raw.trim().replace(/^(["'])(.*)\1$/s, '$2')
@@ -221,13 +350,19 @@ function mention(text: string, at: number): Mention | Fail | null {
     return m
   }
   const open = BRACKETS.find(([o]) => text.startsWith(o, at))?.[0]
-  if (open === undefined) return { id, end: at }
+  if (open === undefined) return { id, end: classEnd(text, at) }
   const pairs = BRACKETS.filter(([o]) => o === open)
   const c = closer(text, at + open.length, pairs.map(([, close]) => close))
   if (!c) return null
   const t = label(text.slice(at + open.length, c.at))
   if (isFail(t)) return t
-  return { id, end: c.at + c.close.length, shape: pairs.find(([, close]) => close === c.close)![2], lines: labelLines(t) }
+  return { id, end: classEnd(text, c.at + c.close.length), shape: pairs.find(([, close]) => close === c.close)![2], lines: labelLines(t) }
+}
+
+// The index past a :::name class at i, else i.
+function classEnd(text: string, i: number): number {
+  CLASS.lastIndex = i
+  return CLASS.test(text) ? CLASS.lastIndex : i
 }
 
 // The first of closes at or after i, outside "…": where it starts and which it is.
@@ -242,13 +377,19 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
   return null
 }
 
-// A bracket or edge label's text: trimmed, one enclosing pair of "…" stripped ("…" keeps
+// A bracket or edge label's text, or a subgraph title: trimmed, one enclosing pair of "…" stripped ("…" keeps
 // punctuation). A "`…`" markdown string fails. Its <br> stay: a node splits them into
 // lines, and an edge label keeps them for layout to split with labelLines.
 function label(raw: string): string | Fail {
   const trimmed = raw.trim()
   if (trimmed.startsWith('"`')) return fail('markdown-string')
   return checked(trimmed.replace(/^"(.*)"$/s, '$1'))
+}
+
+// An edge label as label reads it, but null if it is blank: a blank label would draw no cells.
+function edgeLabel(raw: string): string | null | Fail {
+  const t = label(raw)
+  return isFail(t) || t.trim() ? t : null
 }
 
 // Label text as written, if it can be drawn: a #…; entity or an unsupported character fails.
@@ -260,16 +401,21 @@ function checked(text: string): string | Fail {
   return text
 }
 
-// Declares m's node at its first mention; a later mention's shape or label replaces the one before.
-function declare(st: State, m: Mention): void {
-  const d: Decl = st.nodes.get(m.id) ?? { id: m.id, shape: 'rect', lines: [m.id], order: st.nodes.size }
+// Declares m's node at its first mention; a later mention's shape or label replaces the one before. null, or 'syntax' for a
+// mention with a shape, a label or an @{…} of an id a subgraph has.
+function declare(st: State, m: Mention): Fail | null {
+  const bare = !m.shape && !m.lines && !m.data
+  if (!bare && st.clusters.some(c => c.id === m.id)) return fail('syntax')
+  const d: Decl = st.nodes.get(m.id) ?? { id: m.id, shape: 'rect', lines: [m.id], bare: true }
   if (m.shape) d.shape = m.shape
   if (m.lines) d.lines = m.lines
+  d.bare &&= bare
   st.nodes.set(m.id, d)
+  return null
 }
 
-// A declared node in the graph model: a diamond is a decision, and each label line a centered row.
-function node(d: Decl): GNode {
+// A declared node in the graph model, order its index: a diamond is a decision, and each label line a centered row.
+function node(d: Decl, order: number): GNode {
   const role = d.shape === 'diamond' ? 'decision' : 'node'
-  return { id: d.id, shape: d.shape, role, rows: d.lines.map((text): NodeRow => ({ text, role, align: 'center' })), order: d.order }
+  return { id: d.id, shape: d.shape, role, rows: d.lines.map((text): NodeRow => ({ text, role, align: 'center' })), order }
 }
