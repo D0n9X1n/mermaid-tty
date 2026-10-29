@@ -20,11 +20,13 @@ test('A4.fit-ladder: below the minimum width falls back', () => assert.ok('reaso
 test('A5.errors: explain returns the first Fail of source, lookup, parse and fit, in that order', () => {
   assert.deepEqual(explain('flowchart TD', O), { reason: 'empty' })
   assert.deepEqual(explain('pie title x\n"a": 1', O), { reason: 'disabled:pie' })
-  assert.deepEqual(explain('sequenceDiagram\nA->>B: hi', O), { reason: 'unregistered:sequence' })
   const bad = 'flowchart TD\nA[open --> B'
   assert.deepEqual(explain(bad, O), flowchart.parse(readSource(bad) as Source))
   const model = flowchart.parse(readSource(FC) as Source)
   assert.deepEqual(explain(FC, { columns: 8 }), fitLadder(flowchart, model as never, 8))
+})
+test('A2: explain draws a sequence diagram: its module registers on import, as flowchart\'s does', () => {
+  assert.equal((explain('sequenceDiagram\nA->>B: hi', O) as { step: string }).step, 'natural')
 })
 test('A4.fit-ladder: explain returns the first step that fits, with its drawing at the given columns', () => {
   const r = explain(FC, O) as { step: string; drawing: { columns: number } }

@@ -2,7 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import { 
 import { fitLadder } from '../../core/fit.ts'; import { lookup, ENABLED, KEYWORDS } from '../../core/registry.ts'
 import type { Drawing } from '../../core/canvas.ts'; import { fail, type Fail } from '../../core/fail.ts'; import type { Step } from '../../core/fit.ts'
 import { register, type DiagramModule, type DiagramType } from '../../core/registry.ts'; import { validate } from '../../core/validate.ts'
-import { flowchart } from '../../core/diagrams/flowchart/layout.ts'
+import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { sequence } from '../../core/diagrams/sequence/layout.ts'
 const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
   layout: (_m: unknown, step: string, cols: number) => {
     const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
@@ -90,18 +90,18 @@ test('A1: every keyword and alias maps as in the table; each one A does not draw
 
 // A module lookup only files and finds: its methods are never called. Registration lasts for the rest of this file.
 const stub = (type: DiagramType): DiagramModule => ({ type, parse: () => fail('stub'), steps: () => [], layout: () => fail('stub') })
-// The flowchart module registers itself on import (T19); sequence stays unregistered until T24.
-test('A1: an enabled type is unregistered until its module registers, then lookup returns that module; a disabled type stays disabled', () => {
+// The flowchart and sequence modules register themselves on import (T19, T24), so no enabled type stays unregistered.
+test('A1: lookup returns each enabled type\'s registered module, sequenceDiagram included, then the module registered in its place; a disabled type stays disabled', () => {
   assert.equal(lookup('flowchart TD'), flowchart)
   assert.equal(lookup('graph LR'), flowchart)
-  assert.deepEqual(lookup('sequenceDiagram'), { reason: 'unregistered:sequence' })
+  assert.equal(lookup('sequenceDiagram'), sequence)
   const flow = stub('flowchart')
   register(flow)
   register(stub('pie'))
   assert.equal(lookup('flowchart TD'), flow)
   assert.equal(lookup('graph LR'), flow)
   assert.deepEqual([lookup('sequenceDiagram'), lookup('pie'), lookup('flowchart-elk TD')],
-    [{ reason: 'unregistered:sequence' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }])
+    [sequence, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }])
 })
 test('A1: registering a second module of a type replaces the first, so lookup returns the second', () => {
   const first = stub('flowchart'), second = stub('flowchart')
@@ -112,7 +112,7 @@ test('A1: registering a second module of a type replaces the first, so lookup re
 test('A1: the keyword is the first whitespace-separated token of the header, less one trailing colon', () => {
   const headers = ['sequenceDiagram:', 'pie: title x', 'pie\ttitle x', 'flowchart-elk: TD', 'stateDiagram-v2::']
   assert.deepEqual(headers.map(h => lookup(h)),
-    [{ reason: 'unregistered:sequence' }, { reason: 'disabled:pie' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }, { reason: 'unknown-type' }])
+    [sequence, { reason: 'disabled:pie' }, { reason: 'disabled:pie' }, { reason: 'fallback:flowchart-elk' }, { reason: 'unknown-type' }])
 })
 test('A1: whitespace before the keyword is skipped, so a header with leading spaces still names its type', () => {
   assert.deepEqual(lookup('  pie'), { reason: 'disabled:pie' })
