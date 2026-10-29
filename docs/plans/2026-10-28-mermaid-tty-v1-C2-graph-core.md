@@ -259,7 +259,7 @@ test('A4.fit-ladder: drawAt stacks the title, the graph and the legend; keyed LR
     - **Direction:** `lrToTd` and `keyed` draw LR as TB and RL as BT; the other steps keep `dir`.
     - **wrapAt tries:** `[null]` for natural and tight; `[24, 20, 16, 12, 8]` for wrap; `[null, 24, 20, 16, 12, 8]` for lrToTd and keyed. Only `keyed` builds with `keyed: true`.
     - **Each try:** `build` → `withNotes` → `layoutGraph` → `routeGraph` → `drawGraph(…, columns)` → `stack([heading(title), d], columns)` when there is a title → `withLegend(…, legend, columns, keyable)`.
-    - It returns the first drawing that `validate` accepts, else the last Fail.
+    - It returns the first drawing that `validate` accepts, else the last attempt, as A4.fit-ladder pins; `fitLadder` validates it again, so an invalid attempt never reaches the screen.
   - **Flowchart:** `steps = g => graphSteps(g.dir, false)`, and `layout = (g, step, cols) => drawAt(({ dir }) => ({ graph: { ...g, dir }, legend: [], keyable: [] }), g.dir, step, cols, null)`. Flowchart keeps its title inside the graph, where T18 draws it, so its goldens do not change.
 - [ ] **Done when:**
   - `node --test tests/core/ladder_test.ts tests/core/flowchart-layout_test.ts tests/golden/golden_test.ts` passes, both Q1 tests included;
