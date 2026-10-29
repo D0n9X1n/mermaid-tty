@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { width } from '../core/width.ts'; // T11
 import { publishWikiErrors } from './docs/workflow-tree.ts';
+import { ciErrors, releaseErrors } from './docs/ci-rules.ts'; // T8
+import { checkShErrors } from './lib/ci-rules.ts'; // T8
 import { assetImages, iconErrors, imageErrors, readmeErrors } from './lib/doc-rules.ts';
 import { IMAGES } from './lib/images.ts';
 import { renderImage } from './lib/render-image.ts'; // T11
@@ -14,6 +16,7 @@ const md = read('README.md'), diagrams = IMAGES.map((i) => i.file);
 const pages = existsSync(at('wiki')) ? readdirSync(at('wiki')).filter((f) => f.endsWith('.md')).map((f) => `wiki/${f}`) : [];
 const errors = [...readmeErrors(md, diagrams), ...publishWikiErrors(read('.github/workflows/publish-wiki.yml')),
   ...pages.flatMap((p) => imageErrors(p, read(p), diagrams))];
+errors.push(...ciErrors(read('.github/workflows/ci.yml')), ...releaseErrors(read('.github/workflows/release.yml')), ...checkShErrors(read('scripts/check.sh'))); // T8
 for (const p of new Set(['assets/icon.svg', ...[md, ...pages.map((p) => read(p))].flatMap((t) => assetImages(t))])) if (!existsSync(at(p))) errors.push(`${p} is displayed but does not exist`);
 errors.push(...(existsSync(at('.claude-plugin/icon.png')) ? iconErrors(readFileSync(at('.claude-plugin/icon.png'))) : ['icon.png: missing']));
 // T11 begin: each README SVG equals a fresh render, and every glyph sits at col × CELL.

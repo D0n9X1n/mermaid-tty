@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Only this job publishes a release and reads the publish-wiki run.
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude-config
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm install -g @anthropic-ai/claude-code@2.1.308
+      - id: release-tag
+        run: node scripts/check-release.ts tag "$GITHUB_REF_NAME"
+      - id: release-notes
+        run: node scripts/check-release.ts notes "docs/release-notes/$GITHUB_REF_NAME.md"
+      - id: release-wiki-run
+        name: publish-wiki concluded success for the tagged commit on main (B3)
+        run: |
+          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-wiki.yml/runs?branch=main&head_sha=${GITHUB_SHA}&per_page=1" -q '.workflow_runs[0].conclusion')"
+          echo "publish-wiki on ${GITHUB_SHA}: ${conclusion}"
+          test "$conclusion" = success
+      - id: release-wiki
+        name: The published wiki matches wiki/ (B3)
+        run: |
+          git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"
+          diff -r --exclude=.git wiki "$RUNNER_TEMP/wiki"
+      - id: release-publish
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "mermaid-tty $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"
+      - id: release-notes-published
+        run: gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -
+      - id: release-install
+        name: Install from the GitHub marketplace into a fresh config
+        run: |
+          mkdir -p "$CLAUDE_CONFIG_DIR"
+          claude plugin marketplace add D0n9X1n/mermaid-tty
+          claude plugin install mermaid-tty@mermaid-tty
+          claude plugin list | tee /dev/stderr | grep -F "Version: ${GITHUB_REF_NAME#v}"
+      - run: sudo apt-get update && sudo apt-get install -y tmux
+      - id: release-e2e-tooling
+        run: npm ci --prefix scripts/e2e
+      - id: release-e2e
+        name: A9 against the installed copy
+        env:
+          LC_ALL: C.UTF-8
+        run: node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.308 --scenario all
