@@ -5,6 +5,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { isFail, type Fail } from '../../core/fail.ts'
 import { explain } from '../../core/render.ts'
 import { parseXy, type Xy } from '../../core/diagrams/xychart/parse.ts'; import { readSource } from '../../core/source.ts'
+import { parseSequence } from '../../core/diagrams/sequence/parse.ts'
 
 const CASES = ['Q&A', 'Q & A', 'a < b', 'a<b', 'x > 5', '&lt;', '&amp;', '&lt', '#9829;', 'a<br>b', 'a<BR>b', 'a<br/>b', 'a<br />b',
   '<b>z</b>', 'a<!--c-->b', 'ﬂ°x¶ß']
@@ -93,6 +94,39 @@ test('A5.errors: ground truth: an xychart title, category and axis titles keep e
     { name: 'category', truth: TRUTH.title, draw: X('x-axis ["$", zz]\nbar [1, 2]', m => m.categories?.[0]), strict: [9, TAG] },
     { name: 'x-axis title', truth: TRUTH.title, draw: X('x-axis "$" [p, q]\nbar [1, 2]', m => m.xTitle), strict: [9, TAG] },
     { name: 'y-axis title', truth: TRUTH.title, draw: X('y-axis "$" 0 --> 5\nbar [1]', m => m.yTitle), strict: [9, TAG] },
+  ]
+  fields.forEach(check)
+})
+
+// QA repro: Mermaid 12.2.0 shows flowchart A["a<br />b"] as one unsplit line, an edge label too. Its sequence splitter
+// splits there and at </br>, which this drawing does not, so each falls back.
+test('A5.errors: ground truth: a <br> with a non-HTML space, or a </br>, falls back in a flowchart node or edge label and a sequence message or note', () => {
+  const nb = 'a<br />b'
+  const srcs: [string, string][] = [[`flowchart TD\nA["${nb}"]`, 'A'], [`flowchart TD\nA -->|"${nb}"| B`, 'L_A_B_0:label'],
+    [`sequenceDiagram\nA->>B: ${nb}`, 'm0:label'], ['sequenceDiagram\nA->>B: a</br>b', 'm0:label'], ['sequenceDiagram\nNote over A: a</br>b', 'n0']]
+  assert.deepEqual(srcs.map(([s, o]) => [s, drawn(s, o)]), srcs.map(([s]) => [s, { reason: 'html' }]))
+})
+
+// QA repro: Mermaid 12.2.0 shows sequence `title a<!--c-->b` as ab. A sequence title, statement or frontmatter, is sanitized
+// with no <br>, as a pie title is.
+test('A5.errors: ground truth: a sequence title, statement or frontmatter, is sanitized: a < or a <br> falls back', () => {
+  const T = (src: string) => { const s = readSource(src); return isFail(s) ? s : parseSequence(s) }
+  const bad = ['a<!--c-->b', 'a < b', 'a<br>b', '<b>z</b>']
+  assert.deepEqual(bad.map(c => [c, T(`sequenceDiagram\ntitle ${c}\nA->>B: x`)]), bad.map(c => [c, { reason: 'html' }]))
+  assert.deepEqual(bad.map(c => [c, T(`---\ntitle: "${c}"\n---\nsequenceDiagram\nA->>B: x`)]), bad.map(c => [c, { reason: 'html' }]))
+  assert.deepEqual(drawn('sequenceDiagram\ntitle a<!--c-->b\nA->>B: x', 'title'), { reason: 'html' })
+  assert.deepEqual(['Q & A', 'x > 5'].map(c => drawn(`sequenceDiagram\ntitle ${c}\nA->>B: x`, 'title')), [['Q & A'], ['x > 5']])
+})
+
+// QA repro: Mermaid 12.2.0 shows a frontmatter title "ﬂ°x¶ß" as &x; and "a<!--c-->b" as ab, in every type. explain checks
+// it as a sanitized title with no <br>. Only those two cases were probed for frontmatter; the rest take the title's truth.
+// #9829; falls back though encodeEntities never sees frontmatter, so Mermaid may show it as written: conservative.
+test('A5.errors: ground truth: a frontmatter title draws each case as Mermaid shows a title, or falls back, in pie, flowchart and xychart', () => {
+  const F = (body: string) => (c: string) => drawn(`---\ntitle: "${c}"\n---\n${body}`, 'title')
+  const fields: Field[] = [
+    { name: 'pie frontmatter', truth: TRUTH.title, draw: F('pie\n"a" : 1'), strict: [9, TAG] },
+    { name: 'flowchart frontmatter', truth: TRUTH.title, draw: F('flowchart TD\nA'), strict: [9, TAG] },
+    { name: 'xychart frontmatter', truth: TRUTH.title, draw: F('xychart-beta\nbar [1]'), strict: [9, TAG] },
   ]
   fields.forEach(check)
 })

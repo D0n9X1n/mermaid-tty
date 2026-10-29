@@ -10,7 +10,13 @@ export type Br = 'any' | 'lower' | 'literal' | 'none'
 // Every mode: Mermaid encodes #name; and #123; as entities, and its ﬂ°, ¶ß markers become & and ;, so text holding one
 // shows other text.
 const ENTITY = /#\w+;|ﬂ°|¶ß/
-const BR_ANY = /<br\s*\/?>/gi
+// A <br>, <br/> or <br />, in any case, with only HTML's whitespace (space, tab, newline, form feed, return) before the
+// slash: HTML ends a tag name nowhere else, so <br /> is other markup.
+const BR = String.raw`<br[ \t\n\f\r]*\/?>`
+const BR_ANY = new RegExp(BR, 'gi')
+// A break Mermaid's own splitter finds (common.ts lineBreakRegex): JS's \s, and </br> too. Where a <br> splits, one that
+// BR_ANY leaves would split there but draw here as written.
+const BR_MERMAID = /<\/?br\s*\/?>/i
 // The text each mode shows differently, and why.
 const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
   plain: [],
@@ -24,8 +30,9 @@ const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
 // written, each <br> that splits removed first.
 export function drawable(text: string, mode: Mode, br: Br): Fail | null {
   if (ENTITY.test(text)) return fail('entity')
-  if (br === 'none' && /<br/i.test(text)) return fail('html')
+  if (br === 'none' && /<\/?br/i.test(text)) return fail('html')
   const t = br === 'any' ? text.replace(BR_ANY, '') : br === 'lower' ? text.replaceAll('<br>', '') : text
+  if (br === 'any' && BR_MERMAID.test(t)) return fail('html')
   const hit = RULES[mode].find(([re]) => re.test(t))
   return hit ? fail(hit[1]) : null
 }
@@ -35,10 +42,10 @@ export function drawable(text: string, mode: Mode, br: Br): Fail | null {
 // every label line after the first joins with '\n', which the drawing code sets.
 export type Piece = { text: string; join: '' | ' ' | '\n' }
 
-// A label's lines: it breaks at <br>, <br/> or <br />, in any case. Two breaks in a
-// row, or a break at the end, keep a blank line, as Mermaid's HTML does.
+// A label's lines: it breaks at <br>, <br/> or <br />, in any case, with only HTML whitespace before the slash. Two
+// breaks in a row, or a break at the end, keep a blank line, as Mermaid's HTML does.
 export function labelLines(label: string): string[] {
-  return label.split(/<br\s*\/?>/i)
+  return label.split(BR_ANY)
 }
 
 // Fills line greedily into pieces at most max columns wide (matrix, common rule 6).

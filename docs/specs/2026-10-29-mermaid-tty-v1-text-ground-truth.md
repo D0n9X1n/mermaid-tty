@@ -39,6 +39,12 @@ Columns:
 
 Case 16: Mermaid's `encodeEntities` writes `#name;` and `#123;` as the markers `ﬂ°…¶ß` and `ﬂ°°…¶ß`, and `decodeEntities` turns `ﬂ°` into `&` and `¶ß` into `;` in the SVG. So markers written in the source show as `&` and `;`.
 
+QA probes since (Mermaid 12.2.0, Chrome):
+
+- A frontmatter title `ﬂ°x¶ß` shows `&x;`, and `a<!--c-->b` shows `ab`, in pie, flowchart and xychart.
+- A sequence `title a<!--c-->b` shows `ab`.
+- A flowchart node or edge label `a<br />b` (a no-break space before the slash) shows one unsplit line.
+
 ### Not in X1's scope (for X2)
 
 - timeline splits only a lowercase `<br>`.
@@ -53,10 +59,10 @@ Case 16: Mermaid's `encodeEntities` writes `#name;` and `#123;` as the markers `
 
 1. **Every mode:** `#\w+;`, `ﬂ°` or `¶ß` fails `entity`.
 2. **`br`:**
-   - `any`: `<br\s*\/?>`, in any case, splits; it is removed before the mode rules run.
-   - `lower`: only `<br>` splits; it is removed.
+   - `any`: `<br[ \t\n\f\r]*\/?>`, in any case, splits; it is removed before the mode rules run. Only HTML's whitespace may come before the slash: HTML ends a tag name nowhere else, so `<br />` is other markup. A break Mermaid's own splitter still finds after that (`lineBreakRegex`, `/<\/?br\s*\/?>/i`: a `<br>` with another space, or `</br>`) fails `html`, since Mermaid would split there and this drawing would not.
+   - `lower`: only `<br>` splits; every one is removed.
    - `literal`: every `<br>` spelling draws as written, and the mode rules see it.
-   - `none`: any `<br` fails `html`.
+   - `none`: any `<br` or `</br` fails `html`.
 3. **Mode:**
    - `plain`: nothing more.
    - `html`: `<` before `[A-Za-z/!?]` fails `html`; `&` before `#` or two ASCII letters fails `entity`. `Q&A`, `AT&T` and `a < b` pass.
@@ -73,13 +79,13 @@ Case 16: Mermaid's `encodeEntities` writes `#name;` and `#123;` as the markers `
 | sequence message, note | plain | any | Sequence also fails `hash` on any `#` and `semicolon` on any `;`. |
 | sequence participant alias, frame label (`alt`…, `else`…) | plain | **none** | Stricter: see below. |
 | sequence box title | sanitized | **none** | Stricter: see below. |
-| sequence title, statement or frontmatter | plain | literal | Not probed: only the markers and `#` fail. |
+| sequence title, statement or frontmatter | sanitized | none | QA: Mermaid shows `title a<!--c-->b` as `ab`. |
 | pie slice | plain | literal | The layout wraps a slice only at spaces, never at `<br>`. |
 | pie title, header or statement | sanitized | none | |
 | xychart title, category | sanitized | none | |
 | xychart axis titles, series name | sanitized | none | Not probed: given the title's rule. |
 
-A frontmatter title of pie or xychart is no body text, so `encodeEntities` never sees it; it keeps only `readSource`'s checks.
+**Frontmatter title, every type:** sanitized, `br: none`. `explain` (`core/render.ts`) checks it right after `readSource`, before any parser. QA: Mermaid shows a frontmatter title `ﬂ°x¶ß` as `&x;` and `a<!--c-->b` as `ab`, in pie, flowchart and xychart alike: the title is sanitized, and `decodeEntities` runs over the whole SVG. Only those two cases were probed; the rest take column T. `#9829;` falls back conservatively, though `encodeEntities` never sees frontmatter and Mermaid may show it as written.
 
 ## Where X1 falls back on a `=` or `⏎` case
 
@@ -90,9 +96,11 @@ These cells fall back though Mermaid shows them as written or split. The tests l
 
 ## Tests
 
-- `tests/core/text_test.ts`: `drawable` for each mode and each `br`.
-- `tests/core/text-ground-truth_test.ts`: all 16 cases for every probed field above, plus the xychart axis titles (the sequence title and xychart series name have no truth row, so they are not in it). A `=` case draws as written, a `⏎` case as its split lines, and every other case falls back. xychart has no layout yet, so its cases check what the parser keeps.
+- `tests/core/text_test.ts`: `drawable` for each mode and each `br`, the HTML-whitespace `<br>`, and every `<br>` removed.
+- `tests/core/text-ground-truth_test.ts`: all 16 cases for every probed field above, plus the xychart axis titles and the frontmatter title of pie, flowchart and xychart; and the QA repros: the sequence title, and `<br />` or `</br>` in a flowchart node or edge label and a sequence message or note. A `=` case draws as written, a `⏎` case as its split lines, and every other case falls back. The xychart field cases check what the parser keeps.
 
 ## Blast radius
 
 None. Every block of `fixtures/flowchart`, `fixtures/sequence` and `fixtures/corpus` draws the same cells, or fails with the same reason, at 60, 80 and 120 columns as before X1: 204 results compared, all unchanged. The fixtures hold `<br>` and `<br/>` only outside subgraph titles, aliases, frame labels, box titles and titles; no `&` before `#` or two letters; no other `<`; no markers. The one `&` in a drawn field is `Alice & John` in a sequence box, which stays drawable.
+
+Fix cycle 1 (frontmatter and sequence titles sanitized, `<br>` separators ASCII only): none. The same 204 results match the base, including the 10 fixtures with a frontmatter title.

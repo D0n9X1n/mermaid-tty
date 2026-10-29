@@ -53,10 +53,9 @@ test('A5.errors: a #…; entity in a slice label or a header title falls back; a
   for (const src of ['pie\n"#9829;" : 1', 'pie title I #9829; pets\n"a" : 1']) assert.deepEqual(X(src, 80), { reason: 'entity' }, src)
   assert.deepEqual(text(X('pie title C# and F#\n"F#" : 1', 80).drawing), ['C# and F#', `F# ${bar(480, 60)} 1 100.0%`])
 })
-// A frontmatter title is no body text, so Mermaid does not encode it. accTitle and accDescr, in each form, are parsed and
-// not drawn (matrix common rule 4).
+// accTitle and accDescr, in each form, are parsed and not drawn (matrix common rule 4).
 test('A5: a title statement or a frontmatter title draws as the heading; accTitle and accDescr are ignored', () => {
-  for (const [src, title] of [['pie\ntitle Pets\n"Dogs" : 3', 'Pets'], ['---\ntitle: "I #9829; pets"\n---\npie\n"Dogs" : 3', 'I #9829; pets'],
+  for (const [src, title] of [['pie\ntitle Pets\n"Dogs" : 3', 'Pets'], ['---\ntitle: "I ♥ pets"\n---\npie\n"Dogs" : 3', 'I ♥ pets'],
     ['pie title Pets\naccTitle: Pets\naccDescr: Two\naccDescr {\n  dogs\n  cats }\naccDescr { one }\n"Dogs" : 3', 'Pets']] as const)
     assert.deepEqual(text(X(src, 80).drawing), [title, `Dogs ${bar(480, 60)} 3 100.0%`], src)
 })
@@ -64,6 +63,8 @@ test('A5.errors: a second title, an undrawable title statement or an unclosed ac
   for (const [src, why] of [['pie title A\ntitle B\n"a" : 1', 'repeat:2'], ['pie\ntitle A\n"a" : 1\ntitle B', 'repeat:4'],
     ['---\ntitle: A\n---\npie\ntitle B\n"a" : 1', 'repeat:5'], ['---\ntitle: A\n---\npie title B\n"a" : 1', 'repeat:header'],
     ['pie\ntitle I #9829; pets\n"a" : 1', 'entity'], ['pie\ntitle A\u0007\n"a" : 1', 'unsupported-char U+0007'],
+    // explain checks a frontmatter title as a sanitized title, so its #…; falls back too (text ground truth).
+    ['---\ntitle: "I #9829; pets"\n---\npie\n"a" : 1', 'entity'],
     ['pie\naccTitle: Pets', 'empty'], ['pie\naccDescr {\n"a" : 1', 'syntax:2'], ['pie\naccDescr { a } b\n"a" : 1', 'syntax:2'],
     ['pie\nTitle A\n"a" : 1', 'syntax:2'], ['pie\ntitled A\n"a" : 1', 'syntax:2']] as const)
     assert.deepEqual(X(src, 80), { reason: why }, src)

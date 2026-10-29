@@ -100,3 +100,22 @@ test('A5.errors: drawable: member fails any < and an & before # or two letters o
   assert.deepEqual(['a < b', 'a<b', '&lt', '&#9', 'a&éé', 'Q&A', 'x > 5'].map(s => D(s, 'member')), ['html', 'html', 'entity', 'entity', 'entity', null, null])
   assert.equal(D('a&éé', 'html'), null)
 })
+
+// HTML ends a tag name only at its whitespace (space, tab, newline, form feed, return), / or >: <br /> is no br tag.
+const ODD = [' ', ' ', '　'].map(s => `a<br${s}/>b`)
+test('A3: <br> splits only with HTML whitespace before its slash', () => {
+  assert.deepEqual(labelLines('a<br\t/>b<br\n/>c<br\f/>d<br\r/>e<br />f'), ['a', 'b', 'c', 'd', 'e', 'f'])
+  assert.deepEqual(ODD.map(t => labelLines(t)), ODD.map(t => [t]))
+})
+// Mermaid's own splitter (common.ts lineBreakRegex, /<\/?br\s*\/?>/gi) splits at those and at </br> too; a field whose <br>
+// splits would draw them as written, so it falls back, as a field with no <br> does.
+test('A5.errors: drawable: a <br> with another space, or a </br>, fails html where a <br> splits or none may be drawn', () => {
+  const odd = [...ODD, 'a</br>b', 'a</BR >b']
+  for (const m of MODES) assert.deepEqual(odd.map(t => [D(t, m, 'any'), D(t, m, 'none')]), odd.map(() => ['html', 'html']), m)
+  assert.deepEqual(odd.map(t => D(t, 'plain', 'literal')), odd.map(() => null))
+})
+test('A5.errors: drawable: br any and lower remove every <br>, not only the first', () => {
+  assert.deepEqual(['a<br>b<br>c', 'a<br><br>'].map(t => D(t, 'sanitized', 'lower')), [null, null])
+  assert.deepEqual(['a<br>b<br/>c', 'a<BR><br />'].map(t => D(t, 'sanitized', 'any')), [null, null])
+  assert.equal(D('a<br>b<BR>c', 'sanitized', 'lower'), 'html')
+})

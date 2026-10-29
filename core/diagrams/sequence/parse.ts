@@ -83,7 +83,7 @@ function stop(reason: string): never { throw fail(reason) }
 // Drawn text, trimmed: every label line of it must be supported. Mermaid reads a # as the start of a comment, or of
 // an entity such as #9829;, so it would draw other text; and text it shows otherwise in a field of mode and br fails as
 // drawable says. A message or note splits each <br>; an alias, condition or box label draws on one line (br 'none'); a
-// title keeps its <br> as written (br 'literal').
+// title, statement or frontmatter, is sanitized with no <br>, as Mermaid shows title a<!--c-->b as ab.
 function text(s: string, mode: Mode, br: Br): string {
   const t = s.trim()
   if (t.includes('#')) stop('hash')
@@ -115,7 +115,7 @@ export function parseSequence(src: Source): Seq | Fail {
 function walk(src: Source): Seq {
   const seq: Seq = { title: src.title, participants: [], boxes: [], autonumber: null, items: [] }
   // A frontmatter title is drawn, so it is checked like any label.
-  if (src.title !== null) text(src.title, 'plain', 'literal')
+  if (src.title !== null) text(src.title, 'sanitized', 'none')
   const frames: Frame[] = [], destroyed = new Set<string>()
   // Each participant's activation depth: Mermaid fails on deactivating one that is not active.
   const depth = new Map<string, number>()
@@ -199,7 +199,7 @@ function walk(src: Source): Seq {
       seq.autonumber = { start, step }
     } else if ((m = TITLE.exec(t))) {
       if (seq.title !== null) stop('title')
-      seq.title = text(m[1]!, 'plain', 'literal')
+      seq.title = text(m[1]!, 'sanitized', 'none')
     } else if (ACC.test(t)) {
       // Accessibility text is not drawn.
     } else if ((m = ACC_BLOCK.exec(t))) {

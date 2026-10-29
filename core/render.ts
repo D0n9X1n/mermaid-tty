@@ -7,6 +7,7 @@ import { fitLadder } from './fit.ts'
 import { createLru } from './lru.ts'
 import { lookup } from './registry.ts'
 import { readSource } from './source.ts'
+import { drawable as drawableText } from './text.ts'
 import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
 import { palette } from './themes.ts'
 // Imported for their side effect: the flowchart and sequence modules, then each Tier 1 type's (diagrams/all.ts), register
@@ -23,13 +24,16 @@ export type Options = { columns: number; theme?: string }
 const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
 
 // The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail wins,
-// after 'bad-columns' when o.columns is not drawable. explain never throws: a throw below it is a bug, which falls back as
-// 'internal-error'.
+// after 'bad-columns' when o.columns is not drawable. A frontmatter title, in every type, is checked as Mermaid's sanitized
+// title text with no <br> (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md). explain never throws: a throw below
+// it is a bug, which falls back as 'internal-error'.
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
   if (!drawable(o.columns)) return fail('bad-columns')
   try {
     const src = readSource(source)
     if (isFail(src)) return src
+    const title = src.title === null ? null : drawableText(src.title, 'sanitized', 'none')
+    if (title) return title
     const mod = lookup(src.header)
     if (isFail(mod)) return mod
     const model = mod.parse(src)
