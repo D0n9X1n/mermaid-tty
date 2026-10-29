@@ -148,6 +148,24 @@ test('A9.harness: without stream: true the reply is one JSON message of the same
   } finally { await m.stop() }
 })
 
+// stream must be the boolean true: a truthy "false" or 1 gets JSON, as a missing stream does.
+test('A9.harness: only stream: true streams; stream "false", stream 1 and no stream each get one JSON message', async () => {
+  const m = await startMock()
+  try {
+    const post = (body: object) => fetch(`${m.url}/v1/messages`, { method: 'POST', body: JSON.stringify({ ...body, messages: [{ role: 'user', content: 'hi' }] }) })
+    for (const body of [{ stream: 'false' }, { stream: 1 }, {}]) {
+      const r = await post(body)
+      assert.equal(r.headers.get('content-type'), 'application/json', JSON.stringify(body))
+      const { type, content } = await r.json()
+      assert.deepEqual({ type, content }, { type: 'message', content: [{ type: 'text', text: REPLY }] }, JSON.stringify(body))
+    }
+    const r = await post({ stream: true }), sse = await r.text()
+    assert.equal(r.headers.get('content-type'), 'text/event-stream')
+    assert.equal(events(sse).at(-1)?.event, 'message_stop')
+    assert.equal(text(sse), REPLY)
+  } finally { await m.stop() }
+})
+
 test('A9.harness: array-form user content gets REPLY_LEAD when one of its text blocks contains lead', async () => {
   const m = await startMock()
   try {
