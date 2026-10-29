@@ -3,9 +3,9 @@ const src = (fm: string) => readSource(`---\n${fm}\n---\ngitGraph\ncommit`)
 const cfg = (fm: string) => (src(fm) as Source).config
 test('A5: frontmatter config scalars become dotted keys; other top-level keys are ignored', () => {
   assert.deepEqual(cfg('title: Log\nconfig:\n  theme: dark\n  gitGraph:\n    mainBranchName: "trunk"\n    mainBranchOrder: 2\ndisplayMode: compact'),
-    { theme: 'dark', 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': '2' })
+    { theme: 'dark', 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': 2 })
   assert.deepEqual(cfg('config:\n  mindmap:\n    colorBy: depth # a comment\n\n  timeline:\n    disableMulticolor: true'),
-    { 'mindmap.colorBy': 'depth', 'timeline.disableMulticolor': 'true' })
+    { 'mindmap.colorBy': 'depth', 'timeline.disableMulticolor': true })
   assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
   assert.deepEqual((readSource('pie\n"a" : 1') as Source).config, {})
   assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: trunk\t# note\n    x: a#b'), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'a#b' })   // a tab-# comment; a # inside a word
@@ -27,17 +27,17 @@ test('A5: quoted and plain scalars, comment and blank lines, keys and nesting re
     { 'q.a': 'x\\y', 'q.b': '\\', 'q.c': '', 'q.d': '', 'q.e': "it's", 'q.f': 'say "hi"', 'q.g': "a'" })
   // Indicators after the first character, inner spaces and quotes; a tab after the separating space.
   assert.deepEqual(cfg(yaml('config:', '  p:', '    a: x-y, [z] {w}', '    b: -1', '    c: x:y', '    d: :x', '    e: ?x', '    f: x  y', '    g: 50%', `    h: it's`, '    i: a "b"', '    j: \tx')),
-    { 'p.a': 'x-y, [z] {w}', 'p.b': '-1', 'p.c': 'x:y', 'p.d': ':x', 'p.e': '?x', 'p.f': 'x  y', 'p.g': '50%', 'p.h': "it's", 'p.i': 'a "b"', 'p.j': 'x' })
+    { 'p.a': 'x-y, [z] {w}', 'p.b': -1, 'p.c': 'x:y', 'p.d': ':x', 'p.e': '?x', 'p.f': 'x  y', 'p.g': '50%', 'p.h': "it's", 'p.i': 'a "b"', 'p.j': 'x' })
   // A comment or blank line at any indent is skipped and never ends a mapping, nor does a whitespace-only line with a tab.
   assert.deepEqual(cfg(yaml('config:', '  gitGraph:', '# top', '    mainBranchName: trunk', '      # deep', '  ', ' \t ', '    mainBranchOrder: 2')),
-    { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': '2' })
+    { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': 2 })
   // Keys with _, - and digits; uneven but consistent indents; one line closing two mappings.
   assert.deepEqual(cfg(yaml('config:', '    _k-2:', '       A9: x', '       b:', '         c: 1', '    e: 3', 'other: y')),
-    { '_k-2.A9': 'x', '_k-2.b.c': '1', e: '3' })
+    { '_k-2.A9': 'x', '_k-2.b.c': 1, e: 3 })
   // Trailing spaces and tabs are dropped, on the config: line too.
   assert.deepEqual(cfg('config:  \n  gitGraph:\t\n    mainBranchName: trunk  \n    x: "q"\t '), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'q' })
   assert.deepEqual(readSource('---\ntitle: Log\nconfig:\n  title: nested\n  a: 1\n---\ngitGraph\ncommit'),
-    { header: 'gitGraph', title: 'Log', config: { title: 'nested', a: '1' }, lines: [{ n: 8, text: 'commit' }] })
+    { header: 'gitGraph', title: 'Log', config: { title: 'nested', a: 1 }, lines: [{ n: 8, text: 'commit' }] })
   assert.deepEqual(['configX:\n  a: 1', 'config_y:\n  a: 1', 'x:\n  config:\n    a: 1'].map(cfg), [{}, {}, {}])
 })
 test('A5.errors: every other scalar, key, indentation or tab form falls back', () => {
@@ -55,5 +55,5 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
     '!!str config:\n  a: 1', '- config:\n    a: 1', '  config:\n    a: 1', 'config:\n  a: 1\nconfig:\n  b: 2']
   for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
   // Other plain top-level keys, indicators after their first character included, are still ignored.
-  assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: '1' })
+  assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: 1 })
 })

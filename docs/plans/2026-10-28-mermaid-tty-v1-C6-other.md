@@ -42,7 +42,7 @@ test('A5.errors: an icon, a second root, mismatched delimiters, a markdown strin
     - `"…"` keeps punctuation; `` "`…`" `` fails `markdown:<n>`.
     - `<br>`, `<br/>` and `<br />` break lines (`labelLines`); any other HTML fails `syntax:<n>`. The text also goes through `unsupported()`.
   - **Annotations:** `::icon(…)` fails `syntax:<n>`. A `:::name` suffix or line is ignored.
-  - **Config:** `colorBy` is `'depth'` when `src.config['mindmap.colorBy'] === 'depth'`, else `'branch'`. `title` is `src.title`.
+  - **Config:** `colorBy` is `'depth'` when `src.config['mindmap.colorBy'] === 'depth'`, else `'branch'`, as `mindmapDb.ts` tests it; a typed non-string never matches. `title` is `src.title`.
 - [ ] **Done when:** `node --test tests/core/mindmap-parse_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse mindmaps"`
 
@@ -173,7 +173,7 @@ test('A5.errors: what Mermaid throws on falls back, and so do repeated ids and a
     - `title`.
     - A name is `\w([-./\w]*[-\w])?` or `"…"`. Attributes go in any order. A repeated attribute other than `tag:` fails `repeat:<n>`; an unknown type or statement fails `syntax:<n>`.
   - **State, as Mermaid's db:**
-    - main exists from the start, named `config['gitGraph.mainBranchName'] ?? 'main'`, with order `Number(config['gitGraph.mainBranchOrder'] ?? 0)`.
+    - main exists from the start. `name = config['gitGraph.mainBranchName']`, absent → `'main'`; it must be a non-empty string, else fail `config:gitGraph.mainBranchName`. `order = config['gitGraph.mainBranchOrder']`, absent → `0`; it must be a number, else fail `config:gitGraph.mainBranchOrder`.
     - Each branch has a head, null at first. main's `start` event comes first.
   - **Branches:** `branch` fails `branch:<n>` when the branch exists. Otherwise it starts at the current head, is checked out and emits `start`. `checkout`/`switch` of an unknown branch fails `checkout:<n>`.
   - **Merges:** `merge` fails `merge:<n>` for itself, an unknown branch, a branch with no commits, the same head as the current branch, or a current branch with no commits. A current branch with no commits includes `main` before its first commit, since Mermaid's branch map starts `main → null` (gitGraph-reject-18).
@@ -295,6 +295,10 @@ test('A5: no sections; TD; disableMulticolor from frontmatter config; repeated p
   const t = P('---\nconfig:\n  timeline:\n    disableMulticolor: true\n---\ntimeline TD\n2002 : LinkedIn\n2002 : again')
   assert.deepEqual([t.dir, t.multicolor, shape(t)], ['TD', false, [[null, [['2002', ['LinkedIn']], ['2002', ['again']]]]]])
 })
+test('A5: disableMulticolor is read by JS truthiness: a quoted "false" disables multicolor, and a plain false keeps it', () => {
+  const m = (v: string) => P(`---\nconfig:\n  timeline:\n    disableMulticolor: ${v}\n---\ntimeline\n2002 : LinkedIn`).multicolor
+  assert.deepEqual(['"false"', 'false'].map(m), [false, true])
+})
 test('A5.errors: an event before any period, a period before the first section, a repeated section, ":" with no space, # and a second title fall back', () => {
   for (const [body, why] of [[': lonely', 'syntax:2'], ['2001 : a\nsection A\n2002 : b', 'section:2'], ['section A\n2001 : a\nsection A\n2002 : b', 'repeat:4'],
     ['2002 :LinkedIn', 'syntax:2'], ['C# 1.0 : released', 'syntax:2'], ['title A\ntitle B\n2002 : x', 'repeat:3']] as const)
@@ -315,7 +319,7 @@ test('A5.errors: an event before any period, a period before the first section, 
     - `repeat:<n>` for a repeated section name, or a second title from a statement or the frontmatter.
   - **Without sections**, all periods sit in one section whose name is null.
   - **Text:** `<br>` is kept in the text; the layout splits it with `labelLines`. Everything goes through `unsupported()`.
-  - **Config:** `multicolor = src.config['timeline.disableMulticolor'] !== 'true'`. `accTitle` and `accDescr` are ignored.
+  - **Config:** `multicolor = !src.config['timeline.disableMulticolor']`, JS truthiness, exactly as `timelineRenderer.ts` tests it. `accTitle` and `accDescr` are ignored.
 - [ ] **Done when:** `node --test tests/core/timeline-parse_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse timelines"`
 

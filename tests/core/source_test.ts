@@ -32,11 +32,11 @@ test('A1: indented %% comments and whitespace-only lines are skipped; kept lines
   assert.deepEqual(readSource('flowchart TD\n  %%{init: {}}%%\nA'), { reason: 'directive' })
 })
 
-test('A1: frontmatter title loses one matched quote pair; other keys, nested ones included, are ignored', () => {
+test('A1: frontmatter title is one quoted or plain scalar; other keys, nested ones included, are ignored', () => {
   const titleOf = (fm: string) => (readSource(`---\n${fm}\n---\nflowchart TD\nA`) as Source).title
   assert.deepEqual(
-    [`title: 'Flow'`, 'title:   Flow  ', 'title: ""', `title: "Flow'`, `title: It's "fine"`, 'title: 50%% off', 'config:\n  title: nested\ndisplayMode: compact\ntitleTopMargin: 5'].map(titleOf),
-    ['Flow', 'Flow', '', `"Flow'`, `It's "fine"`, '50%% off', null])
+    [`title: 'Flow'`, 'title:   Flow  ', 'title: ""', `title: It's "fine"`, 'title: 50%% off', 'config:\n  title: nested\ndisplayMode: compact\ntitleTopMargin: 5'].map(titleOf),
+    ['Flow', 'Flow', null, `It's "fine"`, '50%% off', null])
   assert.deepEqual(readSource('---\n---\nflowchart TD\nA'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 4, text: 'A' }] })
 })
 
@@ -68,4 +68,84 @@ test('A5.errors: a frontmatter title with an unsupported character fails unsuppo
   assert.deepEqual(readSource('---\ntitle: "x‍y"\n---\nflowchart TD\nA'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(readSource('---\ntitle: a‍b\n---\nsequenceDiagram\nA->>B: hi'), { reason: 'unsupported-char U+200D' })
   assert.equal((readSource('---\ntitle: 读取配置\n---\nflowchart TD\nA') as Source).title, '读取配置')
+})
+
+// T41b: config scalars are typed as Mermaid's frontmatter.ts reads them, with js-yaml's JSON_SCHEMA.
+// The value read for `config:` / `  a: <v>`, or the Fail.
+const one = (v: string) => { const s = readSource(`---\nconfig:\n  a: ${v}\n---\ngitGraph\ncommit`); return 'reason' in s ? s : s.config['a'] }
+
+test('A5: a plain config scalar is typed as js-yaml JSON_SCHEMA types it: null, bool, safe int, else string', () => {
+  const rows: [string, unknown][] = [['~', null], ['null', null], ['Null', null], ['NULL', null],
+    ['true', true], ['True', true], ['TRUE', true], ['false', false], ['False', false], ['FALSE', false],
+    ['0', 0], ['-0', 0], ['7', 7], ['-1', -1], ['2024', 2024], ['9007199254740991', 9007199254740991], ['-9007199254740991', -9007199254740991],
+    ['false # off', false], ['2 # two', 2], ['nULL', 'nULL'], ['tRUE', 'tRUE'], ['yes', 'yes'], ['on', 'on'], ['depth', 'depth'],
+    ['2024 Roadmap', '2024 Roadmap'], ['50%', '50%'], ['x1', 'x1']]
+  assert.deepEqual(rows.map(([v]) => [v, one(v)]), rows)
+})
+
+test('A5: a quoted config scalar stays a string, whatever it spells', () => {
+  const spellings = ['~', 'null', 'NULL', 'true', 'False', '0', '-1', '2024', '0x10', '1e3', '.inf', '9007199254740993', '']
+  const rows = spellings.flatMap(v => [`"${v}"`, `'${v}'`].map(q => [q, v] as const))
+  assert.deepEqual(rows.map(([q]) => [q, one(q)]), rows)
+})
+
+test('A5.errors: any other numeric-looking plain config scalar fails config:<dotted key>', () => {
+  const bad = ['0x10', '0o7', '0b1', '1e3', '1.5', '.5', '.inf', '-.inf', '.nan', '+1', '1_000', '01', '007', '-.5', '-x',
+    '9007199254740992', '9007199254740993', '-9007199254740992']
+  assert.deepEqual(bad.map(v => [v, one(v)]), bad.map(v => [v, { reason: 'config:a' }]))
+  assert.deepEqual(readSource('---\nconfig:\n  gitGraph:\n    mainBranchName: trunk\n    mainBranchOrder: 1.5\n---\ngitGraph\ncommit'),
+    { reason: 'config:gitGraph.mainBranchOrder' })
+  // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as frontmatter.
+  for (const fm of ['config:\n  a: 1.5\n  a: 2', 'config:\n  a: 1.5\n  b: [1]', 'config:\n  a: 1.5\n  b:'])
+    assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm)
+})
+
+// T41b: the top-level title is one scalar, read by the same rules, and printed as Mermaid's
+// frontmatter.ts prints it: `if (parsed.title) metadata.title = parsed.title.toString()`.
+// The title read from `title: <v>`, or the Fail.
+const titled = (v: string) => { const s = readSource(`---\ntitle: ${v}\n---\nflowchart TD\nA`); return 'reason' in s ? s : s.title }
+
+test('A1: a frontmatter title drops its comment and decodes its escapes', () => {
+  const rows: [string, unknown][] = [['Ideas # draft', 'Ideas'], ['Ideas\t# draft', 'Ideas'], ['Ideas # x‍y', 'Ideas'], ['a#b', 'a#b'],
+    ['"He said \\"hi\\"" # note', 'He said "hi"'], ["'it''s' # note", "it's"], ['"Q #1"', 'Q #1'], ['"2024"', '2024'], ['"false"', 'false'],
+    ['2024 Roadmap', '2024 Roadmap'], ['\tFlow', 'Flow']]
+  assert.deepEqual(rows.map(([v]) => [v, titled(v)]), rows)
+  assert.equal((readSource('---\ntitle:\tFlow\n---\nflowchart TD\nA') as Source).title, 'Flow')   // a tab may separate, as in js-yaml
+})
+
+test('A1: a null, false or empty frontmatter title means no title, as in Mermaid', () => {
+  const none = ['', '~', 'null', 'Null', 'NULL', 'false', 'False', 'FALSE', '""', "''", 'false # off', '"" # none']
+  assert.deepEqual(none.map(v => [v, titled(v)]), none.map(v => [v, null]))
+})
+
+test('A5.errors: a true, numeric or numeric-looking frontmatter title falls back as title', () => {
+  const bad = ['true', 'True', 'TRUE', '0', '-1', '2024', '2024 # year', '0x10', '1e3', '.5', '007', '9007199254740993']
+  assert.deepEqual(bad.map(v => [v, titled(v)]), bad.map(v => [v, { reason: 'title' }]))
+  // A second title still falls back as title, after a null, false or malformed first one.
+  for (const fm of ['title: false\ntitle: B', 'title: ~\ntitle: B', 'title: "open\ntitle: B'])
+    assert.deepEqual(readSource(`---\n${fm}\n---\nflowchart TD\nA`), { reason: 'title' }, fm)
+})
+
+test('A5.errors: a frontmatter title outside the strict YAML subset falls back as frontmatter', () => {
+  const bad = [`"Flow'`, '"open', "'open", '"a" b', '"a\\q"', '[a, b]', '{ a: 1 }', '&t x', '*t', '!!str x', '|', '>', '- x', 'a: b', '# draft']
+  assert.deepEqual(bad.map(v => [v, titled(v)]), bad.map(v => [v, { reason: 'frontmatter' }]))
+  assert.deepEqual(readSource('---\ntitle:x\n---\nflowchart TD\nA'), { reason: 'frontmatter' })
+})
+
+// T41b: a title that js-yaml would read as another title falls back. The Source or
+// Fail read from frontmatter written one YAML line per argument.
+const front = (...ls: string[]) => readSource(`---\n${ls.join('\n')}\n---\nflowchart TD\nA`)
+
+test('A5.errors: a top-level title key with spaces or a tab before its colon falls back as title', () => {
+  const bad = [['title : X'], ['title\t: X'], ['title: A', 'title : B'], ['config:', '  a: 1', 'title : X']]
+  assert.deepEqual(bad.map(ls => [ls, front(...ls)]), bad.map(ls => [ls, { reason: 'title' }]))
+})
+
+test('A5.errors: an indented line after the title line continues it in js-yaml, so it falls back as title', () => {
+  const bad = [['title: Hello', '  World'], ['title:', '  World'], ['title: Hello', '', '  World'], ['title: Hello', '# note', '  World'],
+    ['title: Hello', '  # note', '  World'], ['title: "Hello"', '  World'], ['title:', '  - a'], ['title:', '  a: 1']]
+  assert.deepEqual(bad.map(ls => [ls, front(...ls)]), bad.map(ls => [ls, { reason: 'title' }]))
+  // Blank and comment lines do not count, and an unindented line ends the title.
+  const ok = [['title: Hello', 'config:', '  a: 1'], ['title: Hello', '', 'config:', '  a: 1'], ['title: Hello', '  # note', 'config:', '  a: 1']]
+  assert.deepEqual(ok.map(ls => { const s = front(...ls) as Source; return [s.title, s.config] }), ok.map(() => ['Hello', { a: 1 }]))
 })

@@ -270,7 +270,7 @@ test('A5.errors: a # in drawn text fails hash', () => {
     'loop #\nA->>B: x\nend', 'title Q #1\nA->>B: x', 'box Team #1\nparticipant A\nend', 'box Aqua #team\nparticipant A\nend', 'box #abcTeam\nparticipant A\nend',
     'box #ab Team\nparticipant A\nend', 'box #abcde Team\nparticipant A\nend', 'box #ggg Team\nparticipant A\nend']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'hash' }]))
-  assert.deepEqual(parseSequence(readSource('---\ntitle: Q #1\n---\nsequenceDiagram\nA->>B: x') as Source), { reason: 'hash' })
+  assert.deepEqual(parseSequence(readSource('---\ntitle: "Q #1"\n---\nsequenceDiagram\nA->>B: x') as Source), { reason: 'hash' })
 })
 test('A2: a # may start a box color, which is dropped, or sit in a rect color or accessibility text, which are not drawn', () => {
   assert.deepEqual(P('box #abc G\nparticipant A\nend\nrect #abc\nA->>B: x\nend\naccTitle: a #b\naccDescr {\n#c\n}'),

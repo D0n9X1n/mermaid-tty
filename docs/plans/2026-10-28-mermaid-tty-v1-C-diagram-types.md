@@ -142,8 +142,9 @@ export const TIER1_MODULES: readonly DiagramModule<any>[]                 // eac
 // core/fit.ts (T40)
 export type Step = 'natural' | 'tight' | 'wrap' | 'lrToTd' | 'keyed' | 'keyedWrap' | 'horizontal' | 'oneActor' | 'compact' | 'outline'
 // core/source.ts (T41)
-export type Source = { header: string; title: string | null; config: Readonly<Record<string, string>>
-  lines: readonly { n: number; text: string }[] }  // config: frontmatter `config:` scalars as dotted keys ('gitGraph.mainBranchName')
+export type Scalar = string | number | boolean | null
+export type Source = { header: string; title: string | null; config: Readonly<Record<string, Scalar>>
+  lines: readonly { n: number; text: string }[] }  // config: frontmatter `config:` scalars as dotted keys, typed as Mermaid's js-yaml JSON_SCHEMA types them (quoted: string; plain: null, bool or safe int; other numeric-looking: fall back) (T41b)
 // core/charts/decimal.ts (T43)
 export type Dec = { n: bigint; d: bigint }                               // exact: d > 0, reduced
 export function parseDec(s: string): Dec | null                          // [+-]?(\d+(\.\d+)?|\.\d+), else null
@@ -263,7 +264,7 @@ export function vrun(d: Drawing, col: number, base: number): number     // eight
 | timeline | LR and a bare header: `natural` (gap 2), `tight` (gap 1), `wrap`, `lrToTd`. TD: `natural`, `wrap` |
 
 **Resolved ambiguities** (choices the spec and the matrix leave open; each is recorded here and pinned by a test):
-1. **Config keys** are read from frontmatter `config.<type>.<key>`: `mindmap.colorBy`, `timeline.disableMulticolor`, `gitGraph.mainBranchName`, `gitGraph.mainBranchOrder`. Every other key is ignored.
+1. **Config keys** are read from frontmatter `config.<type>.<key>`: `mindmap.colorBy`, `timeline.disableMulticolor`, `gitGraph.mainBranchName`, `gitGraph.mainBranchOrder`. Every other key is ignored. Values are typed scalars (T41b).
 2. **Gantt status inks:** the matrix's `crit`, `done` and `active` roles are aliases of `arrow`, `note` and `decision`, so the `Palette` shape, a B dependency, does not change. In mono, the status cells `!`, `✓` and `▸` tell them apart.
 3. **Series before the first section** (gantt, journey): those tasks take `s1`, and the sections take `s2`, `s3`, …. With no such tasks, the first section takes `s1`.
 4. **gitGraph labels:**
