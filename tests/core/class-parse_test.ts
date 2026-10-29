@@ -1,0 +1,70 @@
+import test from 'node:test'; import assert from 'node:assert/strict'
+import { parseClass } from '../../core/diagrams/class/parse.ts'; import { readSource } from '../../core/source.ts'
+const P = (body: string) => { const s = readSource(`classDiagram\n${body}`); return ('reason' in s ? s : parseClass(s)) as any }
+test('A5: classes, labels, generics, annotations and members, as Mermaid shows them', () => {
+  const m = P(['class Animal', 'class Square~Shape~', '<<interface>> Shape', 'class Duck["Mallard"] {', '  <<service>>', '  +String beakColor', '  +quack(int x) bool$', '}',
+    'Duck : -List~List~int~~ eggs', 'Duck : +swim()*', 'class `A b`'].join('\n'))
+  assert.deepEqual(m.classes.map((c: any) => [c.id, c.label, c.annot]), [['Animal', 'Animal', null], ['Square', 'Square<Shape>', null],
+    ['Shape', 'Shape', 'interface'], ['Duck', 'Mallard', 'service'], ['A b', 'A b', null]])
+  assert.deepEqual(m.classes[3].members, [{ text: '+String beakColor', method: false }, { text: '+quack(int x) : bool$', method: true },
+    { text: '-List<List<int>> eggs', method: false }, { text: '+swim()*', method: true }])
+})
+test('A5: relations, cardinality, notes, a namespace and direction', () => {
+  const m = P(['Animal <|-- Duck', 'Duck *-- Egg', 'Lake o-- Duck', 'Duck --> Food : eats', 'Duck ..|> Swimmer', 'A "1" --> "*" B : has', 'A <|--|> B', 'A .. B',
+    'note "General"', 'note for Duck "can fly\\nand swim"', 'namespace Pond["Water"] {', '  class Frog', '  note for Frog "ribbit"', '}', 'direction RL'].join('\n'))
+  assert.deepEqual(m.relations.map((r: any) => [r.from, r.to, r.tail, r.head, r.line, r.label, r.tailLabel, r.headLabel]), [
+    ['Animal', 'Duck', 'triangle', 'none', 'solid', null, null, null], ['Duck', 'Egg', 'diamond', 'none', 'solid', null, null, null],
+    ['Lake', 'Duck', 'odiamond', 'none', 'solid', null, null, null], ['Duck', 'Food', 'none', 'arrow', 'solid', 'eats', null, null],
+    ['Duck', 'Swimmer', 'none', 'triangle', 'dotted', null, null, null], ['A', 'B', 'none', 'arrow', 'solid', 'has', '1', '*'],
+    ['A', 'B', 'triangle', 'triangle', 'solid', null, null, null], ['A', 'B', 'none', 'none', 'dotted', null, null, null]])
+  assert.deepEqual(m.notes.map((n: any) => [n.id, n.for, n.text]), [['note0', null, 'General'], ['note1', 'Duck', 'can fly<br>and swim'], ['note2', 'Frog', 'ribbit']])
+  assert.deepEqual(m.namespaces, [{ id: 'Pond', label: 'Water', classes: ['Frog'], notes: ['note2'] }]); assert.equal(m.dir, 'RL')
+})
+test('A5: style, classDef, cssClass, :::name, click, link and callback are parsed and ignored', () =>
+  assert.deepEqual(P('class A\nstyle A fill:#f9f\nclassDef hot fill:#f00\ncssClass "A" hot\nclass A:::hot\nclick A href "x"\nlink A "x"\ncallback A "cb"')
+    .classes.map((c: any) => c.id), ['A']))
+test('A5.errors: unsupported, malformed and repeated statements fall back with their line', () => {
+  for (const [body, why] of [['class A\nA --() bar', 'syntax:3'], ['class X\nnamespace A.B {\nclass C\n}', 'syntax:3'], ['class A\nA', 'syntax:3'],
+    ['class A {\n+x', 'syntax:2'], ['<<interface>> A\n<<service>> A', 'repeat:3'], ['class A["x"]\nclass A["y"]', 'repeat:3'],
+    ['class Box~int~\nclass Box~str~', 'repeat:3']] as const) assert.deepEqual(P(body), { reason: why }, body)
+})
+
+// Beyond the plan's four: the Common rules, each drawn text checked, and the rest of the matrix's class rules.
+const R = (src: string) => { const s = readSource(src); return ('reason' in s ? s : parseClass(s)) as any }
+test('A5: a frontmatter title, classDiagram-v2, and every field set, none undefined', () => assert.deepEqual(
+  R('---\ntitle: Zoo\n---\nclassDiagram-v2\nA <|-- B\nnote for A "n"'), { dir: 'TB', title: 'Zoo',
+    classes: [{ id: 'A', label: 'A', annot: null, members: [], order: 0 }, { id: 'B', label: 'B', annot: null, members: [], order: 1 }],
+    relations: [{ id: 'rel0', from: 'A', to: 'B', tail: 'triangle', head: 'none', line: 'solid', label: null, tailLabel: null, headLabel: null,
+      order: 0 }], notes: [{ id: 'note0', for: 'A', text: 'n', order: 0 }], namespaces: [] }))
+test('A5: reversed ends, an inline annotation, Mermaid member spacing, accTitle and accDescr', () => {
+  const m = P(['A --|> B', 'A --* C', 'A --o D', 'class E <<enum>> {', '  + x', '  + getX()$ int', '  -f(List~T~ a) Map~K~', '}', 'accTitle: t',
+    'accDescr {', 'class Z', '}', 'accDescr : d'].join('\n'))
+  assert.deepEqual(m.relations.map((r: any) => [r.tail, r.head]), [['none', 'triangle'], ['none', 'diamond'], ['none', 'odiamond']])
+  assert.deepEqual([m.classes.map((c: any) => c.id), m.classes[4].annot, m.classes[4].members.map((x: any) => x.text)],
+    [['A', 'B', 'C', 'D', 'E'], 'enum', ['+ x', '+ getX() : int$', '-f(List<T> a) : Map<K>']])
+})
+// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text falls back.
+test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text, and an ignored directive is not checked', () => {
+  for (const body of ['class A["#9829;"]', 'class A {\n  +x #lt;\n}', 'A : #count;', 'A --> B : #9829;', 'A "#9829;" --> B', 'A --> "#9829;" B',
+    'note "#9829;"', 'namespace N["#9829;"] {\n}', 'class A <<#9829;>>', 'class `#9829;`']) assert.deepEqual(P(body), { reason: 'entity' }, body)
+  const m = P('class A["C# 1"]\nA : #count\nclassDef hot fill:#f00;\nstyle A fill:#f9f;')
+  assert.deepEqual([m.classes[0].label, m.classes[0].members[0].text], ['C# 1', '#count'])
+})
+test('A5.errors: headers are case-sensitive and alone; a keyword in another case or starting a longer word falls back', () => {
+  for (const [src, why] of [['classdiagram\nclass A', 'header'], ['classDiagram LR\nclass A', 'header'], ['classDiagram-v3\nclass A', 'header'],
+    ...['Class A', 'classes A', 'Note "x"', 'notebook --> A', 'Direction RL', 'direction rl', 'Style A fill:#f9f', 'namespaced A {', 'cssclass A x']
+      .map(b => [`classDiagram\n${b}`, 'syntax:2'])]) assert.deepEqual(R(src!), { reason: why }, src)
+})
+test('A5.errors: blank texts and blank label lines fall back, and so does an undrawable character', () => {
+  for (const [body, why] of [['note "a<br><br>b"', 'label-blank-line'], ['note "a\\n"', 'label-blank-line'], ['class A["x<br/>"]', 'label-blank-line'],
+    ['class A[" "]', 'syntax:2'], ['A "" --> B', 'syntax:2'], ['A --> B :', 'syntax:2'], ['note ""', 'syntax:2'], ['namespace N[""] {\n}', 'syntax:2'],
+    ['class A["a‍b"]', 'unsupported-char U+200D']]) assert.deepEqual(P(body!), { reason: why }, body)
+})
+test('A5.errors: comma generics, nested namespaces, conflicting declarations and dangling notes fall back; agreeing repeats draw', () => {
+  for (const [body, why] of [['class A\nclass Box~K,V~', 'syntax:3'], ['A : +Map~K,V~ m', 'syntax:2'], ['namespace A {\nnamespace B {\nclass C\n}\n}', 'syntax:3'],
+    ['namespace P {\nclass A', 'syntax:2'], ['accDescr {\nx', 'syntax:2'], ['note for Ghost "x"', 'syntax:2'], ['A : <<x>>', 'syntax:2'],
+    ['class A~T~\nclass A["l"]', 'syntax:3'], ['class A\nclass A~T~', 'repeat:3'], ['namespace P {\nclass A\n}\nnamespace Q {\nclass A\n}', 'repeat:6'],
+    ['namespace P["x"] {\n}\nnamespace P["y"] {\n}', 'repeat:4'], ['class note0\nnote "x"', 'id-collision']]) assert.deepEqual(P(body!), { reason: why }, body)
+  assert.deepEqual(P('class A["x"]\nclass A["x"]\nclass B~T~\nclass B~T~\nnamespace P {\nclass A\n}\nnamespace P {\nclass C\n}').namespaces,
+    [{ id: 'P', label: 'P', classes: ['A', 'C'], notes: [] }])
+})
