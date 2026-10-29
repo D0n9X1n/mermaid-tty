@@ -127,6 +127,27 @@ test('A5.mutation-tests: a merged line cell keeps its first role and style, list
   assert.deepEqual(d.cells[0]![0], { ch: '┯', role: 'edge', kind: 'line', owners: ['A>B', 'A>C'], dirs: 14, arms: '0212', style: 'heavy' })
   assert.deepEqual(d.conflicts, [])
 })
+// This shares looks up each owner's edge, as a renderer's might, and throws for an owner that has none.
+test('A5.mutation-tests: a line on an exclusive cell conflicts before shares is asked; shares sees only line owners', () => {
+  const edges = new Map([['e', { from: 'A' }], ['f', { from: 'A' }]]), seen: string[][] = []
+  const c = createCanvas(3, 6, 6, (a, b) => { seen.push([a, b]); return edges.get(a)!.from === edges.get(b)!.from })
+  c.text(0, 0, 'A', 'label', 'A'); c.cap(0, 1, '(', 'node', 'A'); c.fill(0, 2, 1, 'node', 'A'); c.arrow(0, 3, '►', 'e'); c.text(0, 4, '中', 'label', 'B')
+  c.frame(1, 0, 2, 2, 'frame', 'g1'); c.lifeline(1, 3, false, 'p1'); c.lifeline(2, 3, false, 'p1')
+  for (let col = 0; col < 6; col++) c.line(0, col, 10, 'light', 'edge', 'e')
+  c.line(1, 1, 10, 'light', 'edge', 'e'); c.line(1, 1, 4, 'light', 'edge', 'f'); c.line(1, 3, 5, 'light', 'edge', 'e'); c.line(1, 3, 2, 'light', 'edge', 'f')
+  const d = c.toDrawing(E)
+  assert.deepEqual(rows(d), ['A( ►中', '┌┬┐├  ', '└─┘│  '])
+  assert.deepEqual(seen, [['e', 'f'], ['e', 'f']])
+  assert.deepEqual(d.conflicts, ['A', 'A', 'A', 'e', 'B', 'B'].map((had, col) => ({ row: 0, col, had, by: 'e' })))
+})
+// C>E shares only with C>D, the cell's second owner.
+test('A5.mutation-tests: a line merges through any old owner it shares with, not only the first', () => {
+  const c = createCanvas(1, 1, 1, fromSameNode)
+  c.line(0, 0, 10, 'light', 'edge', 'A>B'); c.line(0, 0, 5, 'light', 'edge', 'C>D'); c.line(0, 0, 5, 'light', 'edge', 'C>E')
+  const d = c.toDrawing(E)
+  assert.deepEqual(d.cells[0]![0], { ch: '┼', role: 'edge', kind: 'line', owners: ['A>B', 'C>D', 'C>E'], dirs: 15, arms: '1111', style: 'light' })
+  assert.deepEqual(d.conflicts, [])
+})
 test('A5.mutation-tests: cap, fill and arrow cells are exclusive: a later write, even a line of the same owner, is logged as {row,col,had,by}', () => {
   const c = createCanvas(1, 6, 6)
   c.cap(0, 0, '((', 'node', 'n1'); c.fill(0, 2, 2, 'node', 'n1'); c.arrow(0, 4, '►', 'e1')

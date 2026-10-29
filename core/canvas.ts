@@ -94,9 +94,11 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
         cells[r]![c] = { ch: glyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight }
         return
       }
+      // Any other kind is exclusive: a Conflict at once, so only a line cell's owners ever reach shares.
+      if (old.kind !== 'line') { conflicts.push({ row: r, col: c, had: old.owners[0]!, by: owner }); return }
       const related = old.owners.some(o => shares(o, owner))
       const crossing = (old.dirs === 10 && dirs === 5) || (old.dirs === 5 && dirs === 10)
-      const merged = old.kind === 'line' && (related || crossing) ? mergeArms(old.arms!, arms) : null
+      const merged = related || crossing ? mergeArms(old.arms!, arms) : null
       if (merged === null) { conflicts.push({ row: r, col: c, had: old.owners[0]!, by: owner }); return }
       const all = old.dirs | dirs
       const style = old.style === 'dotted' ? weight : old.style!   // a dotted cell takes the new line's style: dotted only while every line in it is
