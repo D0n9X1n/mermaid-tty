@@ -204,7 +204,7 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 // edge drawn with no mark seems to lead to every node a mark of another edge on that line points at, its own node
 // included. Each such pair of a bare end t and a head h must be an edge of the drawing from t to h, a self-loop when t = h;
 // one edge's own bare end and mark are its own direction. A fan-out, a fan-in and a complete bipartite merge pass; any
-// other merge seems to draw an edge that is not there.
+// other merge seems to draw an edge that is not there. Edges with no marks at all on one line must fan (fans).
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const line = joined(d, all), groups = new Map<string, Edge[]>()
   for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
@@ -214,11 +214,18 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
   const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
-  for (const group of groups.values()) for (const a of group) for (const b of group) {
-    if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
+  for (const group of groups.values()) {
+    for (const a of group) for (const b of group) {
+      if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
+    }
+    if (!fans(group.filter(e => e.ends.length === 0))) return fail('merge-ambiguous')
   }
   return null
 }
+// Whether unmarked edges on one line read true. With no mark to tell them apart, each end seems to lead to every other, so
+// they must all leave one node, as a mindmap's siblings do, or all enter one; a line of one edge is just that edge.
+const fans = (open: readonly Edge[]): boolean =>
+  open.length < 2 || open.every(e => e.from === open[0]!.from) || open.every(e => e.to === open[0]!.to)
 
 // No row is wider than the budget, measured exactly as toRows emits it: an empty cell is a space, a cont cell adds nothing,
 // a drawn cell counts whatever its ch, a space included, and only trailing empty cells drop.

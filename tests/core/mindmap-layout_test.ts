@@ -1,4 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
+import { createCanvas } from '../../core/canvas.ts'
 import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'; import { validate } from '../../core/validate.ts'; import { mindmap } from '../../core/diagrams/mindmap/layout.ts'; import { parseMindmap } from '../../core/diagrams/mindmap/parse.ts'; import { readSource } from '../../core/source.ts'
 const X = (body: string, columns: number) => explain(`mindmap\n${body}`, { columns, theme: 'mono' }) as any
 test("A3: the root is leftmost; the first child shares its parent's row; the rest hang off a │ trunk", () =>
@@ -99,4 +100,16 @@ test('validate: every swap of two same-shaped pills with different parents fails
     }
   }
   assert.ok(n > 50, `${n} mutants`)
+})
+// QA's cross-family repro: X and Y swapped, and their links redrawn to cross through one shared column, ┬ over ┴, so each
+// pill sits under the other's parent. The links have no end marks, so only a rule on unmarked merges catches it.
+test('validate: unmarked links from different parents merged through one trunk fail merge-ambiguous', () => {
+  const d = swap(X('Root\n  A\n    X\n  B\n    Y', 80).drawing, 'm2', 'm4'), cv = createCanvas(d.cells.length, 18, 80, () => true)
+  const paths: [string, [number, number, number][]][] = [['m2:link', [[0, 12, 10], [0, 13, 12], [1, 13, 3], [1, 14, 10]]],
+    ['m4:link', [[1, 12, 10], [1, 13, 9], [0, 13, 6], [0, 14, 10]]]]
+  for (const [o, p] of paths) for (const [r, c, dirs] of p) { d.cells[r][c] = null; cv.line(r, c, dirs, 'light', 'edge', o) }
+  const drawn = cv.toDrawing(d.expect)
+  for (const [, p] of paths) for (const [r, c] of p) d.cells[r][c] = drawn.cells[r]![c]
+  assert.deepEqual(text(d), [' Root ─┬─ A ─┬─ Y', '       └─ B ─┴─ X'])
+  assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })

@@ -474,3 +474,18 @@ test('merge-ambiguous: an honest self-loop, alone or on a stem it shares, and a 
   assert.equal(validate(loopFan(['e0', 'e1'])), null)
   assert.equal(validate(path(['▲', 5, '▼'], ['A▲', 'B▼'])), null)
 })
+// Unmarked edges joined in one line show no direction, so each end seems to lead to every other: only edges that all leave
+// one node, or all enter one, read true. A and B over C: e0 from A and e1 from B meet at ┬ and run down one stem into C.
+const open = (edges: string[]) => sketch(4, 5, [['A', 0, 0], ['B', 0, 4], ['C', 3, 2]], [['e0', 1, 0, 5], ['e0', 2, 0, 3],
+  ['e0', 2, 1, 10], ['e0', 2, 2, 12], ['e1', 1, 4, 5], ['e1', 2, 4, 9], ['e1', 2, 3, 10], ['e1', 2, 2, 6]], edges)
+// └ ┬ ┘ then ┌ ┴ ┐: e0 from A to D and e1 from B to C share the stem between, then cross to each other's side.
+const cross = () => sketch(5, 3, [['A', 0, 0], ['B', 0, 2], ['C', 4, 0], ['D', 4, 2]], [['e0', 1, 0, 3], ['e0', 1, 1, 12],
+  ['e0', 2, 1, 5], ['e0', 3, 1, 3], ['e0', 3, 2, 12], ['e1', 1, 2, 9], ['e1', 1, 1, 6], ['e1', 2, 1, 5], ['e1', 3, 1, 9], ['e1', 3, 0, 6]], ['e0 A D', 'e1 B C'])
+test('merge-ambiguous: unmarked edges joined in one line pass only when all leave one node or all enter one', () => {
+  assert.equal(validate(open(['e0 A C', 'e1 B C'])), null)                       // fan-in to C
+  assert.equal(validate(open(['e0 C A', 'e1 C B'])), null)                       // fan-out from C
+  assert.equal(validate(open(['e0 A C', 'e1 C B']))?.reason, 'merge-ambiguous')  // A seems linked to B
+  assert.equal(validate(open(['e0 C A', 'e1 B C']))?.reason, 'merge-ambiguous')  // B seems linked to A
+  assert.deepEqual(text(cross()), ['A B', '└┬┘', ' │', '┌┴┐', 'C D'])
+  assert.equal(validate(cross())?.reason, 'merge-ambiguous')                     // A seems linked to C, B to D
+})
