@@ -1,7 +1,8 @@
 // The gitGraph module (plan C T80; matrix, gitGraph): one row per event, time running down (BT: up, glyphs flipped);
 // branches are lanes 2 cells apart, sorted by order; a fork ├─╮ or ╭─┤ from the parent's lane, a merge ◉─┤ or ├─◉ from
 // the merged lane, ┼ where a connector crosses a lane; one label column right of the lanes. Commits are caps; every link
-// drawn with cells is an edge the validator traces, and expect.order pins the rest. Ladder: natural, then wrapped labels.
+// drawn with cells is an edge the validator traces, expect.order pins the rest, and expect.glyphs each commit's type.
+// Ladder: natural, then wrapped labels.
 // It registers itself on import.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { heading, stack } from '../../charts/sheet.ts'
@@ -55,8 +56,6 @@ function pack(its: readonly Item[], max: number): Put[][] | null {
 const series = (k: number): SeriesKey => `s${k % 8 + 1}` as SeriesKey
 const UP = 1, RIGHT = 2, DOWN = 4, LEFT = 8
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
-// A connector ─ over a lane with no link there, by the lane's arms: the lane shows in the glyph only.
-const CROSS: Readonly<Record<number, string>> = { [UP | DOWN]: '┼', [UP]: '┴', [DOWN]: '┬' }
 
 // What replay finds, by event index: each node's first parent, each merge's merged head, and each branch's fork point.
 type Links = { parent: Map<number, number | null>; merged: Map<number, number>; fork: Map<string, number | null> }
@@ -100,12 +99,13 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
   const lanes = [...g.branches].sort((a, b) => a.order - b.order).map(b => b.name)
   const col = new Map(lanes.map((b, i) => [b, 2 * i])), ink = new Map(g.branches.map((b, k) => [b.name, series(k)]))
   const n = g.events.length, bt = g.dir === 'BT', pos = (i: number): number => (bt ? n - 1 - i : i)
-  const blocks: Put[][][] = [], labels: Expect['labels'][number][] = []
+  const blocks: Put[][][] = [], labels: Expect['labels'][number][] = [], marks: { mark: string; owners: string[] }[] = []
   for (const [i, e] of g.events.entries()) {
     const its = items(e, i, ink.get(e.branch)!), rows = pack(its, max)
     if (!rows) return fail('too-wide')
     blocks[pos(i)] = rows
     labels.push(...its.map(({ owner, text }) => ({ owner, text })))
+    marks[pos(i)] = { mark: e.kind === 'start' ? `s${i}` : `c${i}`, owners: its.map(q => q.owner) }
   }
   const top: number[] = []
   let h = 0
@@ -121,40 +121,39 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
     return nx === undefined || L.parent.get(nx) === null ? `lane:${b}` : `r${nx}`
   }
   const x = 2 * lanes.length, wide = Math.max(x - 1, ...blocks.flat(2).map(q => x + q.at + width(q.text)))
-  const cv = createCanvas(h, wide, columns, () => true), corners: [number, number][] = [], crossed = new Set<string>()
-  const over: [number, number, number][] = []
-  // A connector on row y owned by o, in ink k: a tee arm at lane f, ─ between, and at lane b, for a fork, a corner
-  // turning forward; lane f's line from row y0, its link's other node, is o's too.
-  const connect = (y: number, f: string, b: string, k: Ink, o: string, y0: number, fork: boolean): void => {
+  const cv = createCanvas(h, wide, columns, () => true), corners: [number, number, number][] = []
+  // A connector on row y owned by o, in ink k: a tee arm at lane f, ─ between, and at lane b, for a fork (fork: its start
+  // event), a corner turning forward; lane f's line from row y0, its link's other node, is o's too.
+  const connect = (y: number, f: string, b: string, k: Ink, o: string, y0: number, fork: number | null): void => {
     const cf = col.get(f)!, cb = col.get(b)!, d = cb > cf ? 2 : -2
     cv.line(y, cf, d > 0 ? RIGHT : LEFT, 'light', k, o)
-    for (let c = cf + d / 2; c !== cb; c += d / 2) { cv.line(y, c, LEFT | RIGHT, 'light', k, o); crossed.add(`${y},${c}`) }
-    if (fork) { cv.line(y, cb, (d > 0 ? LEFT : RIGHT) | fwd, 'light', k, o); corners.push([y, cb]) }
+    for (let c = cf + d / 2; c !== cb; c += d / 2) cv.line(y, c, LEFT | RIGHT, 'light', k, o)
+    if (fork !== null) { cv.line(y, cb, (d > 0 ? LEFT : RIGHT) | fwd, 'light', k, o); corners.push([y, cb, fork]) }
     for (let r = Math.min(y0, y) + 1; r < Math.max(y0, y); r++) cv.line(r, cf, UP | DOWN, 'light', ink.get(f)!, o)
   }
   for (const [i, e] of g.events.entries()) {
     const f = e.kind === 'start' ? L.fork.get(e.branch) : null, first = nodes.get(e.branch)![0]
     if (f !== null && f !== undefined) {
-      connect(rowOf(i), lane(f), e.branch, ink.get(e.branch)!, first === undefined ? `lane:${e.branch}` : `r${first}`, rowOf(f), true)
+      connect(rowOf(i), lane(f), e.branch, ink.get(e.branch)!, first === undefined ? `lane:${e.branch}` : `r${first}`, rowOf(f), i)
     }
     const hd = L.merged.get(i)
-    if (hd !== undefined) connect(rowOf(i), lane(hd), e.branch, ink.get(lane(hd))!, `m${i}`, rowOf(hd), false)
+    if (hd !== undefined) connect(rowOf(i), lane(hd), e.branch, ink.get(lane(hd))!, `m${i}`, rowOf(hd), null)
   }
   for (const b of lanes) {
     const at = new Set(nodes.get(b)!.map(rowOf)), s = start.get(b)!
     for (let y = Math.min(s, end); y <= Math.max(s, end); y++) {
       if (y === s || at.has(y)) continue
-      const c = col.get(b)!, o = owner(b, y), dirs = y === end ? back : UP | DOWN
-      // A lane's stretch with no link (after its last node, or before an unforked first one) is not an edge, so where a
-      // connector crosses it the connector's edge alone owns the cell, and the lane shows in the glyph.
-      if (o.startsWith('lane:') && crossed.has(`${y},${c}`)) over.push([y, c, dirs])
-      else cv.line(y, c, dirs, 'light', ink.get(b)!, o)
+      // A lane's stretch with no link (after its last node, or before an unforked first one) is no edge but lane:<b>, which
+      // a crossing cell records beside the connector's edge, so the validator checks every arm its glyph shows.
+      cv.line(y, col.get(b)!, y === end ? back : UP | DOWN, 'light', ink.get(b)!, owner(b, y))
     }
   }
+  const glyphs: { owner: string; ch: string }[] = [], caps: [number, string][] = []
   for (const [i, e] of g.events.entries()) {
     const k = ink.get(e.branch)!, c = col.get(e.branch)!, r = rowOf(i)
-    if (e.kind !== 'start') cv.cap(r, c, e.kind === 'pick' ? '◎' : e.type === null ? '◉' : GLYPH[e.type], k, `c${i}`)
-    else if (L.fork.get(e.branch) === null) cv.cap(r, c, bt ? '╵' : '╷', k, `lane:${e.branch}`)
+    const mark = e.kind === 'start' ? (L.fork.get(e.branch) === null ? (bt ? '╵' : '╷') : null) : e.kind === 'pick' ? '◎' : e.type === null ? '◉' : GLYPH[e.type]
+    const id = e.kind === 'start' ? `s${i}` : `c${i}`
+    if (mark !== null) { cv.cap(r, c, mark, k, id); glyphs.push({ owner: id, ch: mark }); caps.push([i, id]) }
     blocks[pos(i)]!.forEach((ps, j) => ps.forEach(q => cv.text(r + j, x + q.at, q.text, q.ink, q.owner, q.join)))
   }
   const all = g.events.flatMap((e, i) => (e.kind === 'start' ? [] : [i])), ids = (is: number[]) => (bt ? [...is].reverse() : is).map(i => `c${i}`)
@@ -164,9 +163,11 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
     return hd === undefined ? run : [...run, { id: `m${i}`, from: `c${hd}`, to: `c${i}`, ends: [] }]
   })
   const order = [...g.branches.map(b => ({ ids: ids(nodes.get(b.name)!), column: true })).filter(o => o.ids.length > 0), { ids: ids(all), column: false }]
-  const d = cv.toDrawing({ labels, edges, edgeLabels: [], frames: [], order })
-  for (const [r, c] of corners) { const cell = d.cells[r]![c]!; d.cells[r]![c] = { ...cell, ch: ROUND[cell.ch] ?? cell.ch } }
-  for (const [r, c, dirs] of over) d.cells[r]![c] = { ...d.cells[r]![c]!, ch: CROSS[dirs]! }
+  const d = cv.toDrawing({ labels, edges, edgeLabels: [], frames: [], order, glyphs, rows: marks })
+  // A fork's corner is its start's mark too, so its branch name binds to its row.
+  for (const [r, c, i] of corners) { const cell = d.cells[r]![c]!; d.cells[r]![c] = { ...cell, ch: ROUND[cell.ch] ?? cell.ch, owners: [...cell.owners, `s${i}`] } }
+  // A node or opening cap is its lane's too, so a lane:<b> arm that ends at it is joined.
+  for (const [i, id] of caps) { const r = rowOf(i), c = col.get(lane(i))!; d.cells[r]![c] = { ...d.cells[r]![c]!, owners: [id, `lane:${lane(i)}`] } }
   return d
 }
 

@@ -3,6 +3,7 @@
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
+import { BOX } from './box-table.ts'
 import { width } from './width.ts'
 
 export type Expect = {
@@ -16,6 +17,8 @@ export type Expect = {
   keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
   order?: readonly { ids: readonly string[]; column: boolean }[]                         // C: owners drawn in this row order
+  glyphs?: readonly { owner: string; ch: string }[]                                      // C: marks drawn as exactly this glyph
+  rows?: readonly { mark: string; owners: readonly string[] }[]                          // C: each mark, in row order, and its labels
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
@@ -33,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys and order. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys, order, glyphs and row labels. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? rowLabels(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -148,12 +151,28 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
     if (mine.length === 0) continue
     if (degree(p.cell) < 2) return fail('line-dangling')
     for (const s of SIDES.filter(s => p.cell.dirs & s.bit)) {
-      const n = beside(d, p, s)
-      const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => p.cell.owners.includes(id))) ||
-        mine.some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
+      // The owners that draw this arm, by the dirs the cell records for each; all of them if it records none.
+      const by = p.cell.segs ? p.cell.segs.filter(x => x.dirs & s.bit).map(x => x.owner) : p.cell.owners
+      const n = beside(d, p, s), others = by.filter(id => !edges.has(id))
+      const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => by.includes(id))) ||
+        (n.kind !== 'line' && n.owners.some(id => others.includes(id))) ||
+        mine.filter(e => by.includes(e.id)).some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
           ((n.kind === 'text' || n.kind === 'cont' || n.kind === 'key') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
       if (!connected) return fail('line-dangling')
     }
+  }
+  return null
+}
+
+// The dirs each glyph a line cell may show draws: every Box Drawing glyph by its arms, the dotted runs, the round corners.
+const DRAWS: ReadonlyMap<string, number> = new Map([...Object.entries(BOX).map(([arms, g]) => [g, [1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0)] as const),
+  ['┄', 10], ['┆', 5], ['╭', 6], ['╮', 12], ['╯', 9], ['╰', 3]])
+// A line cell shows exactly the arms it records: its glyph draws its dirs, and its dirs are the union of the dirs each owner
+// drew there. So a glyph cannot show an arm no owner drew, which dangling and crossings would never check, or hide one.
+function lineGlyphs(all: readonly Spot[]): Fail | null {
+  for (const { cell: x } of all) {
+    if (x.kind !== 'line') continue
+    if (DRAWS.get(x.ch) !== x.dirs || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
   return null
 }
@@ -478,6 +497,33 @@ function order(d: Drawing, all: readonly Spot[]): Fail | null {
     if (ps.some(x => x.length !== 1)) return fail('order-broken')
     const at = ps.map(x => x[0]!)
     if (at.some((p, i) => i > 0 && (p.r <= at[i - 1]!.r || (column && p.c !== at[0]!.c)))) return fail('order-broken')
+  }
+  return null
+}
+
+// C: each listed owner draws exactly one cell as owners[0], and it shows exactly its glyph, so a mark whose glyph is its
+// meaning (a gitGraph commit's type) cannot show another's.
+function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
+  for (const { owner, ch } of d.expect.glyphs ?? []) {
+    const mine = all.filter(p => p.cell.owners[0] === owner)
+    if (mine.length !== 1 || mine[0]!.cell.ch !== ch) return fail('glyph-wrong')
+  }
+  return null
+}
+
+// C: each row's labels are bound to its mark, so a label cannot read as another's. Each mark owns exactly one cell, in
+// strictly increasing rows; its block runs from its row to the row before the next mark's. Every text or cont cell its
+// owners draw lies in its block, right of its mark, in reading order owner by owner, the first on the mark's own row.
+function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
+  if (!d.expect.rows) return null
+  const text = (o: string) => all.filter(p => (p.cell.kind === 'text' || p.cell.kind === 'cont') && p.cell.owners[0] === o)
+  const marks = d.expect.rows.map(x => all.filter(p => owns(p.cell, x.mark)))
+  if (marks.some(m => m.length !== 1)) return fail('label-unbound')
+  const at = marks.map(m => m[0]!)
+  for (const [i, { owners }] of d.expect.rows.entries()) {
+    const m = at[i]!, next = at[i + 1]?.r ?? d.cells.length, ps = owners.flatMap(text)   // spots run in reading order
+    if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) return fail('label-unbound')
+    if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) return fail('label-unbound')
   }
   return null
 }

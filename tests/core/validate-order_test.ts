@@ -18,3 +18,12 @@ test('A5.mutation-tests: order fails a swap, a shared row, a column change, a mi
   const d = marks(o); d.cells[2]![0] = { ...d.cells[0]![0]! }
   assert.deepEqual(validate(d), { reason: 'order-broken' })
 })
+test('A5.mutation-tests: glyphs pins the one cell an owner draws to its glyph', () => {
+  const d = marks([]); d.expect = { ...d.expect, glyphs: [{ owner: 'A', ch: '●' }] }
+  assert.equal(validate(d), null)
+  const other = structuredClone(d); other.cells[0]![0] = { ...other.cells[0]![0]!, ch: '⊗' }
+  assert.deepEqual(validate(other), { reason: 'glyph-wrong' })
+  const two = structuredClone(d); two.cells[2]![0] = { ...two.cells[0]![0]! }
+  assert.deepEqual(validate(two), { reason: 'glyph-wrong' })
+  assert.deepEqual(validate({ ...d, expect: { ...d.expect, glyphs: [{ owner: 'Z', ch: '●' }] } }), { reason: 'glyph-wrong' })
+})

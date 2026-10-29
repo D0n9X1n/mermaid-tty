@@ -2,7 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
 import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'; import { explain } from '../../core/render.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
-import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'
+import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'; import { junction } from '../../core/glyphs.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
   return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
@@ -33,7 +33,7 @@ test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', ()
   wrongOwner.expect = { ...wrongOwner.expect, edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [] }] }
   assert.equal(validate(wrongOwner)?.reason, 'line-dangling')
   const loop = two()
-  const line = (dirs: number, owners = ['A>B']) => ({ ch: '─', kind: 'line' as const, role: 'edge' as const, owners, dirs })
+  const line = (dirs: number, owners = ['A>B']) => ({ ch: junction(dirs, 'light'), kind: 'line' as const, role: 'edge' as const, owners, dirs })
   // A disconnected loop has two arms per cell: valid arms first, then one missing reciprocal bit.
   loop.cells[0]![4] = line(6)
   loop.cells[0]![5] = line(12)
