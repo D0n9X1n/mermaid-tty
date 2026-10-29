@@ -17,3 +17,8 @@ test('A4: horizontal and vertical eighth-block runs; zero draws nothing', () => 
   assert.deepEqual([hbar(381), hbar(84), hbar(15), hbar(0)], ['█'.repeat(47) + '▋', '█'.repeat(10) + '▌', '█▉', ''])
   assert.deepEqual(vbar(13, 8), [' ', ' ', ' ', ' ', ' ', ' ', '▅', '█']); assert.deepEqual(vbar(64, 8), Array(8).fill('█'))
 })
+// Numerics QA: each partial glyph is pinned by its own count, so a swap inside either glyph table fails.
+test('A4: every partial shows exactly its eighths: 1–7 are ▏▎▍▌▋▊▉ across and ▁▂▃▄▅▆▇ up, after the full cells', () => {
+  for (const [k, g] of [...'▏▎▍▌▋▊▉'].entries()) { assert.equal(hbar(k + 1), g, `h${k + 1}`); assert.equal(hbar(k + 9), `█${g}`, `h${k + 9}`) }
+  for (const [k, g] of [...'▁▂▃▄▅▆▇'].entries()) { assert.deepEqual(vbar(k + 1, 1), [g], `v${k + 1}`); assert.deepEqual(vbar(k + 9, 3), [' ', g, '█'], `v${k + 9}`) }
+})
