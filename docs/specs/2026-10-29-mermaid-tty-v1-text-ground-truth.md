@@ -136,3 +136,32 @@ Verified by reading Mermaid 12.2.0's source (`npm install mermaid@12.2.0`, its s
 Tests: `tests/core/text_test.ts` (the rules), each parser's test (QA repros and an ordinary label per field), `tests/core/text-ground-truth_test.ts` (repros end to end; gitGraph is not drawn yet, so its repros are in `gitGraph-parse_test.ts`).
 
 Blast radius: none. All 612 results (204 blocks of `fixtures/{flowchart,sequence,corpus}` at 60, 80 and 120 columns) are unchanged against 6699750.
+
+## X4: non-HTML labels and whitespace the lexers reject
+
+Verified against `mermaid@12.2.0` from npm, in a fresh temp dir: `mermaid.parse` and `mermaidAPI.getDiagramFromText` under JSDOM, and `dist/mermaid.js` read directly.
+
+**`htmlLabels`.** Every mode above assumes HTML labels. Mermaid reads the flag through `getEffectiveHtmlLabels` (`config.htmlLabels ?? config.flowchart?.htmlLabels ?? true`, through `evaluate`, which reads `false`, `"false"`, `"null"` and `"0"` as false) and, in some shapes, `config.htmlLabels` or `flowchart.htmlLabels` directly. No reader of `class.htmlLabels` or `state.htmlLabels` exists. With labels off, `markdownToLines` draws SVG text and drops unsupported inline tokens: `` class A["before `code` after"] `` shows "before after". Rule (`readSource`): any config key `htmlLabels` or `<anything>.htmlLabels` whose value is not the boolean `true` fails `config:htmlLabels`. That covers keys Mermaid does not read, to be safe.
+
+**Directives.** `preprocessDiagram` runs `directiveRegex` over the whole text after the frontmatter, so `%%{init: {"htmlLabels": false}}%%` sets config even inside a `%%` comment line or inside a quoted label. `parse` returned `config: {htmlLabels: false}` for both. Before X4, `readSource` caught `%%{` only at a line's start. Rule: any line holding `%%{` fails `directive`.
+
+**Whitespace.** `ODD_WS` is JS's `\s` less space, tab and line breaks: U+00A0, U+1680, U+2000–U+200A, U+2028/9, U+202F, U+205F, U+3000, U+FEFF, `\v` and `\f`. `trim()` drops them, so `readSource` hid them from the parsers in the header line and in blank lines. What Mermaid 12.2.0 does with each, probed in the header line, a blank line and a leading indent:
+
+| Types | Header line | Blank line | Indent |
+|---|---|---|---|
+| gitGraph, pie (Langium; hide only `[ \t]+`) | lexer error | lexer error | lexer error |
+| mindmap, quadrantChart (Jison) | parse error | parse error | accepted (mindmap indents the same as spaces) |
+| flowchart/graph, sequenceDiagram, stateDiagram(-v2), classDiagram(-v2), erDiagram, gantt, journey, timeline, xychart(-beta) (Jison `\s`) | accepted | accepted | accepted |
+
+Before the header, Mermaid's `cleanupComments` `trimStart()` drops them in every type. Inside double quotes, gitGraph and pie accept them (`"a b"`).
+
+Rule (`readSource`, `oddWhitespace`), from the header line on (its leading whitespace dropped):
+- gitGraph and pie fail `whitespace` on any `ODD_WS` outside double quotes. A title holding U+00A0 is included, which fails closed.
+- Types in `JISON_WS` never fail on it.
+- Every other type fails on one in the header line or in a blank line.
+
+gitGraph's own check (X3, `syntax:<n>`) stays, tested past `readSource`.
+
+Tests: `tests/core/source-config_test.ts` (X4 htmlLabels), `tests/core/source_test.ts` (X4 directive, X4 whitespace: pie, mindmap and quadrantChart fail; flowchart's header and blank line, a mindmap indent and a quoted pie label read as their ASCII twins), `tests/core/gitGraph-parse_test.ts` (X4, both repros; X3 updated).
+
+Blast radius: none. All 1257 results (419 blocks of `fixtures/**`, corpus included, at 60, 80 and 120 columns) are unchanged against 86d5df4.

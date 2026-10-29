@@ -49,6 +49,10 @@ export function readSource(text: string): Source | Fail {
     for (const [key, raw] of Object.entries(read)) {
       const value = raw.quoted ? raw.text : typed(raw.text)
       if (value === undefined) return fail(`config:${key}`)
+      // X4. Mermaid 12.2.0 reads htmlLabels and flowchart.htmlLabels (getEffectiveHtmlLabels); any value but true draws
+      // SVG text through markdownToLines, which drops tokens every drawn-text mode keeps. Any other *.htmlLabels falls
+      // back too, to be safe.
+      if (/(?:^|\.)htmlLabels$/.test(key) && value !== true) return fail('config:htmlLabels')
       put(config, key, value)
     }
     start = end + 1
@@ -57,17 +61,39 @@ export function readSource(text: string): Source | Fail {
   for (let i = start; i < all.length; i++) {
     const line = all[i]!
     const t = line.trimStart()
-    if (t.startsWith('%%{')) return fail('directive')
+    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4).
+    if (line.includes('%%{')) return fail('directive')
     if (t === '' || t.startsWith('%%')) continue
     if (t.replace(/"[^"]*"/g, '').includes('%%')) return fail('directive')
     kept.push({ n: i + 1, text: encodeColours(line) })
   }
   const [head, ...lines] = kept
   if (!head || lines.length === 0) return fail('empty')
+  if (oddWhitespace([all[head.n - 1]!.trimStart(), ...all.slice(head.n)])) return fail('whitespace')
   // A's grammars end a statement at ;, so their headers lose a trailing one. Any other type keeps it: Mermaid's TITLE
   // terminal reads `pie title Fruit;` as "Fruit;", and a header that takes no ; then fails its own parser.
   const h = head.text.trim(), header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
   return { header, title, config, lines }
+}
+
+// X4. Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.
+const ODD_WS = /[^\S \t\n]/
+// Headers whose Jison grammar skips ODD_WS in the header line, blank lines and indents as \s, verified against Mermaid
+// 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md, X4).
+const JISON_WS = new Set(['flowchart', 'graph', 'sequenceDiagram', 'stateDiagram', 'stateDiagram-v2', 'classDiagram',
+  'classDiagram-v2', 'erDiagram', 'gantt', 'journey', 'timeline', 'xychart', 'xychart-beta'])
+// Langium grammars (gitGraph, pie) hide only [ \t]+ and newlines, so their lexer rejects ODD_WS anywhere outside a
+// string.
+const LANGIUM = new Set(['gitGraph', 'pie'])
+
+// Whether Mermaid's lexer for the header's type could reject, or read otherwise, ODD_WS in body (the source from the
+// header line on; Mermaid's trimStart drops it before the header). In a Langium type, any outside double quotes; in a
+// type outside JISON_WS (mindmap, quadrantChart reject it), any in the header line or a blank line.
+function oddWhitespace(body: readonly string[]): boolean {
+  const kw = (/\S+/.exec(body[0]!)?.[0] ?? '').replace(/:$/, '')
+  if (JISON_WS.has(kw)) return false
+  if (LANGIUM.has(kw)) return body.some(l => ODD_WS.test(l.replace(/"[^"]*"/g, '')))
+  return body.some((l, i) => (i === 0 || l.trim() === '') && ODD_WS.test(l))
 }
 
 // The block Mermaid's frontMatterRegex finds (diagram-api/regexes.ts, matchFrontMatter): `---` on line 1, then the

@@ -167,3 +167,22 @@ test("A1: (8) the colour rewrite drops a line's last ; after the #, as Mermaid's
   const lines = (readSource('pie\n"style x:#a; b;" : 1\nclassDef c fill:#f00;x;') as Source).lines.map(l => l.text)
   assert.deepEqual(lines, ['"style x:#a; b" : 1', 'classDef c fill:#f00;x'])
 })
+
+test('X4: a %%{ anywhere after the frontmatter is a directive Mermaid applies, inside a comment or quotes too', () => {
+  const inputs = ['flowchart LR\nA-->B\n%% x %%{init: {"htmlLabels": false}}%%', `flowchart LR\nA["a %%{init: {'htmlLabels': false}}%% b"]-->B`,
+    '%% c %%{init: {}}%%\nflowchart LR\nA-->B']
+  assert.deepEqual(inputs.map(t => [t, readSource(t)]), inputs.map(t => [t, { reason: 'directive' }]))
+})
+
+test('X4: non-ASCII whitespace falls back where Mermaid 12.2.0\'s lexer for the header\'s type rejects it', () => {
+  const ws = ['pie\n \n"a" : 1', 'pie \n"a" : 1', 'pie\n "a" : 1', 'pie title A B\n"a" : 1', 'mindmap\n \nroot', 'mindmap　\nroot',
+    'quadrantChart\n \nA: [0.1, 0.2]', 'quadrantChart \nA: [0.1, 0.2]']
+  assert.deepEqual(ws.map(t => [t, readSource(t)]), ws.map(t => [t, { reason: 'whitespace' }]))
+  // Jison's \s skips them in flowchart's header line and blank lines, so these read as their ASCII twins; mindmap indents too.
+  for (const [odd, plain] of [['flowchart LR\n \nA-->B', 'flowchart LR\n\nA-->B'], ['flowchart LR \nA-->B', 'flowchart LR\nA-->B'],
+    ['mindmap\nroot\n  a', 'mindmap\nroot\n  a'], ['pie\n"a b" : 1', 'pie\n"a b" : 1']]) {
+    const a = readSource(odd), b = readSource(plain)
+    assert.ok(!('reason' in a), JSON.stringify(odd))
+    assert.equal(JSON.stringify(a).length, JSON.stringify(b).length, JSON.stringify(odd))
+  }
+})

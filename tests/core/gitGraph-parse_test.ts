@@ -92,6 +92,16 @@ test('A5: accTitle and accDescr are ignored; an unclosed accDescr block falls ba
 // (U+00A0, U+2028, a form feed) is a lexer error, between tokens or at either end of a line.
 test('X3: whitespace other than space and tab fails, where Mermaid throws a lexer error; spaces and tabs still separate', () => {
   for (const b of ['commit\u00a0id: "a"', 'commit id:\u00a0"a"', '\u00a0commit', 'commit\u00a0', 'commit\u2028id: "a"', 'commit id: "a"\u2028',
-    'commit\fid: "a"']) assert.deepEqual(P(`gitGraph\n${b}`), { reason: 'syntax:2' }, JSON.stringify(b))
+    'commit\fid: "a"']) {
+    // readSource now fails these first as 'whitespace' (X4), so the parser's own check is tested past it.
+    assert.deepEqual(P(`gitGraph\n${b}`), { reason: 'whitespace' }, JSON.stringify(b))
+    assert.deepEqual(parseGitGraph({ header: 'gitGraph', title: null, config: {}, lines: [{ n: 2, text: b }] }), { reason: 'syntax:2' }, JSON.stringify(b))
+  }
   assert.ok(!('reason' in P('gitGraph\n \tcommit\tid: "a" \t\n')))
+})
+test('X4: whitespace Mermaid 12.2.0\'s Langium lexer rejects (U+00A0 and other non-ASCII) falls back, outside quotes', () => {
+  for (const s of ['gitGraph\n \ncommit id: "a"', 'gitGraph \ncommit id: "a"', 'gitGraph\n commit id: "a"', 'gitGraph\ncommit\n　',
+    'gitGraph\ncommit id: "a"﻿', 'gitGraph\n\v\ncommit'])
+    assert.deepEqual(P(s), { reason: 'whitespace' }, JSON.stringify(s))
+  assert.equal(P(' gitGraph\ncommit id: "a"').events.at(-1).id, 'a')   // before the header, Mermaid's trimStart drops it
 })
