@@ -7,9 +7,12 @@ import { width } from './width.ts'
 
 export type Expect = {
   labels: readonly { owner: string; text: string }[]                                     // every label instance, keyed by owner id
-  edges: readonly { id: string; from: string; to: string; ends: readonly End[] }[]       // drawn edges; ~~~ is not listed
+  edges: readonly { id: string; from: string; to: string; ends: readonly End[]           // drawn edges; ~~~ is not listed
+    endLabels?: readonly { node: string; owner: string }[] }[]   // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
+  bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]  // C: each bar; lanes: its width across the axis, default 1
+  members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
@@ -20,17 +23,18 @@ type Spot = { r: number; c: number; cell: Cell }
 // step to the neighbor there.
 type Side = { bit: number; back: number; dr: number; dc: number }
 const SIDES: readonly Side[] = [{ bit: 1, back: 4, dr: -1, dc: 0 }, { bit: 2, back: 8, dr: 0, dc: 1 }, { bit: 4, back: 1, dr: 1, dc: 0 }, { bit: 8, back: 2, dr: 0, dc: -1 }]
-// The side each directional head glyph points at; any other head (● ◇ ◉) has no point.
-const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SIDES[1]!], ['▼', SIDES[2]!], ['◄', SIDES[3]!]])
+// The side each directional head glyph points at, C's triangles △▷▽◁ included; any other head (● ◇ ◉, C's ◆ o x) has no point.
+const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SIDES[1]!], ['▼', SIDES[2]!], ['◄', SIDES[3]!],
+  ['△', SIDES[0]!], ['▷', SIDES[1]!], ['▽', SIDES[2]!], ['◁', SIDES[3]!]])
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels, frames.
-// null if none.
+// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels, frames,
+// then C's end labels, bars and member rows. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ??
-    rows(d) ?? edgeLabels(d, all) ?? frames(d, all)
+    rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -229,4 +233,83 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     for (let r = top + 1; r < bottom; r++) if (!kept(r, left) || !kept(r, right)) return fail('frame-broken')
   }
   return null
+}
+
+// The Chebyshev distance between two cells, and the least between a cell of ps and one of qs: Infinity if either has none.
+const cheb = (p: Spot, q: Spot): number => Math.max(Math.abs(p.r - q.r), Math.abs(p.c - q.c))
+const gap = (ps: readonly Spot[], qs: readonly Spot[]): number => ps.reduce((m, p) => qs.reduce((n, q) => Math.min(n, cheb(p, q)), m), Infinity)
+
+// C: each end label sits at its own end. A node's terminal is the edge's line or arrow cells beside it. The label's cells,
+// taken together, come within distance 1 of its node's terminal, and strictly nearer it than the other end's terminal. A
+// tie fails: a label that spans the edge, or any end label of a self-loop, whose two terminals are one. labels checks its text.
+function endLabels(d: Drawing, all: readonly Spot[]): Fail | null {
+  for (const e of d.expect.edges) {
+    if (!e.endLabels) continue
+    const route = all.filter(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && owns(p.cell, e.id))
+    const terminal = (node: string) => route.filter(p => SIDES.some(s => owns(beside(d, p, s), node)))
+    for (const { node, owner } of e.endLabels) {
+      const mine = all.filter(p => owns(p.cell, owner)), near = gap(mine, terminal(node))
+      if (!(near <= 1 && near < gap(mine, terminal(node === e.from ? e.to : e.from)))) return fail('end-label')
+    }
+  }
+  return null
+}
+
+// Bar glyphs: █ counts 8 eighths on either axis, and a partial its index + 1: ▏…▉ growing right (h), ▁…▇ growing up (v).
+const FULL = '█'
+const PART = { h: [...'▏▎▍▌▋▊▉'], v: [...'▁▂▃▄▅▆▇'] } as const
+const BAR: ReadonlySet<string> = new Set([FULL, ...PART.h, ...PART.v])
+// The eighths a run's glyphs show, in reading order: full cells, then at most one partial of its axis. NaN for any other run.
+function eighthsOf(gs: readonly string[], axis: 'h' | 'v'): number {
+  const last = gs.at(-1)!, part = PART[axis].indexOf(last) + 1
+  if (gs.slice(0, -1).some(g => g !== FULL) || (last !== FULL && part === 0)) return NaN
+  return 8 * (gs.length - 1) + (last === FULL ? 8 : part)
+}
+// Maximal runs of cells: row runs (h) or column runs (v). A run's lane is its row (h) or column (v); its base, the reading
+// position of its axis-side end, its left column (h) or its bottom row (v); its glyphs, left to right (h) or bottom to top (v).
+type Run = { lane: number; base: number; glyphs: string[] }
+function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
+  const lane = (p: Spot) => (axis === 'h' ? p.r : p.c), pos = (p: Spot) => (axis === 'h' ? p.c : -p.r)
+  const out: Run[] = []
+  for (const p of [...cells].sort((a, b) => lane(a) - lane(b) || pos(a) - pos(b))) {
+    const run = out.at(-1)
+    if (run?.lane === lane(p) && run.base + run.glyphs.length === pos(p)) run.glyphs.push(p.cell.ch)
+    else out.push({ lane: lane(p), base: pos(p), glyphs: [p.cell.ch] })
+  }
+  return out
+}
+
+// C: each bar draws exactly its eighths, never vacuously. A bar cell is a cap in a bar glyph, so a status cap, a padding space
+// or a ◆ its owner draws is none; a bar's runs are the maximal runs of the bar cells whose owners[0] is its owner. A bar of 0
+// has no cell. A positive bar has exactly lanes ?? 1 runs, one in each of that many adjacent rows (h) or columns (v), all on
+// one baseline, each its full cells then at most one partial, summing to eighths, so each ⌈eighths / 8⌉ cells long. Else
+// bar. A bar cell whose owners[0] is no listed bar's owner is bar-stray.
+function bars(d: Drawing, all: readonly Spot[]): Fail | null {
+  const cells = all.filter(p => p.cell.kind === 'cap' && BAR.has(p.cell.ch)), listed = d.expect.bars ?? []
+  for (const { owner, eighths, axis, lanes } of listed) {
+    const rs = runs(cells.filter(p => p.cell.owners[0] === owner), axis), n = lanes ?? 1
+    const ok = eighths === 0 ? rs.length === 0 : n >= 1 && rs.length === n &&
+      rs.every((x, i) => x.lane === rs[0]!.lane + i && x.base === rs[0]!.base && eighthsOf(x.glyphs, axis) === eighths)
+    if (!ok) return fail('bar')
+  }
+  const owners = new Set(listed.map(b => b.owner))
+  return cells.some(p => !owners.has(p.cell.owners[0]!)) ? fail('bar-stray') : null
+}
+
+// C: each listed member is drawn, owned by exactly its own id and its parent's: it has a cell, and every cell whose owners[0]
+// is its id has owners [id, parent]. Else member. With members set, every text cell with two distinct owners, the second no
+// edge of expect.edges, is a listed { id: owners[0], parent: owners[1] }, so an omitted row fails member-unlisted. A drawing
+// that sets no members, as no A drawing does, has no row checked.
+function members(d: Drawing): Fail | null {
+  const listed = d.expect.members
+  if (!listed) return null
+  const cells = d.cells.flat().filter((x): x is Cell => !!x)
+  for (const { id, parent } of listed) {
+    const mine = cells.filter(x => x.owners[0] === id)
+    if (mine.length === 0 || mine.some(x => x.owners.length !== 2 || x.owners[1] !== parent)) return fail('member')
+  }
+  const edges = new Set(d.expect.edges.map(e => e.id))
+  const unlisted = (x: Cell) => x.kind === 'text' && new Set(x.owners).size >= 2 && !edges.has(x.owners[1]!) &&
+    !listed.some(m => m.id === x.owners[0] && m.parent === x.owners[1])
+  return cells.some(unlisted) ? fail('member-unlisted') : null
 }
