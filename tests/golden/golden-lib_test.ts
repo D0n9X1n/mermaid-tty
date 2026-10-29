@@ -5,8 +5,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createCanvas } from '../../core/canvas.ts'
+import { GLYPHS } from '../../core/glyphs.ts'
 import type { Ink } from '../../core/themes.ts'
 import type { Expect } from '../../core/validate.ts'
+import { width } from '../../core/width.ts'
 import { goldenGlyphs, goldenOf, widest } from './golden-lib.ts'
 
 const EXPECT = {} as Expect   // goldenOf and widest read only the cells
@@ -48,4 +50,39 @@ test('widest is the widest right-trimmed row in display columns', () => {
   c.fill(0, 3, 4, 'node', 'A')       // a trailing fill and an empty cell are blank: row 0 is 3 wide
   c.text(1, 0, '中中', 'node', 'B')   // two characters, four columns
   assert.equal(widest(c.toDrawing(EXPECT)), 4)
+})
+
+// goldenGlyphs on one golden holding a single text row and its role row: each flag as 'line ch'.
+function scanRow(text: string, roles: string): string[] {
+  const dir = mkdtempSync(join(tmpdir(), 'golden-lib-')), p = join(dir, 'x.golden')
+  try {
+    writeFileSync(p, `@60\n${text}\n@60 roles\n${roles}\n`)
+    return goldenGlyphs(dir).map(s => s.slice(p.length + 1))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+const ACUTE = '́', ZWSP = '​'   // a combining mark and a zero-width space: both take no column
+
+test('goldenGlyphs flags a zero-width code point whose own cell is drawn, even after source text', () => {
+  assert.deepEqual(scanRow(`A${ACUTE}`, 'Ln'), [`2 ${ACUTE}`])      // the repro: source text, then a drawn U+0301
+  assert.deepEqual(scanRow(`中${ACUTE}`, 'N~n'), [`2 ${ACUTE}`])    // its own cell comes after 中's cont cell
+  assert.deepEqual(scanRow(`A${ZWSP}─`, 'Lee'), [`2 ${ZWSP}`])
+})
+
+test('goldenGlyphs flags a zero-width code point joined to a drawn cell or to none', () => {
+  assert.deepEqual(scanRow(`─${ACUTE}A`, 'eL'), [`2 ${ACUTE}`])     // part of ─, or a cell before A: drawn either way
+  assert.deepEqual(scanRow(`${ACUTE}A`, 'L'), [`2 ${ACUTE}`])       // no cell before it to join
+})
+
+test('goldenGlyphs skips a zero-width code point inside source text, CJK cont cells included', () => {
+  assert.deepEqual(scanRow(`[ e${ACUTE}x ]`, 'nnNNnn'), [])          // mid-label
+  assert.deepEqual(scanRow(`e${ACUTE}`, 'N'), [])                     // at the row's end, so no cell of its own
+  assert.deepEqual(scanRow(`中${ACUTE}x`, 'N~N'), [])                 // after a wide character and its cont cell
+  assert.deepEqual(scanRow(`A${ZWSP}B`, 'NN'), [])
+})
+
+test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph always takes its own column', () => {
+  for (const g of GLYPHS) assert.ok(width(g) === 1 && !/\p{M}/u.test(g), `U+${g.codePointAt(0)!.toString(16)}`)
 })

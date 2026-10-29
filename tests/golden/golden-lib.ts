@@ -25,7 +25,7 @@ export function goldenOf(runs: readonly (readonly [number, Drawing])[]): string 
 export const widest = (d: Drawing): number => Math.max(0, ...rows(d, glyph).map(r => width(r)))
 
 // 'file:line ch' for each drawn (lowercase) or series (digit) cell in dir's *.golden files, at any depth, whose glyph is not
-// allow-listed. Source text (uppercase) is not checked.
+// allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase) is not checked.
 export function goldenGlyphs(dir: string): string[] {
   const out: string[] = []
   const files = (readdirSync(dir, { recursive: true }) as string[]).filter(f => f.endsWith('.golden')).sort()
@@ -42,14 +42,21 @@ export function goldenGlyphs(dir: string): string[] {
   return out
 }
 
-// Pairs a text row with its role row by column: a character takes width(ch) columns, and a zero-width one joins the cell
-// before it, so it is checked against that cell's code.
+// Is a role code a drawn or series cell (lowercase or digit), or source text (uppercase)? Neither for ' ', '~' or none.
+const drawn = (code: string | undefined): boolean => code !== undefined && /[a-z0-9]/.test(code)
+const sourceText = (code: string | undefined): boolean => code !== undefined && /[A-Z]/.test(code)
+
+// Pairs a text row with its role row by column: a character takes width(ch) columns. A zero-width code point is either a
+// cell of its own, on the next column, or part of the cell before it, and a golden cannot tell which; so it is flagged
+// unless both readings are safe: its own column is not drawn, and the cell it would join is source text. It never inherits
+// a text exemption from a drawn cell beside it. No allow-listed glyph is zero-width, so a drawn one never passes.
 function scan(text: string, roles: string, where: string, out: string[]): void {
-  let col = 0, lead = 0
+  let col = 0, lead = -1                        // lead: the column of the last character that took a column
   for (const ch of text) {
     const w = width(ch)
+    const bad = w > 0 ? drawn(roles[col]) && !GLYPHS.has(ch) : drawn(roles[col]) || !sourceText(roles[lead])
+    if (bad) out.push(`${where} ${ch}`)
     if (w > 0) lead = col
-    if (/[a-z0-9]/.test(roles[lead] ?? ' ') && !GLYPHS.has(ch)) out.push(`${where} ${ch}`)
     col += w
   }
 }
