@@ -13,11 +13,12 @@ import type { Box, Placed } from './layered.ts'
 import type { GCluster, GEdge, GNode, NodeRow, Note } from './model.ts'
 import type { Route } from './route.ts'
 
-// One row of a box: capL, a pad, the piece centred, a pad, capR. Caps and fill are owned by owner, the text by owners; a
-// keyed row's piece is its key, drawn in place.
+// One row of a box: capL, a pad, the piece centred (or after one pad cell when flush, a left-aligned row), a pad, capR.
+// Caps and fill are owned by owner, the text by owners; a keyed row's piece is its key, drawn in place.
 function row(cv: Canvas, b: Box, r: number, caps: readonly [string, string], piece: Piece, role: Role, textRole: Role,
-  owner: string, owners: readonly string[], keyed = false): void {
-  const [l, rt] = caps, inner = b.cols - width(l) - width(rt), w = width(piece.text), left = (inner - w) >> 1
+  owner: string, owners: readonly string[], keyed = false, flush = false): void {
+  const [l, rt] = caps, inner = b.cols - width(l) - width(rt), w = width(piece.text)
+  const left = flush ? Math.min(1, Math.max(0, inner - w)) : (inner - w) >> 1
   cv.cap(r, b.col, l, role, owner)
   cv.fill(r, b.col + width(l), left, role, owner)
   if (keyed) cv.key(r, b.col + width(l) + left, piece.text, textRole, owners, false)
@@ -67,13 +68,14 @@ function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, 
   let r = b.row
   for (const [k, line] of rows.entries()) {
     if (line.row?.fixed || line.row?.cols) { fixedRow(cv, b, r++, caps, role, owner, line.row, line.owners, k > 0); continue }
-    if (line.row?.key) { row(cv, b, r++, caps, { text: line.text, join: '' }, role, line.role, owner, line.owners, true); continue }
+    const flush = line.row?.align === 'left'
+    if (line.row?.key) { row(cv, b, r++, caps, { text: line.text, join: '' }, role, line.role, owner, line.owners, true, flush); continue }
     const pieces: Piece[] = wrap(line.text, max) ?? [{ text: line.text, join: '' }]
     for (const [i, piece] of pieces.entries()) {
       const joined: Piece = i === 0 && k > 0 ? { ...piece, join: '\n' } : piece
       if (textOnly) {
         cv.text(r++, b.col + ((b.cols - width(piece.text)) >> 1), piece.text, line.role, line.owners, joined.join)
-      } else row(cv, b, r++, caps, joined, role, line.role, owner, line.owners)
+      } else row(cv, b, r++, caps, joined, role, line.role, owner, line.owners, false, flush)
     }
   }
 }
@@ -119,11 +121,11 @@ function divide(cv: Canvas, c: GCluster, frame: (id: string) => Box | undefined,
 
 // A side note beside its pill b: each line, wrapped at its box's width, as note-role text owned by the note, its first
 // line joined to the pill by ' ┄┄' caps (┄┄ ' ' on the right) owned by `${id}:link`. A keyed note draws its key in its
-// text's place, and lists no label.
-function note(cv: Canvas, b: Box, at: Box | undefined, n: Note, labels: Expect['labels'][number][]): void {
+// text's place, and lists no label. Its text is listed even when its pill or box is missing, so a note not drawn fails closed.
+function note(cv: Canvas, b: Box | undefined, at: Box | undefined, n: Note, labels: Expect['labels'][number][]): void {
   const text = labelLines(n.text)
   if (n.key === undefined) labels.push({ owner: n.id, text: text.join('\n') })
-  if (!at) return
+  if (!at || !b) return
   const link = `${n.id}:link`
   if (n.side === 'left') { cv.cap(at.row, b.col - 3, ' ', 'note', link); cv.cap(at.row, b.col - 2, '┄┄', 'note', link) }
   else { cv.cap(at.row, b.col + b.cols, '┄┄', 'note', link); cv.cap(at.row, b.col + b.cols + 2, ' ', 'note', link) }
@@ -173,7 +175,8 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
   const shown = (s: string) => s.trim() !== ''
   for (const n of p.graph.nodes) {
     const b = at(p.boxes.get(n.id))
-    if (n.mark) { if (b) mark(cv, b, n, across); continue }
+    const side = () => { if (n.note) note(cv, b, at(p.notes?.get(n.note.id)), n.note, labels) }   // a mark's note too
+    if (n.mark) { if (b) mark(cv, b, n, across); side(); continue }
     const rows = n.rows.map(x => ({ text: x.text, role: x.role, owners: [...new Set([x.id ?? n.id, n.id])], row: x }))
     if (b) lines(cv, b, CAPS[n.shape], n.role, n.id, rows)
     const texts = new Map<string, string>()
@@ -188,7 +191,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
       }
     }
     for (const [owner, text] of texts) labels.push({ owner, text })
-    if (n.note && b) note(cv, b, at(p.notes?.get(n.note.id)), n.note, labels)
+    side()
   }
   for (const route of routes) {
     for (const c of route.cells) cv.line(c.r + dy, c.c + dx, c.dirs, WEIGHT[route.style], 'edge', route.edge)

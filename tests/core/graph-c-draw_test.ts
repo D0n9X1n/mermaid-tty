@@ -143,3 +143,12 @@ test('A4: two end labels that meet end to end are a Conflict; a cell apart they 
   assert.ok(channel(5).conflicts.length > 0); assert.deepEqual(validate(channel(6)), { reason: 'overwrite' })
   const d = channel(7); assert.deepEqual([d.conflicts.length, validate(d)], [0, null]); assert.equal(text(d)[0], '      1 0..*')
 })
+test('A3: a keyed column draws its key in its place, owned by [col id, node]: a member, but no label', () => {
+  const gr = g('TB', ['C>D']), cols = [{ text: 'string', role: 'label', id: 'C.a0.type', width: 6 }, { text: 'id', role: 'label', id: 'C.a0.name', width: 5 },
+    { text: 'a long comment', role: 'note', id: 'C.a0.note', width: 1, key: 'k' }] as NodeRow['cols']
+  gr.nodes[0]!.rows = [{ text: 'CAR', role: 'node', align: 'center' }, { text: 'string id k', role: 'label', align: 'left', fixed: true, cols }]
+  const d = D(gr), t = text(d).join('\n'); assert.deepEqual(validate(d), { reason: 'key-stray' })
+  assert.match(t, /string id    k/); assert.doesNotMatch(t, /comment/); assert.ok(!d.expect.labels.some(l => l.owner === 'C.a0.note'))
+  assert.ok(d.cells.flat().some(c => c?.kind === 'key' && c.ch === 'k' && c.owners.join() === 'C.a0.note,C'))
+  assert.deepEqual(d.expect.members, ['type', 'name', 'note'].map(k => ({ id: `C.a0.${k}`, parent: 'C' })))
+})
