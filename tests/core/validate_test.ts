@@ -1,6 +1,6 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
-import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'
+import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'; import { explain } from '../../core/render.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
 import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
@@ -361,4 +361,56 @@ test('A5.mutation-tests: a crossing cell without per-owner dirs fails crossing-a
   assert.equal(validate(d), null)
   delete d.cells[3]![3]!.segs
   assert.equal(validate(d)?.reason, 'crossing-ambiguous')
+})
+
+// merge-ambiguous: edges whose drawn lines join read as one line, so each end without a mark seems to lead to each head on
+// it. A merge that implies an edge the drawing does not have fails, by explain at 80 columns and on hand-built grids.
+const verdict = (src: string) => { const r = explain(src, { columns: 80, theme: 'mono' }); return 'reason' in r ? r.reason : null }
+test('merge-ambiguous: QA repros, a merged line that implies D→C or A→B, fall back', () => {
+  assert.equal(verdict('flowchart TB\nA --> B\nA --> C\nD --> B'), 'merge-ambiguous')
+  assert.equal(verdict('flowchart TB\nA --> C\nB <--> C'), 'merge-ambiguous')
+})
+test('merge-ambiguous: fan-out, fan-in, complete bipartite, a self-loop, a two-headed edge and open links still draw', () => {
+  for (const src of ['A --> B\nA --> C', 'A --> C\nB --> C', 'A & B --> C & D', 'A --> A', 'A <--> B', 'A --- B\nA --- C'])
+    assert.equal(verdict(`flowchart TB\n${src}`), null, src)
+})
+// sketch, with each edge 'id from to' then its end marks, each its node and glyph: 'e1 B C C▼ B▲'.
+function marked(rows: number, cols: number, nodes: [string, number, number][], marks: Mark[], edges: string[]): Drawing {
+  const d = sketch(rows, cols, nodes, marks, [])
+  d.expect = { ...d.expect, edges: edges.map(s => {
+    const [id = '', from = '', to = '', ...ends] = s.split(' ')
+    return { id, from, to, ends: ends.map(x => ({ node: x[0]!, glyph: x.slice(1) })) }
+  }) }
+  return d
+}
+// Repro 1: A→C (e0) down column 0; A→B (e1) leaves it at ├ for ┤ and B's stem; D→B (e2) down that stem into B's ▼.
+const m1: Mark[] = [...v('e0', 0, 1, 3), ['e0', 4, 0, '▼'], ['e1', 1, 0, 5], ['e1', 2, 0, 3], ...h('e1', 2, 1, 2), ['e1', 2, 3, 12],
+  ['e1', 3, 3, 5], ['e1', 4, 3, '▼'], ...v('e2', 3, 1, 3), ['e2', 4, 3, '▼']]
+const merge1 = (keep: string[]) => marked(6, 4, [['A', 0, 0], ['D', 0, 3], ['C', 5, 0], ['B', 5, 3]], m1.filter(m => keep.includes(m[0])),
+  ['e0 A C C▼', 'e1 A B B▼', 'e2 D B B▼'].filter(s => keep.includes(s.slice(0, 2))))
+// Repro 2: A→C (e0) turns at └ and joins C's stem at ┬; B's edge e1 leaves B at ▲ or │, turns at ┘ and runs into the ┬.
+const merge2 = (twoHeaded: boolean) => marked(6, 4, [['A', 0, 0], ['B', 0, 3], ['C', 5, 1]],
+  [['e0', 1, 0, 5], ['e0', 2, 0, 3], ['e0', 2, 1, 12], ['e0', 3, 1, 5], ['e0', 4, 1, '▼'], ['e1', 1, 3, twoHeaded ? '▲' : 5],
+    ['e1', 2, 3, 9], ['e1', 2, 2, 10], ['e1', 2, 1, 6], ['e1', 3, 1, 5], ['e1', 4, 1, '▼']], ['e0 A C C▼', `e1 B C C▼${twoHeaded ? ' B▲' : ''}`])
+// Open link B --- A (e1) runs from B along row 2 into A→C's (e0) stem at ├.
+const merge3 = () => marked(6, 4, [['A', 0, 0], ['B', 0, 3], ['C', 5, 0]],
+  [...v('e0', 0, 1, 3), ['e0', 4, 0, '▼'], ['e1', 1, 3, 5], ['e1', 2, 3, 9], ...h('e1', 2, 1, 2), ['e1', 2, 0, 3], ['e1', 1, 0, 5]], ['e0 A C C▼', 'e1 B A'])
+test('merge-ambiguous: a hand-built merge fails when an unmarked end reaches a head it has no edge to, and passes otherwise', () => {
+  assert.equal(validate(merge1(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous')   // D seems to lead to C
+  assert.equal(validate(merge1(['e0', 'e1'])), null)                              // a fan-out on A's stem
+  assert.equal(validate(merge1(['e1', 'e2'])), null)                              // a fan-in on B's stem and head
+  assert.equal(validate(merge2(true))?.reason, 'merge-ambiguous')                 // A seems to lead to B
+  assert.equal(validate(merge2(false)), null)                                     // B→C: a fan-in
+  assert.equal(validate(merge3())?.reason, 'merge-ambiguous')                     // B seems to lead to C
+  assert.equal(validate(fork()), null)
+  // ┼: A→B down column 3 crosses C→D along row 3; their own dirs there share no arm, so the lines do not join.
+  assert.equal(validate(sketch(7, 7, [['A', 0, 3], ['B', 6, 3], ['C', 3, 0], ['D', 3, 6]],
+    [...v('e0', 3, 1, 4), ['e0', 5, 3, '▼'], ...h('e1', 3, 1, 4), ['e1', 3, 5, '►']], ['e0 A B ▼', 'e1 C D ►'])), null)
+})
+// P<-->Q (e0) down column 0, and Q→R (e1) leaving Q's side to run up e0's line from ├ to ├ before it turns off to R: Q's
+// bare end reaches P's ▲, real only as e0 drawn back from Q, and R's ▲, real as e1.
+test('merge-ambiguous: a two-headed edge counts both ways, so a bare end merged into its line may lead to either node', () => {
+  assert.equal(validate(marked(9, 3, [['P', 0, 0], ['R', 0, 2], ['Q', 8, 0]], [['e0', 1, 0, '▲'], ...v('e0', 0, 2, 6), ['e0', 7, 0, '▼'],
+    ['e1', 8, 1, 9], ...v('e1', 1, 6, 7), ['e1', 5, 1, 12], ['e1', 5, 0, 3], ['e1', 4, 0, 5], ['e1', 3, 0, 6], ['e1', 3, 1, 10],
+    ['e1', 3, 2, 9], ['e1', 2, 2, 5], ['e1', 1, 2, '▲']], ['e0 P Q Q▼ P▲', 'e1 Q R R▲'])), null)
 })

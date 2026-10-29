@@ -29,12 +29,13 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: labels, edges, dangling lines, crossings, conflicts, row widths, edge labels, frames,
-// then C's end labels, bars and member rows. null if none.
+// The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
+// labels, frames, then C's end labels, bars and member rows. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? (d.conflicts.length > 0 ? fail('overwrite') : null) ??
-    rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d)
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
+    (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
+    endLabels(d, all) ?? bars(d, all) ?? members(d)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -172,6 +173,39 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
     const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
     if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) return fail('crossing-ambiguous')
     if (pairs.some(([a, b]) => drew(a) === drew(b))) return fail('crossing-ambiguous')
+  }
+  return null
+}
+
+// Merged lines imply only real edges. Two edges' lines join in a line cell where the dirs each drew there, by the cell's
+// segs, share an arm: they run together there, where a perpendicular crossing shares none. An arrow cell that several
+// edges own joins them too. Joined lines read as one line, so in each group of joined edges every end drawn with no mark
+// seems to lead to every node a mark in the group points at. Each such pair of a bare end t and a head h, t ≠ h, must be
+// an edge of the drawing, from t to h. A fan-out, a fan-in and a complete bipartite merge pass; any other merge seems to
+// draw an edge that is not there. A line cell that records no dirs for an edge there, as a hand-built cell may not, joins
+// it by the cell's whole dirs, so it fails closed.
+function merges(d: Drawing, all: readonly Spot[]): Fail | null {
+  const ids = new Set(d.expect.edges.map(e => e.id)), root = new Map(d.expect.edges.map(e => [e.id, e.id]))
+  const find = (id: string): string => { let r = id; while (root.get(r) !== r) r = root.get(r)!; return r }
+  for (const p of all) {
+    if (p.cell.kind !== 'line' && p.cell.kind !== 'arrow') continue
+    const mine = p.cell.owners.filter(id => ids.has(id))
+    const drew = (id: string) => p.cell.segs?.find(s => s.owner === id)?.dirs ?? p.cell.dirs
+    for (const [i, a] of mine.entries()) for (const b of mine.slice(i + 1)) {
+      if (p.cell.kind === 'arrow' || (drew(a) & drew(b)) !== 0) root.set(find(a), find(b))
+    }
+  }
+  const groups = new Map<string, Edge[]>()
+  for (const e of d.expect.edges) groups.set(find(e.id), [...(groups.get(find(e.id)) ?? []), e])
+  // How many of e's end marks name n; e's endpoints at a node no mark covers, a self-loop's node counting twice.
+  const marks = (e: Edge, n: string) => e.ends.filter(x => x.node === n).length
+  const bare = (e: Edge) => [...new Set([e.from, e.to])].filter(n => Number(e.from === n) + Number(e.to === n) > marks(e, n))
+  // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
+  // edge's do, or those of an edge drawn reversed.
+  const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
+  for (const group of groups.values()) {
+    const heads = new Set(group.flatMap(e => e.ends.map(x => x.node))), tails = new Set(group.flatMap(e => bare(e)))
+    for (const t of tails) for (const h of heads) if (t !== h && !real(t, h)) return fail('merge-ambiguous')
   }
   return null
 }
