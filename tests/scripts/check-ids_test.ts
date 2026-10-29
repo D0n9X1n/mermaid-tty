@@ -141,6 +141,12 @@ test("A8.validation: @nt fails, naming each unchecked site, when an ID's tests h
     assert.equal(a3.status, 1)
     assert.deepEqual(unchecked(a3.stderr), ['tests/b_test.ts:3:1: A3: parent: its function calls no assert', 'tests/b_test.ts:3:41: A3: parent > placeholder: no inline function'])
   }))
+// GPT-6's regex repro: node:test passes it, and the assert in the regex after the for header's ) is no call.
+test("A8.validation: @nt fails when a test's only assert is in a regex after a control header's )", () =>
+  scratch({ 'tests/a_test.ts': "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})\n" }, dir => {
+    const r = check(dir, 'A1')
+    assert.equal(r.status, 1); assert.deepEqual(unchecked(r.stderr), ['tests/a_test.ts:2:1: A1: assertion keywords: its function calls no assert'])
+  }))
 test('A8.validation: @nt fails when a checked parent has a t.test child with no inline function, and passes when the child is checked', () =>
   scratch({ 'tests/a_test.ts': nodeTest("test('A2: parent', async t => { assert.ok(t); await t.test('child') })",
     "test('A3: parent', async t => { assert.ok(t); await t.test('child', () => { assert.ok(t) }) })") }, dir => {

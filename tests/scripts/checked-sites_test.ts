@@ -62,3 +62,19 @@ test('A8.validation: checkedSite counts lines as V8 does', () => {
   const src = "const s = `a\r\nb\rc\nd\u2028e\u2029f`; test('A1: x', () => {})\ntest('A1: y', () => { assert.ok(s) })"
   assert.deepEqual([checkedSite(src, 6, 5), checkedSite(src, 7, 1)], ['its function calls no assert', true])
 })
+
+// GPT-6's repro: an assert in a regex after a for header's ). node:test reports its test at line 2, column 1.
+const REPRO = "import test from 'node:test'\ntest('A1: assertion keywords', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})\n"
+// A test at line 1, column 1 whose function holds stmts.
+const holding = (stmts: string) => `test('A1: x', () => {\n  ${stmts}\n})`
+test("A8.validation: checkedSite reads a / after an if, for, for await or while header's ) as a regex, whose text calls no assert", () => {
+  assert.equal(checkedSite(REPRO, 2, 1), 'its function calls no assert')
+  for (const stmt of ['if (x) /assert(y)/.test(s)', 'for await (const w of ws) /assert(w)/.test(s)', 'while (i--) /assert(y)/.test(s)'])
+    assert.equal(checkedSite(holding(stmt), 1, 1), 'its function calls no assert', stmt)
+})
+test("A8.validation: checkedSite reads a / after a block's } as a regex, whose text calls no assert", () =>
+  assert.equal(checkedSite(holding('{ f() }\n  /assert(y)/.test(s)'), 1, 1), 'its function calls no assert'))
+test('A8.validation: checkedSite reads a / after any other ) or a ] as a division, so the assert calls beside it count', () => {
+  for (const stmt of ['const m = (a + b) / 2; assert.equal(m, 1)', 'assert.equal(arr[0] / 2, 1)', 'assert.ok(f(a) / g(b) > 1)'])
+    assert.equal(checkedSite(holding(stmt), 1, 1), true, stmt)
+})

@@ -5,8 +5,9 @@
 // A small tokenizer, not one regex: strings, templates, regexes and comments hide what they hold, and brackets balance to
 // find each call's arguments.
 
-// A token of a test file: a word; a string, template or regex, whole; or punctuation, one character but =>. at is its offset.
-type Token = { text: string; at: number }
+// A token of a test file: a word; a string, template or regex, whole; or punctuation, one character but =>. at is its offset;
+// head marks a ) that closes an if, for, for await, while or with header.
+type Token = { text: string; at: number; head?: boolean }
 
 // The index of s in src at or after i, or src's length.
 const until = (src: string, s: string, i: number) => { const j = src.indexOf(s, i); return j < 0 ? src.length : j }
@@ -21,8 +22,12 @@ function template(src: string, i: number): number {
   for (i++; i < src.length && src[i] !== '`'; i++) if (src[i] === '\\') i++; else if (src.startsWith('${', i)) i = lex(src, i + 2, true).end
   return i + 1
 }
-// Whether a / after prev starts a regex rather than a division: after nothing, a keyword, or punctuation but ) ] }.
-const regexAfter = (prev?: Token) => !prev || /^(?:[^\w$'"`/)\]}]|(?:return|typeof|instanceof|in|of|new|delete|void|throw|case|do|else|yield|await)$)/.test(prev.text)
+// Whether a / after prev starts a regex rather than a division: after nothing, a keyword, or punctuation but ) and ]; after a
+// ) that closes an if, for, for await, while or with header, which a statement follows; and after any }: a block's is
+// followed by a statement, and an object literal's never directly by / in practice. Taking an unsure / for a regex fails
+// closed: no call in its text counts.
+const regexAfter = (prev?: Token) => !prev || prev.head === true ||
+  /^(?:[^\w$'"`/)\]]|(?:return|typeof|instanceof|in|of|new|delete|void|throw|case|do|else|yield|await)$)/.test(prev.text)
 // The end of the regex whose / is at i, past its flags, or -1 if no / closes it on its line.
 function regexEnd(src: string, i: number): number {
   for (let k = i + 1, inClass = false; k < src.length && src[k] !== '\n'; k++) {
@@ -33,9 +38,10 @@ function regexEnd(src: string, i: number): number {
   return -1
 }
 // The tokens of src from i, and where they end: at src's end or, for the code of a ${…} (sub), at the } that closes it.
-// Comments and whitespace are not tokens, so no call inside a comment, a string, a template or a regex is seen.
+// Comments and whitespace are not tokens, so no call inside a comment, a string, a template or a regex is seen. heads holds,
+// for each open (, whether it opens an if, for, for await, while or with header.
 function lex(src: string, i = 0, sub = false): { tokens: Token[]; end: number } {
-  const tokens: Token[] = []
+  const tokens: Token[] = [], heads: boolean[] = []
   for (let depth = 0; i < src.length;) {
     const at = i, c = src[i]!
     if (/\s/.test(c)) { i++; continue }
@@ -48,7 +54,9 @@ function lex(src: string, i = 0, sub = false): { tokens: Token[]; end: number } 
     else if (re > 0) i = re
     else if (/[\w$]/.test(c)) while (i < src.length && /[\w$]/.test(src[i]!)) i++
     else { if (c === '{') depth++; i += src.startsWith('=>', i) ? 2 : 1 }
-    tokens.push({ text: src.slice(at, i), at })
+    if (c === '(') heads.push(['if', 'for', 'while', 'with'].includes(tokens.at(-1)?.text ?? '') ||
+      (tokens.at(-1)?.text === 'await' && tokens.at(-2)?.text === 'for'))
+    tokens.push({ text: src.slice(at, i), at, head: c === ')' && heads.pop() })
   }
   return { tokens, end: i }
 }
