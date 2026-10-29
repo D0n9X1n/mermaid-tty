@@ -26,13 +26,13 @@ function routeObstacles(p: Placed, e: GEdge): Box[] {
 // Disjoint complete bipartite nets: joining any two lines in a net implies only declared edges.
 function mergeGroups(p: Placed): Map<string, string> {
   const edges = p.graph.edges.filter(e => e.style !== 'invisible').toSorted((a, b) => a.order - b.order)
-  const eligible = (e: GEdge) => e.tail === 'none' && e.head === 'arrow' && e.from !== e.to && !e.reversed
+  const eligible = (e: GEdge) => e.tail === 'none' && e.head !== 'none' && e.from !== e.to && !e.reversed
   const groups: GEdge[][] = [], result = new Map<string, string>()
   for (const e of edges) {
     let group = eligible(e) ? groups.find(g => {
-      if (!eligible(g[0]!) || g[0]!.style !== e.style || !g.some(n => n.from === e.from || n.to === e.to)) return false
+      if (!eligible(g[0]!) || g[0]!.style !== e.style || g[0]!.head !== e.head || !g.some(n => n.from === e.from || n.to === e.to)) return false
       const tails = new Set([...g.map(n => n.from), e.from]), heads = new Set([...g.map(n => n.to), e.to])
-      return [...tails].every(from => [...heads].every(to => edges.some(n => eligible(n) && n.style === e.style && n.from === from && n.to === to)))
+      return [...tails].every(from => [...heads].every(to => edges.some(n => eligible(n) && n.style === e.style && n.head === e.head && n.from === from && n.to === to)))
     }) : undefined
     if (!group) { group = []; groups.push(group) }
     group.push(e)

@@ -242,7 +242,8 @@ const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓',
 
 // Each frame stays closed. Its own frame cells span a real box, at least two rows and two columns, whose four corners are
 // its own frame cells drawing its corner glyphs: text that erases a border and its corners leaves cells that span a smaller
-// box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own or one of:
+// box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own drawing
+// that border (V5), ─ or ━ across and │ or ┃ down a side, or a tee ┬ ┴ ├ ┤ one of its own dividers continues inside; or:
 // its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its own dividers `${id}.${k}`,
 // ├ on its left side or ┤ on its right; or a line only edges cross straight through, each by the dirs it drew there: │ (5)
 // through the top or bottom, ─ (10) through a side. A lifeline needs no exception: a frame draws first, and a lifeline only
@@ -262,9 +263,18 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     if (!([[top, left], [top, right], [bottom, left], [bottom, right]] as const).every(corner)) return fail('frame-broken')
     const divider = (o: string) => o.startsWith(`${id}.`) && /^\d+$/.test(o.slice(id.length + 1))
+    // Whether the line cell at (r, c) is this frame's divider and points back, by bit, at the border cell beside it.
+    const stem = (r: number, c: number, bit: number) => {
+      const y = at(d, r, c)
+      return y?.kind === 'line' && (y.dirs & bit) !== 0 && y.owners.length > 0 && y.owners.every(divider)
+    }
+    // A frame cell of its own on a border draws that border: ─ ━ across, │ ┃ down a side, or a tee a divider continues.
+    const drawn = (ch: string, r: number, c: number, across: boolean) => across
+      ? '─━'.includes(ch) || ch === (r === top ? '┬' : '┴') && stem(r === top ? r + 1 : r - 1, c, r === top ? 1 : 4)
+      : '│┃'.includes(ch) || ch === (c === left ? '├' : '┤') && stem(r, c === left ? c + 1 : c - 1, c === left ? 8 : 2)
     const kept = (r: number, c: number): boolean => {
       const x = at(d, r, c), across = r === top || r === bottom, side = c === left || c === right
-      if (x?.kind === 'frame') return x.owners[0] === id
+      if (x?.kind === 'frame') return x.owners[0] === id && (across && side || drawn(x.ch, r, c, across))
       if (!x || (across && side)) return false
       if (x.kind === 'text' || x.kind === 'cont') return r === top && x.owners[0] === id
       if (x.kind !== 'line' || x.owners.length === 0) return false

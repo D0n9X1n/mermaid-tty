@@ -78,6 +78,62 @@ test('A1: R3 a rejoined suffix cannot merge before the target channel', () => {
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
+// The fixture reads marks per end: a merged net implies a pair from each bare end to each mark, of that mark's kind.
+test('A1: R4 the implied-pair fixture reads each head mark at its node', async t => {
+  const merged = () => {
+    const r = explain('flowchart TB\nA-->B\nA-->C\nD-->B\nD-->C', { columns: 80 })
+    assert.ok(!('reason' in r))
+    assert.deepEqual(falsePairs(r.drawing), [])
+    return r.drawing
+  }
+  const patch = (ends: { node: string; glyph: string }[]) => {
+    const d = merged()
+    return { ...d, expect: { ...d.expect, edges: d.expect.edges.map(e => e.id === 'L_D_C_0' ? { ...e, ends } : e) } }
+  }
+  await t.test('a two-headed edge has no bare end, so it is no one-way pair, and its tail mark is a head to the net',
+    () => assert.deepEqual(falsePairs(patch([{ node: 'D', glyph: '▲' }, { node: 'C', glyph: '▼' }])), ['A->D', 'D->C', 'D->D']))
+  await t.test('a circle on the shared line is no arrow, nor an arrow a circle',
+    () => assert.deepEqual(falsePairs(patch([{ node: 'C', glyph: 'o' }])), ['A-oC', 'D->C']))
+})
+
+// R4: one-line edits to mergeGroups and the shared-run check each drew validated false edges no test caught.
+test('A1: R4 mixed marks on one target never share a fan-in line', () => {
+  const r = explain('flowchart TB\nA-->C\nA--oD\nB-->C\nB-->D', { columns: 80 })
+  assert.ok(!('reason' in r))
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
+})
+
+test('A1: R4 a two-headed link is no one-way pair for a bipartite net', () => {
+  const r = explain('flowchart TB\nA-->B\nA-->C\nD-->B\nD<-->C', { columns: 80 })
+  assert.ok(!('reason' in r))
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
+})
+
+// Only edges of one merge group share a run: a fan-out stem joined to another group's fan-in reads as a self-loop N1→N1.
+test('A1: R4 a shared run stays inside one merge group', () => {
+  const graph = g('BT', ['N1>N0', 'N2>N0|yes', 'N2>N1'])
+  graph.clusters = [{ id: 'S', title: 'S', dir: null, nodes: ['N2'], clusters: [] }]
+  const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const rs = routeGraph(p)
+  assert.ok(Array.isArray(rs))
+  const d = drawGraph(p, rs, 10000)
+  assert.deepEqual(falsePairs(d), [], text(d).join('\n'))
+  assert.equal(validate(d), null)
+})
+
+test('A1: R4 circle and cross fans share a stem again', () => {
+  for (const op of ['--o', '--x']) for (const [src, a, b] of [[`A${op}B\nA${op}C`, 'L_A_B_0', 'L_A_C_0'], [`A${op}C\nB${op}C`, 'L_A_C_0', 'L_B_C_0']]) {
+    const r = explain(`flowchart TB\n${src}`, { columns: 80 })
+    assert.ok(!('reason' in r))
+    assert.equal(validate(r.drawing), null)
+    assert.deepEqual(falsePairs(r.drawing), [])
+    const shared = r.drawing.cells.flat().filter(c => c?.kind === 'line' && c.owners.includes(a) && c.owners.includes(b))
+    assert.ok(shared.length > 0, `${src} shares no line\n${text(r.drawing).join('\n')}`)
+  }
+})
+
 test('A1: R3 self-loop turns stay out of crossings even when all owners share its node', () => {
   const gr = g('LR', ['N0>N1', 'N1.>N2|yes', 'N0>N3', 'N0>N0|成功'], { N2: '读取配置', N3: '读取配置' })
   gr.clusters = [{ id: 'S', title: null, dir: null, nodes: ['N2'], clusters: [] }]

@@ -15,7 +15,7 @@ import { falsePairs as drawnFalsePairs, g } from './graph-fixture.ts'
 function random(seed: number) { return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n } }
 function pick<T>(next: (n: number) => number, xs: readonly T[]): T { return xs[next(xs.length)]! }
 
-// Graph i: TB or LR, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a back edge to the
+// Graph i: TB, LR, BT or RL in turn, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a back edge to the
 // parent or the root, a repeat of an earlier pair, or a self-loop. A quarter of the edges are labelled; some ends are
 // circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the graphs frame a run of nodes.
 function graphFor(i: number, next: (n: number) => number): Graph {
@@ -34,7 +34,7 @@ function graphFor(i: number, next: (n: number) => number): Graph {
   }
   const labels: Record<string, string> = {}
   for (let k = 0; k < count; k++) if (next(5) === 0) labels[name(k)] = pick(next, ['two<br/>lines', '读取配置', 'a wider node'])
-  const graph = g(i % 2 ? 'LR' : 'TB', specs, labels)
+  const graph = g((['TB', 'LR', 'BT', 'RL'] as const)[i % 4]!, specs, labels)
   for (const e of graph.edges) {
     if (next(6) === 0) e.tail = pick<End>(next, ['arrow', 'circle', 'cross'])
     if (next(8) === 0) e.head = pick<End>(next, ['none', 'circle', 'cross'])
