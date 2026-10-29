@@ -287,3 +287,19 @@ test('A2: + and activate each start an activation, and - and deactivate each end
   assert.deepEqual(P('A->>+B: a\nactivate B\nB-->>-A: b\ndeactivate B\nA->>+C: c\nC-->>-A: d').items, [msg('A', 'B', 'a', { activate: true }), mark('activate', 'B'),
     msg('B', 'A', 'b', { line: 'dotted', deactivate: true }), mark('deactivate', 'B'), msg('A', 'C', 'c', { activate: true }), msg('C', 'A', 'd', { line: 'dotted', deactivate: true })])
 })
+
+// Mermaid reads a wrap: or nowrap: at the start of a message, note, condition, alias or box label as a directive, not
+// text; a title keeps it.
+test('A2: a leading wrap: or nowrap: is dropped', () => {
+  const texts = ['A->>B: wrap: long', 'Note over A: nowrap: x', 'A->>B:wrap:y', 'A->>B: :nowrap: z', 'A->>B: x wrap: y', 'A->>B: WRAP: x', 'A->>B: wrapped: x']
+  assert.deepEqual(texts.map(t => P(t).items[0].text), ['long', 'x', 'y', 'z', 'x wrap: y', 'WRAP: x', 'wrapped: x'])
+  assert.deepEqual(P('participant A as wrap: Alice\nbox Aqua nowrap: Team\nparticipant B\nend\nalt wrap: ok\nA->>B: x\nelse nowrap: no\nA->>B: y\nend\nalt wrap:\nA->>B: z\nend\ntitle wrap: T'),
+    seq([part('A', 'participant', 'Alice'), part('B')], [frame('alt', ['ok', [msg('A', 'B', 'x')]], ['no', [msg('A', 'B', 'y')]]), frame('alt', [null, [msg('A', 'B', 'z')]])],
+      { boxes: [{ label: 'Team', ids: ['B'] }], title: 'wrap: T' }))
+})
+// Mermaid's lexer reads an id such as 42 or 1.5 as a number when a space follows it, and fails.
+test('A5.errors: an id that is a number fails id', () => {
+  const bad = ['A ->> 1 : x', 'participant 42', '1->>B: x', 'A->>1.5: x', 'A->>.5: x', 'Note over A,7: n', 'activate 3']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'id' }]))
+  assert.deepEqual(['1a', 'A1', 'v1.2'].map(id => P(`${id}->>B: x`).items[0]), ['1a', 'A1', 'v1.2'].map(id => msg(id, 'B', 'x')))
+})

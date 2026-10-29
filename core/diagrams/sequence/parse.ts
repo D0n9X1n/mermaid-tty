@@ -39,6 +39,8 @@ const ACC_BLOCK = re(String.raw`accDescr\s*\{(.*)`)
 const KEYWORDS = `participant actor note over end loop alt else opt par and rect critical break option activate deactivate autonumber
   title box create destroy link links properties details accTitle accDescr par_over off sequenceDiagram`.split(/\s+/)
 const KEYWORD = new RegExp(`^(?:${KEYWORDS.join('|')})(?![A-Za-z0-9_])`, 'i')
+// Mermaid's lexer reads an id such as 42 or 1.5 as a number when a space follows it, and fails: such an id fails id.
+const NUMBER = /^(?:[0-9]+(?:\.[0-9]{1,2})?|\.[0-9]{1,2})$/
 // The 148 CSS named colors (CSS Color 4), matched in any case.
 const NAMED = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse
   chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen
@@ -73,8 +75,11 @@ function text(s: string): string {
   for (const line of labelLines(t)) { const u = unsupported(line); if (u) stop(`unsupported-char ${u}`) }
   return t
 }
-// Drawn text that may be absent.
-function optText(s: string | null | undefined): string | null { return s === null || s === undefined ? null : text(s) }
+// Mermaid reads a wrap: or nowrap: at the start of a message, note, condition, alias or box label as a directive, not
+// text; a title keeps it. The fit ladder wraps anyway, so the directive is dropped.
+function unwrap(s: string): string { return s.trim().replace(/^:?(?:no)?wrap:/, '') }
+// A condition or box label, after any directive: null if absent or empty.
+function optText(s: string | null | undefined): string | null { return s === null || s === undefined ? null : text(unwrap(s)) || null }
 
 // Whether an accDescr { block closes in rest. Not in the plan: its first } closes it, and must end the line.
 function closes(rest: string, n: number): boolean {
@@ -99,9 +104,10 @@ function walk(src: Source): Seq {
   let box: Box | null = null, creating: string[] = [], destroying: string[] = [], accFrom = 0, sent = false
   // A statement goes into the innermost open frame's last section, or the top level.
   const add = (item: Item) => void (frames.at(-1)?.sections.at(-1)?.items ?? seq.items).push(item)
-  // Naming a participant declares it if it is new; naming a keyword, or a destroyed participant, fails.
+  // Naming a participant declares it if it is new; naming a keyword, a number or a destroyed participant fails.
   const mention = (id: string) => {
     if (KEYWORD.test(id)) stop('keyword')
+    if (NUMBER.test(id)) stop('id')
     if (destroyed.has(id)) stop('destroyed')
     if (!seq.participants.some(p => p.id === id)) seq.participants.push({ id, kind: 'participant', label: id })
   }
@@ -131,7 +137,7 @@ function walk(src: Source): Seq {
       if (m[1] && known) stop('create')
       // Not in the plan: as in Mermaid, declaring a known participant again changes it only with an as alias.
       const p = seq.participants.find(q => q.id === id)!
-      if (!known || m[4] !== undefined) { p.kind = m[2] as Participant['kind']; p.label = m[4] === undefined ? id : text(m[4]) }
+      if (!known || m[4] !== undefined) { p.kind = m[2] as Participant['kind']; p.label = m[4] === undefined ? id : text(unwrap(m[4])) }
       if (box) {
         // Not in the plan: as in Mermaid, a participant belongs to one box.
         if (seq.boxes.some(b => b !== box && b.ids.includes(id))) stop('box-split')
@@ -151,7 +157,7 @@ function walk(src: Source): Seq {
       // Not in the plan: as in Mermaid's grammar, only over takes two participants.
       if (m[3] && m[1] !== 'over') stop(`syntax:${n}`)
       const ids = m[3] ? [m[2]!, m[3]] : [m[2]!]
-      ids.forEach(mention); add({ kind: 'note', side: m[1] as Note['side'], ids, text: text(m[4]!) })
+      ids.forEach(mention); add({ kind: 'note', side: m[1] as Note['side'], ids, text: text(unwrap(m[4]!)) })
     } else if ((m = FRAME.exec(t))) {
       open(m[1] as Frame['type'], optText(m[2]))
     } else if (RECT.test(t)) {
@@ -210,7 +216,7 @@ function message(t: string): Msg | null {
   const to = TO.exec(rest.slice(arrow[0].length))
   if (!to) return null
   const [, line, tail, head] = arrow
-  return { kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(to[3]!), activate: to[1] === '+', deactivate: to[1] === '-' }
+  return { kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(unwrap(to[3]!)), activate: to[1] === '+', deactivate: to[1] === '-' }
 }
 
 // A box's label: its text after a leading CSS color, which is not drawn; null if none is left.
