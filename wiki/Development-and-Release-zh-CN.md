@@ -48,7 +48,7 @@ node scripts/check-ci-coverage.ts
 
 - `bash scripts/check.sh` 是必须通过的检查入口，使用 `set -euo pipefail`。依次运行 `claude plugin validate .`、`claude plugin test .`（mods kit 测试）及 `node scripts/check.ts all`：所有 `tests/**/*_test.ts`，再执行可移植性、性能上限、全新克隆、语料、图库、连线纠缠、评审结论和配色检查。它不发现 `scripts/tests/` 或文档测试；CI 会单独运行。
 - `npm ci --prefix scripts/e2e` 安装端到端框架的固定版本依赖。`node scripts/e2e/run.ts` 在伪终端中运行真实 Claude Code，连接模拟 Messages API，不需要账号或密钥。
-- `node scripts/render-gallery.ts` 将非拒绝类流程图和时序图样例按 60、80 列及 `nord` 主题生成 SVG，并生成 CJK 与六主题合辑，供视觉评审。它尚未覆盖所有图表类型的黄金样例。
+- `node scripts/render-gallery.ts` 将每种图表类型的所有非拒绝类样例（`fixtures/` 下除 `corpus` 外的每个目录）按 60、80 列及 `nord` 主题生成 SVG，并为每种类型生成 CJK 合辑，另有六主题合辑，供视觉评审。
 - `node scripts/check-ci-coverage.ts` 在验收检查没有对应 CI 步骤时失败。
 
 需要更快的开发反馈时，可选用以下命令：

@@ -48,7 +48,7 @@ node scripts/check-ci-coverage.ts
 
 - `bash scripts/check.sh` is the must-pass suite, under `set -euo pipefail`. It runs `claude plugin validate .`, then `claude plugin test .` (the mods kit tests), then `node scripts/check.ts all`: every `tests/**/*_test.ts`, then the portability, benchmark, fresh-clone, corpus, gallery, tangle, review-verdict and palette checks. It does not discover `scripts/tests/` or docs specs; CI runs those separately.
 - `npm ci --prefix scripts/e2e` installs the end-to-end harness's pinned packages. `node scripts/e2e/run.ts` runs the harness: real Claude Code, in a pseudo-terminal, against a mock Messages API, with no account or secret.
-- `node scripts/render-gallery.ts` renders non-reject flowchart and sequence fixtures at 60 and 80 columns under `nord`, plus CJK and six-theme sheets, as SVG for visual review. It does not yet include every diagram type's goldens.
+- `node scripts/render-gallery.ts` renders every non-reject fixture of every diagram type (each `fixtures/` folder except `corpus`) at 60 and 80 columns under `nord`, plus a CJK sheet per type and a six-theme sheet, as SVG for visual review.
 - `node scripts/check-ci-coverage.ts` fails if an acceptance check has no CI step.
 
 For a faster loop:
