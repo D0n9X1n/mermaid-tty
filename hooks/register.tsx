@@ -24,9 +24,10 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // CommandRunInput types args as a string, yet a run that leaves it out arrives undefined.
+  // CommandRunInput types args as a string, yet $.command.run passes any value as given
+  // (undefined when left out); parseModeArgs coerces none of them.
   on('command.run', { command: 'mermaid-tty' }, async ($, e) => {
-    const a = parseModeArgs(String(e.args ?? '')), cur = await mode($)
+    const a = parseModeArgs(e.args), cur = await mode($)
     if ('error' in a) return { text: a.error }
     if ('report' in a) return { text: modeReply(cur, false) }
     await $.state.set(SOURCE, a.set === 'source'); $.ui.invalidate('ui.render')
