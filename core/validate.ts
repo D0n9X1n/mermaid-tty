@@ -15,6 +15,7 @@ export type Expect = {
   members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
   keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
+  order?: readonly { ids: readonly string[]; column: boolean }[]                         // C: owners drawn in this row order
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
@@ -32,12 +33,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and keys. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows, keys and order. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all) ?? order(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -457,4 +458,19 @@ function keys(d: Drawing, all: readonly Spot[]): Fail | null {
   const has = (a: { item: string; cls: string }) => listed.some(k => k.item === a.item && k.cls === a.cls)
   const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && has(a) !== has(b)))
   return partial ? fail('key-partial') : null
+}
+
+// C: each order list's owners are each drawn on exactly one cell, in strictly increasing rows, and all in one column when
+// column is set, so marks that only their position links (a gitGraph's commits on adjacent rows of a lane) cannot swap.
+function order(d: Drawing, all: readonly Spot[]): Fail | null {
+  if (!d.expect.order) return null
+  const cells = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) cells.set(o, [...(cells.get(o) ?? []), p])
+  for (const { ids, column } of d.expect.order) {
+    const ps = ids.map(id => cells.get(id) ?? [])
+    if (ps.some(x => x.length !== 1)) return fail('order-broken')
+    const at = ps.map(x => x[0]!)
+    if (at.some((p, i) => i > 0 && (p.r <= at[i - 1]!.r || (column && p.c !== at[0]!.c)))) return fail('order-broken')
+  }
+  return null
 }
