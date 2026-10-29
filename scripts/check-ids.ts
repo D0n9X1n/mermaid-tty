@@ -15,4 +15,4 @@ function main(): number {
 }
 
 // main() runs only when node runs this file, not when another module imports it.
-if (isMain(import.meta.url)) process.exitCode = main()
+if (isMain(import.meta)) process.exitCode = main()

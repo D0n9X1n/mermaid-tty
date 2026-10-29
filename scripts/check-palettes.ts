@@ -76,4 +76,4 @@ function main(): number {
 }
 
 // main() runs only when node is given this file, not when a test imports paletteProblems.
-if (isMain(import.meta.url)) process.exitCode = main()
+if (isMain(import.meta)) process.exitCode = main()

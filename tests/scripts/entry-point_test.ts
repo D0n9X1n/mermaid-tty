@@ -1,13 +1,14 @@
-import test, { type TestContext } from 'node:test'
+import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { isMain, sameName, samePath } from '../../scripts/lib/is-main.ts'
+import { isMain } from '../../scripts/lib/is-main.ts'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
+const IS_MAIN = new URL('../../scripts/lib/is-main.ts', import.meta.url).href
 
 // The .ts files under dir, a '/'-separated path from the repo root, in every
 // subdirectory except node_modules.
@@ -19,12 +20,13 @@ function tsFiles(dir: string): string[] {
   })
 }
 
-// import.meta.main arrived in Node 24.2, but package.json allows 24.0: there a script guarded
-// by it skips its body and exits 0, so a check passes without running. Scripts use lib/is-main.ts.
-test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.meta.main', () => {
+// import.meta.main arrived in Node 24.2, but package.json allows 24.0, where it is undefined: a
+// script guarded by it skips its body and exits 0, so a check passes without running. Only
+// lib/is-main.ts reads it, and without it falls back to Node's own rule for the main entry.
+test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.meta.main, except lib/is-main.ts', () => {
   const files = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d))
-  for (const f of ['scripts/check-palettes.ts', 'core/themes.ts', 'hooks/fences.ts']) assert.ok(files.includes(f), `${f} was not scanned`)
-  const uses = files.flatMap(f => readFileSync(join(ROOT, f), 'utf8').split(/\r?\n/)
+  for (const f of ['scripts/check-palettes.ts', 'scripts/lib/is-main.ts', 'core/themes.ts', 'hooks/fences.ts']) assert.ok(files.includes(f), `${f} was not scanned`)
+  const uses = files.filter(f => f !== 'scripts/lib/is-main.ts').flatMap(f => readFileSync(join(ROOT, f), 'utf8').split(/\r?\n/)
     .flatMap((line, i) => (line.includes('import.meta.main') ? [`${f}:${i + 1}: ${line.trim()}`] : [])))
   assert.deepEqual(uses, [])
 })
@@ -32,87 +34,120 @@ test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.me
 // One shared guard, not a copy per script: the copies compared the paths exactly, so on a Windows
 // UNC path, whose host realpath keeps in its case and the module URL lowercases, each one skipped
 // main() and exited 0 without checking anything.
-test('A8.portability: every script with a main() guards it with isMain from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
+test('A8.portability: every script with a main() guards it with isMain(import.meta) from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
   const mains = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d)).filter(f => /\bfunction main\(/.test(readFileSync(join(ROOT, f), 'utf8')))
   for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) assert.ok(mains.includes(f), `${f} was not scanned`)
   const bad = mains.flatMap(f => {
     const text = readFileSync(join(ROOT, f), 'utf8')
-    return [...(text.includes('if (isMain(import.meta.url)) process.exitCode = main()') ? [] : [`${f}: no isMain(import.meta.url) guard`]),
+    return [...(text.includes('if (isMain(import.meta)) process.exitCode = main()') ? [] : [`${f}: no isMain(import.meta) guard`]),
       ...(/process\.argv\[1\]|realpathSync/.test(text) ? [`${f}: an inline argv[1] or realpath guard`] : [])]
   })
   assert.deepEqual(bad, [])
 })
-test('A8.portability: on Windows, samePath ignores the case of a UNC host', () =>
-  assert.equal(samePath('\\\\SERVER\\share\\x.ts', '\\\\server\\share\\x.ts', 'win32'), true))
-test('A8.portability: on Windows, samePath ignores the case of a drive letter, and still tells two paths apart', () => {
-  assert.equal(samePath('C:\\a\\x.ts', 'c:\\a\\x.ts', 'win32'), true)
-  assert.equal(samePath('C:\\a\\x.ts', 'C:\\b\\x.ts', 'win32'), false)
-})
-// A Windows directory can be case-sensitive (WSL interop) and hold both Main.ts and main.ts:
-// lowercasing the whole path made them one file, so importing one could run the other's main().
-test('A8.portability: on Windows, samePath tells apart two files whose names differ only in case', () =>
-  assert.equal(samePath('C:\\repo\\Main.ts', 'C:\\repo\\main.ts', 'win32'), false))
-test('A8.portability: on Windows, samePath ignores the case of a UNC host, but not of the path after it', () =>
-  assert.equal(samePath('\\\\SERVER\\share\\Main.ts', '\\\\server\\share\\main.ts', 'win32'), false))
-test('A8.portability: elsewhere, samePath compares exactly, case included', () => {
-  for (const platform of ['linux', 'darwin']) {
-    assert.equal(samePath('/A/x.ts', '/a/x.ts', platform), false, platform); assert.equal(samePath('/a/x.ts', '/a/x.ts', platform), true, platform)
-  }
-})
-test('A8.portability: on Windows, sameName ignores the case of a file name; elsewhere it compares exactly', () => {
-  assert.equal(sameName('C:\\repo\\Main.ts', 'D:\\other\\main.ts', 'win32'), true)
-  assert.equal(sameName('C:\\repo\\main.ts', 'C:\\repo\\other.ts', 'win32'), false)
-  for (const platform of ['linux', 'darwin']) {
-    assert.equal(sameName('/repo/Main.ts', '/other/main.ts', platform), false, platform); assert.equal(sameName('/repo/main.ts', '/other/main.ts', platform), true, platform)
-  }
-})
 
-// isMain(import.meta.url) in the module at file, as if node had been given argv1 to run.
-function isMainGiven(argv1: string, file: string): boolean {
-  const argv = process.argv
-  process.argv = [process.execPath, argv1]
-  try { return isMain(pathToFileURL(file).href) } finally { process.argv = argv }
+// A module that prints one JSON line: its URL, Node's answer to whether it is the main module,
+// and isMain's fallback, the answer isMain gives on Node 24.0 and 24.1, which lack
+// import.meta.main. It imports the modules at imports first, so their lines come before its own.
+function probe(...imports: string[]): string {
+  return [...imports.map(f => `import ${JSON.stringify(pathToFileURL(f).href)}`), `import { isMain } from ${JSON.stringify(IS_MAIN)}`,
+    'console.log(JSON.stringify({ url: import.meta.url, native: import.meta.main, fallback: isMain({ url: import.meta.url }) }))', ''].join('\n')
 }
 
-// An empty main.ts in a new temp dir, which the test's end removes with any links made in it.
-function moduleFile(t: TestContext): string {
-  const dir = mkdtempSync(join(tmpdir(), 'mermaid-tty-main-')), file = join(dir, 'main.ts')
-  t.after(() => rmSync(dir, { recursive: true, force: true }))
-  writeFileSync(file, '')
-  return file
+// One run of node on entry from cwd, and import.meta.main in each module it loads, in the
+// order they print.
+type Run = { cwd: string; entry: string; native: boolean[] }
+
+// The OS refused to create a link: Windows needs admin rights or Developer Mode for a symlink to
+// a file, and some filesystems have no hard links.
+class LinkRefused extends Error {}
+function makeLink(make: () => void): void {
+  try { make() } catch (e) {
+    const { code, message } = e as { code?: string; message?: string }
+    if (code === 'EPERM' || code === 'EACCES') throw new LinkRefused(`the OS refused to create a link: ${message}`)
+    throw e
+  }
 }
 
-// isMain compares files, not paths: a case-sensitive directory holds main.ts and Main.ts as two
-// files, while a hard link or a symlink reaches the same one. A temp dir that ignores case, as
-// macOS's and Windows's do by default, cannot hold both names.
-test('A8.portability: isMain tells apart two files whose names differ only in case', t => {
-  const lower = moduleFile(t), upper = join(dirname(lower), 'Main.ts')
-  if (existsSync(upper)) { t.skip(`${dirname(lower)} ignores case, so main.ts and Main.ts would be one file`); return }
-  writeFileSync(upper, '')
-  assert.equal(isMainGiven(lower, lower), true)
-  assert.equal(isMainGiven(upper, lower), false)
+// Each layout builds its modules in dir, a real path, and returns the runs to make.
+const LAYOUTS: { name: string; build: (dir: string) => Run[] }[] = [
+  { name: '(a) a direct run, and an import from a module run directly', build: dir => {
+    const file = join(dir, 'probe.mjs'), importer = join(dir, 'importer.mjs')
+    writeFileSync(file, probe()); writeFileSync(importer, probe(file))
+    return [{ cwd: dir, entry: file, native: [true] }, { cwd: dir, entry: importer, native: [false, true] }]
+  } },
+  { name: '(b) a run through a symlink, and an import through it', build: dir => {
+    const file = join(dir, 'probe.mjs'), symlink = join(dir, 'link.mjs'), importer = join(dir, 'importer.mjs')
+    writeFileSync(file, probe()); makeLink(() => symlinkSync(file, symlink)); writeFileSync(importer, probe(symlink))
+    return [{ cwd: dir, entry: symlink, native: [true] }, { cwd: dir, entry: importer, native: [false, true] }]
+  } },
+  // Two hard links are one file, but Node loads them as two modules, by URL: only the entry is main.
+  { name: '(c) a run of either of two same-named hard links in different directories, each importing the other', build: dir => {
+    const a = join(dir, 'a', 'probe.mjs'), b = join(dir, 'b', 'probe.mjs')
+    mkdirSync(join(dir, 'a')); mkdirSync(join(dir, 'b'))
+    writeFileSync(a, probe(a, b)); makeLink(() => linkSync(a, b))
+    return [{ cwd: dir, entry: a, native: [false, true] }, { cwd: dir, entry: b, native: [false, true] }]
+  } },
+  { name: '(d) a run by a relative path from another cwd, and an import from a module run that way', build: dir => {
+    const real = join(dir, 'real'), cwd = join(dir, 'elsewhere'), file = join(real, 'probe.mjs'), importer = join(real, 'importer.mjs')
+    mkdirSync(real); mkdirSync(cwd)
+    writeFileSync(file, probe()); writeFileSync(importer, probe(file))
+    return [{ cwd, entry: relative(cwd, file), native: [true] }, { cwd, entry: relative(cwd, importer), native: [false, true] }]
+  } },
+  { name: '(e) a run through a symlinked parent directory, and an import through it', build: dir => {
+    const real = join(dir, 'real'), alias = join(dir, 'alias')
+    mkdirSync(real); makeLink(() => symlinkSync(real, alias, 'junction'))
+    writeFileSync(join(real, 'probe.mjs'), probe()); writeFileSync(join(real, 'importer.mjs'), probe(join(alias, 'probe.mjs')))
+    return [{ cwd: dir, entry: join(alias, 'probe.mjs'), native: [true] }, { cwd: dir, entry: join(alias, 'importer.mjs'), native: [false, true] }]
+  } },
+]
+
+// On Node 24.0 and 24.1 isMain falls back to Node's own rule for the main entry, so wherever a
+// module lies, the fallback must give Node's answer: here, from 24.2, import.meta.main. On those
+// two, which lack it, there is no answer to compare with, so only these tests skip.
+const NO_NATIVE = typeof import.meta.main !== 'boolean' && 'native import.meta.main unavailable (Node < 24.2): agreement not checkable'
+for (const { name, build } of LAYOUTS) {
+  test(`A8.portability: isMain's fallback agrees with import.meta.main in every module of ${name}`, { skip: NO_NATIVE }, t => {
+    // A real path: macOS's temp dir lies under the /var symlink, which would make every layout (e).
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'mermaid-tty-main-')))
+    t.after(() => rmSync(dir, { recursive: true, force: true }))
+    let runs: Run[]
+    try { runs = build(dir) } catch (e) {
+      if (!(e instanceof LinkRefused)) throw e
+      t.skip(e.message); return
+    }
+    for (const { cwd, entry, native } of runs) {
+      const r = spawnSync(process.execPath, [entry], { cwd, encoding: 'utf8' })
+      assert.equal(r.status, 0, `node ${entry}: ${r.stderr}`)
+      const modules = r.stdout.split(/\r?\n/).filter(Boolean).map(l => JSON.parse(l) as { url: string; native?: boolean; fallback: boolean })
+      assert.deepEqual(modules.map(m => m.native), native, `node ${entry}: import.meta.main in each module`)
+      for (const m of modules) assert.equal(m.fallback, m.native, `node ${entry}: isMain's fallback in ${relative(dir, fileURLToPath(m.url))}`)
+    }
+  })
+}
+
+// isMain(meta) in a process that node started with argv after its own path.
+function isMainWith(argv: string[], meta: { url: string; main?: boolean }): boolean {
+  const saved = process.argv
+  process.argv = [process.execPath, ...argv]
+  try { return isMain(meta) } finally { process.argv = saved }
+}
+
+// node -e, -p, stdin and the REPL leave argv[1] unset, unless given more arguments. A fallback
+// that resolved a missing argv[1] would get the cwd, and take a module there for the main one.
+test('A8.portability: isMain is false when argv[1] is absent', () =>
+  assert.equal(isMainWith([], { url: pathToFileURL(realpathSync(process.cwd())).href }), false))
+
+// From Node 24.2, import.meta.main is a boolean: Node's own answer, whatever argv[1] names.
+test('A8.portability: isMain returns a boolean import.meta.main as it is, whatever argv[1] names', () => {
+  const self = fileURLToPath(import.meta.url), other = new URL('no-such-module.ts', import.meta.url).href
+  assert.equal(isMainWith([self], { url: import.meta.url }), true); assert.equal(isMainWith([self], { url: import.meta.url, main: false }), false)
+  assert.equal(isMainWith([self], { url: other }), false); assert.equal(isMainWith([self], { url: other, main: true }), true)
 })
-test('A8.portability: isMain takes a hard link of the same name for the module itself', t => {
-  const file = moduleFile(t), link = join(dirname(file), 'linked', 'main.ts')
-  mkdirSync(dirname(link)); linkSync(file, link)
-  assert.equal(isMainGiven(link, file), true)
-})
-// Without admin rights or Developer Mode, Windows refuses to create a symlink to a file.
-test('A8.portability: isMain takes a symlink to the module for the module itself, whatever its name', t => {
-  const file = moduleFile(t), link = join(dirname(file), 'link.ts')
-  try { symlinkSync(file, link) } catch (e) {
-    const code = (e as { code?: string }).code
-    if (code !== 'EPERM' && code !== 'EACCES') throw e
-    t.skip(`cannot create a symlink here (${code}); on Windows that needs admin rights or Developer Mode`); return
-  }
-  assert.equal(isMainGiven(link, file), true)
-})
-// A file ID can repeat: ReFS's 64-bit one is not unique. So isMain also asks that both real paths
-// end in the same name, and a file that shares the module's ID under another name is not it.
-test('A8.portability: isMain does not take a hard link of another name for the module, as file IDs can repeat', t => {
-  const file = moduleFile(t), link = join(dirname(file), 'other.ts')
-  linkSync(file, link)
-  assert.equal(isMainGiven(link, file), false)
+
+// node -e code arg leaves argv[1] naming no file, so its realpath throws.
+test('A8.portability: when argv[1] names no file, isMain compares the URL of the path as given, and does not throw', () => {
+  assert.equal(isMainWith(['no-such-file.ts'], { url: import.meta.url }), false)
+  assert.equal(isMainWith(['no-such-file.ts'], { url: pathToFileURL(resolve('no-such-file.ts')).href }), true)
 })
 
 // Node gives the main module its real path, but argv[1] keeps the path node was given,

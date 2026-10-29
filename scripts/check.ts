@@ -134,4 +134,4 @@ function main(): number {
 }
 
 // main() runs only when node runs this file, not when a test imports CHECKS or run.
-if (isMain(import.meta.url)) process.exitCode = main()
+if (isMain(import.meta)) process.exitCode = main()
