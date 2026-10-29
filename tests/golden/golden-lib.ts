@@ -24,6 +24,21 @@ export function goldenOf(runs: readonly (readonly [number, Drawing])[]): string 
 // The widest right-trimmed row, in terminal columns.
 export const widest = (d: Drawing): number => Math.max(0, ...rows(d, glyph).map(r => width(r)))
 
+// A string's code points, as 'U+XXXX' separated by spaces.
+const hex = (s: string): string => [...s].map(ch => 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ')
+
+// 'row r col c U+XXXX' for each drawn cell (any kind but text and cont) whose ch is not an allow-listed glyph of width 1 or
+// more, or holds a zero-width code point. A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in the
+// source text before it, so this checks the drawing itself.
+export function drawnGlyphs(d: Drawing): string[] {
+  const out: string[] = []
+  d.cells.forEach((row, r) => row.forEach((cell, c) => {
+    if (!cell || cell.kind === 'text' || cell.kind === 'cont') return
+    if (!GLYPHS.has(cell.ch) || width(cell.ch) < 1 || [...cell.ch].some(ch => width(ch) === 0)) out.push(`row ${r} col ${c} ${hex(cell.ch)}`)
+  }))
+  return out
+}
+
 // 'file:line ch' for each drawn (lowercase) or series (digit) cell in dir's *.golden files, at any depth, whose glyph is not
 // allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase) is not checked.
 export function goldenGlyphs(dir: string): string[] {
@@ -46,15 +61,16 @@ export function goldenGlyphs(dir: string): string[] {
 const drawn = (code: string | undefined): boolean => code !== undefined && /[a-z0-9]/.test(code)
 const sourceText = (code: string | undefined): boolean => code !== undefined && /[A-Z]/.test(code)
 
-// Pairs a text row with its role row by column: a character takes width(ch) columns. A zero-width code point is either a
-// cell of its own, on the next column, or part of the cell before it, and a golden cannot tell which; so it is flagged
-// unless both readings are safe: its own column is not drawn, and the cell it would join is source text. It never inherits
-// a text exemption from a drawn cell beside it. No allow-listed glyph is zero-width, so a drawn one never passes.
+// Pairs a text row with its role row by column: a character takes width(ch) columns, and a zero-width code point joins the
+// cell before it, as canvas.text() joins it. So it is part of source text when that cell is source text, and is flagged
+// otherwise: on a drawn cell, since no allow-listed glyph holds one, and on an empty cell or at a row's start, where no cell
+// can take it. A drawn cell whose whole ch is zero-width reads the same in a golden as a mark in the source text before it;
+// drawnGlyphs catches that one on the drawing.
 function scan(text: string, roles: string, where: string, out: string[]): void {
   let col = 0, lead = -1                        // lead: the column of the last character that took a column
   for (const ch of text) {
     const w = width(ch)
-    const bad = w > 0 ? drawn(roles[col]) && !GLYPHS.has(ch) : drawn(roles[col]) || !sourceText(roles[lead])
+    const bad = w > 0 ? drawn(roles[col]) && !GLYPHS.has(ch) : !sourceText(roles[lead])
     if (bad) out.push(`${where} ${ch}`)
     if (w > 0) lead = col
     col += w

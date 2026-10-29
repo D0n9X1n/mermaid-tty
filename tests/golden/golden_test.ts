@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
-import { join } from 'node:path'; import { explain } from '../../core/render.ts'; import { goldenOf, goldenGlyphs, widest } from './golden-lib.ts'
+import { join } from 'node:path'; import { explain } from '../../core/render.ts'; import { drawnGlyphs, goldenOf, goldenGlyphs, widest } from './golden-lib.ts'
 const W = [60, 80, 120], EDGE = new Set(['flowchart-reject-04', 'sequence-reject-04']), X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
 const LADDER: Record<string, string> = { 'flowchart-ok-41': 'natural', 'flowchart-ok-42': 'tight', 'flowchart-ok-43': 'wrap', 'flowchart-ok-44': 'lrToTd',
   'sequence-ok-27': 'natural', 'sequence-ok-28': 'tight', 'sequence-ok-29': 'wrap' }
@@ -25,6 +25,12 @@ test('A3: shape fixtures draw each one-line label in exactly one row', () => {
     for (const { owner } of d.expect.labels) assert.equal(d.cells.filter((row: any[]) => row.some(c => c?.kind === 'text' && c.owners.includes(owner))).length, 1, `${id} ${owner}`) }
 })
 test('A8.platforms: every drawn glyph in every golden is allow-listed', () => assert.deepEqual(goldenGlyphs('goldens'), []))
+// A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in the source text before it, so each drawn
+// cell is checked on the drawing too. A fixture that falls back has no drawing; A1 and A2 report it.
+const OK = ['flowchart', 'sequence'].flatMap(t => (existsSync(`fixtures/${t}`) ? readdirSync(`fixtures/${t}`) : []).map(f => f.replace(/\.mmd$/, '')))
+  .filter(id => !id.includes('-reject-')).sort()
+test('A8.platforms: every drawn cell of every ok fixture holds one allow-listed glyph', () => assert.deepEqual(
+  OK.flatMap(id => W.flatMap(w => { const r = X(src(id), w); return 'reason' in r ? [] : drawnGlyphs(r.drawing).map(s => `${id}@${w} ${s}`) })), []))
 test('A1: weight glyphs in flowchart-ok-50…52', () => {
   for (const [id, re] of [['flowchart-ok-50', /[┏┓┗┛]/], ['flowchart-ok-51', /[╂┿]/], ['flowchart-ok-52', /┆/]] as const)
     assert.match(readFileSync(join('goldens', 'flowchart', `${id}.golden`), 'utf8'), re, id)
