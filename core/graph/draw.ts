@@ -33,7 +33,7 @@ function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, 
   for (const [k, line] of rows.entries()) {
     const pieces: Piece[] = wrap(line.text, max) ?? [{ text: line.text, join: '' }]
     for (const [i, piece] of pieces.entries()) {
-      const joined = i === 0 && k > 0 ? { ...piece, join: '\n' } : piece
+      const joined: Piece = i === 0 && k > 0 ? { ...piece, join: '\n' } : piece
       if (textOnly) {
         cv.text(r++, b.col + ((b.cols - width(piece.text)) >> 1), piece.text, line.role, line.owners, joined.join)
       } else row(cv, b, r++, caps, joined, role, line.role, owner, line.owners)
