@@ -86,3 +86,8 @@ test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are s
     '---\ntitle: My day\n---\njourney\nsection Go\nA: 3: Me\naccDescr { one }']) assert.deepEqual(text(X(src, 80).drawing), rows, src)
   assert.deepEqual(text(X('journey\nA: 3: Me\nA: 5: Me', 80).drawing), ['  A ' + bar(48) + ' 3  Me', '  A ' + bar(80) + ' 5  Me'])
 })
+// T65 QA: the bar rounds half up at its boundary: 16 × 1.03125 is 16.5, so 17 eighths, not a truncated 16.
+test('A4: a score on a half-eighth boundary rounds half up: 1.03125 draws 17 eighths', () => {
+  const d = X('journey\nsection S\nA: 1.03125: Me', 80).drawing
+  assert.deepEqual(d.expect.bars, [{ owner: 't0', eighths: 17, axis: 'h' }])
+})
