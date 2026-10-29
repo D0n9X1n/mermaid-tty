@@ -9,7 +9,9 @@ type Context = { test: Function; assert: object }
 const als = new AsyncLocalStorage<Store>()
 // The store of the test whose function is running, if any. Accepted, fail-closed: an EventEmitterAsyncResource runs its
 // listeners in the async context it was made in, so a node:assert call in a listener of one made outside the test counts
-// for no test, and the test must also assert in its own flow. t.assert counts for its own test wherever it is called.
+// for no test, and the test must also assert in its own flow. Likewise, a plain EventEmitter runs its listeners in the
+// emitter's caller's context, so under { concurrency } a listener's node:assert counts for the test that emitted. Both
+// can only fail a test that asserts, never pass one that does not. t.assert counts for its own test wherever it is called.
 export const running = () => als.getStore()
 
 // Adds one to store and to each of its ancestors'.
