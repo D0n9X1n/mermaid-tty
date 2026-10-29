@@ -12,9 +12,29 @@ import { explain } from '../../core/render.ts'
 const R = (dir: 'TB' | 'LR', e: string[]) => routeGraph(layoutGraph(g(dir, e), {
   rankGap: 3, nodeGap: 4, wrapAt: null,
 }) as Placed) as Route[]
-const linked = (r: Route) => r.cells.every((c, i) => !i ||
-  Math.abs(c.r - r.cells[i - 1]!.r) + Math.abs(c.c - r.cells[i - 1]!.c) === 1)
+const linked = (r: Route, p?: Placed) => r.cells.every((c, i) => {
+  if (!i) return true
+  const a = r.cells[i - 1]!, distance = Math.abs(c.r - a.r) + Math.abs(c.c - a.c)
+  if (distance === 1) return true
+  const b = p?.boxes.get(`${r.edge}:label`)
+  if (!b || c.c !== a.c && c.r !== a.r) return false
+  const dr = Math.sign(c.r - a.r), dc = Math.sign(c.c - a.c)
+  for (let k = 1; k < distance; k++) {
+    const row = a.r + dr * k, col = a.c + dc * k
+    if (row < b.row || row >= b.row + b.rows || col < b.col || col >= b.col + b.cols) return false
+  }
+  return true
+})
 const at = (r: Route) => new Set(r.cells.map(c => `${c.r},${c.c}`))
+
+test('A1: Q1 outside lanes are deterministic when routing the same placement twice', () => {
+  const p = layoutGraph(g('TB', ['A>B', 'B>C', 'C>A']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const first = routeGraph(p)
+  assert.ok(Array.isArray(first))
+  const extent = [p.rows, p.cols]
+  assert.deepEqual(routeGraph(p), first)
+  assert.deepEqual([p.rows, p.cols], extent)
+})
 
 test('A1: shared end groups never hide arrow-on-bend conflicts', () => {
   const graph = g('TB', ['A>E', 'A>E'])
@@ -100,7 +120,7 @@ test('A1: labelled forks, horizontal cycles, mixed styles and self-loops render'
     assert.equal(validate(drawGraph(p, rs, 80)), null, `${dir} ${specs}`)
     assert.equal(validate(drawGraph(p, rs, 120)), null, `${dir} ${specs}`)
     assert.deepEqual([...p.boxes], before)
-    for (const r of rs) { assert.ok(linked(r)); assert.equal(at(r).size, r.cells.length) }
+    for (const r of rs) { assert.ok(linked(r, p)); assert.equal(at(r).size, r.cells.length) }
   }
 })
 
@@ -225,7 +245,7 @@ test('A1: a long edge visits each of its dummies exactly once', () => {
   assert.ok(linked(r))
 })
 
-test('A1: labelled edges pass beside their label without entering it', () => {
+test('A1: labelled edges join through their label without overwriting its text', () => {
   for (const dir of ['TB', 'LR', 'BT', 'RL'] as const) {
     const p = layoutGraph(g(dir, ['A>B|yes', 'A>C', 'C>D']), {
       rankGap: 4, nodeGap: 4, wrapAt: null,
@@ -236,8 +256,10 @@ test('A1: labelled edges pass beside their label without entering it', () => {
     const distance = (c: { r: number; c: number }) => Math.max(
       b.row - c.r, c.r - b.row - b.rows + 1, b.col - c.c, c.c - b.col - b.cols + 1, 0)
     assert.ok(r.cells.some(c => distance(c) === 1))
-    assert.ok(r.cells.every(c => distance(c) > 0))
-    assert.ok(linked(r))
+    const d = drawGraph(p, rs, 120)
+    assert.ok(r.cells.every(c => !['text', 'cont'].includes(d.cells[c.r]![c.c]!.kind)))
+    assert.ok(linked(r, p))
+    assert.equal(validate(d), null)
   }
 })
 
@@ -248,12 +270,12 @@ test('A1: a back-edge head points at its real target after a straight in-stem', 
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
   const r = rs.find(r => r.edge === 'e3')!, a = p.boxes.get('A')!, h = r.ends[0]!
-  assert.equal(h.ch, '▲')
-  assert.equal(h.r, a.row + a.rows)
-  assert.ok(h.c >= a.col && h.c < a.col + a.cols)
+  assert.equal(h.ch, '◄')
+  assert.equal(h.c, a.col + a.cols)
+  assert.ok(h.r >= a.row && h.r < a.row + a.rows)
   assert.ok(linked(r))
-  const stem = r.cells.find(c => c.r === h.r + 1 && c.c === h.c)
-  assert.equal(stem?.dirs, 5)
+  const stem = r.cells.find(c => c.r === h.r && c.c === h.c + 1)
+  assert.equal(stem?.dirs, 10)
   assert.equal(r.ends.length, 1)
 })
 

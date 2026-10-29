@@ -27,13 +27,16 @@ const WEIGHT = { solid: 'light', thick: 'heavy', dotted: 'dotted' } as const
 // A box's lines, each wrapped at the box's content width: the layout sized the box to its widest piece wrapped at wrapAt,
 // and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'.
 type Line = { text: string; role: Role; owners: readonly string[] }
-function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, owner: string, rows: readonly Line[]): void {
+function lines(cv: Canvas, b: Box, caps: readonly [string, string], role: Role, owner: string, rows: readonly Line[], textOnly = false): void {
   const max = b.cols - width(caps[0]) - width(caps[1]) - 2
   let r = b.row
   for (const [k, line] of rows.entries()) {
     const pieces: Piece[] = wrap(line.text, max) ?? [{ text: line.text, join: '' }]
     for (const [i, piece] of pieces.entries()) {
-      row(cv, b, r++, caps, i === 0 && k > 0 ? { ...piece, join: '\n' } : piece, role, line.role, owner, line.owners)
+      const joined = i === 0 && k > 0 ? { ...piece, join: '\n' } : piece
+      if (textOnly) {
+        cv.text(r++, b.col + ((b.cols - width(piece.text)) >> 1), piece.text, line.role, line.owners, joined.join)
+      } else row(cv, b, r++, caps, joined, role, line.role, owner, line.owners)
     }
   }
 }
@@ -79,7 +82,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number):
     const owner = `${e.id}:label`, b = at(p.boxes.get(owner)), text = labelLines(e.label)
     labels.push({ owner, text: text.join('\n') })
     edgeLabels.push({ owner, edge: e.id })
-    if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })))
+    if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
   return cv.toDrawing({ labels, edges, edgeLabels })
 }

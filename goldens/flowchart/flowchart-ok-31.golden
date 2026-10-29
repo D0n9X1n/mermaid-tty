@@ -1,60 +1,60 @@
 @60
 [ A ]
-  └──┐
-     │
-     │
- yes │
-  ┌──┘
+  │
+  │
+  │
+ yes
+  │
   │
   ▼
 [ B ]
 @60 roles
 nnNnn
-  eeee
-     e
-     e
-lLLLle
-  eeee
+  e
+  e
+  e
+ LLL
+  e
   e
   a
 nnNnn
 @80
 [ A ]
-  └──┐
-     │
-     │
- yes │
-  ┌──┘
+  │
+  │
+  │
+ yes
+  │
   │
   ▼
 [ B ]
 @80 roles
 nnNnn
-  eeee
-     e
-     e
-lLLLle
-  eeee
+  e
+  e
+  e
+ LLL
+  e
   e
   a
 nnNnn
 @120
 [ A ]
-  └──┐
-     │
-     │
- yes │
-  ┌──┘
+  │
+  │
+  │
+ yes
+  │
   │
   ▼
 [ B ]
 @120 roles
 nnNnn
-  eeee
-     e
-     e
-lLLLle
-  eeee
+  e
+  e
+  e
+ LLL
+  e
   e
   a
 nnNnn

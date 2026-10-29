@@ -28,10 +28,14 @@ const across = (g: Graph): boolean => g.dir === 'LR' || g.dir === 'RL'
 
 // One attempt: layout, route and draw at the given columns, passing any Fail through.
 function attempt(g: Graph, s: Spacing, columns: number): Drawing | Fail {
-  const placed = layoutGraph(g, s)
-  if (isFail(placed)) return placed
-  const routes = routeGraph(placed)
-  return isFail(routes) ? routes : drawGraph(placed, routes, columns)
+  for (const extra of [0, 2, 4]) {
+    const placed = layoutGraph(g, { ...s, rankGap: s.rankGap + extra, nodeGap: s.nodeGap + extra })
+    if (isFail(placed)) return placed
+    const routes = routeGraph(placed)
+    if (!isFail(routes)) return drawGraph(placed, routes, columns)
+    if (routes.reason !== 'route-conflict' || extra === 4) return routes
+  }
+  return fail('route-conflict')
 }
 
 // One attempt per wrapAt, in order: the first drawing validate accepts, else the last attempt.

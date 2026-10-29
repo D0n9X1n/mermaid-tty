@@ -10,7 +10,8 @@ function random(seed: number) {
   return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n }
 }
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
-const ceilings = { dag: 5.8, mixed: 10.0, clusters: 17.4, loops: 14.6 }
+const ceilings = { dag: 5.0, mixed: 8.2, clusters: 10.4, loops: 13.8 }
+const rawCeilings = { dag: 5.8, mixed: 10.0, clusters: 15.4, loops: 14.6 }
 
 function graphFor(kind: typeof classes[number], index: number, next: (n: number) => number) {
   const count = 2 + next(11), names = Array.from({ length: count }, (_, i) => `N${i}`)
@@ -40,14 +41,21 @@ function graphFor(kind: typeof classes[number], index: number, next: (n: number)
 test('A1: seeded router property covers 2000 graphs without invalid drawings', () => {
   const next = random(0x17a10), failures: string[] = [], rates: Record<string, number> = {}
   for (const kind of classes) {
-    let conflicts = 0
+    let conflicts = 0, raw = 0
     for (let i = 0; i < 500; i++) {
       const graph = graphFor(kind, i, next)
-      const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
-      if ('reason' in p) { conflicts++; continue }
-      const rs = routeGraph(p)
+      let p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
+      if ('reason' in p) { conflicts++; raw++; continue }
+      let rs = routeGraph(p)
+      if (!Array.isArray(rs)) raw++
+      for (const extra of [2, 4]) {
+        if (Array.isArray(rs) || rs.reason !== 'route-conflict') break
+        const placed = layoutGraph(graph, { rankGap: 3 + extra, nodeGap: 4 + extra, wrapAt: null })
+        if ('reason' in placed) break
+        p = placed; rs = routeGraph(p)
+      }
       if (!Array.isArray(rs)) { conflicts++; continue }
-      const error = validate(drawGraph(p, rs, 10000))
+      const drawing = drawGraph(p, rs, 10000), error = validate(drawing)
       if (error) failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`)
       for (const r of rs) {
         for (const other of rs.slice(rs.indexOf(r) + 1)) {
@@ -74,8 +82,22 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         }
         const e = p.graph.edges.find(e => e.id === r.edge)!
         assert.equal(r.ends.length, Number(e.tail !== 'none') + Number(e.head !== 'none'))
-        const path = [...(e.tail === 'none' ? [] : [r.ends[0]!]), ...r.cells,
+        const drawnPath = [...(e.tail === 'none' ? [] : [r.ends[0]!]), ...r.cells,
           ...(e.head === 'none' ? [] : [r.ends.at(-1)!])]
+        const label = p.boxes.get(`${e.id}:label`), path: { r: number; c: number }[] = []
+        for (const c of drawnPath) {
+          const previous = path.at(-1)
+          if (label && previous && (previous.c === c.c || previous.r === c.r)) {
+            const distance = Math.abs(c.r - previous.r) + Math.abs(c.c - previous.c)
+            const dr = Math.sign(c.r - previous.r), dc = Math.sign(c.c - previous.c)
+            for (let k = 1; k < distance; k++) {
+              const row = previous.r + dr * k, col = previous.c + dc * k
+              assert.ok(row >= label.row && row < label.row + label.rows && col >= label.col && col < label.col + label.cols)
+              path.push({ r: row, c: col })
+            }
+          }
+          path.push(c)
+        }
         const context = `${kind}/${i}/${e.id}`
         assert.equal(new Set(path.map(c => `${c.r},${c.c}`)).size, path.length, context)
         assert.ok(path.every((c, i) => i === 0 || Math.abs(c.r - path[i - 1]!.r) + Math.abs(c.c - path[i - 1]!.c) === 1), context)
@@ -85,21 +107,24 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         assert.equal(distance(path[0]!, a), 1, context)
         assert.equal(distance(path.at(-1)!, b), 1, context)
         let previous = -1
-        const dummies = [...p.boxes].filter(([id]) => id.startsWith(`${e.id}#`))
+        const dummies = [...p.boxes].filter(([id]) => !e.reversed && id.startsWith(`${e.id}#`))
           .sort((a, b) => Number(a[0].split('#').at(-1)) - Number(b[0].split('#').at(-1)))
         for (const [, b] of dummies) {
           const index = path.findIndex(c => c.r === b.row && c.c === b.col)
           assert.ok(index > previous, context)
           previous = index
         }
-        const label = p.boxes.get(`${e.id}:label`)
-        if (label) assert.ok(path.some(c => distance(c, label) === 1), context)
-        for (const [id, b] of p.boxes) if (!id.startsWith(`${e.id}#`)) assert.ok(path.every(c => distance(c, b) > 0), context)
+        if (label) assert.ok(drawnPath.some(c => distance(c, label) === 1), context)
+        for (const [id, b] of p.boxes) if (!id.startsWith(`${e.id}#`) && id !== `${e.id}:label`) {
+          assert.ok(drawnPath.every(c => distance(c, b) > 0), context)
+        }
+        assert.ok(r.cells.every(c => drawing.cells[c.r]![c.c]!.kind === 'line'), context)
         assert.ok(r.cells.every(c => [3, 5, 6, 9, 10, 12].includes(c.dirs)), context)
       }
     }
     rates[kind] = conflicts / 5
-    console.log(`conflicts ${kind}: ${rates[kind]!.toFixed(1)}%`)
+    console.log(`conflicts ${kind}: raw ${(raw / 5).toFixed(1)}%, retry ${rates[kind]!.toFixed(1)}%`)
+    assert.ok(raw / 5 <= rawCeilings[kind], `${kind} raw conflict rate regressed`)
     assert.ok(rates[kind]! <= ceilings[kind], `${kind} conflict rate regressed`)
   }
   assert.deepEqual(failures.slice(0, 3), [])

@@ -16,6 +16,16 @@ const D = (gr: ReturnType<typeof g>, wrapAt: number | null = null) => {
   return { p, d: drawGraph(p, routeGraph(p) as Route[], 80) }
 }
 
+test('A3: edge labels draw centered text without fill while nodes keep their fill', () => {
+  const p = layoutGraph(g('LR', ['A>B|成功']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
+  const d = drawGraph(p, [], 80), label = p.boxes.get('e0:label')!, a = p.boxes.get('A')!
+  assert.equal(d.cells[label.row]![label.col], null)
+  assert.equal(d.cells[label.row]![label.col + label.cols - 1], null)
+  assert.deepEqual(d.cells[label.row]![label.col + 1]!.owners, ['e0:label', 'e0'])
+  assert.equal(d.cells[label.row]![label.col + 1]!.ch, '成')
+  assert.equal(d.cells[a.row]![a.col + 1]!.kind, 'fill')
+})
+
 test('A3: one row per label line; no border-only rows', () => {
   const { p, d } = D(g('TB', ['A>B'], { A: 'one', B: 'two<br/>lines' }))
   assert.equal(validate(d), null)
@@ -63,7 +73,7 @@ test('expect lists each drawn edge with its original ends and head glyphs; a bac
   assert.deepEqual(d.expect.edges, [
     { id: 'e0', from: 'A', to: 'B', heads: ['▼'] },
     { id: 'e1', from: 'B', to: 'C', heads: ['▼'] },
-    { id: 'e2', from: 'C', to: 'A', heads: ['▲'] },
+    { id: 'e2', from: 'C', to: 'A', heads: ['◄'] },
   ])
 })
 
