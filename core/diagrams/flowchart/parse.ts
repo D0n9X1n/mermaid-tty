@@ -314,14 +314,14 @@ function stroke(line: string, head?: string): { style: GEdge['style']; minlen: n
 const endOf = (mark?: string): End => (mark === 'o' ? 'circle' : mark === 'x' ? 'cross' : mark ? 'arrow' : 'none')
 
 // Adds an edge for each pair of from × to, in source order. As Mermaid gives ids, the link's
-// id@ names the edge from the last of from to the first of to unless an edge has it already;
-// any other edge is L_<from>_<to>_<n>, n 0 for the pair's first edge, then its count so far plus 1.
+// id@ names the edge from the last of from to the first of to; any other edge is L_<from>_<to>_<n>,
+// n 0 for the pair's first edge, then its count so far plus 1. An id@ is never renamed: where Mermaid
+// renames one that an edge already has, parseFlowchart fails it as id-collision.
 function connect(st: State, from: string[], to: string[], l: Link): void {
   for (const f of from) {
     for (const t of to) {
       const pair = st.edges.filter(e => e.from === f && e.to === t).length
-      const id = l.id !== undefined && f === from.at(-1) && t === to[0] && !st.edges.some(e => e.id === l.id)
-        ? l.id : `L_${f}_${t}_${pair === 0 ? 0 : pair + 1}`
+      const id = l.id !== undefined && f === from.at(-1) && t === to[0] ? l.id : `L_${f}_${t}_${pair === 0 ? 0 : pair + 1}`
       st.edges.push({ id, from: f, to: t, style: l.style, tail: l.tail, head: l.head, label: l.label, minlen: l.minlen, order: st.edges.length })
     }
   }

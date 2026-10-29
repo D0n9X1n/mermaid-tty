@@ -82,9 +82,13 @@ test('A1: a default edge id is L_<from>_<to>_<n>, n as Mermaid counts it: 0 for 
   assert.deepEqual(E('A --> B\nA --> B\nA --> B\nB --> A').map((e: any) => e.id), ['L_A_B_0', 'L_A_B_2', 'L_A_B_3', 'L_B_A_0'])
 })
 
-test('A1: id@ names the edge from the last node before the link to the first after it, unless an edge already has that id', () => {
+test('A1: id@ names the edge from the last node before the link to the first after it; of a & group, that edge alone, so one id is no reuse', () => {
   assert.deepEqual(E('A & B e1@--> C & D').map((e: any) => e.id), ['L_A_C_0', 'L_A_D_0', 'e1', 'L_B_D_0'])
-  assert.deepEqual(E('A e1@--> B\nC e1@--> D\nE e2@-- t --> F').map((e: any) => e.id), ['e1', 'L_C_D_0', 'e2'])
+  assert.deepEqual(E('A e1@--> B\nE e2@-- t --> F').map((e: any) => e.id), ['e1', 'e2'])
+})
+test('A5.errors: an explicit edge id already taken fails id-collision, never renamed: reused, an earlier default id, two edges of one group', () => {
+  const bad = ['A e1@--> B\nC e1@--> D', 'A --> B\nC L_A_B_0@--> D', 'A & B L_A_C_0@--> C', 'A e1@--> B e1@--> C', 'A & A e1@--> B']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'id-collision' }]))
 })
 
 test('A1: order counts edges across the whole diagram, in source order', () => {
