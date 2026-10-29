@@ -56,9 +56,16 @@ const RENDER_GALLERY = fileURLToPath(new URL('../../scripts/render-gallery.ts', 
 const cli = (path: string, ...args: string[]) => spawnSync(process.execPath, [RENDER_GALLERY, ...args],
   { encoding: 'utf8', env: { ...Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toUpperCase() !== 'PATH')), PATH: path } })
 
-test('VR.gallery: render-gallery.ts without OUT_DIR prints its usage and exits 2', () => {
-  const r = cli('')
-  assert.equal(r.status, 2); assert.match(r.stderr, /usage: node scripts\/render-gallery\.ts OUT_DIR \[--png\]/)
+test('VR.gallery: render-gallery.ts with two OUT_DIRs prints its usage and exits 2', t => {
+  const r = cli('', scratch(t), scratch(t))
+  assert.equal(r.status, 2); assert.match(r.stderr, /usage: node scripts\/render-gallery\.ts \[OUT_DIR\] \[--png\]/)
+})
+
+test('VR.gallery: render-gallery.ts without OUT_DIR writes out/gallery under the working directory, as the wiki runs it', t => {
+  const cwd = scratch(t), r = spawnSync(process.execPath, [RENDER_GALLERY], { encoding: 'utf8', cwd })
+  assert.equal(r.status, 0, r.stderr)
+  const files = readdirSync(join(cwd, 'out', 'gallery'))
+  assert.ok(files.includes('index.html') && files.includes('flowchart-ok-01@80.svg'), files.join(' '))
 })
 
 test('VR.gallery: render-gallery.ts OUT_DIR --png with no rsvg-convert on PATH writes the gallery, says rsvg-convert is missing, and exits 0', t => {

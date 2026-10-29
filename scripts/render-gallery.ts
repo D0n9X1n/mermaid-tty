@@ -1,4 +1,4 @@
-// node scripts/render-gallery.ts OUT_DIR [--png]: the review gallery, for judging the drawings outside a terminal. It
+// node scripts/render-gallery.ts [OUT_DIR] [--png]: the review gallery, for judging the drawings outside a terminal. It
 // renders every non-reject fixture of fixtures/{flowchart,sequence} to SVG at 80 and 60 columns under nord, stacks the
 // CJK fixtures in cjk.svg and two fixtures under all 6 themes in palettes.svg, and links them all from index.html. It
 // self-checks every SVG, each glyph at x = col × CELL_W, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
@@ -73,13 +73,14 @@ function png(out: string): string[] {
   })
 }
 
-const USAGE = 'usage: node scripts/render-gallery.ts OUT_DIR [--png]'
+const USAGE = 'usage: node scripts/render-gallery.ts [OUT_DIR] [--png]'
+// OUT_DIR defaults to out/gallery, under the working directory (out/ is gitignored), as the wiki's local checks run it.
 
-// Writes the gallery to OUT_DIR, and with --png its PNGs. Exits 1 on a problem, 2 on bad arguments.
+// Writes the gallery to OUT_DIR, and with --png its PNGs. Exits 1 on a problem, 2 on more than one OUT_DIR.
 function main(): number {
   const args = process.argv.slice(2), dirs = args.filter(a => a !== '--png')
-  if (dirs.length !== 1) { console.error(USAGE); return 2 }
-  const out = dirs[0]!, problems = [...gallery(out).problems, ...(args.includes('--png') ? png(out) : [])]
+  if (dirs.length > 1) { console.error(USAGE); return 2 }
+  const out = dirs[0] ?? join('out', 'gallery'), problems = [...gallery(out).problems, ...(args.includes('--png') ? png(out) : [])]
   for (const p of problems) console.error(`render-gallery: ${p}`)
   if (problems.length) return 1
   console.log(`render-gallery: wrote ${readdirSync(out).filter(f => f.endsWith('.svg')).length} SVGs and index.html to ${out}`)
