@@ -46,6 +46,8 @@ const envFor = (driver: Driver) => sessionEnv({ home: dir, config: join(dir, 'cf
 const start = (driver: Driver) => startSession({ driver, argv: [process.execPath, join(dir, 'prog.mjs'), dir], cwd: dir, env: envFor(driver) })
 // The tmux driver's socket, in tmux's default directory: the driver runs tmux without TMUX_TMPDIR.
 const socketPath = () => join('/tmp', `tmux-${process.getuid!()}`, `mtty-${process.pid}`)
+// The pid of the tmux driver's server, asked of it on that socket, as the driver runs tmux.
+const serverPid = () => Number(spawnSync('tmux', ['-L', `mtty-${process.pid}`, 'display', '-p', '#{pid}'], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '' }, timeout: 5000 }).stdout)
 // A program that ignores hangups and starts a child that does too: it writes its pid and the child's to dir/pids, then
 // ready. On Windows, a Node program does what sh does elsewhere.
 writeFileSync(join(dir, 'hup.mjs'), [
@@ -204,7 +206,7 @@ test('A9.harness: with its tmux server suspended, waitFor still times out on tim
   try {
     await s.waitFor(/ready/, 10000)
     prog = pid()
-    server = Number(spawnSync('tmux', ['-L', `mtty-${process.pid}`, 'display', '-p', '#{pid}'], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '' }, timeout: 5000 }).stdout)
+    server = serverPid()
     assert.ok(server > 0 && prog > 0, `server ${server}, program ${prog}`)
     process.kill(server, 'SIGSTOP')
     // Resumes the server 5 s on, so that a read or write without a bound blocks only that long.
@@ -224,6 +226,24 @@ test('A9.harness: with its tmux server suspended, waitFor still times out on tim
     resume?.kill()
     if (server > 0) try { process.kill(server, 'SIGCONT') } catch {}
     if (prog > 0) try { process.kill(prog, 'SIGKILL') } catch {}
+    await s.stop()
+  }
+})
+
+test('A9.harness: with its live tmux socket unlinked, stop() still kills the server whose pid it recorded, and the program', { skip: SKIP.tmux }, async () => {
+  const s = await start('tmux')
+  let server = 0, prog = 0
+  try {
+    await s.waitFor(/ready/, 10000)
+    prog = pid()
+    server = serverPid()
+    assert.ok(server > 0 && prog > 0, `server ${server}, program ${prog}`)
+    // No tmux command reaches the server now, kill-server included.
+    rmSync(socketPath())
+    await s.stop()
+    assert.deepEqual([await gone(server), await gone(prog)], [true, true])
+  } finally {
+    for (const p of [server, prog]) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
     await s.stop()
   }
 })

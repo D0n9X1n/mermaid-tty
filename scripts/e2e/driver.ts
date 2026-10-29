@@ -151,15 +151,13 @@ export function ptyCommand(argv: string[], platform: string, env: Record<string,
 const SOCKET = `mtty-${process.pid}`
 // The longest the driver waits for a tmux command; a server that has not answered by then is taken to hang.
 const CMD_MS = 2000
-// A tmux command that got no answer within CMD_MS.
-class TmuxTimeout extends Error {}
 // tmux on the server, under env -i with env alone: no variable of this process's reaches the server, whose environment
 // each pane inherits.
 const tmuxArgv = (env: Record<string, string>, args: string[]) => ['-i', ...Object.entries(env).map(([k, v]) => `${k}=${v}`), 'tmux', '-L', SOCKET, ...args]
-// Runs tmux and returns its stdout. Throws with its stderr when it fails, and a TmuxTimeout when it gets no answer.
+// Runs tmux and returns its stdout. Throws with its stderr when it fails, or saying so when it gets no answer.
 function tmux(env: Record<string, string>, args: string[]): string {
   const r = spawnSync('env', tmuxArgv(env, args), { encoding: 'utf8', timeout: CMD_MS, killSignal: 'SIGKILL' })
-  if ((r.error as { code?: string } | undefined)?.code === 'ETIMEDOUT') throw new TmuxTimeout(`tmux ${args.join(' ')} failed: no answer in ${CMD_MS} ms`)
+  if ((r.error as { code?: string } | undefined)?.code === 'ETIMEDOUT') throw new Error(`tmux ${args.join(' ')} failed: no answer in ${CMD_MS} ms`)
   if (r.status !== 0) throw new Error(`tmux ${args.join(' ')} failed: ${r.error?.message ?? r.stderr.trim()}`)
   return r.stdout
 }
@@ -184,10 +182,6 @@ function tmuxSession(o: SessionOptions): Session {
   // pane, the program's pid, is also its process group's: tmux makes the program lead a session of its own. stop() uses
   // these, recorded now, and looks up nothing.
   const server = Number(started[0]), pane = Number(started[1]), socket = started.slice(2).join(' ')
-  // kill-server; a server that does not answer can neither end nor reap the program, so it is killed instead.
-  const killServer = () => {
-    try { run('kill-server') } catch (e) { if (e instanceof TmuxTimeout && server > 0) process.kill(server, 'SIGKILL') }
-  }
   // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
   const capture = async (signal?: AbortSignal) => {
     const screen = createScreen(COLS, ROWS)
@@ -209,13 +203,14 @@ function tmuxSession(o: SessionOptions): Session {
       }
     },
     // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to its process group,
-    // which a child of it may outlive it in. Only then does it end the server, and remove the socket tmux leaves behind: on
-    // macOS a Node program whose tty closes under it may stall rather than exit. Each step runs whatever the ones before it
-    // threw: the program, its group or the server may be gone already.
+    // which a child of it may outlive it in. Only then does it end the server, as on macOS a Node program whose tty closes
+    // under it may stall rather than exit: kill-server, then SIGKILL to the server's recorded pid whatever kill-server did,
+    // since a server that does not answer, or whose socket is gone, outlives kill-server. Last it removes the socket tmux
+    // leaves behind. Each step runs whatever the ones before it threw: the program, its group or the server may be gone.
     stop: async () => {
       if (stopped) return
       stopped = true
-      const cleanup = [killServer, () => rmSync(socket, { force: true })]
+      const cleanup = [() => run('kill-server'), () => { if (server > 0) process.kill(server, 'SIGKILL') }, () => rmSync(socket, { force: true })]
       // A pid of 0 would signal this process's own group.
       if (pane > 0) await end(() => process.kill(pane, 'SIGHUP'), ms => gone(pane, ms), () => killTree(pane), ...cleanup)
       else cleanup.forEach(attempt)
