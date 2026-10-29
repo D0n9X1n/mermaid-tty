@@ -4,11 +4,10 @@
 // logged, each finding in the dir it was handed the markers of the calls before it, and no others; that the sentinel still
 // holds exactly its marker, which a call handed any alias of the sentinel breaks; that a watch on the sentinel saw no change
 // during the run, not even one undone before the run ended; and that TMPDIR, a fresh empty dir for each run, is empty after it.
-// Runs miss a dir left outside TMPDIR, where macOS's bare mktemp -d puts it, so the last test reads the script's own text: its
-// one temp allocation, explicitly under TMPDIR, and its one trap, which removes it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, sep } from 'node:path';
@@ -163,12 +162,8 @@ test('local install: the trap removes the mktemp dir, not the form of it cygpath
   assert.deepEqual(r.changes, []);
   assert.deepEqual(r.left, []);
 });
-// The script's raw text, comments included, with no parsing: it names mktemp once, in its one temp allocation, explicitly under
-// TMPDIR; mkdir and tempfile never; and trap once, in its trap, which removes that dir. So its comments name none of these.
-test("local install: the script's one temp allocation is under TMPDIR, and its one trap removes it", () => {
-  const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8');
-  // For each word, how many times the text names it, and the lines that do.
-  const named = (...words: string[]) => Object.fromEntries(words.map((w) => [w, [text.split(w).length - 1, text.split('\n').filter((l) => l.includes(w))]]));
-  assert.deepEqual(named('mktemp', 'mkdir', 'tempfile', 'trap '), { mktemp: [1, ['tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")"']],
-    mkdir: [0, []], tempfile: [0, []], 'trap ': [1, [`trap 'rm -rf "$tmp"' EXIT`]] });
+// Runs miss effects like a write outside the sentinel and TMPDIR, so the script is pinned: each edit shows in review as a new pin.
+test('local install: the script matches its pinned SHA-256', () => {
+  const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').replaceAll('\r\n', '\n');
+  assert.equal(createHash('sha256').update(text).digest('hex'), 'de15b76735cc5fd35d73ba545a967c8350c6d06cfbf161e9ecbb2c87bef21959');
 });
