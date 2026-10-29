@@ -27,13 +27,18 @@ export function heading(text: string, ink: Ink, owner: string, columns: number):
 // padded with null to the widest part, each part's conflicts move down by its row offset, and its expect merges by name.
 export function stack(parts: readonly Drawing[], columns: number): Drawing {
   const wide = parts.reduce((w, p) => p.cells.reduce((v, r) => Math.max(v, r.length), w), 0)
-  const cells: (Cell | null)[][] = [], conflicts: Conflict[] = []
+  const cells: (Cell | null)[][] = [], conflicts: Conflict[] = [], expects: Expect[] = []
   for (const p of parts) {
+    expects.push(shift(p.expect, cells.length))
     for (const x of p.conflicts) conflicts.push({ ...x, row: x.row + cells.length })
     for (const r of p.cells) cells.push([...r, ...Array<Cell | null>(wide - r.length).fill(null)])
   }
-  return { columns, cells, conflicts, expect: merge(parts.map(p => p.expect)) }
+  return { columns, cells, conflicts, expect: merge(expects) }
 }
+
+// A part's expect as it sits dr rows down: a key's at names a cell, so it moves with the part's cells.
+const shift = (e: Expect, dr: number): Expect =>
+  dr === 0 || !e.keys ? e : { ...e, keys: e.keys.map(k => (k.at ? { ...k, at: { r: k.at.r + dr, c: k.at.c } } : k)) }
 
 // Every array field of the expects, each concatenated in their order by name: A's labels, edges (with their ends and
 // endLabels), edgeLabels and frames, C's bars, members, keys and keyable, and any field a later task adds. A's four start

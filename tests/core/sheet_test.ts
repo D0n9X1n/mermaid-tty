@@ -92,3 +92,10 @@ test('A5.mutation-tests: stack carries every entry of a part, so a part with two
   const e = stack([two, part('b', 'y')], 10).expect
   assert.deepEqual([e.labels.map(l => l.owner), e.frames, e.members?.map(m => m.id)], [['a', 'a2', 'b'], ['F', 'G'], ['a.m0', 'a.m1']])
 })
+// T87 fix: a key's at is a cell, so stacking moves it with its part; a point key under a heading stays placed.
+test('A5.mutation-tests: stack moves each key position down by its part\'s row offset', () => {
+  const k = (r: number): Drawing => { const c = createCanvas(1, 4, 4); c.key(0, 0, 'a', 'note', 'p0', false)
+    return c.toDrawing({ labels: [], edges: [], edgeLabels: [], frames: [], keys: [{ key: 'a', item: 'p0', cls: 'point', at: { r, c: 0 } }] }) }
+  assert.deepEqual(stack([part('t', 'T'), part('u', 'U'), k(0)], 10).expect.keys, [{ key: 'a', item: 'p0', cls: 'point', at: { r: 2, c: 0 } }])
+  assert.deepEqual(stack([k(0)], 10).expect.keys, [{ key: 'a', item: 'p0', cls: 'point', at: { r: 0, c: 0 } }])
+})
