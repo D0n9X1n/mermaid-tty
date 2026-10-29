@@ -163,10 +163,12 @@ test('local install: the trap removes the mktemp dir, not the form of it cygpath
   assert.deepEqual(r.changes, []);
   assert.deepEqual(r.left, []);
 });
-// The script's own text, outside comments (each from a # at a line's start or after a space; the script has no # in quotes):
-// the lines naming mktemp, mkdir, tempfile or trap are exactly its one temp allocation, explicitly under TMPDIR, and its trap.
+// The script's raw text, comments included, with no parsing: it names mktemp once, in its one temp allocation, explicitly under
+// TMPDIR; mkdir and tempfile never; and trap once, in its trap, which removes that dir. So its comments name none of these.
 test("local install: the script's one temp allocation is under TMPDIR, and its one trap removes it", () => {
-  const code = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').split('\n').map((l) => l.replace(/(^|\s)#.*/, '').trim());
-  assert.deepEqual(code.filter((l) => /\b(mktemp|mkdir|tempfile|trap)\b/.test(l)),
-    ['tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")"', `trap 'rm -rf "$tmp"' EXIT`]);
+  const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8');
+  // For each word, how many times the text names it, and the lines that do.
+  const named = (...words: string[]) => Object.fromEntries(words.map((w) => [w, [text.split(w).length - 1, text.split('\n').filter((l) => l.includes(w))]]));
+  assert.deepEqual(named('mktemp', 'mkdir', 'tempfile', 'trap '), { mktemp: [1, ['tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")"']],
+    mkdir: [0, []], tempfile: [0, []], 'trap ': [1, [`trap 'rm -rf "$tmp"' EXIT`]] });
 });

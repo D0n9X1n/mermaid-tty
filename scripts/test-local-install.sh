@@ -2,8 +2,10 @@
 # B5, every PR: install the plugin from this checkout's marketplace into a throwaway config. Offline; no account.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")" # an explicit template, as macOS's bare mktemp -d ignores TMPDIR
-trap 'rm -rf "$tmp"' EXIT # the mktemp path itself, never the cygpath -w form handed to claude
+# The throwaway dir, from an explicit template under TMPDIR, since without one macOS ignores TMPDIR. On exit, remove that path
+# itself, never the cygpath -w form of it handed to claude.
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/mtty-install.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
 config="$tmp"
 if command -v cygpath >/dev/null 2>&1; then config="$(cygpath -w "$tmp")"; fi # Git Bash: give claude.exe a Windows path
 export CLAUDE_CONFIG_DIR="$config"
