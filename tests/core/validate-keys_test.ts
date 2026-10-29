@@ -181,3 +181,20 @@ test('A5.mutation-tests: each entry matches a keyable item by item and class, el
 // n1's in-place key reads its entry's a, but its legend key reads b, as n2's does: only the legend key's read catches it.
 test("A5.mutation-tests: a legend key reads its entry's key even where the in-place key does, else key-mismatch", () =>
   assert.deepEqual(validate(keyed([['n1', 'a', 'b'], ['n2', 'b', 'b']], K)), { reason: 'key-mismatch' }))   // a / b; b memo, b other
+// In-place keys a and b at (0, 0) and (0, 2), then a alpha as the legend's first row. Shared: b beta on that row at column 12,
+// and alpha's wrapped tail under beta at column 14. Else alpha's tail at (2, 2), then b 设计, wide cells, in the next row.
+function oneRow(shared: boolean): Drawing {
+  const c = createCanvas(4, 20, 20); c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, 2, 'b', 'note', 'n2', false)
+  c.key(1, 0, 'a', 'note', 'n1', true); c.text(1, 2, 'alpha', 'note', 'n1')
+  const [br, bc, tc, b] = shared ? [1, 12, 14, 'beta'] : [3, 0, 2, '设计']
+  c.text(2, tc, 'tail', 'note', 'n1', ' '); c.key(br, bc, 'b', 'note', 'n2', true); c.text(br, bc + 2, b, 'note', 'n2')
+  return c.toDrawing({ labels: [{ owner: 'n1', text: 'alpha tail' }, { owner: 'n2', text: b }], edges: [], edgeLabels: [], frames: [], keys: K,
+    keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
+}
+test("A5.mutation-tests: a legend key is its row's first drawn cell, so a row holds one entry, else key-unbound", () => {
+  assert.deepEqual(validate(oneRow(true)), { reason: 'key-unbound' }); assert.equal(validate(oneRow(false)), null)   // tail reads as beta's; then CJK below
+})
+test('A5.mutation-tests: a class is keyed all or none by item and class, so keying an item in another class fails key-partial', () => {
+  const kn = [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }, { item: 'n2', cls: 'label' }]
+  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-partial' })   // n2 keyed as a label, not as a note
+})

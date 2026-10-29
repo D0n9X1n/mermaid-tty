@@ -385,16 +385,17 @@ function keyRuns(all: readonly Spot[]): KeyRun[] {
 
 // C: a keyed item's text is replaced in place by its key, and drawn once in its own legend row after that key. Of the runs
 // whose owners include an entry's item, exactly one is in place and one in the legend, else key-missing (fewer) or key-dup
-// (more), and both read its key, else key-mismatch. The legend run is bound to its row: one empty cell, then a text cell
-// whose owners[0] is the item, its legend text's start, else key-unbound; so the key at an item is the key in its own
-// legend row. An entry's at, its own cell (a quadrant point's), is in its in-place run or beside it on its row, and a run
+// (more), and both read its key, else key-mismatch. The legend run is bound to its row: it is the row's first drawn cell,
+// so a row holds one entry, then one empty cell, then a text cell whose owners[0] is the item, its legend text's start,
+// else key-unbound; so the key at an item is the key in its own legend row. An entry's at, its own cell (a quadrant point's), is in its in-place run or beside it on its row, and a run
 // the items of two or more entries own needs at on each, else key-unplaced. No key run touches a key cell on its row, which
 // would read as one key with it, else key-adjacent: runs are maximal, so that cell is another run's. Each legend key row
 // starts a block that runs to the row before the next one, and every text cell whose owners[0] is an entry's item, its
 // wrapped rows included, is in its own legend row's block, else key-unbound; parts other owners draw, such as a value or a
 // separator, are not checked. Then a run whose owner is no entry's item is key-stray; an entry that no keyable item matches
-// by item and class is key-class; and a keyable class with an entry for some of its items but not all is key-partial.
-// labels checks the legend text, which the item itself owns.
+// by item and class is key-class; and a keyable class with an entry for some of its (item, cls) pairs but not all is
+// key-partial, so keying an item in another class keys none of this one. labels checks the legend text, which the item
+// itself owns.
 function keys(d: Drawing, all: readonly Spot[]): Fail | null {
   const runs = keyRuns(all), listed = d.expect.keys ?? [], items = new Set(listed.map(k => k.item)), home = new Map<string, number>()
   for (const { key, item, at: pos } of listed) {
@@ -402,9 +403,10 @@ function keys(d: Drawing, all: readonly Spot[]): Fail | null {
     if (here.length === 0 || there.length === 0) return fail('key-missing')
     if (here.length > 1 || there.length > 1) return fail('key-dup')
     if (here[0]!.text !== key || there[0]!.text !== key) return fail('key-mismatch')
-    const { r, end } = there[0]!, x = at(d, r, end + 1)
-    if (at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) return fail('key-unbound')
+    const { r, c: from, end } = there[0]!, x = at(d, r, end + 1)
+    if (d.cells[r]!.slice(0, from).some(y => y) || at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) return fail('key-unbound')
     const h = here[0]!, shared = [...h.owners].filter(o => items.has(o)).length > 1
+    // at is the producer's statement of its item's cell, as expect.labels is: a point is drawn only as its key; goldens pin it.
     if (pos ? pos.r !== h.r || pos.c < h.c - 1 || pos.c > h.end : shared) return fail('key-unplaced')
     home.set(item, r)
   }
@@ -414,6 +416,7 @@ function keys(d: Drawing, all: readonly Spot[]): Fail | null {
   if (runs.some(x => !items.has(x.owner))) return fail('key-stray')
   const keyable = d.expect.keyable ?? []
   if (listed.some(k => !keyable.some(a => a.item === k.item && a.cls === k.cls))) return fail('key-class')
-  const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && items.has(a.item) !== items.has(b.item)))
+  const has = (a: { item: string; cls: string }) => listed.some(k => k.item === a.item && k.cls === a.cls)
+  const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && has(a) !== has(b)))
   return partial ? fail('key-partial') : null
 }
