@@ -166,6 +166,15 @@ test('A9.harness: only stream: true streams; stream "false", stream 1 and no str
   } finally { await m.stop() }
 })
 
+test('A9.harness: the body {"stream":"true"}, a string and not the boolean, gets one JSON message, not an event stream', async () => {
+  const m = await startMock()
+  try {
+    const r = await fetch(`${m.url}/v1/messages`, { method: 'POST', body: '{"stream":"true"}' })
+    assert.equal(r.headers.get('content-type'), 'application/json')
+    assert.deepEqual(await r.json(), { id: 'msg_mock_1', type: 'message', role: 'assistant', content: [{ type: 'text', text: REPLY }], model: '', stop_reason: 'end_turn', stop_sequence: null, usage: { input_tokens: 1, output_tokens: 5 } })
+  } finally { await m.stop() }
+})
+
 test('A9.harness: array-form user content gets REPLY_LEAD when one of its text blocks contains lead', async () => {
   const m = await startMock()
   try {
