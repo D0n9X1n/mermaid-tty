@@ -6,7 +6,7 @@
 **Plan files (each ≤ 500 lines):**
 - this index: design, checks, traceability, the Tier 2 gate, risks;
 - `…-C1-shared.md`: T40–T48 (gate, source config, glyphs, chart helpers, the C test harness);
-- `…-C1b-contracts.md`: T86–T88 (validator contracts for keys, end marks, bars and members; the hash-checked Tier 2 gate), added by fix cycle 1;
+- `…-C1b-contracts.md`: T86–T88 (validator contracts for keys, end labels, bars and members, on A's end-mark and frame contracts; the hash-checked Tier 2 gate), added by fix cycle 1;
 - `…-C2-graph-core.md`: T49–T53 (graph extensions, member rows, the graph ladder);
 - `…-C3-graph-types.md`: T54–T62 (state, class, ER);
 - `…-C4-charts.md`: T63–T70 (pie, journey, gantt);
@@ -18,7 +18,7 @@
 - the matrix: its common rules (lines 5–68), its 11 Tier 1 sections and its Coverage table;
 - plan A: §6 and §7, and its task style (A2–A4);
 - the code at `edd4783` (`plan-c-fix`): A's T2–T20, T23–T25, T27 and T32 are merged; T26 and T28–T31 are not. The validator rule `crossing-ambiguous` is in flight; C's checks run after it;
-- fix cycle 1: the cross-family audit of this plan (part 1, part 2a) and the PM's calls on it.
+- fix cycle 1: the cross-family audit of this plan (parts 1, 2a and 2b) and the PM's calls on it; A's shared contracts landing now (per-end marks, frame integrity, `label-blank-line`).
 
 **Numbering:** C continues A's task numbers, since A ends at T39. So `T18` always means A's draw task. B's tasks are written "B's T7".
 
@@ -82,7 +82,7 @@ Spec C has no check IDs: its per-type checks are the matrix's fixtures. So each 
 | spans carry role and series colors | `A7:` | colors |
 | C's glyphs are allowed; the golden glyph scan | `A8.platforms:` | the glyph allow-list |
 | gallery entries; tangle over C's goldens; review scopes; the support table | `VR.gallery:`, `VR.tangled:`, `VR.reviewers:`, `B1:` | the visual gate; B's README check |
-| validator contracts: keys, end marks, bars, members (T86, T87); the Tier 2 gate (T88) | `A5.mutation-tests:`, `A5.errors:` | each contract is a fail-closed check, tested by mutating a drawing; the gate decides which types stay disabled |
+| validator contracts: keys, end labels, bars, members (T86, T87); the Tier 2 gate (T88) | `A5.mutation-tests:`, `A5.errors:` | each contract is a fail-closed check, tested by mutating a drawing; the gate decides which types stay disabled |
 
 - **Kinds:**
   - unit tests in `tests/core/*_test.ts`;
@@ -105,7 +105,7 @@ Each row passes the fitness check: it has one job, its dependencies point one wa
 | `core/charts/{scale,bars}.ts` | Eighths, cells, rows, percentages; eighth-block runs | `eighths`, `cellOf`, `rowAt`, `percent`, `hbar`, `vbar` | decimal | — | `bars_test` |
 | `core/charts/sheet.ts` | Title and header rows; stacks drawn parts | `heading`, `stack` | canvas, text | — | `sheet_test` |
 | `core/charts/legend.ts` | Keys and legend rows | `fieldKey`, `pointKey`, `legendRows`, `withLegend` | sheet | the wrap policy | `legend_test` |
-| `core/validate.ts` | C's contracts: end marks, bars, member rows, keys | `Expect` fields `ends`, `bars`, `members`, `keys`, `keyable` | A's checks, which run first | a new contract | `validate-c_test`, `validate-keys_test` |
+| `core/validate.ts` | C's contracts: end labels, bars, member rows, keys | `Expect` fields `endLabels`, `bars`, `members`, `keys`, `keyable` | A's checks, which run first | a new contract | `validate-c_test`, `validate-keys_test` |
 | `core/canvas.ts` | The `key` cell kind | `Canvas.key` | A's canvas | key placement | `validate-keys_test` |
 | `core/charts/axis.ts` | A tick rule and its labels | `axisRows` | canvas | — | `axis_test` |
 | `core/graph/{model,sizes}.ts` | Marks, member columns, notes, class and ER ends, end labels, frameless clusters | the model types; `nodeSize(n, wrapAt, across?)` | A's model | a new mark | `graph-c-model_test` |
@@ -213,8 +213,7 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
 // each layout.ts exports its DiagramModule and registers it. Parsers: parseState parseClass parseEr parsePie parseJourney parseGantt parseXy
 // parseQuadrant parseMindmap parseGitGraph parseTimeline. Modules: state classDiagram er pie journey gantt xychart quadrant mindmap gitGraph timeline.
 // core/validate.ts (T86, T87): optional Expect fields; A's drawings list none, so they check as before
-export type EndMark = 'arrow' | 'circle' | 'cross' | 'none' | 'triangle' | 'diamond' | 'odiamond'
-export type EndSpec = { node: string; mark: EndMark; label?: string }   // Expect.edges[].ends: [true tail, true head]
+//   Expect.edges[].endLabels?: { node; owner }[] (T86) extends A's per-end marks, ends: { node; glyph }[]; frames: A's Expect.frames
 //   bars?: { owner; eighths; axis: 'h' | 'v' }[]   members?: { id; parent }[]   keys?: { key; item; cls }[]   keyable?: { item; cls }[]
 // core/canvas.ts (T87): Kind gains 'key', Cell gains legend?: true, and key(r, c, s, role, owner: string | readonly string[], legend: boolean): number
 // scripts/check-tier2.ts (T88)
@@ -247,7 +246,7 @@ export function vrun(d: Drawing, col: number, base: number): number     // eight
   - `expect.keys` lists each drawn key and `expect.keyable` every item of a keyable class, so `validate` fails a key missing in place or in the legend, a swapped or stray key, and a half-keyed class (T87).
 - **Point keys** (quadrant): the plot draws each key once, as a `key` cell owned by every point it stands for. Each point's legend row draws its key, its name (owner `p<i>`) and its `(x, y)` (owner `p<i>.xy`).
 - **Glyph cells:** bars, markers, status glyphs, tags, connectors, marks and axis rules are `cap` cells, in a role or series ink. Their owner is their item; when the item's text is on another row, as for xychart plot marks, it is `<item>:mark`, so `borderRows` passes.
-- **Contracts (T86):** every bar is in `expect.bars` with its eighths, every class or ER end in `expect.edges[].ends`, and every member row or column in `expect.members`, so `validate` checks them, not only a layout test.
+- **Contracts:** C builds on A's per-end marks (`ends`, `end-misplaced`), frames (`expect.frames`, `frame-broken`) and `label-blank-line`; a `<br><br>` in any C text falls back. T86 adds every end label to `endLabels`, every bar to `expect.bars` with its eighths and every member row or column to `expect.members`. Every drawn frame is listed (T48); a frameless region lists none.
 - **Computed text** is a text cell whose expected text is the computed string: percentages, tick labels, the cardinalities `0..*`, `«annot»`, `Square<Shape>`, ER keys `PK, FK`.
 
 **Ladders** (normative; after the last step, each falls back):
@@ -374,7 +373,7 @@ export function vrun(d: Drawing, col: number, base: number): number     // eight
 | T83 | Timeline module | G3 | T40, T45, T82 | C6 |
 | T84 | Timeline fixtures and goldens | G4 | T48, T83 | C6 |
 | T85 | Visual gate: gallery, tangle, review scopes, support table, stubs gone | G7 | T30, T31, T32, every fixture task | C6 |
-| T86 | Validator contracts I: end marks, bars, members | G1 | — | C1b |
+| T86 | Validator contracts I: end labels, bars, members | G1 | A's per-end marks | C1b |
 | T87 | Validator contracts II: keys | G2 | T86 | C1b |
 | T88 | The Tier 2 gate, hash-checked | G2 | T40 | C1b |
 

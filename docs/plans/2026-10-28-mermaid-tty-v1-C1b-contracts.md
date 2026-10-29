@@ -1,31 +1,31 @@
 # mermaid-tty v1 C — tasks T86–T88 (validator contracts, the Tier 2 gate)
 
-**Depends on:** the index (§4, §5) and A's validator (T11). This file continues C1. It holds the shared contract tasks that fix cycle 1 added; they are numbered after T85, so no task is renumbered.
+**Depends on:** the index (§4, §5) A's validator (T11), and A's shared contracts: per-end marks (`Expect.edges[].ends: { node, glyph }[]`, `end-misplaced`), frame integrity (`Expect.frames`, `frame-broken`) and `label-blank-line`. C builds on them and re-specifies none. This file continues C1. It holds the shared contract tasks that fix cycle 1 added; they are numbered after T85, so no task is renumbered.
 **Conventions:** as in C1. Every contract is an optional `Expect` field, so A's drawings and goldens do not change. Each new check runs after A's checks (labels, edges, dangling, the in-flight `crossing-ambiguous`, conflicts, rows, edge labels) and never edits them.
 
-### T86: Validator contracts I: end marks, bars, members
-**Group** G1 · **Deps** — · **Covers** fix-cycle findings 2 and 5; spec C rules 4 and 5 (bars, zero); matrix class and ER ends and cardinality; A5.mutation-tests
+### T86: Validator contracts I: end labels, bars, members
+**Group** G1 · **Deps** A's per-end-mark contract · **Covers** fix-cycle findings 2 and 5; spec C rules 4 and 5 (bars, zero); matrix class and ER ends and cardinality; A5.mutation-tests
 **Files:** modify `core/validate.ts`. Test: `tests/core/validate-c_test.ts`.
 - [ ] **Failing test:**
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Drawing } from '../../core/canvas.ts'; import { validate, type Expect } from '../../core/validate.ts'
-type Ends = NonNullable<Expect['edges'][number]['ends']>
-// [ A ] at row 0 and [ B ] at row 4; edge e0 down column 2, its mark at row 1; its tail and head labels at column 3.
-function edge(mark: string, tail: [string, number], head: [string, number], ends: Ends): Drawing {
+// [ A ] at row 0 and [ B ] at row 4; edge e0 down column 2, its tail mark at row 1; the end labels at column 3, rows tl and hl.
+function edge(mark: string, tl: number, hl: number): Drawing {
   const c = createCanvas(5, 10, 10)
   for (const [r, id] of [[0, 'A'], [4, 'B']] as const) { c.cap(r, 0, '[', 'node', id); c.text(r, 2, id, 'node', id); c.cap(r, 4, ']', 'node', id) }
   c.arrow(1, 2, mark, 'e0'); c.line(2, 2, 5, 'light', 'edge', 'e0'); c.line(3, 2, 5, 'light', 'edge', 'e0')
-  c.text(tail[1], 3, tail[0], 'arrow', 'e0:tail'); c.text(head[1], 3, head[0], 'arrow', 'e0:head')
-  return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }, { owner: 'e0:tail', text: tail[0] }, { owner: 'e0:head', text: head[0] }],
-    edges: [{ id: 'e0', from: 'A', to: 'B', heads: [mark], ends }], edgeLabels: [{ owner: 'e0:tail', edge: 'e0' }, { owner: 'e0:head', edge: 'e0' }] })
+  c.text(tl, 3, '1', 'label', 'e0:tail'); c.text(hl, 3, '0..*', 'label', 'e0:head')
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }, { owner: 'e0:tail', text: '1' }, { owner: 'e0:head', text: '0..*' }],
+    edges: [{ id: 'e0', from: 'A', to: 'B', heads: [mark], ends: [{ node: 'A', glyph: mark }],
+      endLabels: [{ node: 'A', owner: 'e0:tail' }, { node: 'B', owner: 'e0:head' }] }],
+    edgeLabels: [{ owner: 'e0:tail', edge: 'e0' }, { owner: 'e0:head', edge: 'e0' }] })
 }
-const E: Ends = [{ node: 'A', mark: 'triangle', label: '1' }, { node: 'B', mark: 'none', label: '0..*' }]
-test('A5.mutation-tests: an end mark sits at its own node and points at it; end labels stay at their own ends', () => {
-  assert.equal(validate(edge('△', ['1', 1], ['0..*', 3], E)), null)
-  assert.deepEqual(validate(edge('▽', ['1', 1], ['0..*', 3], E)), { reason: 'end-point' })     // the mark points away from A
-  assert.deepEqual(validate(edge('△', ['1', 3], ['0..*', 1], E)), { reason: 'end-label' })     // the cardinalities swapped
-  assert.deepEqual(validate(edge('△', ['1', 1], ['0..*', 3], [{ ...E[0], mark: 'none' }, { ...E[1], mark: 'triangle' }])), { reason: 'end-mark' })
+test("A5.mutation-tests: an end label sits at its own end, strictly; a C triangle must point at its node under A's end rule", () => {
+  assert.equal(validate(edge('△', 1, 3)), null)
+  assert.deepEqual(validate(edge('△', 3, 1)), { reason: 'end-label' })     // the cardinalities swapped
+  assert.deepEqual(validate(edge('△', 2, 3)), { reason: 'end-label' })     // the tail label as near the other end
+  assert.ok(['edge-disconnected', 'end-misplaced'].includes(validate(edge('▽', 1, 3))?.reason ?? ''))   // ▽ points away from A
 })
 const bar = (cells: string, eighths: number, extra: Partial<Expect> = {}): Drawing => { const c = createCanvas(1, 8, 8); c.cap(0, 0, cells, 's1', 'x0')
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], bars: [{ owner: 'x0', eighths, axis: 'h' }], ...extra }) }
@@ -41,18 +41,14 @@ test("A5.mutation-tests: a member row is owned by exactly its own id and its par
   for (const o of [['U.m0', 'V'], ['U.m0'], ['W.m0', 'U']]) assert.deepEqual(validate(member(o)), { reason: 'member' }, o.join())
 })
 ```
-- [ ] **Run** `node --test tests/core/validate-c_test.ts` → FAIL: `Expected values to be strictly deep-equal` (`validate` returns null for the `▽`).
+- [ ] **Run** `node --test tests/core/validate-c_test.ts` → FAIL: `Expected values to be strictly deep-equal` (`validate` returns null for the swapped labels).
 - [ ] **Implement** in `core/validate.ts`:
+  - **Built on A:** end marks use A's per-end-mark contract, `Expect.edges[].ends: { node, glyph }[]`, which fails `end-misplaced`. Frames use A's `Expect.frames` (`frame-broken`). C re-specifies neither. C adds `△▷▽◁` to A's pointing glyphs (`POINT`), so a triangle must point at its node; `◆`, `◇`, `o` and `x` have no point.
   - **Types:**
-    - `Expect.edges[]` gains `ends?: readonly [EndSpec, EndSpec]`: the true tail, then the true head, in source order, even on a reversed edge.
-    - `EndSpec = { node: string; mark: EndMark; label?: string }`. `EndMark = 'arrow' | 'circle' | 'cross' | 'none' | 'triangle' | 'diamond' | 'odiamond'` is declared here, so `validate.ts` imports nothing from `core/graph/`.
+    - `Expect.edges[]` gains `endLabels?: readonly { node: string; owner: string }[]`, a C extension. The owner is `${id}:tail` or `${id}:head`, named by the true end, even on a reversed edge.
     - `Expect` gains `bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v' }[]` and `members?: readonly { id: string; parent: string }[]`.
-  - **Order:** `validate` appends `?? ends(d, all) ?? bars(d, all) ?? members(d)` after A's last check. A's checks, and `crossing-ambiguous` wherever it lands, run first and are not edited. Every field is optional. A has no bar cells, since its glyph scan forbids `▏…█` and `▁…▇` before T42. So a drawing without the new fields checks exactly as before.
-  - **`ends`:** for each edge with `ends`, take each end i, and let `own` be the edge's arrow cells beside `ends[i].node`.
-    - Mark `none`: `own` is empty, else `end-mark`.
-    - Any other mark: `own` is exactly one cell with a glyph from `MARKS[mark]`, else `end-mark`. The sets are A's `arrow` `▲►▼◄`, `circle` `o` and `cross` `x`, plus C's `triangle` `△▷▽◁`, `diamond` `◆` and `odiamond` `◇`.
-    - Pointing glyphs: an arrow or triangle glyph must point at the node, else `end-point`. The cell on its point side must be owned by the node.
-    - Labels: the owner `${id}:tail` (i = 0) or `${id}:head` (i = 1) must have a cell within Chebyshev distance 1 of the terminal for end i, else `end-label`. The terminal is the edge's line or arrow cells beside that node. The cell must also be strictly nearer its own terminal than the other end's; a tie fails. The label text is checked by `labels`, since T50 lists it under the same owner.
+  - **Order:** `validate` appends `?? endLabels(d, all) ?? bars(d, all) ?? members(d)` after A's last check. A's checks (`ends`, `frames`, `label-blank-line`, `crossing-ambiguous`) run first and are not edited. Every new field is optional, and A has no bar cells. So A's drawings check exactly as before.
+  - **`endLabels`:** a node's terminal is the edge's line or arrow cells beside it. The owner needs a cell within Chebyshev distance 1 of its node's terminal, and strictly nearer it than the edge's other terminal; a tie fails. Else `end-label`. The text is checked by `labels`.
   - **`bars`:**
     - Bar cells are cap cells drawn in a bar glyph: `▏…█` on axis h, `▁…▇█` on axis v.
     - For each listed bar, each row (h) or column (v) of its cells (owners[0] === owner) is one run. It reads full `█` cells, then at most one partial glyph, left to right (h) or bottom to top (v). Each run sums to `eighths`: `█` counts 8, and a partial counts its index + 1.
@@ -63,7 +59,7 @@ test("A5.mutation-tests: a member row is owned by exactly its own id and its par
   - `node --test tests/core/validate-c_test.ts tests/core/validate_test.ts` passes;
   - `node scripts/typecheck.ts` passes;
   - `node scripts/check.ts A4` passes, with every golden unchanged.
-- [ ] **Commit:** `git commit -m "Validate end marks, bars and member rows"`
+- [ ] **Commit:** `git commit -m "Validate end labels, bars and member rows"`
 
 ### T87: Validator contracts II: keys
 **Group** G2 · **Deps** T86 · **Covers** fix-cycle finding 1; spec C rule 7 (keyed items, all or none); A5.mutation-tests

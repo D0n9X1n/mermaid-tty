@@ -931,7 +931,7 @@ Both axes are optional. Every series has one value per category; with no categor
 - Unquoted text of several words, which Mermaid joins without spaces; an unquoted axis title with digits, which Mermaid lexes as numbers; an unquoted word where a keyword begins a run of letters (`barley`), which Mermaid splits.
 - A repeated `x-axis`, `y-axis` or category; a series whose length differs from the number of groups.
 - A value outside an explicit range; `y0 ≥ y1`, including all-zero data with no range.
-- A bar series when `y0 < 0`: bars grow from `y0`, so a zero bar would not be empty. More than 8 line series (markers would repeat) or 26 bar series.
+- A bar series when `y0 < 0`: bars grow from `y0`, so a zero bar would not be empty. More than 8 line series (markers would repeat) or 26 bar series. An implicit range whose values are all 0 (`y0 = y1`), which leaves no scale.
 
 **Text design** (source: `title Sales`, `x-axis [jan, feb, mar]`, `y-axis 0 --> 100`, `bar [20, 75, 50]`, `line [30, 60, 90]`):
 
@@ -997,6 +997,10 @@ a      20  75  50
 - `xychart-reject-11`: `y-axis 5 --> 5`.
 - `xychart-reject-12`: one 50-letter category, at 60 columns.
 - `xychart-reject-13`: 9 line series.
+- `xychart-reject-14`: a markdown string title, `` "`**Sales**`" ``.
+- `xychart-reject-15`: a second `x-axis`.
+- `xychart-reject-16`: every value 0 and no `y-axis` range, so the implicit range is empty (`y0 = y1 = 0`).
+- `xychart-reject-17`: 27 bar series.
 
 ### quadrant
 
@@ -1083,6 +1087,12 @@ Reach
 - `quadrant-reject-07`: a point named `Titled work` (Mermaid reads a title).
 - `quadrant-reject-08`: a 10th point at x = 0.49, the last cell of the left half: its key `10` would run into the cross.
 - `quadrant-reject-09`: docs' campaign example at 18 columns (q = 7).
+- `quadrant-reject-10`: a markdown string, `` quadrant-1 "`**A**`" ``.
+- `quadrant-reject-11`: a second `x-axis`.
+- `quadrant-reject-12`: `A: [.5, 0.5]` (the point pattern needs `0.`).
+- `quadrant-reject-13`: `Point A: [0.9, 0.0] color: #ff3300`.
+- `quadrant-reject-14`: `Point A: [0.9, 0.0] stroke-color: #10f0f0`.
+- `quadrant-reject-15`: `Point A: [0.9, 0.0] stroke-width: 5px`.
 
 ### journey
 
@@ -1395,6 +1405,9 @@ A node's parent is the nearest earlier node with less indentation. Blank lines, 
 - `mindmap-reject-04`: markdown string.
 - `mindmap-reject-05`: header only.
 - `mindmap-reject-06`: unbreakable 61-column label, at 60.
+- `mindmap-reject-07`: HTML other than `<br>`, `<b>bold</b>`.
+- `mindmap-reject-08`: a trailing `%% note` after a node.
+- `mindmap-reject-09`: text after the header, `mindmap extra`.
 
 ### gitGraph
 
@@ -1434,6 +1447,8 @@ Attributes go in any order. The title follows common rule 3. Honored config keys
 - `gitGraph-ok-09`: CJK branch names, ids and tags.
 - `gitGraph-ok-10`: exactly 60 columns at step 1; 59 wraps.
 - `gitGraph-ok-11`: valid graph, then `accTitle: Log`; accTitle parsed and ignored.
+- `gitGraph-ok-12`, `-13`, `-14`: headers `gitGraph:`, `gitGraph LR:` and `gitGraph TB:`, each drawn as `gitGraph`.
+- `gitGraph-ok-15`: a cherry-pick with an explicit `tag:`, which replaces `cherry-pick:<id>`.
 
 **Rejection fixtures:**
 - `gitGraph-reject-01`: `checkout` of an unknown branch.
@@ -1443,6 +1458,16 @@ Attributes go in any order. The title follows common rule 3. Honored config keys
 - `gitGraph-reject-05`: cherry-pick of a merge without `parent:`.
 - `gitGraph-reject-06`: `commit type: BOLD`.
 - `gitGraph-reject-07`: 30 branches at 60 columns.
+- `gitGraph-reject-08`: a repeated attribute, `commit id: "a" id: "b"`.
+- `gitGraph-reject-09`: two `title` lines.
+- `gitGraph-reject-10`: a merge reusing an existing id.
+- `gitGraph-reject-11`: `merge nope` (an unknown branch).
+- `gitGraph-reject-12`: `merge main` on main (a self merge).
+- `gitGraph-reject-13`: a merge from a branch with no commits.
+- `gitGraph-reject-14`: `cherry-pick id: "zz"` (an unknown id).
+- `gitGraph-reject-15`: a cherry-pick of a commit on the current branch.
+- `gitGraph-reject-16`: a cherry-pick onto a branch with no commits.
+- `gitGraph-reject-17`: a cherry-pick of an ordinary commit with a `parent:` that is not its parent.
 
 ### timeline
 
@@ -1461,7 +1486,7 @@ Period : event [: event]…   ': ' splits; '10:30' does not
 %% whole-line comment
 ```
 
-The title follows common rule 3. Honored config key: `disableMulticolor`.
+The title follows common rule 3. Honored config key: `disableMulticolor`. As in Mermaid, it applies only when there are no sections: then every period takes `s1`, and sections keep their colors.
 
 **Not supported:** HTML except `<br>`; an event before any period (Mermaid throws); a period before the first `section` (Mermaid drops it); a repeated section name (Mermaid draws its periods twice). Trailing `%%` (common rule 2) and a second title, from a statement or frontmatter (common rule 3), fall back.
 
@@ -1484,6 +1509,7 @@ The title follows common rule 3. Honored config key: `disableMulticolor`.
 - `timeline-ok-10`: exactly 60 columns at step 1; 59 takes step 2.
 - `timeline-ok-11`, `timeline-ok-12`: first fit at 60 at steps 3 and 4.
 - `timeline-ok-13`: valid timeline, then `accTitle: History`; accTitle parsed and ignored.
+- `timeline-ok-14`: CJK period labels, `2001年` and `2002年`.
 
 **Rejection fixtures:**
 - `timeline-reject-01`: an event before any period.
@@ -1493,6 +1519,9 @@ The title follows common rule 3. Honored config key: `disableMulticolor`.
 - `timeline-reject-05`: `C# 1.0 : released` (`#` starts a comment).
 - `timeline-reject-06`: two `title` lines.
 - `timeline-reject-07`: an unbreakable 61-column event, at 60.
+- `timeline-reject-08`: HTML other than `<br>` in an event.
+- `timeline-reject-09`: a trailing `%%` after an event.
+- `timeline-reject-10`: a frontmatter `title` and a `title` statement.
 
 ### kanban
 
@@ -2174,12 +2203,12 @@ The title follows common rule 3. No config key is honored.
 | mindmap | branch colors; `colorBy: depth` | mindmap-ok-01, mindmap-ok-13 |
 | mindmap | fit ladder steps 1-4 and fallback | mindmap-ok-09, mindmap-ok-10, mindmap-ok-11, mindmap-ok-12, mindmap-reject-06 |
 | mindmap | `:::class` parsed and ignored | mindmap-ok-14 |
-| gitGraph | headers `gitGraph`, `gitGraph:`, `LR:`, `TB:`, `BT:` | gitGraph-ok-01, gitGraph-ok-06 |
+| gitGraph | headers `gitGraph`, `gitGraph:`, `LR:`, `TB:`, `BT:` | gitGraph-ok-01, gitGraph-ok-06, gitGraph-ok-12, gitGraph-ok-13, gitGraph-ok-14 |
 | gitGraph | commit id, `msg:` and bare message, tags | gitGraph-ok-01, gitGraph-ok-07 |
 | gitGraph | commit types NORMAL, REVERSE, HIGHLIGHT | gitGraph-ok-01, gitGraph-reject-06 |
 | gitGraph | branch, checkout, switch | gitGraph-ok-02, gitGraph-reject-01, gitGraph-reject-03 |
 | gitGraph | merge with id, tag and type | gitGraph-ok-02, gitGraph-ok-03, gitGraph-reject-02 |
-| gitGraph | cherry-pick with tags and `parent:` | gitGraph-ok-04, gitGraph-reject-05 |
+| gitGraph | cherry-pick with tags and `parent:` | gitGraph-ok-04, gitGraph-reject-05, gitGraph-ok-15 |
 | gitGraph | `order:`, `mainBranchOrder`, `mainBranchName` | gitGraph-ok-05 |
 | gitGraph | quoted and `feature/x.y` branch names | gitGraph-ok-07 |
 | gitGraph | `title`, comments | gitGraph-ok-07 |
@@ -2192,6 +2221,7 @@ The title follows common rule 3. No config key is honored.
 | timeline | headers `timeline`, `timeline LR`, `timeline TD` | timeline-ok-01, timeline-ok-06, timeline-ok-07 |
 | timeline | `title` statement or frontmatter, once | timeline-ok-01, timeline-ok-07, timeline-reject-06 |
 | timeline | period with inline events | timeline-ok-02, timeline-reject-04, timeline-reject-05 |
+| timeline | CJK period labels | timeline-ok-14 |
 | timeline | `: event` continuation lines | timeline-ok-01, timeline-reject-01 |
 | timeline | `:` inside event text | timeline-ok-02 |
 | timeline | period without events; repeated period text | timeline-ok-05 |

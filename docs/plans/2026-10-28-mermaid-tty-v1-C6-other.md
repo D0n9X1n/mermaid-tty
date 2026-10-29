@@ -3,7 +3,7 @@
 **Depends on:** the index (§4, §5), C1 (T40, T41, T45, T48), and A's T30–T32 for the visual gate. Conventions are as in C4. These three types draw rows directly on one canvas per part. Their connectors and glyphs are `cap` cells (index §5), so the edge and tangle checks pass over them.
 
 ### T76: Mindmap parse
-**Group** G2 · **Deps** T41 · **Covers** matrix mindmap subset (one root, nesting, seven shapes, quoted text, `<br>`, `colorBy`, `:::class`), mindmap-reject-01…05
+**Group** G2 · **Deps** T41 · **Covers** matrix mindmap subset (one root, nesting, seven shapes, quoted text, `<br>`, `colorBy`, `:::class`), mindmap-reject-01…05, -07…09
 **Files:** create `core/diagrams/mindmap/parse.ts`.
 - **Model:** `Mindmap = { title, colorBy: 'branch' | 'depth', root: MNode }` and `MNode = { k: number, shape: Shape, lines: string[], children: MNode[] }`, where `k` is the source index, used for owners.
 - **Test:** `tests/core/mindmap-parse_test.ts`.
@@ -124,13 +124,14 @@ test('A7: the root fills with the node role; a top-level branch colors its subtr
 | ok-13, -14 | frontmatter `config:` / `mindmap:` / `colorBy: depth`, then ok-01's body; ok-01's body plus a `:::urgent` line after `B` |
 | reject-01…03 | `Root`, `  A`, `  ::icon(fa fa-book)`; `Root`, `Other` (a second root); `Root`, `  id[Square)` |
 | reject-04…06 | `Root`, then a child `` "`**bold**`" `` (a markdown string); `mindmap` alone; `%% expect 60 fallback`, `%% expect 80 natural`, a one-word 61-letter root |
+| reject-07…09 | `Root`, then a child `<b>bold</b>` (HTML other than `<br>`); `Root`, `  A %% note` (a trailing `%%`); the header `mindmap extra`, then ok-01's body |
 
 Size ok-09…12 with `node scripts/explain.ts FILE 60`.
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/mindmap/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/mindmap_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add mindmap fixtures and goldens"`
 
 ### T79: gitGraph parse
-**Group** G2 · **Deps** T41 · **Covers** matrix gitGraph subset (headers, commit, branch, checkout/switch, merge, cherry-pick, order, `mainBranchName`/`Order`) and Mermaid's db errors; gitGraph-reject-01…06
+**Group** G2 · **Deps** T41 · **Covers** matrix gitGraph subset (headers, commit, branch, checkout/switch, merge, cherry-pick, order, `mainBranchName`/`Order`) and Mermaid's db errors; gitGraph-reject-01…06, -08…17
 **Files:** create `core/diagrams/gitGraph/parse.ts`.
 - **Model:** `GitGraph = { dir: 'LR' | 'TB' | 'BT', title, branches: { name, order }[], events: { kind: 'start' | 'commit' | 'merge' | 'pick', branch, from?, id, msg, tags, type, line }[] }`.
 - For a pick, `id` is the source commit's id.
@@ -146,8 +147,9 @@ test('A5: commits, tags, types, branch order, checkout and switch, merge and che
   assert.deepEqual(g.branches, [{ name: 'main', order: 0 }, { name: 'dev', order: 2 }, { name: 'feature/x.y', order: 0 }])
   assert.deepEqual(g.events.map((e: any) => [e.kind, e.branch, e.id, e.msg, e.tags, e.type]), [['start', 'main', null, null, [], null],
     ['commit', 'main', 'a', null, ['v1', 'v1.1'], 'NORMAL'], ['start', 'dev', null, null, [], null], ['commit', 'dev', null, null, [], 'HIGHLIGHT'],
-    ['commit', 'dev', 'b', 'b', [], 'REVERSE'], ['merge', 'main', 'm', null, ['rel'], 'NORMAL'], ['start', 'feature/x.y', null, null, [], null],
+    ['commit', 'dev', 'b', 'b', [], 'REVERSE'], ['merge', 'main', 'm', null, ['rel'], null], ['start', 'feature/x.y', null, null, [], null],
     ['commit', 'feature/x.y', null, 'bare', [], 'NORMAL'], ['pick', 'feature/x.y', 'b', null, ['cherry-pick:b'], null]])
+  assert.equal(P('gitGraph\ncommit\nbranch d\ncommit\ncheckout main\nmerge d type: NORMAL').events.at(-1).type, 'NORMAL')   // explicit, unlike the untyped merge's null
 })
 test('A5: headers gitGraph, gitGraph:, LR:, TB:, BT:; mainBranchName and mainBranchOrder from frontmatter config', () => {
   assert.deepEqual(['gitGraph', 'gitGraph:', 'gitGraph LR:', 'gitGraph TB:', 'gitGraph BT:'].map(h => P(`${h}\ncommit`).dir), ['LR', 'LR', 'LR', 'TB', 'BT'])
@@ -180,8 +182,9 @@ test('A5.errors: what Mermaid throws on falls back, and so do repeated ids and a
     - an unknown id;
     - a source on the current branch;
     - a current branch with no commits;
-    - a merge source without a `parent:` that is one of its parents.
+    - a merge source without a `parent:`, or any source, an ordinary commit included, with a `parent:` that is not one of its parents, as pinned Mermaid throws.
     - With no tag, the pick is tagged `cherry-pick:<id>`, plus `|parent:<p>` for a merge, as Mermaid does.
+  - **Merge type:** an untyped merge keeps `type: null`, so T80 draws the default `◉`; an explicit `type:` is kept, `NORMAL` included (finding 2).
   - **Other:** a second title fails `repeat:<n>`. `accTitle` and `accDescr` are ignored.
 - [ ] **Done when:** `node --test tests/core/gitGraph-parse_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse gitGraphs with Mermaid's branch and merge rules"`
@@ -197,6 +200,7 @@ const X = (body: string, columns = 80, h = 'gitGraph') => explain(`${h}\n${body}
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'
 test('A3: one row per event; lanes 2 cells apart; main opens with ╷; a fork ├─╮; a merge ◉─┤; one label column; BT flips', () => {
   assert.deepEqual(text(X(LOG).drawing), ['╷   main', '●   a', '├─╮ dev', '│ ● b', '◉─┤ m'])
+  assert.equal(text(X(LOG + ' type: NORMAL').drawing).at(-1), '●─┤ m')   // an explicit NORMAL merge is not the default ◉
   assert.deepEqual(text(X(LOG, 80, 'gitGraph BT:').drawing), ['◉─┤ m', '│ ● b', '├─╯ dev', '●   a', '╵   main'])
 })
 test('A3: a connector that crosses a lane draws ┼', () => {
@@ -220,7 +224,7 @@ test('A4.fit-ladder: labels wrap at the label column; too many lanes fall back',
     - a lane runs `│` from its start row to the last row.
   - **Events:**
     - commit `●`, REVERSE `⊗`, HIGHLIGHT `■`; cherry-pick `◎`;
-    - merge `◉` (or its `type:` glyph), joined to the merged lane by `─┤` or `├─`, in the merged lane's ink;
+    - merge `◉` when untyped, or its explicit `type:` glyph (`type: NORMAL` draws `●`), joined to the merged lane by `─┤` or `├─`, in the merged lane's ink;
     - a connector cell over another lane is `┼`.
   - **Labels**, at the label column:
     - the branch name on its start row, in the lane's ink (owner `b:<name>`);
@@ -261,14 +265,17 @@ test('A7: each lane takes a series color for its glyphs and name; tags take the 
 | ok-07 | `title Release log`, `%% a comment`, `commit msg: "init"`, `branch "hotfix"`, `commit "fix typo"`, `checkout main`, `branch feature/x.y`, `commit`, `checkout main`, `merge feature/x.y` |
 | ok-08, -09 | `branch dev` before main's first commit, `commit`, `checkout main`, `commit`, `merge dev` (no fork, as main's head was empty); `commit id: "初始"`, `branch "功能"`, `commit id: "新功能" tag: "版本1"`, `checkout main`, `merge "功能"` |
 | ok-10, -11 | `%% expect 60 natural widest 60`, `%% expect 59 wrap`, `commit msg: "…"` with a 58-cell message of several words (2 + 58 = 60); ok-02's body plus `accTitle: Log` |
+| ok-12…15 | ok-03's body under `gitGraph:`, under `gitGraph LR:` and under `gitGraph TB:`; ok-04's body with `cherry-pick id: "A" tag: "picked"` (an explicit tag replaces `cherry-pick:A`) |
 | reject-01…04 | `commit`, `checkout nope`; `commit`, `branch develop`, `checkout main`, `merge develop`; `branch develop`, `branch develop`; the docs MetroLine example (commit id `Boston` twice) |
 | reject-05…07 | `commit`, `branch b`, `commit`, `checkout main`, `merge b id: "m"`, `branch c`, `commit`, `cherry-pick id: "m"`; `commit type: BOLD`; `%% expect 60 fallback`, `%% expect 80 natural`, then 30 × (`branch b<i>`, `commit`, `checkout main`): 31 lanes put the label column at 62 |
+| reject-08…12 | `commit id: "a" id: "b"`; `title A`, `title B`, `commit`; `commit id: "m"`, `branch b`, `commit`, `checkout main`, `merge b id: "m"`; `commit`, `merge nope`; `commit`, `merge main` |
+| reject-13…17 | `branch b`, `checkout main`, `commit`, `merge b` (b has no commits); `commit`, `cherry-pick id: "zz"`; `commit id: "a"`, `cherry-pick id: "a"`; `branch b`, `commit id: "x"`, `checkout main`, `cherry-pick id: "x"`; `commit id: "ZERO"`, `branch develop`, `commit id: "A"`, `checkout main`, `commit id: "ONE"`, `cherry-pick id: "A" parent: "ONE"` |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/gitGraph/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/gitGraph_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add gitGraph fixtures and goldens"`
 
 ### T82: Timeline parse
-**Group** G2 · **Deps** T41 · **Covers** matrix timeline subset (headers, `title`, `section`, periods, `: ` splitting, continuation lines, `<br>`, `disableMulticolor`); timeline-reject-01…06
+**Group** G2 · **Deps** T41 · **Covers** matrix timeline subset (headers, `title`, `section`, periods, `: ` splitting, continuation lines, `<br>`, `disableMulticolor`); timeline-reject-01…06, -08…10
 **Files:** create `core/diagrams/timeline/parse.ts`.
 - **Model:** `Timeline = { dir: 'LR' | 'TD', title, multicolor: boolean, sections: { name: string | null, periods: { text, events: string[] }[] }[] }`.
 - **Test:** `tests/core/timeline-parse_test.ts`.
@@ -346,7 +353,7 @@ test('A4.fit-ladder: gap 2, then gap 1; a word wider than every capped column sk
     - It draws unwrapped first; then period text wraps to `cols − 2` and event text to `cols − 4`. A word wider fails `too-wide`.
   - **Width:** rows are measured as `validate` measures them, so trailing blanks do not count.
   - **Inks:**
-    - Each section, or each period when there are no sections, takes the next series color for its name, pills, dots and events. With `multicolor` false, all take `s1`.
+    - Each section, or each period when there are no sections, takes the next series color for its name, pills, dots and events. With `multicolor` false and no sections, every period takes `s1`; sections keep their colors, as Mermaid applies the option only without sections.
     - The axis takes the `edge` role. Pills are not filled.
   - **Owners:** a period `p<k>`, an event `p<k>.e<j>`, a section `sec<k>`, a dot `p<k>:mark`, the axis `axis`.
 - [ ] **Done when:** `node --test tests/core/timeline-layout_test.ts` passes.
@@ -361,6 +368,12 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import { 
 import { renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'; import { coverageOf, fx, spanOf } from './c-lib.ts'
 const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/timeline').map(f => f.replace('.mmd', ''))
 test('A5: every timeline coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'timeline', ids), []))
+test('A7: with sections, disableMulticolor changes nothing: each section keeps its own color, as in Mermaid', async () => {
+  const { renderMermaid } = await import('../../core/render.ts'), body = 'timeline\nsection Alpha\n2001 : x\nsection Beta\n2002 : y'
+  const on = renderMermaid(body, { columns: 80, theme: 'nord' })!, colorOf = (s: string) => on.flat().find(x => x.text.includes(s))?.color
+  assert.deepEqual(renderMermaid(`---\nconfig:\n  timeline:\n    disableMulticolor: true\n---\n${body}`, { columns: 80, theme: 'nord' }), on)
+  assert.ok(colorOf('Alpha') && colorOf('Alpha') !== colorOf('Beta'))
+})
 test('A7: without sections each period takes the next series color; disableMulticolor keeps them all on s1', () => {
   const n = THEMES.nord, ink = (id: string, y: string) => spanOf(renderMermaid(fx(id), { columns: 120, theme: 'nord' })!, new RegExp(`^ ?${y} ?$`))?.color
   assert.deepEqual([ink('timeline-ok-01', '2002'), ink('timeline-ok-01', '2004')], [n.series.s1, n.series.s2])
@@ -380,8 +393,10 @@ test('A7: without sections each period takes the next series color; disableMulti
 | ok-10 | `%% expect 60 natural widest 60`, `%% expect 59 tight`, then `2001 : Planning`, `2002 : Research`, `2003 : Building`, `2004 : Testing`, `2005 : Shipping it` (pills 10 + 10 + 10 + 9 + 13 = 52, plus four gaps of 2) |
 | ok-11, -12 | `%% expect 60 wrap`, `2001 : the first long event of several short words`, `2002 : ` the same event (each pill 45 cells; two columns need 92); `%% expect 60 lrToTd`, `2001 : Construction`, `2002 : Introduction`, `2003 : Announcement`, `2004 : Distribution`, `2005 : Construction` (wrap caps a column at 11, narrower than a 12-letter word) |
 | ok-13 | ok-01's body plus `accTitle: History` |
+| ok-14 | `2001年 : 创立`, `2002年 : 扩张` (CJK period labels) |
 | reject-01…04 | `: lonely`; `2001 : a`, `section A`, `2002 : b`; `section Bronze Age`, `2001 : a`, `section Bronze Age`, `2002 : b`; `2002 :LinkedIn` |
 | reject-05…07 | `C# 1.0 : released`; `title A`, `title B`, `2002 : x`; `%% expect 60 fallback`, `%% expect 80 natural`, `2002 : ` + a one-word 61-letter event (a 63-cell pill) |
+| reject-08…10 | `2001 : <b>x</b>` (HTML other than `<br>`); `2001 : x %% note` (a trailing `%%`); frontmatter `title: A`, then `title B`, `2001 : x` (two titles) |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/timeline/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/timeline_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add timeline fixtures and goldens"`
@@ -398,6 +413,7 @@ test('A7: without sections each period takes the next series color; disableMulti
 import test from 'node:test'; import assert from 'node:assert/strict'; import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'; import { tmpdir } from 'node:os'; import { join } from 'node:path'
 import { gallery } from '../../scripts/render-gallery.ts'; import { TIER1, supportTable } from '../../core/registry.ts'; import { explain } from '../../core/render.ts'
+import { requirePass } from '../../scripts/check-review-hashes.ts'
 test('VR.gallery: every Tier 1 ok fixture at 80 and 60, a CJK sheet per type, the palette sheet; every glyph at col × cell', () => {
   const out = mkdtempSync(join(tmpdir(), 'mtty-galc-'))
   try {
@@ -417,6 +433,10 @@ test('VR.reviewers: each Tier 1 type has its own review scope over its goldens a
   for (const t of TIER1) assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
 })
 test('B1: docs/generated/support-table.md is exactly supportTable()', () => assert.equal(readFileSync('docs/generated/support-table.md', 'utf8'), supportTable() + '\n'))
+test('VR.passes: with no records, the release gate reports every Tier 1 review scope', () => {
+  const req = JSON.parse(readFileSync('docs/reviews/required.json', 'utf8'))
+  for (const t of TIER1) assert.ok(requirePass([], req).some(p => p.startsWith(`vr-C-${t}: `)), t)
+})
 test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   for (const t of TIER1) assert.ok(!('reason' in explain(readFileSync(`fixtures/${t}/${t}-ok-01.mmd`, 'utf8'), { columns: 120 })), t)
 })
@@ -432,6 +452,7 @@ test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   - **`check-tangle.ts`** (extends T31): it walks the same folders at 60, 80 and 120 and prints one `<type>: <n> ok` line per type. It still exits 1 on any hit.
   - **`required.json`:** add `"vr-C-<type>": ["goldens/<type>/**", "core/themes.ts"]` for the 11 types. CI stays red until each verdict is recorded, as for `vr-A` (PM, 2026-10-28).
   - **`scripts/support-table.ts`:** `--write` writes `supportTable()` and a newline to `docs/generated/support-table.md`, and `--check` exits 1 when the file differs. B owns `README.md` and includes the file through B-T12, so C never edits the README.
+  - **Release prerequisite (finding 1):** T85 wires it. Its 11 `vr-C-<type>` scopes in `required.json` make `check.sh` fail until every Tier 1 type has a pass record: the `REVIEWS` step runs `check-review-hashes.ts --require-pass` (`scripts/check.ts:25`), and A's T38 green gate needs `check.sh` to exit 0 before any release.
   - **`stub.ts`:** delete it; no `layout.ts` imports it any more.
   - **The review of each type** (by people, as in plan A §14):
     1. Run `node scripts/render-gallery.ts out/gallery --png`.

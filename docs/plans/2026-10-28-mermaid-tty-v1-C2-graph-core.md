@@ -51,9 +51,8 @@ test('A3: marks draw one glyph and no label; class ends and cardinality draw at 
   Object.assign(gr.edges[1]!, { tail: 'triangle', head: 'none' }); Object.assign(gr.edges[2]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
   const d = D(gr), t = text(d).join('\n'); assert.equal(validate(d), null)
   assert.deepEqual([...t].filter(c => '●◉'.includes(c)), ['●', '◉']); assert.match(t, /△/); assert.match(t, /◆/); assert.match(t, /0\.\.\*/)
-  assert.deepEqual(d.expect.edges[1]!.ends, [{ node: 'A', mark: 'triangle' }, { node: 'B', mark: 'none' }])
-  assert.deepEqual(d.expect.edges[2]!.ends, [{ node: 'A', mark: 'diamond' }, { node: 'C', mark: 'none', label: '0..*' }])
-  assert.equal(d.expect.edges[0]!.ends, undefined)          // a plain edge lists no ends, so A's expects do not change
+  assert.deepEqual([d.expect.edges[1]!.ends, d.expect.edges[2]!.ends], [[{ node: 'A', glyph: '△' }], [{ node: 'A', glyph: '◆' }]])   // A's per-end marks
+  assert.deepEqual(d.expect.edges[2]!.endLabels, [{ node: 'C', owner: 'e2:head' }])
 })
 test('A3: member columns align; a column cell is owned by its own id, then the node', () => {
   const gr = g('TB', ['C>D']), cols = (k: number, type: string, name: string) => [{ text: type, role: 'label', id: `C.a${k}.type`, width: 6 },
@@ -70,7 +69,7 @@ test('A4: an end label gets room beside its end, and a reversed edge lists its t
   const d = D(one); assert.equal(d.conflicts.length, 0); assert.equal(validate(d), null); assert.match(text(d).join('\n'), /0\.\.\*/)
   const cyc = g('TB', ['A>B', 'B>A']); Object.assign(cyc.edges[1]!, { tail: 'diamond', head: 'none', headLabel: '0..*' })
   const c = D(cyc); assert.equal(validate(c), null)
-  assert.deepEqual(c.expect.edges[1]!.ends, [{ node: 'B', mark: 'diamond' }, { node: 'A', mark: 'none', label: '0..*' }])
+  assert.deepEqual([c.expect.edges[1]!.ends, c.expect.edges[1]!.endLabels], [[{ node: 'B', glyph: '◆' }], [{ node: 'A', owner: 'e1:head' }]])
 })
 ```
 - [ ] **Run** `node --test tests/core/graph-c-draw_test.ts` → FAIL: `Expected values to be strictly deep-equal` with `{ reason: 'edge-disconnected' }`: an empty mark draws nothing yet, so no route touches it.
@@ -99,8 +98,8 @@ test('A4: an end label gets room beside its end, and a reversed edge lists its t
       - in LR and RL, in that rank gap, plus one top row.
       So a label beside the last node is never out of bounds.
     - **Reversed edges:** `chains.ts` swaps `tailLabel` and `headLabel` with `tail` and `head`. `draw.ts` names each label by its true end: on a `reversed` edge, the drawn tail's label is `${edge}:head`.
-  - **`expect` contracts (T86):**
-    - An edge with a C end mark (`triangle`, `diamond`, `odiamond`) or an end label lists `ends`: `[true tail, true head]`, each `{ node, mark }` plus `label` when it has one. A plain edge lists none, so flowchart and state expects do not change.
+  - **`expect` contracts:**
+    - Each end mark is listed on A's per-end-mark contract, `ends: { node, glyph }[]`, at its true node, as A's draw lists arrows; `end-misplaced` checks it. Each end label is listed in T86's `endLabels` as `{ node, owner }`, its owner named by the true end.
     - Each `cols` column id, and each `fixed` row's `id`, is listed in `expect.members` with `parent: node.id`.
   - **Keyed text (T87):** an edge with `labelKey` draws `cv.key` where its label goes, owned by `[${edge}:label, edge]`. A note with `key` draws it in the note's place, and a column with `key` in the column's place, each owned like the text it replaces. That text is not listed in `expect.labels`, since its legend row lists it. `chains.ts` sizes a keyed label by its key.
   - **`expect.edges` heads:** each end's glyph, tail first.
@@ -143,6 +142,7 @@ test('A3: frameless regions stack inside one frame, split by a dashed row; they 
   const d = D(gr), t = text(d); assert.equal(validate(d), null)
   assert.ok(t.some(l => /^│ *┄+ *│$/.test(l.trim())), t.join('\n'))
   assert.ok(!d.cells.flat().some(c => c?.kind === 'frame' && (c.owners[0] === 'r1' || c.owners[0] === 'r2')))
+  assert.deepEqual(d.expect.frames, ['S'])                     // A's frame contract: a frameless region lists no frame
 })
 ```
 - [ ] **Run** `node --test tests/core/graph-notes_test.ts` → FAIL: `Cannot find module …/core/graph/notes.ts`.
@@ -163,7 +163,7 @@ test('A3: frameless regions stack inside one frame, split by a dashed row; they 
     - The first line joins the pill by ` ┄┄` caps (`note` role), owned by `${note.id}:link`, mirrored for `right`.
     - `expect.labels` gets `{ owner: note.id, text: labelLines(text).join('\n') }`.
   - **`draw.ts` regions:**
-    - A frameless cluster draws no frame.
+    - A frameless cluster draws no frame and is not listed in A's `expect.frames`; its parent is. A divider stays inside the parent's border, so `frame-broken` holds.
     - Between two consecutive frameless children of one cluster, draw a divider of `cap` cells in the `frame` role, owned by `${parent}:div<k>`. It is `┄` across the parent's inner width on the gap's middle row (TB/BT), or `┆` down the gap's middle column (LR/RL).
     - Caps are not lines, so the tangle and edge checks ignore dividers.
 - [ ] **Done when:** `node --test tests/core/graph-notes_test.ts tests/core/graph-c-draw_test.ts tests/core/layered_test.ts` passes.

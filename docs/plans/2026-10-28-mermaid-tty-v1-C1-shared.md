@@ -328,7 +328,7 @@ test('A4: ticks sit at their cells; a label that leaves the field, or meets the 
 ```ts
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'; import { tmpdir } from 'node:os'; import { explain } from '../../core/render.ts'; import { createCanvas } from '../../core/canvas.ts'
-import { goldenOf, goldenGlyphs, widest, roleCode } from './golden-lib.ts'; import { GATED_DIRS, LADDER, expectLines, fx, borderRows, coverageOf } from './c-lib.ts'
+import { goldenOf, goldenGlyphs, widest, roleCode } from './golden-lib.ts'; import { GATED_DIRS, LADDER, expectLines, fx, borderRows, unlistedFrames, coverageOf } from './c-lib.ts'
 const W = [60, 80, 120], X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
 const MATRIX = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8')
 for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
@@ -343,9 +343,9 @@ for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
       for (const e of lines.length ? lines : W.map(cols => ({ cols, step: 'fallback' as const }))) {
         const r = X(src, e.cols); if (e.step === 'fallback') assert.ok('reason' in r, `${id}@${e.cols}`); else assert.equal(r.step, e.step, `${id}@${e.cols}`) }
     }); continue }
-    test(`A4: ${id} renders, validates and matches its golden at 60/80/120, with no border-only rows`, () => {
+    test(`A4: ${id} renders, validates and matches its golden at 60/80/120, with no border-only rows and every frame listed`, () => {
       const g = goldenOf(W.map(w => { const r = X(src, w); assert.ok(!('reason' in r), `${id}@${w} ${r.reason}`)
-        assert.deepEqual(borderRows(r.drawing), [], `${id}@${w}`); return [w, r.drawing] as const }))
+        assert.deepEqual([...borderRows(r.drawing), ...unlistedFrames(r.drawing)], [], `${id}@${w}`); return [w, r.drawing] as const }))
       const p = join('goldens', type, `${id}.golden`)
       if (process.env.UPDATE_GOLDEN === '1') { mkdirSync(join('goldens', type), { recursive: true }); writeFileSync(p, g) }
       assert.equal(g, readFileSync(p, 'utf8'))
@@ -362,6 +362,10 @@ test('A4.fit-ladder: expect lines parse', () => assert.deepEqual(expectLines('pi
 test('A3: borderRows flags an item row with caps and no text; glyph-only owners pass', () => {
   const c = createCanvas(2, 6, 6); c.cap(0, 0, '[', 'node', 'A'); c.text(0, 2, 'x', 'node', 'A'); c.cap(1, 0, '[', 'node', 'A'); c.cap(1, 3, '●', 'node', 'S')
   assert.deepEqual(borderRows(c.toDrawing({ labels: [{ owner: 'A', text: 'x' }], edges: [], edgeLabels: [] })), ['A@1'])
+})
+test('A3: unlistedFrames names a frame owner that expect.frames does not list', () => {
+  const c = createCanvas(3, 4, 4), e = { labels: [], edges: [], edgeLabels: [] }; c.frame(0, 0, 2, 3, 'frame', 'S')
+  assert.deepEqual(unlistedFrames(c.toDrawing(e)), ['S']); assert.deepEqual(unlistedFrames(c.toDrawing({ ...e, frames: ['S'] })), [])
 })
 test('A5: coverageOf finds missing, uncited and empty rows, and a type with no rows', () => {
   assert.deepEqual(coverageOf('## Coverage\n| pie | x | pie-ok-01, pie-reject-09 |\n| pie | y |  |', 'pie', ['pie-ok-01', 'pie-ok-02', 'pie-reject-01']),
@@ -394,6 +398,7 @@ test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as
   - **`expectLines`** reads `^%% expect (\d+) (\w+)(?: widest (\d+))?$`, omitting `widest` when it is absent.
   - **`fx(id)`** reads `fixtures/<id less -(ok|reject)-NN>/<id>.mmd`.
   - **`borderRows(d)`:** for each owner named in any text or `cont` cell's owners, every row holding that owner's `cap` or `fill` cell must hold one of its text cells. Owners with no text, such as marks, bars, connectors and point keys, pass; a `key` cell is neither cap nor fill.
+  - **`unlistedFrames(d)`:** the sorted owners of `frame` cells that `expect.frames` (A's frame contract) does not list. Every type that draws a frame (state composites, class namespaces, the quadrant plot, any other) must list it.
   - **`coverageOf(matrix, type, ids)`:** reads the `| <type> | <feature> | <ids> |` rows after `## Coverage`. It returns, each group sorted:
     - `empty: <feature>` for a row citing no id;
     - `missing <id>` for each cited id not in `ids`;

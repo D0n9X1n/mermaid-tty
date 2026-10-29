@@ -3,7 +3,7 @@
 **Depends on:** the index (§4, §5), C1 (T40, T43–T48). Conventions are as in C4.
 
 ### T71: xychart parse
-**Group** G2 · **Deps** T43 · **Covers** matrix xychart subset (headers, orientation, text tokens, numbers, axes, series) and its fallbacks; xychart-reject-01…11, -13
+**Group** G2 · **Deps** T43 · **Covers** matrix xychart subset (headers, orientation, text tokens, numbers, axes, series) and its fallbacks; xychart-reject-01…11, -13…17
 **Files:** create `core/diagrams/xychart/parse.ts`.
 - **Model:** `Xy = { orientation: 'vertical' | 'horizontal', title, xTitle, categories: string[] | null, yTitle, range: { lo: Num; hi: Num } | null, series: { kind: 'bar' | 'line', name: string | null, values: Num[] }[] }`, where `Num = { raw: string; value: Dec }`.
 - **Test:** `tests/core/xychart-parse_test.ts`.
@@ -147,12 +147,13 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
 | reject-05…08 | `x-axis 0 --> 100`, `bar [1]`; `title Sales Revenue`, `bar [1]`; `x-axis Q1 [a, b]`, `bar [1, 2]`; `x-axis [barley, wheat]`, `bar [1, 2]` |
 | reject-09…11 | `bar [1, 2` (unclosed); `x-axis [a, a]`, `bar [1, 2]`; `y-axis 5 --> 5`, `line [5]` |
 | reject-12, -13 | `%% expect 60 fallback`, `%% expect 120 natural`, `xychart-beta horizontal`, `x-axis [` + a one-word 50-letter category of `q`s + `]`, `bar [1]` (a vertical header would fit in 56 cells); nine `line [1]` series |
+| reject-14…17 | ok-01's body plus: `` title "`**Sales**`" `` (a markdown string); a second `x-axis [a, b]`; then alone, `bar [0, 0]` with no `y-axis` (an all-zero implicit range); 27 `bar [1]` series |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/xychart/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/xychart_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add xychart fixtures and goldens"`
 
 ### T74: Quadrant parse and module
-**Group** G4 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07
+**Group** G4 · **Deps** T40, T43, T46 · **Covers** matrix quadrant (subset, text design, numbers, collisions, ladder), quadrant-reject-01…07, -10…15
 **Files:** create `core/diagrams/quadrant/parse.ts`.
 - **Model:** `Quadrant = { title, x: [string, string | null] | null, y: [string, string | null] | null, quads: (string | null)[], points: { name, x: Num, y: Num }[], fields: { owner, text }[] }`.
 - `fields` lists the quadrant and x-axis texts in source order (an axis: left, then right).
@@ -206,6 +207,7 @@ test('A5.errors: point styles, bad coordinates, a lone -->, repeats and a keywor
       - A point's column is `min(2q − 1, ⌊2q·x⌋)` and its row `min(9, ⌊10·y⌋)`, counted from the bottom; `Dec` math.
       - A point whose key would sit in, or next to on its row, an existing key's cells joins the lowest such key. Otherwise it takes the next `pointKey`. Keys are drawn after grouping, each once with `cv.key`, rightward from its first point's cell, in `s1`, owned by every point it stands for. Each point's legend row is `{ key, item: 'p<i>', cls: 'point' }`; a keyed field's row has its own owner as `item` and `cls: 'field'`. `keyable` lists every point and every field, so T87 checks each key in place, in the legend, and all or none.
       - A key that would run into the cross or the frame fails `key-collision`.
+    - **Frame:** the plot box is a frame, listed in A's `expect.frames`; T48 checks every type's frames.
   - **Roles:** frame and cross `frame`; quadrant, axis and point-name texts and `↑↓` `label`; title `title`; coordinates `value`.
 - [ ] **Done when:** `node --test tests/core/quadrant-layout_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Parse and draw quadrant charts with point keys"`
@@ -248,6 +250,7 @@ test('A7: point keys take s1; the frame takes frame; coordinates take value', ()
 | reject-01…04 | ok-01's body plus `Point A: [0.9, 0.0] radius: 12`; `A: [1.2, 0.5]`; `A: [1.0, 0.5]`; `x-axis Low -->` |
 | reject-05…07 | `quadrant-1 A`, `quadrant-1 B`; `A: [0.3 0.6]`; `Titled work: [0.3, 0.6]` |
 | reject-08, -09 | ok-05's `P1`…`P9`, then `J: [0.49, 0.5]`: J takes key 10 in the left half's last cell, so the key runs into the cross; `%% expect 18 fallback` and the docs campaign example (q = 7) |
+| reject-10…15 | ok-01's body plus: `` quadrant-1 "`**A**`" `` (markdown); a second `x-axis Low --> High`; `A: [.5, 0.5]`; `Point A: [0.9, 0.0] color: #ff3300`; `… stroke-color: #10f0f0`; `… stroke-width: 5px` |
 
 - [ ] **Done when:** `UPDATE_GOLDEN=1 node --test tests/golden/c-golden_test.ts` writes `goldens/quadrant/`. After each golden is read, `node --test tests/golden/c-golden_test.ts tests/golden/quadrant_test.ts tests/golden/golden_test.ts` passes.
 - [ ] **Commit:** `git commit -m "Add quadrant fixtures and goldens"`
