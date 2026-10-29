@@ -1,8 +1,8 @@
-// Reads a flowchart's header, nodes, shapes and labels (plan A, T13 and §7) into
-// the graph model. A statement it cannot read whole fails, so the fence draws as source.
+// Reads a flowchart's header, nodes, shapes, labels and links (plan A, T13, T14 and §7)
+// into the graph model. A statement it cannot read whole fails, so the fence draws as source.
 import { shapeFromName, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
-import type { Dir, GNode, Graph, NodeRow } from '../../graph/model.ts'
+import type { Dir, End, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
 import { labelLines } from '../../text.ts'
 import { unsupported } from '../../width.ts'
@@ -10,7 +10,21 @@ import { unsupported } from '../../width.ts'
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
 // Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
-const ID = /^[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*/u
+const NAME = String.raw`[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*`
+const ID = new RegExp(`^${NAME}`, 'u')
+// A link in its basic form at lastIndex, with the spaces around it: an optional id@, then a
+// tail mark, a line (two or more - or =, or - dots -) and a head mark, each mark optional;
+// or three or more ~, with no marks. One |label| may follow (any "…" in it whole). Too short
+// a line, -- or == with no head, is no link: it opens a text form.
+const LINK = new RegExp(String.raw`\s*(?:(${NAME})@)?(?:([<ox])?(-{2,}|={2,}|-\.+-)([>ox])?|(~{3,}))\s*(?:\|((?:"[^"]*"|[^"|])*)\|\s*)?`, 'uy')
+// A link in a text form at lastIndex, with the spaces around it: an optional id@, an opener,
+// the text up to the first closer of the opener's kind (any "…" in it whole), then that
+// closer and an optional head mark: -- t -->, == t ==>, -. t .->.
+const TEXT = String.raw`((?:"[^"]*"|[^"])*?)`
+const TEXTS = [String.raw`--${TEXT}(-{2,})([>ox])?`, String.raw`==${TEXT}(={2,})([>ox])?`, String.raw`-\.${TEXT}(-?\.+-)([>ox])?`]
+  .map(form => new RegExp(String.raw`\s*(?:(${NAME})@)?${form}\s*`, 'uy'))
+// The & between two nodes of a group, spaces around it: Mermaid reads A&B as one id.
+const AMP = /\s+&\s+/y
 // Each opener with each closer it pairs with, longest opener first. [/ and [\ pair
 // with either slash, and the closer found first decides the shape.
 const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[] = [
@@ -27,8 +41,10 @@ const PAIR = /\s*([\w-]+)\s*:\s*("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
 type Mention = { id: string; end: number; shape?: Shape; lines?: string[] }
 // A node as the statements so far declare it.
 type Decl = { id: string; shape: Shape; lines: string[]; order: number }
-// What the statements so far have declared: nodes by id, in first-mention order.
-type State = { nodes: Map<string, Decl> }
+// A link as one statement writes it: what its edges draw, its id@ if it has one, and how far it reads.
+type Link = { id?: string; end: number; style: GEdge['style']; tail: End; head: End; label: string | null; minlen: number }
+// What the statements so far have declared: nodes by id, in first-mention order, and edges in source order.
+type State = { nodes: Map<string, Decl>; edges: GEdge[] }
 
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
@@ -38,14 +54,14 @@ export function parseFlowchart(src: Source): Graph | Fail {
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
   if (!head) return fail('header')
   const dir = (head[3] === undefined || head[3] === 'TD' ? 'TB' : head[3]) as Dir
-  const st: State = { nodes: new Map() }
+  const st: State = { nodes: new Map(), edges: [] }
   for (const { n, text } of statements(src)) {
     const end = statement(text, st)
     if (isFail(end)) return end
     // Text left on a statement fails, with the statement's source line.
     if (end < text.length) return fail(`syntax:${n}`)
   }
-  return { dir, title: src.title, nodes: [...st.nodes.values()].map(node), edges: [], clusters: [] }
+  return { dir, title: src.title, nodes: [...st.nodes.values()].map(node), edges: st.edges, clusters: [] }
 }
 
 // Each line's statements, trimmed, with the line's number; empty ones drop.
@@ -95,14 +111,91 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
   return text[i] === '}' ? { pairs, end: i + 1 } : null
 }
 
-// Reads one statement into st and returns how far it read; the caller fails on any
-// text left. A statement is one node for now: links and keyword statements read here.
+// Reads one statement into st and returns how far it read; the caller fails on any text
+// left. A statement is G0 L1 G1 L2 G2 …: each G one node or several joined by &, and each
+// link joins every node of the group before it to every node of the group after it.
 function statement(text: string, st: State): number | Fail {
-  const m = mention(text, 0)
-  if (m === null) return 0
-  if (isFail(m)) return m
-  declare(st, m)
-  return m.end
+  let g = group(text, 0, st)
+  if (g === null) return 0
+  if (isFail(g)) return g
+  for (;;) {
+    const l = link(text, g.end)
+    if (l === null) return g.end
+    if (isFail(l)) return l
+    const next = group(text, l.end, st)
+    if (next === null) return g.end
+    if (isFail(next)) return next
+    connect(st, g.ids, next.ids, l)
+    g = next
+  }
+}
+
+// The nodes at `at`, one or several joined by " & ", each declared into st: their ids, and
+// how far they read. null if no node starts there or after an &; a label's Fail if one fails.
+function group(text: string, at: number, st: State): { ids: string[]; end: number } | Fail | null {
+  const ids: string[] = []
+  for (;;) {
+    const m = mention(text, at)
+    if (m === null || isFail(m)) return m
+    declare(st, m)
+    ids.push(m.id)
+    AMP.lastIndex = m.end
+    if (!AMP.test(text)) return { ids, end: m.end }
+    at = AMP.lastIndex
+  }
+}
+
+// The link at `at`: a basic form, or else a text form. null if none starts there; its
+// label's Fail if that fails.
+function link(text: string, at: number): Link | Fail | null {
+  LINK.lastIndex = at
+  const b = LINK.exec(text)
+  if (b) {
+    const [, id, tail, line, head, tildes = '', raw] = b
+    const s = stroke(line ?? tildes, head)
+    if (s.minlen > 0) {
+      const lbl = raw === undefined ? null : label(raw)
+      if (isFail(lbl)) return lbl
+      return { id, end: LINK.lastIndex, ...s, tail: endOf(tail), head: endOf(head), label: lbl }
+    }
+  }
+  for (const form of TEXTS) {
+    form.lastIndex = at
+    const t = form.exec(text)
+    if (!t) continue
+    const [, id, raw = '', line = '', head] = t
+    const s = stroke(line, head)
+    if (s.minlen < 1) return null
+    const lbl = label(raw)
+    if (isFail(lbl)) return lbl
+    return { id, end: form.lastIndex, ...s, tail: 'none', head: endOf(head), label: lbl }
+  }
+  return null
+}
+
+// What a link's line draws: = thick, a dot dotted, ~ invisible, - solid; and minlen, 1 plus
+// the line's length over its form's base: -- or == with a head, --- or === without, ~~~, or one dot.
+function stroke(line: string, head?: string): { style: GEdge['style']; minlen: number } {
+  if (line.includes('.')) return { style: 'dotted', minlen: line.replace(/[^.]/g, '').length }
+  const style = line[0] === '=' ? 'thick' : line[0] === '~' ? 'invisible' : 'solid'
+  return { style, minlen: line.length - (head ? 1 : 2) }
+}
+
+// The end a mark draws: < or > an arrow, o a circle, x a cross; no mark, none.
+const endOf = (mark?: string): End => (mark === 'o' ? 'circle' : mark === 'x' ? 'cross' : mark ? 'arrow' : 'none')
+
+// Adds an edge for each pair of from × to, in source order. As Mermaid gives ids, the link's
+// id@ names the edge from the last of from to the first of to unless an edge has it already;
+// any other edge is L_<from>_<to>_<n>, n 0 for the pair's first edge, then its count so far plus 1.
+function connect(st: State, from: string[], to: string[], l: Link): void {
+  for (const f of from) {
+    for (const t of to) {
+      const pair = st.edges.filter(e => e.from === f && e.to === t).length
+      const id = l.id !== undefined && f === from.at(-1) && t === to[0] && !st.edges.some(e => e.id === l.id)
+        ? l.id : `L_${f}_${t}_${pair === 0 ? 0 : pair + 1}`
+      st.edges.push({ id, from: f, to: t, style: l.style, tail: l.tail, head: l.head, label: l.label, minlen: l.minlen, order: st.edges.length })
+    }
+  }
 }
 
 // A node at `at`: its id, then at most one bracket shape or @{…}. null if no id
@@ -120,9 +213,9 @@ function mention(text: string, at: number): Mention | Fail | null {
       const value = raw.trim().replace(/^(["'])(.*)\1$/s, '$2')
       if (key === 'shape') m.shape = shapeFromName(value)
       else if (key === 'label') {
-        const lines = value.startsWith('`') ? fail('markdown-string') : textLines(value)
-        if (isFail(lines)) return lines
-        m.lines = lines
+        const t = value.startsWith('`') ? fail('markdown-string') : checked(value)
+        if (isFail(t)) return t
+        m.lines = labelLines(t)
       }
     }
     return m
@@ -132,9 +225,9 @@ function mention(text: string, at: number): Mention | Fail | null {
   const pairs = BRACKETS.filter(([o]) => o === open)
   const c = closer(text, at + open.length, pairs.map(([, close]) => close))
   if (!c) return null
-  const lines = label(text.slice(at + open.length, c.at))
-  if (isFail(lines)) return lines
-  return { id, end: c.at + c.close.length, shape: pairs.find(([, close]) => close === c.close)![2], lines }
+  const t = label(text.slice(at + open.length, c.at))
+  if (isFail(t)) return t
+  return { id, end: c.at + c.close.length, shape: pairs.find(([, close]) => close === c.close)![2], lines: labelLines(t) }
 }
 
 // The first of closes at or after i, outside "…": where it starts and which it is.
@@ -149,21 +242,22 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
   return null
 }
 
-// A bracket label's lines: trimmed, one enclosing pair of "…" stripped ("…" keeps
-// punctuation). A "`…`" markdown string fails.
-function label(raw: string): string[] | Fail {
+// A bracket or edge label's text: trimmed, one enclosing pair of "…" stripped ("…" keeps
+// punctuation). A "`…`" markdown string fails. Its <br> stay: a node splits them into
+// lines, and an edge label keeps them for layout to split with labelLines.
+function label(raw: string): string | Fail {
   const trimmed = raw.trim()
   if (trimmed.startsWith('"`')) return fail('markdown-string')
-  return textLines(trimmed.replace(/^"(.*)"$/s, '$1'))
+  return checked(trimmed.replace(/^"(.*)"$/s, '$1'))
 }
 
-// Label text split at <br>. A #…; entity or an unsupported character fails.
-function textLines(text: string): string[] | Fail {
+// Label text as written, if it can be drawn: a #…; entity or an unsupported character fails.
+function checked(text: string): string | Fail {
   // Mermaid decodes #name; and #123; as HTML entities.
   if (/#\w+;/.test(text)) return fail('entity')
   const bad = unsupported(text)
   if (bad) return fail(`unsupported-char ${bad}`)
-  return labelLines(text)
+  return text
 }
 
 // Declares m's node at its first mention; a later mention's shape or label replaces the one before.
