@@ -43,17 +43,27 @@ const KEYS = Object.keys(VALID)
 // The trimmed cells of a table row: | a | b | gives ['a', 'b'].
 const cells = (row: string) => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
 const HEX64 = /^[0-9a-f]{64}$/
+// A GFM table's delimiter row, with or without outer pipes, each cell one or more hyphens between optional alignment
+// colons: --- | ---, |:-:|--:|, or a single column's --- | or :---.
+const DELIMITER = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
+
+// Whether a line belongs to a table: a row that starts with |, or a delimiter row, in a blockquote too (its > markers
+// stripped). Hyphens alone are a rule or a setext underline, never a delimiter row, so a delimiter row needs a | or a :.
+function tableLine(line: string): boolean {
+  const s = line.replace(/^(\s*>)+/, '')
+  return line.trimStart().startsWith('|') || (DELIMITER.test(s) && /[|:]/.test(s))
+}
 
 // The files of the record's one ## Files table. Every non-blank line from that heading to the next ## heading
 // is the table: | path | sha256 |, a |---|---| row, then one | <path> | <64 lowercase hex> | row per reviewed
-// file, each path once. A table row anywhere else, or a second ## Files heading, fails the record.
+// file, each path once. Any table anywhere else, a line tableLine finds, or a second ## Files heading fails the record.
 function filesTable(path: string, lines: string[]): ReviewFile[] | { error: string } {
   const start = lines.indexOf('## Files')
   if (start < 0) return { error: `${path}: no ## Files table` }
   if (lines.indexOf('## Files', start + 1) >= 0) return { error: `${path}: more than one ## Files heading` }
   const next = lines.findIndex((l, i) => i > start && l.startsWith('## '))
   const stop = next < 0 ? lines.length : next
-  const stray = lines.find((l, i) => (i < start || i >= stop) && l.trimStart().startsWith('|'))
+  const stray = lines.find((l, i) => (i < start || i >= stop) && tableLine(l))
   if (stray) return { error: `${path}: table row outside ## Files ${JSON.stringify(stray)}` }
   const [header, rule, ...rows] = lines.slice(start + 1, stop).filter(l => l.trim() !== '')
   if (JSON.stringify(cells(header ?? '')) !== '["path","sha256"]' || !cells(rule ?? '').every(c => /^:?-+:?$/.test(c)))

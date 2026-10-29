@@ -225,3 +225,34 @@ test('VR.reviewers: a valid record, one ## Files table then prose-only sections,
   assert.deepEqual([r.status, r.stdout, r.stderr],
     [0, 'check-review-hashes: 1 record(s); every reviewed file matches its SHA-256; every required path has a passing verdict\n', ''])
 })
+
+// The QA repro: a table without outer pipes under ## Notes was never parsed, so a reader saw files that were never hashed.
+test('VR.reviewers: a table without outer pipes under ## Notes fails the record, so --require-pass exits 1', t => {
+  const dir = tree(t, {
+    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\npath | sha256\n--- | ---\nabsent | ${Z}\n`,
+  })
+  const r = cli(dir, '--require-pass')
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
+    'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
+})
+
+// REC with lines added under its ## Notes, after a blank line.
+const withNotes = (...lines: string[]) => `${REC}\n${lines.join('\n')}\n`
+// The error for a table line outside ## Files.
+const outside = (line: string) => ({ error: `r.md: table row outside ## Files ${JSON.stringify(line)}` })
+
+test('VR.reviewers: a table outside ## Files fails the record, its delimiter row aligned, one hyphen a cell, or in a blockquote', () => {
+  for (const table of [['path | sha256', ':--- | ---:', `absent | ${Z}`], ['path | sha256', ':-: | -', `absent | ${Z}`],
+    ['> path | sha256', '> --- | ---', `> absent | ${Z}`]])
+    assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(table[1]!))
+})
+
+test('VR.reviewers: a single-column table outside ## Files fails the record, with or without outer pipes', () => {
+  const tables: [string[], string][] = [[['path |', '--- |', 'absent |'], '--- |'], [['path', ':---', 'absent'], ':---'], [['| path |', '|---|', '| absent |'], '| path |']]
+  for (const [table, line] of tables) assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(line))
+})
+
+// A --- alone on a line is a thematic break, not a table's delimiter row.
+test('VR.reviewers: ## Notes holding only prose, a --- rule alone on a line among it, still passes', () =>
+  assert.deepEqual(parseRecord('r.md', withNotes('The PM read the a | b labels.', '', '---', '', 'The palettes tell the roles apart.')), parsed('r.md')))
