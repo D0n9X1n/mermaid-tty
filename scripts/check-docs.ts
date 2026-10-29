@@ -9,6 +9,7 @@ import { checkShErrors } from './lib/ci-rules.ts'; // T8
 import { assetImages, iconErrors, imageErrors, readmeErrors } from './lib/doc-rules.ts';
 import { versionsErrors } from './docs/ci-rules.ts'; // T17
 import { IMAGES } from './lib/images.ts';
+import { githubHtml, renderErrors } from './lib/github-render.ts'; // T18
 import { renderImage } from './lib/render-image.ts'; // T11
 import { misplaced } from './lib/svg.ts'; // T11
 const root = fileURLToPath(new URL('..', import.meta.url)), at = (p: string) => join(root, p);
@@ -33,6 +34,11 @@ for (const img of IMAGES) {
 const listed = new Set(diagrams);
 for (const f of existsSync(at('assets/readme')) ? readdirSync(at('assets/readme')) : [])
   if (f.endsWith('.svg') && !listed.has(`assets/readme/${f}`)) errors.push(`assets/readme/${f}: not in the image manifest`);
+// T18 begin: D15d, GitHub's render of each page must show the tree's links and images; CI passes GH_TOKEN, and a local run without it skips.
+if (process.env.GH_TOKEN) for (const p of ['README.md', ...pages]) try { errors.push(...renderErrors(p, read(p), githubHtml(p, root))); } catch (e) { errors.push(`${p}: ${(e as Error).message}`); }
+else if (process.env.GITHUB_ACTIONS === 'true') errors.push('GitHub render cross-check: GH_TOKEN is not set in CI (D15d)');
+else console.log('check-docs: GitHub render cross-check skipped: no GH_TOKEN (CI sets it)');
+// T18 end
 for (const e of errors) console.error(`check-docs: ${e}`);
 if (errors.length) process.exit(1);
 console.log(`check-docs: ok (README, ${IMAGES.length} images, 4 workflows, check.sh, icon)`);

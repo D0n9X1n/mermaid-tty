@@ -48,6 +48,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [releaseErrors, REL, 'marketplace add D0n9X1n/mermaid-tty', 'marketplace add ./', 'GitHub marketplace install'],
   [releaseErrors, REL, 'head_sha=${GITHUB_SHA}', 'head_sha=other', 'publish-wiki run for the tagged commit'],
   [ciErrors, CI, 'run: node scripts/render-gallery.ts gallery', 'run: npm ci --prefix scripts/e2e', 'npm ci outside its tooling job'],
+  [ciErrors, CI, '  e2e:\n', '      - id: docs\n        run: node scripts/check-docs.ts\n  e2e:\n', 'GH_TOKEN on every check-docs step'],
 ];
 for (const [rule, base, from, to, want] of cases)
   test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some(e => e.includes(want)), `${from} -> ${to}`));

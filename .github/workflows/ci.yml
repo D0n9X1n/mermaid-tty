@@ -59,6 +59,8 @@ jobs:
       # Last, so a red docs check (README content lands late) never skips the gates above.
       - id: docs
         run: node scripts/check-docs.ts
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   e2e:
     name: e2e (${{ matrix.os }})
