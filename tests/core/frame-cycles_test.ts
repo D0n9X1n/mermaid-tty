@@ -17,3 +17,23 @@ for (const [name, src] of Object.entries(REPROS)) {
     assert.equal(validate(r.drawing), null, text(r.drawing).join('\n'))
   })
 }
+
+// V8: the same, with an edge from outside the frame into a node of the cycle: it crosses the frame's border to its node.
+const ENTERED = {
+  'flowchart TD two-node cycle, edge into it': 'flowchart TD\nx --> a\nsubgraph S\n  a --> b\n  b --> a\nend',
+  'flowchart LR three-node cycle, edge into it': 'flowchart LR\nx --> a\nsubgraph S\n  a --> b --> c\n  c --> a\nend',
+}
+for (const [name, src] of Object.entries(ENTERED)) {
+  test(`V8: ${name} draws at 80 columns`, () => {
+    const r = explain(src, { columns: 80, theme: 'mono' })
+    assert.ok(!isFail(r), `fell back: ${isFail(r) ? r.reason : ''}`)
+    assert.equal(validate(r.drawing), null, text(r.drawing).join('\n'))
+  })
+}
+
+// V8: the lane lies two rows past the frame's nodes, as at the top level: before, its own dummy pushed it one row further.
+test('V8: the LR cycle in a frame an edge points at has no empty rows before its lane', () => {
+  const r = explain(REPROS['flowchart LR three-node cycle, edge to the frame'], { columns: 80, theme: 'mono' })
+  assert.ok(!isFail(r), `fell back: ${isFail(r) ? r.reason : ''}`)
+  assert.equal(text(r.drawing).length, 9, text(r.drawing).join('\n'))
+})

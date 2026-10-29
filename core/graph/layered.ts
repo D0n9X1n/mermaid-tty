@@ -3,6 +3,7 @@ import { fail, isFail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
 import type { Extent, Unit } from './chains.ts'
 import { ancestors, clusterTree, subgraph } from './clusters.ts'
+import type { Tree } from './clusters.ts'
 import type { GEdge, Graph } from './model.ts'
 import { place } from './place.ts'
 import type { Rect } from './place.ts'
@@ -139,8 +140,12 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further out.
   // A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's move here.
   const blocked = new Set([...subs.values()].flatMap(x => x.graph.edges.map(e => e.id)))
-  let outside = Math.max(...[...boxes, ...frames].map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
-  const backs = graph.edges.filter(e => e.reversed && !blocked.has(e.id))
+  const inStrip = stripLanes(graph, t, boxes, frames, notes, across, room, blocked)
+  const backs = graph.edges.filter(e => e.reversed && !blocked.has(e.id) && !inStrip.has(e.id))
+  // Nested, beside all but these edges' own dummies and labels, which move into the lanes, so the frame holds no blank rows
+  // before them; at the top level the drawings stay as they were.
+  const own = (k: string) => nested && backs.some(e => k.startsWith(`${e.id}#`) || k === `${e.id}:label`)
+  let outside = Math.max(...[...boxes, ...frames].filter(([k]) => !own(k)).map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
   for (const e of backs) {
     outside += room(e)
     const label = boxes.get(`${e.id}:label`)
@@ -153,7 +158,44 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   }
   // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it goes.
   const lanes = nested && backs.some(e => e.style !== 'invisible') ? outside - 2 : 0
-  const rows = Math.max(across ? p.wide : p.long, ...[...boxes.values()].map(b => b.row + b.rows), across ? lanes : 0)
-  const cols = Math.max(across ? p.long : p.wide, ...[...boxes.values()].map(b => b.col + b.cols), across ? 0 : lanes)
+  const all = [...boxes.values(), ...frames.values()]  // a strip widened for its lanes (stripLanes) too
+  const rows = Math.max(across ? p.wide : p.long, ...all.map(b => b.row + b.rows), across ? lanes : 0)
+  const cols = Math.max(across ? p.long : p.wide, ...all.map(b => b.col + b.cols), across ? 0 : lanes)
   return { graph, boxes, frames, rows, cols, bands, ...(notes.size > 0 ? { notes } : {}) }
+}
+
+// V8: a back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside what
+// the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all past it
+// moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown. An edge into
+// the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7). Returns the edges.
+function stripLanes(g: Graph, t: Tree, boxes: Map<string, Box>, frames: Map<string, Box>, notes: Map<string, Box>,
+  across: boolean, room: (e: GEdge) => number, blocked: ReadonlySet<string>): Set<string> {
+  const home = new Map<string, GEdge[]>()
+  for (const e of g.edges.filter(e => e.reversed && e.style !== 'invisible' && !blocked.has(e.id))) {
+    const a = ancestors(t.parent, e.from), b = ancestors(t.parent, e.to)
+    const c = a.find(x => b.includes(x) && !t.byId.get(x)?.frameless)
+    if (c !== undefined && frames.has(c)) home.set(c, [...(home.get(c) ?? []), e])
+  }
+  const far = (b: Box) => across ? b.row + b.rows : b.col + b.cols, start = (b: Box) => across ? b.row : b.col
+  const wraps = (f: Box, b: Box) => b.row > f.row && b.col > f.col && b.row + b.rows < f.row + f.rows && b.col + b.cols < f.col + f.cols
+  for (const [c, es] of [...home].sort(([x], [y]) => ancestors(t.parent, y).length - ancestors(t.parent, x).length)) {
+    const f = frames.get(c)!, mine = (k: string) => es.some(e => k.startsWith(`${e.id}#`) || k === `${e.id}:label`)
+    const held = [...boxes, ...frames, ...notes].filter(([k, b]) => k !== c && !mine(k) && wraps(f, b)).map(([, b]) => far(b))
+    const content = Math.max(start(f) + 1, ...held), gap = far(f) - 1 - content  // blank cells before its far border
+    let outside = content + 2
+    for (const e of es) {
+      outside += room(e)
+      const label = boxes.get(`${e.id}:label`), lane = outside + (label ? (across ? label.rows : label.cols) >> 1 : 0)
+      for (const [id, b] of boxes) if (id.startsWith(`${e.id}#`)) boxes.set(id, across ? { ...b, row: lane } : { ...b, col: lane })
+      if (label) boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
+      outside += (label ? across ? label.rows : label.cols : 1) + 2
+    }
+    const d = outside - 2 + gap + 1 - far(f), past = far(f)
+    if (d <= 0) continue
+    const move = (b: Box): Box => across ? { ...b, row: b.row + d } : { ...b, col: b.col + d }
+    const grow = (b: Box): Box => across ? { ...b, rows: b.rows + d } : { ...b, cols: b.cols + d }
+    for (const m of [boxes, notes]) for (const [k, b] of m) if (!mine(k) && start(b) >= past) m.set(k, move(b))
+    for (const [k, b] of frames) frames.set(k, k === c || wraps(b, f) ? grow(b) : start(b) >= past ? move(b) : b)
+  }
+  return new Set([...home.values()].flat().map(e => e.id))
 }
