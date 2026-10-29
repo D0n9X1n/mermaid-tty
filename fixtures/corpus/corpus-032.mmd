@@ -1,0 +1,8 @@
+flowchart TD
+    A([Start]) --> B[Check disk usage]
+    B --> C{Over 90%?}
+    C -->|yes| D[Clean old logs]
+    D --> E[Page on-call]
+    C -->|no| F[Do nothing]
+    F --> G((End))
+    E --> G

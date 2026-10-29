@@ -1,0 +1,36 @@
+@60
+                          [ Order ]
+       ┌───────────────┬──────┴───────┬──────────────┐
+       │               │              │              │
+       ▼               ▼              ▼              ▼
+[ Check stock ]  [ Bill card ]  [ Pack boxes ]  [ Ship it ]
+@60 roles
+                          nnNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e              e              e
+       a               a              a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn  nnNNNNNNNNNNnn  nnNNNNNNNnn
+@80
+                           [ Order ]
+       ┌───────────────┬───────┴────────┬──────────────┐
+       │               │                │              │
+       ▼               ▼                ▼              ▼
+[ Check stock ]  [ Bill card ]    [ Pack boxes ]  [ Ship it ]
+@80 roles
+                           nnNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e                e              e
+       a               a                a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn    nnNNNNNNNNNNnn  nnNNNNNNNnn
+@120
+                           [ Order ]
+       ┌───────────────┬───────┴────────┬──────────────┐
+       │               │                │              │
+       ▼               ▼                ▼              ▼
+[ Check stock ]  [ Bill card ]    [ Pack boxes ]  [ Ship it ]
+@120 roles
+                           nnNNNNNnn
+       eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       e               e                e              e
+       a               a                a              a
+nnNNNNNNNNNNNnn  nnNNNNNNNNNnn    nnNNNNNNNNNNnn  nnNNNNNNNnn

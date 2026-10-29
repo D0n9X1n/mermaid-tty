@@ -1,0 +1,36 @@
+@60
+                        [ Start ]
+        ┌───────────────────┼────────────────────┐
+        │                   │                    │
+        ▼                   ▼                    ▼
+[ Read the input ]  [ Check settings ]  [ Write the report ]
+@60 roles
+                        nnNNNNNnn
+        eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e                   e                    e
+        a                   a                    a
+nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNnn
+@80
+                        [ Start ]
+        ┌───────────────────┼────────────────────┐
+        │                   │                    │
+        ▼                   ▼                    ▼
+[ Read the input ]  [ Check settings ]  [ Write the report ]
+@80 roles
+                        nnNNNNNnn
+        eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e                   e                    e
+        a                   a                    a
+nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNnn
+@120
+                        [ Start ]
+        ┌───────────────────┼────────────────────┐
+        │                   │                    │
+        ▼                   ▼                    ▼
+[ Read the input ]  [ Check settings ]  [ Write the report ]
+@120 roles
+                        nnNNNNNnn
+        eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e                   e                    e
+        a                   a                    a
+nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNnn  nnNNNNNNNNNNNNNNNNnn

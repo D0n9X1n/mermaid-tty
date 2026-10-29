@@ -1,0 +1,6 @@
+graph TD
+A("Start") --> B["Collect data<br/>logs from S3"]
+B --> C["Clean data<br/>pandas"]
+C --> D["Evaluate<br/>AUC"]
+D --> E["Ship model"]
+E --> F(["Done"])

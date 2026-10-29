@@ -1,0 +1,10 @@
+// README image manifest: which .mmd source renders to which SVG, at what width and theme. No core import.
+export const THEMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const;
+export type Image = { file: string; source: string; columns: number; theme: (typeof THEMES)[number]; raw?: boolean };
+export const IMAGES: Image[] = [
+  { file: 'assets/readme/before.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default', raw: true },
+  { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default' },
+  { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'default' },
+  { file: 'assets/readme/cjk.svg', source: 'assets/readme/src/cjk.mmd', columns: 60, theme: 'default' },
+  ...THEMES.map((theme) => ({ file: `assets/readme/theme-${theme}.svg`, source: 'assets/readme/src/theme.mmd', columns: 44, theme })),
+];

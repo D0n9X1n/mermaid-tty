@@ -1,0 +1,8 @@
+sequenceDiagram
+participant C as Client
+participant S as Server
+participant D as Database
+C->>S: GET /orders
+S->>D: SELECT id, total FROM all_orders
+D-->>S: rows
+S-->>C: 200 OK

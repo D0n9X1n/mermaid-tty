@@ -1,0 +1,8 @@
+flowchart TD
+    A["Generate patch"] --> B{"Tests pass?"}
+    B -->|Yes| C["Open PR"]
+    B -->|No| D{"Retries left?"}
+    D -->|Yes| E["Feed back errors"]
+    E -.-> A
+    D -->|No| F["Ask a human"]
+    C --> G(("End"))

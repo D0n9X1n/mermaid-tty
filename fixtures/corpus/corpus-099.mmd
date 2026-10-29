@@ -1,0 +1,21 @@
+flowchart TD
+    subgraph Backend
+        api["API server"]
+        subgraph Services
+            session["Session service"]
+            retriever["Retriever"]
+            llm["LLM gateway"]
+        end
+    end
+    subgraph data ["Storage"]
+        pgvector[("pgvector")]
+        redis[("Redis")]
+    end
+    web["Web chat"] -- HTTPS --> api
+    api --> session
+    api --> retriever
+    api --> llm
+    session --> redis
+    retriever --> pgvector
+    llm --> redis
+    llm -.->|HTTPS| openai["OpenAI API"]

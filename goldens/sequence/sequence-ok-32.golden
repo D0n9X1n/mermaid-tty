@@ -1,0 +1,48 @@
+@60
+[ A ]        [ B ]
+  │  10. one   │
+  │───────────►│
+  │  15. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄┄│
+  │ 20. three  │
+  │───────────►│
+@60 roles
+nnNnn        nnNnn
+  o  LLLLLLL   o
+  oeeeeeeeeeeeao
+  o  LLLLLLL   o
+  oaeeeeeeeeeeeo
+  o LLLLLLLLL  o
+  oeeeeeeeeeeeao
+@80
+[ A ]        [ B ]
+  │  10. one   │
+  │───────────►│
+  │  15. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄┄│
+  │ 20. three  │
+  │───────────►│
+@80 roles
+nnNnn        nnNnn
+  o  LLLLLLL   o
+  oeeeeeeeeeeeao
+  o  LLLLLLL   o
+  oaeeeeeeeeeeeo
+  o LLLLLLLLL  o
+  oeeeeeeeeeeeao
+@120
+[ A ]        [ B ]
+  │  10. one   │
+  │───────────►│
+  │  15. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄┄│
+  │ 20. three  │
+  │───────────►│
+@120 roles
+nnNnn        nnNnn
+  o  LLLLLLL   o
+  oeeeeeeeeeeeao
+  o  LLLLLLL   o
+  oaeeeeeeeeeeeo
+  o LLLLLLLLL  o
+  oeeeeeeeeeeeao

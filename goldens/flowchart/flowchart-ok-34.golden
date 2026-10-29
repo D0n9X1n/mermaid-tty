@@ -1,0 +1,60 @@
+@60
+┌─outer─────┐
+│  ┌[ A ]   │
+│ ┌│inner─┐ │
+│ │└──┐   │ │
+│ │   │   │ │
+│ │   ▼   │ │
+│ │ [ B ] │ │
+│ └───────┘ │
+└───────────┘
+@60 roles
+ffFFFFFffffff
+f  ennNnn   f
+f feFFFFFff f
+f feeee   f f
+f f   e   f f
+f f   a   f f
+f f nnNnn f f
+f fffffffff f
+fffffffffffff
+@80
+┌─outer─────┐
+│  ┌[ A ]   │
+│ ┌│inner─┐ │
+│ │└──┐   │ │
+│ │   │   │ │
+│ │   ▼   │ │
+│ │ [ B ] │ │
+│ └───────┘ │
+└───────────┘
+@80 roles
+ffFFFFFffffff
+f  ennNnn   f
+f feFFFFFff f
+f feeee   f f
+f f   e   f f
+f f   a   f f
+f f nnNnn f f
+f fffffffff f
+fffffffffffff
+@120
+┌─outer─────┐
+│  ┌[ A ]   │
+│ ┌│inner─┐ │
+│ │└──┐   │ │
+│ │   │   │ │
+│ │   ▼   │ │
+│ │ [ B ] │ │
+│ └───────┘ │
+└───────────┘
+@120 roles
+ffFFFFFffffff
+f  ennNnn   f
+f feFFFFFff f
+f feeee   f f
+f f   e   f f
+f f   a   f f
+f f nnNnn f f
+f fffffffff f
+fffffffffffff

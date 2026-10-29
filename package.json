@@ -1,0 +1,10 @@
+{
+  "name": "mermaid-tty",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  }
+}

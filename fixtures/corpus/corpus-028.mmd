@@ -1,0 +1,8 @@
+flowchart TD
+    A(["开始"]) --> B["拉取代码<br/>git pull"]
+    B --> C["安装依赖<br/>npm ci"]
+    C --> D["运行测试<br/>单元和端到端"]
+    D --> E["构建镜像<br/>docker build"]
+    E --> F["推送镜像"]
+    F --> G["部署上线<br/>kubectl apply"]
+    G --> H(["完成"])

@@ -1,0 +1,7 @@
+flowchart LR
+    A["Open PR"] --> B{"CI green?"}
+    B -->|Y| C["Review"]
+    C --> D["Merge"]
+    B -->|N| E["Fix and push"]
+    E --> B
+    D --> F(("End"))

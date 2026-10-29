@@ -1,0 +1,6 @@
+flowchart TD
+    A["提交代码<br/>git push"] ==> B["代码检查<br/>eslint"]
+    B ==> C["单元测试"]
+    C ==> D["构建镜像"]
+    D ==> E["部署预发"]
+    E ==> F["部署生产"]

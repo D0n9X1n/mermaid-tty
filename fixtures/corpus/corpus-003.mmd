@@ -1,0 +1,14 @@
+sequenceDiagram
+    actor U as User
+    participant W as Web app
+    participant A as Auth service
+    U->>W: Submit email and password
+    W->>A: POST /login
+    alt valid
+        A-->>W: 200 + token
+        W-->>U: Go to dashboard
+    else wrong password
+        A-->>W: 401
+        W-->>U: Show error
+    end
+    Note over W,A: Token expires in 1 hour

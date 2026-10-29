@@ -1,0 +1,20 @@
+flowchart TD
+  subgraph Backend
+    bff["BFF<br/>GraphQL"]
+    subgraph svc ["Services"]
+      account["Account service"]
+      report[["Report service"]]
+      export["Export worker"]
+    end
+  end
+  subgraph data ["Storage"]
+    postgresql[("PostgreSQL")]
+  end
+  admin(["Admin dashboard"]) -->|HTTPS| bff
+  bff --> account
+  bff --> report
+  bff --> export
+  account --> postgresql
+  report --> postgresql
+  export --> postgresql
+  export -.->|send report| email["Email service"]

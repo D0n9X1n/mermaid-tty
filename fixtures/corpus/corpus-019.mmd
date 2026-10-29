@@ -1,0 +1,7 @@
+flowchart TD
+    A["Open PR"] --> B{"CI green?<br/>lint and tests"}
+    B -->|yes| C["Review<br/>2 approvals"]
+    C --> D["Merge"]
+    B -->|no| E["Fix and push"]
+    E --> B
+    D --> F(("End"))

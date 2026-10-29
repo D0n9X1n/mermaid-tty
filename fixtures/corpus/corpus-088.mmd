@@ -1,0 +1,8 @@
+flowchart TD
+  A(["Start"]) --> B["Receive request"]
+  B --> C{"Cache hit?<br/>Redis"}
+  C -- Yes --> D["Return data"]
+  C -- No --> E["Query MySQL"]
+  E --> F["Write back to cache<br/>TTL 10 min"]
+  F --> D
+  D --> G(["End"])

@@ -1,0 +1,6 @@
+flowchart LR
+    A(("Start")) --> B[/"Pull code<br/>git pull"/]
+    B --> C["Install deps<br/>npm ci"]
+    C --> D["Push to registry"]
+    D --> E["Deploy<br/>kubectl apply"]
+    E --> F("Done")

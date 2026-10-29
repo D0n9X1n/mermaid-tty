@@ -1,0 +1,7 @@
+flowchart TD
+    A[Receive request] --> B{Cache hit?}
+    B -- Yes --> C[Return data]
+    B -- No --> D[Query MySQL]
+    D --> E[Write back to cache]
+    E --> C
+    C --> F([End])

@@ -1,0 +1,18 @@
+{
+  "name": "mermaid-tty",
+  "version": "1.0.0",
+  "description": "Draws the mermaid fences in Claude's replies as colored box-drawing diagrams in the terminal.",
+  "author": {
+    "name": "D0n9X1n"
+  },
+  "types": "./types/mermaid-tty.d.ts",
+  "userConfig": {
+    "theme": {
+      "type": "string",
+      "title": "Theme",
+      "description": "default follows your Claude Code theme; the others are curated palettes, and mono draws without color.",
+      "default": "default",
+      "options": ["default", "nord", "dracula", "gruvbox", "solarized", "mono"]
+    }
+  }
+}

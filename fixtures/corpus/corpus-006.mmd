@@ -1,0 +1,24 @@
+---
+title: 电商系统
+---
+graph LR
+    subgraph backend ["后端"]
+        api["API 网关"]
+        subgraph svc ["服务层"]
+            user["用户服务"]
+            order["订单服务"]
+            payment["支付服务"]
+        end
+    end
+    subgraph data ["存储层"]
+        mysql[("MySQL")]
+        redis[("Redis")]
+    end
+    browser["浏览器"] -- HTTPS --> api
+    api --> user
+    api --> order
+    api --> payment
+    user --> redis
+    order --> mysql
+    payment --> mysql
+    payment -.->|支付事件| kafka["Kafka"]

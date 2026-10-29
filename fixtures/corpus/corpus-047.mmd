@@ -1,0 +1,21 @@
+graph LR
+    subgraph backend [后端]
+        api[API 服务<br/>FastAPI]
+        subgraph svc [服务层]
+            session[[会话服务]]
+            retriever[检索服务]
+            llm[模型网关]
+        end
+    end
+    subgraph data [存储层]
+        pgvector[(向量库 pgvector)]
+        redis[(Redis)]
+    end
+    web([网页聊天]) -- HTTPS --> api
+    api --> session
+    api --> retriever
+    api --> llm
+    session --> redis
+    retriever --> pgvector
+    llm --> redis
+    llm -.->|HTTPS| openai[OpenAI API]

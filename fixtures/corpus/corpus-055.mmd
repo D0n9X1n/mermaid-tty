@@ -1,0 +1,20 @@
+graph TD
+subgraph backend ["Backend"]
+api["API gateway<br/>Kong"]
+subgraph svc ["Services"]
+user["User service"]
+order["Order service"]
+payment["Payment service"]
+end
+end
+subgraph data ["Storage"]
+mysql[("MySQL")]
+end
+browser("Browser") -- HTTPS --> api
+api --> user
+api --> order
+api --> payment
+user --> mysql
+order --> mysql
+payment --> mysql
+payment -.->|payment events| kafka["Kafka"]

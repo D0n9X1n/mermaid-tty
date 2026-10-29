@@ -1,0 +1,12 @@
+{
+  "name": "mermaid-tty-docs-tooling",
+  "private": true,
+  "description": "Pinned parsers for the docs checks (D15c): Markdown and workflow YAML; not part of the plugin. The root package.json keeps no dependencies.",
+  "type": "module",
+  "dependencies": {
+    "mdast-util-from-markdown": "2.1.0",
+    "mdast-util-gfm": "3.1.0",
+    "micromark-extension-gfm": "3.0.0",
+    "yaml": "2.9.1"
+  }
+}

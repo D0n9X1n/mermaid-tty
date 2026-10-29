@@ -1,0 +1,36 @@
+@60
+    [ A ]
+      └────┐
+           │
+           ▼
+[ B ]    [ C ]
+@60 roles
+    nnNnn
+      eeeeee
+           e
+           a
+nnNnn    nnNnn
+@80
+    [ A ]
+      └────┐
+           │
+           ▼
+[ B ]    [ C ]
+@80 roles
+    nnNnn
+      eeeeee
+           e
+           a
+nnNnn    nnNnn
+@120
+    [ A ]
+      └────┐
+           │
+           ▼
+[ B ]    [ C ]
+@120 roles
+    nnNnn
+      eeeeee
+           e
+           a
+nnNnn    nnNnn

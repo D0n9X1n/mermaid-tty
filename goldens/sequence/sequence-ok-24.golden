@@ -1,0 +1,48 @@
+@60
+  [ A ]         [ B ]
+┌─alt [ok]────────────┐
+│ ┌─loop [every 1s]─┐ │
+│ │ │      x      │ │ │
+│ │ │────────────►│ │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+@60 roles
+  nnNnn         nnNnn
+ffFFFFFFFFfffffffffffff
+f ffFFFFFFFFFFFFFFFff f
+f f o      L      o f f
+f f oeeeeeeeeeeeeao f f
+f fffffffffffffffffff f
+fffffffffffffffffffffff
+@80
+  [ A ]         [ B ]
+┌─alt [ok]────────────┐
+│ ┌─loop [every 1s]─┐ │
+│ │ │      x      │ │ │
+│ │ │────────────►│ │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+@80 roles
+  nnNnn         nnNnn
+ffFFFFFFFFfffffffffffff
+f ffFFFFFFFFFFFFFFFff f
+f f o      L      o f f
+f f oeeeeeeeeeeeeao f f
+f fffffffffffffffffff f
+fffffffffffffffffffffff
+@120
+  [ A ]         [ B ]
+┌─alt [ok]────────────┐
+│ ┌─loop [every 1s]─┐ │
+│ │ │      x      │ │ │
+│ │ │────────────►│ │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+@120 roles
+  nnNnn         nnNnn
+ffFFFFFFFFfffffffffffff
+f ffFFFFFFFFFFFFFFFff f
+f f o      L      o f f
+f f oeeeeeeeeeeeeao f f
+f fffffffffffffffffff f
+fffffffffffffffffffffff
