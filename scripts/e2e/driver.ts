@@ -166,13 +166,14 @@ function tmuxRead(env: Record<string, string>, args: string[], signal?: AbortSig
 // keeps an OSC 52 copy as a buffer; and keeps the pane after its program exits, so that its last screen stays readable.
 function tmuxSession(o: SessionOptions): Session {
   const run = (...args: string[]) => tmux(o.env, args)
-  // new-session prints the server's pid, the program's and the socket's path.
+  // new-session prints the server's pid, the program's and the socket's path. window-size is set only once the session
+  // exists: tmux 3.6 (ubuntu-latest) exits with "server exited unexpectedly" when it is set first; -x/-y fix the size.
   const started = run('-f', '/dev/null',
-    'set', '-g', 'window-size', 'manual', ';', 'set', '-g', 'default-size', `${COLS}x${ROWS}`, ';',
+    'set', '-g', 'default-size', `${COLS}x${ROWS}`, ';',
     'set', '-g', 'default-terminal', 'xterm-256color', ';', 'set', '-g', 'set-clipboard', 'on', ';',
     'set', '-g', 'remain-on-exit', 'on', ';',
     'new-session', '-d', '-P', '-F', '#{pid} #{pane_pid} #{socket_path}', '-s', 'mtty-e2e', '-x', String(COLS), '-y', String(ROWS),
-    '-c', o.cwd, '--', ...o.argv).trim().split(' ')
+    '-c', o.cwd, '--', ...o.argv, ';', 'set', '-g', 'window-size', 'manual').trim().split(' ')
   const server = Number(started[0]), pane = Number(started[1]), socket = started.slice(2).join(' ')
   // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
   const capture = async (signal?: AbortSignal) => {
