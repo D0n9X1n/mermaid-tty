@@ -1,0 +1,14 @@
+@60
+[ Read the ]    [ Check every ]    [ Write the ]
+[  config  ]───►[    field    ]───►[  report   ]
+@60 roles
+nnNNNNNNNNnn    nnNNNNNNNNNNNnn    nnNNNNNNNNNnn
+nnnNNNNNNnnneeeannnnnNNNNNnnnnneeeannnNNNNNNnnnn
+@80
+[ Read the config ]─────►[ Check every field ]─────►[ Write the report ]
+@80 roles
+nnNNNNNNNNNNNNNNNnneeeeeannNNNNNNNNNNNNNNNNNnneeeeeannNNNNNNNNNNNNNNNNnn
+@120
+[ Read the config ]─────►[ Check every field ]─────►[ Write the report ]
+@120 roles
+nnNNNNNNNNNNNNNNNnneeeeeannNNNNNNNNNNNNNNNNNnneeeeeannNNNNNNNNNNNNNNNNnn

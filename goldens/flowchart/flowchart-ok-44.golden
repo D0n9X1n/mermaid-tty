@@ -1,0 +1,52 @@
+@60
+ [ Plan ]
+     │
+     │
+     ▼
+ [ Build ]
+     │
+     │
+     ▼
+ [ Test ]
+     │
+     │
+     ▼
+[ Review ]
+     │
+     │
+     ▼
+ [ Ship ]
+     │
+     │
+     ▼
+[ Watch ]
+@60 roles
+ nnNNNNnn
+     e
+     e
+     a
+ nnNNNNNnn
+     e
+     e
+     a
+ nnNNNNnn
+     e
+     e
+     a
+nnNNNNNNnn
+     e
+     e
+     a
+ nnNNNNnn
+     e
+     e
+     a
+nnNNNNNnn
+@80
+[ Plan ]───►[ Build ]───►[ Test ]───►[ Review ]───►[ Ship ]───►[ Watch ]
+@80 roles
+nnNNNNnneeeannNNNNNnneeeannNNNNnneeeannNNNNNNnneeeannNNNNnneeeannNNNNNnn
+@120
+[ Plan ]─────►[ Build ]─────►[ Test ]─────►[ Review ]─────►[ Ship ]─────►[ Watch ]
+@120 roles
+nnNNNNnneeeeeannNNNNNnneeeeeannNNNNnneeeeeannNNNNNNnneeeeeannNNNNnneeeeeannNNNNNnn

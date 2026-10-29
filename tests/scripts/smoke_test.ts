@@ -13,7 +13,7 @@ test('smoke: prints the flowchart-ok-01 fixture drawn at 80 columns under nord, 
   const r = spawnSync(process.execPath, [SMOKE], { encoding: 'utf8' })
   assert.equal(r.status, 0, r.stderr)
   assert.equal(r.stdout, plain(renderMermaid(readFileSync(FIXTURE, 'utf8'), { columns: 80, theme: 'nord' })!))
-  for (const label of ['Start', 'Ready?', 'yes', 'Done']) assert.ok(r.stdout.includes(label), label)
+  for (const label of ['Start', 'Next', 'End']) assert.ok(r.stdout.includes(label), label)
 })
 test('smoke: a source that falls back prints no rows, says so on stderr, and exits 1', (t) => {
   const log = t.mock.method(console, 'log', () => {}), err = t.mock.method(console, 'error', () => {})
