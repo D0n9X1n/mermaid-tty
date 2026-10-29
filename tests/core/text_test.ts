@@ -29,6 +29,13 @@ test('A4.fit-ladder: a W/F character counts 2 columns', () => {
   assert.equal(wrap('中', 1), null)
 })
 
+// U+20000 and U+20001 (CJK Extension B) are East Asian Width W and 2 code units each: the code point, not its high surrogate, is W.
+test('A4.fit-ladder: an astral W/F character counts 2 columns and splits from a W/F neighbor, BMP or astral', () => {
+  assert.deepEqual(wrap('\u{20000}\u{20001}', 2), [{ text: '\u{20000}', join: '' }, { text: '\u{20001}', join: '' }])
+  assert.deepEqual(wrap('\u{20000}\u{20001}', 4), [{ text: '\u{20000}\u{20001}', join: '' }])
+  assert.deepEqual(wrap('读\u{20000} \u{20001}取', 2), [{ text: '读', join: '' }, { text: '\u{20000}', join: '' }, { text: '\u{20001}', join: ' ' }, { text: '取', join: '' }])
+})
+
 // 读取a is the tokens 读 and 取a: no split falls between 取 and a, so the 3-column 取a cannot fit in 2.
 test('A4.fit-ladder: a narrow character stays in the token of the W/F character next to it', () => {
   assert.deepEqual(wrap('读取a', 3), [{ text: '读', join: '' }, { text: '取a', join: '' }])
