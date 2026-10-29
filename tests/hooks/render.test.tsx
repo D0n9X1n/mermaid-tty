@@ -1,4 +1,5 @@
 import { test, expect } from 'claude-code/testing'; import { THEMES } from '../../core/themes.ts'
+import { width } from '../../core/width.ts'
 const FC = '```mermaid\nflowchart TD\nA[读取] --> B[完成]\n```\n', BAD = '```mermaid\nflowchart TD\nA[👨‍👩]\n```\n'
 const mount = ($: any, text: string, surface = 'terminal', extra: object = {}) => $.ui.mount({ plugin: 'mermaid-tty', surface, component: 'AssistantMessage',
   props: { text, isFirstOfReply: true, ...extra }, viewport: { columns: 80, rows: 40 } })
@@ -30,6 +31,28 @@ test('A5.errors: a failed diagram draws the original fence; the reason goes only
 test('A5.errors: a failed fence beside a drawn one joins the prose around it', async ($, on) => {
   const c = capture(on), ui = await mount($, `Intro\n${BAD}Mid\n${FC}Outro`)
   expect(c.seen).toEqual([`Intro\n${BAD}Mid\n`, 'Outro']); expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
+})
+// FAN draws at 80 columns and falls back (row-too-wide) at 40. LR5 draws wider than 40 at 80
+// columns and within 40 at 40. Each is used by one test only, so no cache hit hides a render.
+const FAN = '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
+const LR5 = '```mermaid\nflowchart LR\nA[读取配置文件] --> B[解析命令行参数]\nB --> C[执行任务]\nC --> D[写入结果文件]\nD --> E[完成]\n```\n'
+const mountAt = ($: any, text: string, viewport?: { columns: number; rows: number }) => $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal',
+  component: 'AssistantMessage', props: { text, isFirstOfReply: true }, ...(viewport ? { viewport } : {}) })
+test('A6.hook-tests: the viewport width reaches the renderer', async ($, on) => {
+  const c = capture(on), reply = `Intro\n${FAN}Outro`, wide = await mountAt($, reply, { columns: 80, rows: 40 })
+  expect(c.seen).toEqual(['Intro\n', 'Outro']); expect(await wide.find({ key: 'mermaid-0' })).toBeDefined(); expect(c.logs).toEqual([])
+  c.seen.length = 0; const narrow = await mountAt($, reply, { columns: 40, rows: 40 })
+  expect(c.seen).toEqual([reply]); expect(await narrow.find({ key: 'mermaid-0' })).toBeUndefined(); expect(c.logs).toEqual(['debug:mermaid-tty fallback: row-too-wide'])
+})
+test('A6.hook-tests: a reply with no viewport reaches next(e) untouched', async ($, on) => {
+  const c = capture(on), reply = `Intro\n${FC}Outro`, ui = await mountAt($, reply)
+  expect(c.seen).toEqual([reply]); expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
+})
+test('A6.hook-tests: every drawn row fits the viewport, a CJK character counting 2', async ($, on) => {
+  capture(on); const ui = await mountAt($, LR5, { columns: 40, rows: 40 })
+  // Only the hook's rows are Texts that truncate (findAll's `in` names a Client, not a Box key).
+  const rows = (await ui.findAll({ type: 'Text' })).filter((x: any) => x.props.wrap === 'truncate-end').map((x: any) => width(x.text))
+  expect(rows.length).toBeGreaterThan(0); expect(rows.filter((w: number) => w > 40)).toEqual([])
 })
 // The 7th role, note, is a sequence role: its test lands with sequence registration (T24), as this runner has no todo.
 const ROLES ='flowchart TD\nA[读取] -->|yes| B{ok?}\nsubgraph F [Frame]\nC[x]\nend\n'
