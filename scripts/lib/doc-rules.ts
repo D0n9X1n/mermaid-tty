@@ -1,5 +1,5 @@
 // Pure acceptance rules on the GFM tree (D15c): B1 README, B3 publish-wiki.yml, B6 icon. The workflow helpers live in ci-rules.ts.
-import { type Node, all, parse, section, text, within } from '../docs/markdown.ts';
+import { type Node, all, lineOf, parse, section, text, within } from '../docs/markdown.ts';
 import { INSTALL, common, need } from './workflow.ts';
 export { INSTALL };
 export const TAGLINE = 'Yet, just another Mermaid renderer for your terminal';
@@ -32,7 +32,7 @@ function linkOk(t: string, readme: boolean): boolean {
 }
 const firstH2 = (tree: Node, md: string) => all(tree, 'heading').find((h) => h.depth === 2)?.position!.start.offset ?? md.length;
 export function grammarErrors(where: string, md: string, readme: boolean): string[] {
-  const e: string[] = [], tree = parse(md), h2 = firstH2(tree, md), at = (n: Node, what: string) => e.push(`${where}:${n.position!.start.line}: ${what} (D15b)`);
+  const e: string[] = [], tree = parse(md), h2 = firstH2(tree, md), at = (n: Node, what: string) => e.push(`${where}:${lineOf(n)}: ${what} (D15b)`);
   all(tree, 'html').forEach((n, i) => {
     if (!readme) at(n, 'raw HTML; the wiki allows none');
     else if (i > 0 || !HERO.test(n.value!) || n.position!.start.offset > h2) at(n, 'raw HTML other than the one hero line');
@@ -44,8 +44,9 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
     else if (!badge && !SRC.test(n.url!)) at(n, `image src must match ^assets/[a-z0-9/_-]+.svg$: ${n.url}`);
     if (within(n, 'listItem')) at(n, 'image in a list item');
   }
+  // A literal autolink the GFM transform makes has no position (see lineOf); it is an autolink all the same.
   for (const n of all(tree, 'link')) {
-    if (md[n.position!.start.offset] !== '[') at(n, `autolink or bare URL; write [label](url): ${n.url}`);
+    if (!n.position || md[n.position.start.offset] !== '[') at(n, `autolink or bare URL; write [label](url): ${n.url}`);
     else if (!linkOk(n.url!, readme)) at(n, n.url!.endsWith('.md') ? `link must omit .md: ${n.url}` : `link target not allowed: ${n.url}`);
   }
   for (const n of REFS.flatMap((t) => all(tree, t))) at(n, 'reference-style link, image, definition or footnote');

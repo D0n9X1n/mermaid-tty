@@ -74,6 +74,12 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
     [LONG + '[c](Usage-zh-CN)' + LONG, 'backtick run longer than 3', false], ['``````sh\nx\n``````', 'fence longer than 5', true]] as const)
     assert.ok(G(md, readme).some((e) => e.includes(want)), want);
 });
+test('D15b: every autolink literal is reported on its own line, including one the GFM transform leaves with no position', () => {
+  // markdown.docs-spec.ts shows the transform gives `say "www.x.example"` no position; the tokenizer positions https://x.dev.
+  assert.deepEqual(grammarErrors('x.md', '# T\n\nsee https://x.dev\n\nsay "www.x.example"\n', false), [
+    'x.md:3: autolink or bare URL; write [label](url): https://x.dev (D15b)',
+    'x.md:5: autolink or bare URL; write [label](url): http://www.x.example (D15b)']);
+});
 test('wiki images: rendered diagrams or allow-listed only', () => {
   assert.deepEqual(imageErrors('wiki/Home.md', '![d](https://raw.githubusercontent.com/D0n9X1n/mermaid-tty/main/assets/readme/after.svg) <img src="../assets/icon.svg">', IMG), []);
   assert.ok(imageErrors('wiki/Home.md', '![r](../assets/rogue.svg)', IMG)[0]!.includes('displays assets/rogue.svg'));
