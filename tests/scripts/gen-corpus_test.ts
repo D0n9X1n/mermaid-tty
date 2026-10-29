@@ -1,5 +1,5 @@
 // gen-corpus.ts writes the 100 synthetic blocks to fixtures/corpus under its working directory; --check writes nothing,
-// and exits 1 when regenerating would change a file.
+// and exits 1 when regenerating would change a file or fixtures/corpus holds a file it does not write.
 import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -45,6 +45,15 @@ test('A10: gen-corpus --check exits 0 on a current corpus, and 1, naming the fil
   unlinkSync(f)
   r = run(d, '--check')
   assert.equal(r.status, 1); assert.match(r.stderr, /corpus-042\.mmd/); assert.equal(existsSync(f), false)
+})
+
+test('A10: gen-corpus --check exits 1 on a file in fixtures/corpus that it does not write, naming it and removing nothing', t => {
+  const d = tmp(t), extra = join(d, 'fixtures/corpus/corpus-101.mmd'), notes = join(d, 'fixtures/corpus/notes.txt')
+  assert.equal(run(d).status, 0)
+  writeFileSync(extra, 'flowchart TD\nA --> B\n'); writeFileSync(notes, 'x\n')
+  const r = run(d, '--check')
+  assert.equal(r.status, 1); assert.match(r.stderr, /corpus-101\.mmd/); assert.match(r.stderr, /notes\.txt/)
+  assert.ok(existsSync(extra) && existsSync(notes))
 })
 
 test('A10: gen-corpus prints its usage, exits 2 and writes nothing, given any argument but --check', t => {

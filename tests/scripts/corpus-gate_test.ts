@@ -26,11 +26,35 @@ test('A10: gate names a failing block <index>@<cols> <reason>, counting blocks f
   assert.deepEqual(gate(dir(t, { 'b.mmd': BAD, 'a.mmd': GOOD })), { total: 2, failed: ['2@80 syntax:2', '2@120 syntax:2'] })
 })
 
-test('A10: a .md file adds its closed mermaid fences in order; other fences, an unclosed one and other files add none', t => {
-  const fence = (info: string, body: string) => ['```' + info, body.trimEnd(), '```'].join('\n')
+// A fence: the opening line with info, body, the closing line.
+const fence = (info: string, body: string) => ['```' + info, body.trimEnd(), '```'].join('\n')
+
+test('A10: a .md file adds its mermaid fences in order, an unclosed one too; other fences and other files add none', t => {
   const md = ['# Notes', fence('mermaid', BAD), fence('js', 'x()'), fence('mermaid', GOOD), '```mermaid', BAD].join('\n')
   const d = dir(t, { 'a.mmd': GOOD, 'b.md': md, 'c.txt': BAD })
-  assert.deepEqual(gate(d), { total: 3, failed: ['2@80 syntax:2', '2@120 syntax:2'] })
+  assert.deepEqual(gate(d), { total: 4, failed: ['2@80 syntax:2', '2@120 syntax:2', '4@- unclosed-fence'] })
+})
+
+// A reply shows an unclosed fence as source, so the gate fails it rather than skip it. a.md's ```` fence is not closed
+// by a ``` line; b.md's fence is ~~~; c.md's mermaid line sits inside an open js fence, so it opens nothing.
+test('A10: an unclosed mermaid fence fails as <index>@- unclosed-fence, and is never skipped', t => {
+  const d = dir(t, { 'a.md': ['````mermaid', GOOD, '```'].join('\n'), 'b.md': `~~~mermaid\n${GOOD}`,
+    'c.md': ['```js', '```mermaid', BAD].join('\n'), 'd.mmd': GOOD })
+  assert.deepEqual(gate(d), { total: 3, failed: ['1@- unclosed-fence', '2@- unclosed-fence'] })
+  const r = run(dir(t, { 'a.md': ['Prose.', '```mermaid', BAD].join('\n') }))
+  assert.equal(r.stdout, 'corpus-gate: 1 block, 1 failure at 80 and 120 columns\n  1@- unclosed-fence\n'); assert.equal(r.status, 1)
+})
+
+test('A10: an empty block fails as <index>@- empty: a blank .mmd file or an empty mermaid fence', t => {
+  const d = dir(t, { 'a.mmd': '', 'b.mmd': ' \n\n', 'c.md': fence('mermaid', ''), 'd.mmd': GOOD })
+  assert.deepEqual(gate(d), { total: 4, failed: ['1@- empty', '2@- empty', '3@- empty'] })
+})
+
+test('A10: a directory with no block fails as -@- no-blocks, so 0 blocks never pass, under --private too', t => {
+  assert.deepEqual(gate(dir(t, {})), { total: 0, failed: ['-@- no-blocks'] })
+  const r = run(dir(t, { 'a.txt': GOOD, 'b.md': '# No diagrams\n' }))
+  assert.equal(r.stdout, 'corpus-gate: 0 blocks, 1 failure at 80 and 120 columns\n  -@- no-blocks\n'); assert.equal(r.status, 1)
+  assert.equal(run(dir(t, { 'a.mmd': GOOD }), '--private', dir(t, {})).status, 1)
 })
 
 test('A10: the CLI prints the counts and each failure, never a block or a path, and exits 1', t => {

@@ -3,8 +3,9 @@
 // five templates (a process flow, a decision with yes and no branches, a retry loop, a pipeline, and a service
 // architecture with nested subgraphs) and 8 are sequence diagrams. A mulberry32 PRNG with a fixed seed picks each
 // variation, and quotas hold the feature mix at or above the owner's shares, so the output is byte-stable. --check
-// writes nothing: it names each file that regenerating would change, and exits 1 when there is any.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+// writes nothing: it names each file that regenerating would change, and each file in fixtures/corpus that it does not
+// write, and exits 1 when there is any.
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isMain } from './lib/is-main.ts'
 
@@ -346,7 +347,10 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
   if (check) {
     const stale = files.filter(f => !existsSync(f.path) || readFileSync(f.path, 'utf8') !== f.body)
     for (const f of stale) console.error(`gen-corpus: ${f.path} is out of date; run node scripts/gen-corpus.ts`)
-    return stale.length > 0 ? 1 : 0
+    const written = new Set(files.map(f => f.path))
+    const extra = existsSync(DIR) ? readdirSync(DIR).sort().map(name => join(DIR, name)).filter(p => !written.has(p)) : []
+    for (const p of extra) console.error(`gen-corpus: ${p} is not a file gen-corpus writes; delete it`)
+    return stale.length + extra.length > 0 ? 1 : 0
   }
   mkdirSync(DIR, { recursive: true })
   for (const f of files) writeFileSync(f.path, f.body)
