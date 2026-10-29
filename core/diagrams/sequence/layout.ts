@@ -27,6 +27,7 @@ type Op = (cv: Canvas, dx: number) => void
 type Label = Expect['labels'][number]
 type Edge = Expect['edges'][number]
 type EdgeLabel = Expect['edgeLabels'][number]
+type Mark = { owner: string; r: number; c: number }
 type Pill = ReturnType<typeof pill>
 // What both passes read: the pills, each participant's index, each message, note and frame's number among its kind,
 // each message and note's label text and wrapped pieces, and the columns from each lifeline to the right border of the
@@ -159,7 +160,7 @@ function measure(c: Ctx): number[] {
     if (it.kind === 'frame') return frame(it)
     if (it.kind === 'create') born.add(it.id)
     if (it.kind === 'note') {
-      const is = it.ids.map(id => at.get(id)!), i = is[0]!, w = widest(c.pcs.get(it)!) + 2
+      const is = it.ids.map(id => at.get(id)!), i = is[0]!, w = widest(c.pcs.get(it)!) + 4
       if (it.side === 'right of' && i < last) spread(i, i + 1, w + 3)
       if (it.side === 'left of' && i > 0) spread(i - 1, i, w + 3)
       return { lo: Math.min(...is), hi: Math.max(...is), l: 0, r: 0 }
@@ -198,6 +199,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   const c = context(seq, pad, wrapAt)
   if (isFail(c)) return c
   const xs = measure(c), back: Op[] = [], fore: Op[] = [], labels: Label[] = [], edges: Edge[] = [], edgeLabels: EdgeLabel[] = []
+  const marks: Mark[] = []                                        // each note's ┆ cap, before the shift: validate holds it there
   // The header row: below the title row, if any, and the box tops, if any box has a member.
   const title = seq.title || null, boxed = seq.boxes.some(b => b.ids.length > 0), head = (title ? 1 : 0) + (boxed ? 1 : 0)
   let row = head + 1, lo = 0, hi = -1                             // the next free row; the drawn columns, before the shift
@@ -251,20 +253,22 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     edges.push({ id, from: m.from, to: m.to, ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
     if (ps.some(p => p.text)) edgeLabels.push({ owner: `${id}:label`, edge: id })
   }
-  // A note: one row per line, centered in a box of note fill one column wider each side than its widest line; over its
-  // lifelines, a column beyond each, or beside its lifeline, a column off it.
+  // A note: one row per line, centered between ┆ caps in a box of note fill, cap and blank one column each beyond its
+  // widest line, so it reads as a note without color; over its lifelines, a column beyond each, or beside its lifeline,
+  // a column off it.
   const note = (n: Note) => {
-    const id = `n${c.no.get(n)!}`, ps = c.pcs.get(n)!, top = row, w = widest(ps) + 2
+    const id = `n${c.no.get(n)!}`, ps = c.pcs.get(n)!, top = row, w = widest(ps) + 4
     const xa = Math.min(...n.ids.map(p => xs[c.at.get(p)!]!)), xb = Math.max(...n.ids.map(p => xs[c.at.get(p)!]!))
     const span = n.side === 'over' ? Math.max(w, xb - xa + 3) : w
     const left = n.side === 'left of' ? xa - 1 - span : n.side === 'right of' ? xa + 2 : xa - Math.floor((span - 1 - (xb - xa)) / 2)
     ps.forEach((p, k) => {
       const pw = width(p.text), at = left + Math.floor((span - pw) / 2)
       fore.push((cv, dx) => {
-        cv.fill(top + k, left + dx, at - left, 'note', id)
+        cv.cap(top + k, left + dx, '┆', 'note', id); cv.fill(top + k, left + 1 + dx, at - left - 1, 'note', id)
         cv.text(top + k, at + dx, p.text, 'note', id, k > 0 ? p.join : undefined)
-        cv.fill(top + k, at + pw + dx, left + span - at - pw, 'note', id)
+        cv.fill(top + k, at + pw + dx, left + span - 1 - at - pw, 'note', id); cv.cap(top + k, left + span - 1 + dx, '┆', 'note', id)
       })
+      marks.push({ owner: id, r: top + k, c: left }, { owner: id, r: top + k, c: left + span - 1 })
     })
     touch(left, left + span - 1)
     row = top + ps.length
@@ -332,7 +336,8 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   }
   const cv = createCanvas(last + 1 + (boxed ? 1 : 0), hi - lo + 1, columns)
   for (const op of [...back, ...life, ...fore]) op(cv, -lo)
-  return cv.toDrawing({ labels, edges, edgeLabels, frames })
+  const glyphs = marks.map(m => ({ owner: m.owner, ch: '┆', at: { r: m.r, c: m.c - lo } }))
+  return cv.toDrawing({ labels, edges, edgeLabels, frames, ...(glyphs.length ? { glyphs } : {}) })
 }
 
 // natural and tight draw once, unwrapped; wrap tries each width in WRAPS: the first drawing validate accepts, else the last.

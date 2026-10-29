@@ -2,7 +2,7 @@
 [ A ] [ B ]
   │ hi  │
   │────►│
-     n
+ ┆   n   ┆
 @60 roles
 nnNnn nnNnn
   o LL  o
@@ -12,7 +12,7 @@ nnNnn nnNnn
 [ A ] [ B ]
   │ hi  │
   │────►│
-     n
+ ┆   n   ┆
 @80 roles
 nnNnn nnNnn
   o LL  o
@@ -22,7 +22,7 @@ nnNnn nnNnn
 [ A ] [ B ]
   │ hi  │
   │────►│
-     n
+ ┆   n   ┆
 @120 roles
 nnNnn nnNnn
   o LL  o

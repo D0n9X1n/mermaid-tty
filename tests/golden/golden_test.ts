@@ -35,3 +35,10 @@ test('A1: weight glyphs in flowchart-ok-50…52', () => {
   for (const [id, re] of [['flowchart-ok-50', /[┏┓┗┛]/], ['flowchart-ok-51', /[╂┿]/], ['flowchart-ok-52', /┆/]] as const)
     assert.match(readFileSync(join('goldens', 'flowchart', `${id}.golden`), 'utf8'), re, id)
 })
+// vr-A: mono draws no note fill, so each note golden shows its note by ┆ caps at every width.
+test('A2: every sequence golden with a note shows a ┆ note marker at 60/80/120', () => {
+  for (const n of [14, 15, 16, 17, 26, 33, 38]) {
+    const g = readFileSync(join('goldens', 'sequence', `sequence-ok-${n}.golden`), 'utf8')
+    for (const w of W) assert.match(g.split(`@${w}\n`)[1]!.split(`@${w} roles`)[0]!, /┆[^\n]*┆/, `sequence-ok-${n}@${w}`)
+  }
+})

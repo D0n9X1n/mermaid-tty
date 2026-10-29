@@ -1,30 +1,30 @@
 @60
-[ A ] [ B ]
-  │ hi  │
-  │────►│
-  │  n  │
+[ A ]   [ B ]
+  │  hi   │
+  │──────►│
+  │ ┆ n ┆ │
 @60 roles
-nnNnn nnNnn
-  o LL  o
-  oeeeeao
-  o oOo o
+nnNnn   nnNnn
+  o  LL   o
+  oeeeeeeao
+  o ooOoo o
 @80
-[ A ] [ B ]
-  │ hi  │
-  │────►│
-  │  n  │
+[ A ]   [ B ]
+  │  hi   │
+  │──────►│
+  │ ┆ n ┆ │
 @80 roles
-nnNnn nnNnn
-  o LL  o
-  oeeeeao
-  o oOo o
+nnNnn   nnNnn
+  o  LL   o
+  oeeeeeeao
+  o ooOoo o
 @120
-[ A ] [ B ]
-  │ hi  │
-  │────►│
-  │  n  │
+[ A ]   [ B ]
+  │  hi   │
+  │──────►│
+  │ ┆ n ┆ │
 @120 roles
-nnNnn nnNnn
-  o LL  o
-  oeeeeao
-  o oOo o
+nnNnn   nnNnn
+  o  LL   o
+  oeeeeeeao
+  o ooOoo o

@@ -1,7 +1,7 @@
 @60
 [ Alice ]                                   [ John ]
 ┌──────────────────────────────────────────────────┐
-│   │  Alice calls John.                       │   │
+│   │ ┆ Alice calls John. ┆                    │   │
 │   │         Hello John, how are you?         │   │
 │   │─────────────────────────────────────────►┃   │
 │ ┌──────────────────────────────────────────────┐ │
@@ -20,7 +20,7 @@
 @60 roles
 nnNNNNNnn                                   nnNNNNnn
 oooooooooooooooooooooooooooooooooooooooooooooooooooo
-o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o ooOOOOOOOOOOOOOOOOOoo                    o   o
 o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
 o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
 o oooooooooooooooooooooooooooooooooooooooooooooooo o
@@ -39,7 +39,7 @@ oooooooooooooooooooooooooooooooooooooooooooooooooooo
 @80
 [ Alice ]                                   [ John ]
 ┌──────────────────────────────────────────────────┐
-│   │  Alice calls John.                       │   │
+│   │ ┆ Alice calls John. ┆                    │   │
 │   │         Hello John, how are you?         │   │
 │   │─────────────────────────────────────────►┃   │
 │ ┌──────────────────────────────────────────────┐ │
@@ -58,7 +58,7 @@ oooooooooooooooooooooooooooooooooooooooooooooooooooo
 @80 roles
 nnNNNNNnn                                   nnNNNNnn
 oooooooooooooooooooooooooooooooooooooooooooooooooooo
-o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o ooOOOOOOOOOOOOOOOOOoo                    o   o
 o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
 o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
 o oooooooooooooooooooooooooooooooooooooooooooooooo o
@@ -77,7 +77,7 @@ oooooooooooooooooooooooooooooooooooooooooooooooooooo
 @120
 [ Alice ]                                   [ John ]
 ┌──────────────────────────────────────────────────┐
-│   │  Alice calls John.                       │   │
+│   │ ┆ Alice calls John. ┆                    │   │
 │   │         Hello John, how are you?         │   │
 │   │─────────────────────────────────────────►┃   │
 │ ┌──────────────────────────────────────────────┐ │
@@ -96,7 +96,7 @@ oooooooooooooooooooooooooooooooooooooooooooooooooooo
 @120 roles
 nnNNNNNnn                                   nnNNNNnn
 oooooooooooooooooooooooooooooooooooooooooooooooooooo
-o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o ooOOOOOOOOOOOOOOOOOoo                    o   o
 o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
 o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
 o oooooooooooooooooooooooooooooooooooooooooooooooo o
