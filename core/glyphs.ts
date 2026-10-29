@@ -13,5 +13,14 @@ export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string 
 
 const ASCII = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i))
 const BOXES = Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x2500 + i))
-export const GLYPHS: ReadonlySet<string> = new Set([...ASCII, ...BOXES, ...'►◄▲▼◇●◉'])
+// The glyphs C's sections name (rule 12). None has the Emoji property.
+const C_GLYPHS = [
+  ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇',  // bars: horizontal ▏…█, vertical ▁…█ (spec C rule 5)
+  ...'✓▸◆·',            // gantt: done and active status cells, the milestone, the timing's separator
+  ...'■○△□',            // xychart: the line markers ●◆▲■○◇△□ not listed above
+  ...'▷◁▽«»',           // class: triangle ends, with △ above; «annotation»
+  ...'⊗◎',              // gitGraph: reverse and cherry-pick commits; highlight is ■ above
+  ...'↑↓',              // quadrant: before the top and bottom axis texts
+]
+export const GLYPHS: ReadonlySet<string> = new Set([...ASCII, ...BOXES, ...'►◄▲▼◇●◉', ...C_GLYPHS])
 export const isAllowed = (g: string): boolean => GLYPHS.has(g)
