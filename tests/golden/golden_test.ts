@@ -1,7 +1,8 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'; import { explain } from '../../core/render.ts'; import { goldenOf, goldenGlyphs, widest } from './golden-lib.ts'
 const W = [60, 80, 120], EDGE = new Set(['flowchart-reject-04', 'sequence-reject-04']), X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
-const LADDER: Record<string, string> = { 'flowchart-ok-41': 'natural', 'flowchart-ok-42': 'tight', 'flowchart-ok-43': 'wrap', 'flowchart-ok-44': 'lrToTd' }
+const LADDER: Record<string, string> = { 'flowchart-ok-41': 'natural', 'flowchart-ok-42': 'tight', 'flowchart-ok-43': 'wrap', 'flowchart-ok-44': 'lrToTd',
+  'sequence-ok-27': 'natural', 'sequence-ok-28': 'tight', 'sequence-ok-29': 'wrap' }
 const src = (id: string) => readFileSync(join('fixtures', id.split('-')[0]!, `${id}.mmd`), 'utf8')
 for (const type of ['flowchart', 'sequence']) for (const f of existsSync(`fixtures/${type}`) ? readdirSync(`fixtures/${type}`) : []) {
   const id = f.replace(/\.mmd$/, ''), A = type === 'flowchart' ? 'A1' : 'A2'

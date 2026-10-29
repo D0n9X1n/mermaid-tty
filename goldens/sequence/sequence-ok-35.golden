@@ -1,0 +1,84 @@
+@60
+[ Alice ]                   [ Bob ]
+    │ Hello Bob, how are you ? │
+    │─────────────────────────►│
+    │Fine, thank you. And you? │
+    │◄─────────────────────────│
+    │            Hi Carl!      │
+    │───────────────────────────────►[ Carl ]
+    │                          │        │ Hi!
+    │                          │        │────►([ Donald ])
+    │          We are too many │        │          │
+    │──────────────────────────────────x│          │
+    │         I agree          │                   │
+    │◄─────────────────────────│                   │
+@60 roles
+nnNNNNNnn                   nnNNNnn
+    o LLLLLLLLLLLLLLLLLLLLLLLL o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeao
+    oLLLLLLLLLLLLLLLLLLLLLLLLL o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o            LLLLLLLL      o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeannNNNNnn
+    o                          o        o LLL
+    o                          o        oeeeeannnNNNNNNnnn
+    o          LLLLLLLLLLLLLLL o        o          o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao          o
+    o         LLLLLLL          o                   o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeo                   o
+@80
+[ Alice ]                     [ Bob ]
+    │  Hello Bob, how are you ?  │
+    │───────────────────────────►│
+    │ Fine, thank you. And you?  │
+    │◄───────────────────────────│
+    │             Hi Carl!       │
+    │──────────────────────────────────►[ Carl ]
+    │                            │         │ Hi!
+    │                            │         │─────►([ Donald ])
+    │           We are too many  │         │           │
+    │─────────────────────────────────────x│           │
+    │          I agree           │                     │
+    │◄───────────────────────────│                     │
+@80 roles
+nnNNNNNnn                     nnNNNnn
+    o  LLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o LLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o             LLLLLLLL       o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeannNNNNnn
+    o                            o         o LLL
+    o                            o         oeeeeeannnNNNNNNnnn
+    o           LLLLLLLLLLLLLLL  o         o           o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao           o
+    o          LLLLLLL           o                     o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeo                     o
+@120
+[ Alice ]                     [ Bob ]
+    │  Hello Bob, how are you ?  │
+    │───────────────────────────►│
+    │ Fine, thank you. And you?  │
+    │◄───────────────────────────│
+    │             Hi Carl!       │
+    │──────────────────────────────────►[ Carl ]
+    │                            │         │ Hi!
+    │                            │         │─────►([ Donald ])
+    │           We are too many  │         │           │
+    │─────────────────────────────────────x│           │
+    │          I agree           │                     │
+    │◄───────────────────────────│                     │
+@120 roles
+nnNNNNNnn                     nnNNNnn
+    o  LLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o LLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o             LLLLLLLL       o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeannNNNNnn
+    o                            o         o LLL
+    o                            o         oeeeeeannnNNNNNNnnn
+    o           LLLLLLLLLLLLLLL  o         o           o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao           o
+    o          LLLLLLL           o                     o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeo                     o

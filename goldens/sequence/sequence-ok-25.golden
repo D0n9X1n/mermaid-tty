@@ -1,0 +1,48 @@
+@60
+[ A ]       [ B ]
+  │  1. one   │
+  │──────────►│
+  │  2. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄│
+  │ 3. three  │
+  │──────────►│
+@60 roles
+nnNnn       nnNnn
+  o  LLLLLL   o
+  oeeeeeeeeeeao
+  o  LLLLLL   o
+  oaeeeeeeeeeeo
+  o LLLLLLLL  o
+  oeeeeeeeeeeao
+@80
+[ A ]       [ B ]
+  │  1. one   │
+  │──────────►│
+  │  2. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄│
+  │ 3. three  │
+  │──────────►│
+@80 roles
+nnNnn       nnNnn
+  o  LLLLLL   o
+  oeeeeeeeeeeao
+  o  LLLLLL   o
+  oaeeeeeeeeeeo
+  o LLLLLLLL  o
+  oeeeeeeeeeeao
+@120
+[ A ]       [ B ]
+  │  1. one   │
+  │──────────►│
+  │  2. two   │
+  │◄┄┄┄┄┄┄┄┄┄┄│
+  │ 3. three  │
+  │──────────►│
+@120 roles
+nnNnn       nnNnn
+  o  LLLLLL   o
+  oeeeeeeeeeeao
+  o  LLLLLL   o
+  oaeeeeeeeeeeo
+  o LLLLLLLL  o
+  oeeeeeeeeeeao

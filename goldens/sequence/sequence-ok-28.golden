@@ -1,0 +1,60 @@
+@60
+[ Client ]   [ Server ]                       [ Database ]
+    │GET /orders │                                 │
+    │───────────►│                                 │
+    │            │SELECT id, total FROM all_orders │
+    │            │────────────────────────────────►│
+    │            │              rows               │
+    │            │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+    │   200 OK   │                                 │
+    │◄┄┄┄┄┄┄┄┄┄┄┄│                                 │
+@60 roles
+nnNNNNNNnn   nnNNNNNNnn                       nnNNNNNNNNnn
+    oLLLLLLLLLLL o                                 o
+    oeeeeeeeeeeeao                                 o
+    o            oLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL o
+    o            oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o            o              LLLL               o
+    o            oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o   LLLLLL   o                                 o
+    oaeeeeeeeeeeeo                                 o
+@80
+[ Client ]     [ Server ]                         [ Database ]
+    │ GET /orders  │                                   │
+    │─────────────►│                                   │
+    │              │ SELECT id, total FROM all_orders  │
+    │              │──────────────────────────────────►│
+    │              │               rows                │
+    │              │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+    │    200 OK    │                                   │
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄│                                   │
+@80 roles
+nnNNNNNNnn     nnNNNNNNnn                         nnNNNNNNNNnn
+    o LLLLLLLLLLL  o                                   o
+    oeeeeeeeeeeeeeao                                   o
+    o              o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    o              oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o              o               LLLL                o
+    o              oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o    LLLLLL    o                                   o
+    oaeeeeeeeeeeeeeo                                   o
+@120
+[ Client ]     [ Server ]                         [ Database ]
+    │ GET /orders  │                                   │
+    │─────────────►│                                   │
+    │              │ SELECT id, total FROM all_orders  │
+    │              │──────────────────────────────────►│
+    │              │               rows                │
+    │              │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+    │    200 OK    │                                   │
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄│                                   │
+@120 roles
+nnNNNNNNnn     nnNNNNNNnn                         nnNNNNNNNNnn
+    o LLLLLLLLLLL  o                                   o
+    oeeeeeeeeeeeeeao                                   o
+    o              o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    o              oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o              o               LLLL                o
+    o              oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+    o    LLLLLL    o                                   o
+    oaeeeeeeeeeeeeeo                                   o

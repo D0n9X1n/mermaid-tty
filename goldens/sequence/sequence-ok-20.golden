@@ -1,0 +1,36 @@
+@60
+[ A ]         [ B ]
+┌─loop [every 1s]─┐
+│ │      x      │ │
+│ │────────────►│ │
+└─────────────────┘
+@60 roles
+nnNnn         nnNnn
+ffFFFFFFFFFFFFFFFff
+f o      L      o f
+f oeeeeeeeeeeeeao f
+fffffffffffffffffff
+@80
+[ A ]         [ B ]
+┌─loop [every 1s]─┐
+│ │      x      │ │
+│ │────────────►│ │
+└─────────────────┘
+@80 roles
+nnNnn         nnNnn
+ffFFFFFFFFFFFFFFFff
+f o      L      o f
+f oeeeeeeeeeeeeao f
+fffffffffffffffffff
+@120
+[ A ]         [ B ]
+┌─loop [every 1s]─┐
+│ │      x      │ │
+│ │────────────►│ │
+└─────────────────┘
+@120 roles
+nnNnn         nnNnn
+ffFFFFFFFFFFFFFFFff
+f o      L      o f
+f oeeeeeeeeeeeeao f
+fffffffffffffffffff

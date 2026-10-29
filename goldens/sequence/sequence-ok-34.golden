@@ -1,0 +1,78 @@
+@60
+┌─Alice & John───────────────┐ ┌─Another Group─────────────┐
+│ [ A ]                [ J ] │ │ [ B ]               [ C ] │
+│   │Hello John, how are │   │ │   │                   │   │
+│   │        you?        │   │ │   │                   │   │
+│   │───────────────────►│   │ │   │                   │   │
+│   │       Great!       │   │ │   │                   │   │
+│   │◄───────────────────│   │ │   │                   │   │
+│   │      Hello Bob, how is │ │   │                   │   │
+│   │           Charley? │   │ │   │                   │   │
+│   │─────────────────────────────►│                   │   │
+│   │                    │   │ │   │Hello Charley, how │   │
+│   │                    │   │ │   │     are you?      │   │
+│   │                    │   │ │   │──────────────────►│   │
+└────────────────────────────┘ └───────────────────────────┘
+@60 roles
+ffFFFFFFFFFFFFffffffffffffffff ffFFFFFFFFFFFFFffffffffffffff
+f nnNnn                nnNnn f f nnNnn               nnNnn f
+f   oLLLLLLLLLLLLLLLLLLL o   f f   o                   o   f
+f   o        LLLL        o   f f   o                   o   f
+f   oeeeeeeeeeeeeeeeeeeeao   f f   o                   o   f
+f   o       LLLLLL       o   f f   o                   o   f
+f   oaeeeeeeeeeeeeeeeeeeeo   f f   o                   o   f
+f   o      LLLLLLLLLLLLLLLLL f f   o                   o   f
+f   o           LLLLLLLL o   f f   o                   o   f
+f   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao                   o   f
+f   o                    o   f f   oLLLLLLLLLLLLLLLLLL o   f
+f   o                    o   f f   o     LLLLLLLL      o   f
+f   o                    o   f f   oeeeeeeeeeeeeeeeeeeao   f
+ffffffffffffffffffffffffffffff fffffffffffffffffffffffffffff
+@80
+┌─Alice & John────────────────────┐     ┌─Another Group──────────────────────┐
+│ [ A ]                     [ J ] │     │ [ B ]                        [ C ] │
+│   │Hello John, how are you? │   │     │   │                            │   │
+│   │────────────────────────►│   │     │   │                            │   │
+│   │         Great!          │   │     │   │                            │   │
+│   │◄────────────────────────│   │     │   │                            │   │
+│   │      Hello Bob, how is Charley?   │   │                            │   │
+│   │──────────────────────────────────────►│                            │   │
+│   │                         │   │     │   │Hello Charley, how are you? │   │
+│   │                         │   │     │   │───────────────────────────►│   │
+└─────────────────────────────────┘     └────────────────────────────────────┘
+@80 roles
+ffFFFFFFFFFFFFfffffffffffffffffffff     ffFFFFFFFFFFFFFfffffffffffffffffffffff
+f nnNnn                     nnNnn f     f nnNnn                        nnNnn f
+f   oLLLLLLLLLLLLLLLLLLLLLLLL o   f     f   o                            o   f
+f   oeeeeeeeeeeeeeeeeeeeeeeeeao   f     f   o                            o   f
+f   o         LLLLLL          o   f     f   o                            o   f
+f   oaeeeeeeeeeeeeeeeeeeeeeeeeo   f     f   o                            o   f
+f   o      LLLLLLLLLLLLLLLLLLLLLLLLLL   f   o                            o   f
+f   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao                            o   f
+f   o                         o   f     f   oLLLLLLLLLLLLLLLLLLLLLLLLLLL o   f
+f   o                         o   f     f   oeeeeeeeeeeeeeeeeeeeeeeeeeeeao   f
+fffffffffffffffffffffffffffffffffff     ffffffffffffffffffffffffffffffffffffff
+@120
+┌─Alice & John──────────────────────┐      ┌─Another Group────────────────────────┐
+│ [ A ]                       [ J ] │      │ [ B ]                          [ C ] │
+│   │ Hello John, how are you?  │   │      │   │                              │   │
+│   │──────────────────────────►│   │      │   │                              │   │
+│   │          Great!           │   │      │   │                              │   │
+│   │◄──────────────────────────│   │      │   │                              │   │
+│   │        Hello Bob, how is Charley?    │   │                              │   │
+│   │─────────────────────────────────────────►│                              │   │
+│   │                           │   │      │   │ Hello Charley, how are you?  │   │
+│   │                           │   │      │   │─────────────────────────────►│   │
+└───────────────────────────────────┘      └──────────────────────────────────────┘
+@120 roles
+ffFFFFFFFFFFFFfffffffffffffffffffffff      ffFFFFFFFFFFFFFfffffffffffffffffffffffff
+f nnNnn                       nnNnn f      f nnNnn                          nnNnn f
+f   o LLLLLLLLLLLLLLLLLLLLLLLL  o   f      f   o                              o   f
+f   oeeeeeeeeeeeeeeeeeeeeeeeeeeao   f      f   o                              o   f
+f   o          LLLLLL           o   f      f   o                              o   f
+f   oaeeeeeeeeeeeeeeeeeeeeeeeeeeo   f      f   o                              o   f
+f   o        LLLLLLLLLLLLLLLLLLLLLLLLLL    f   o                              o   f
+f   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao                              o   f
+f   o                           o   f      f   o LLLLLLLLLLLLLLLLLLLLLLLLLLL  o   f
+f   o                           o   f      f   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   f
+fffffffffffffffffffffffffffffffffffff      ffffffffffffffffffffffffffffffffffffffff

@@ -1,0 +1,114 @@
+@60
+[ Alice ]                                   [ John ]
+┌──────────────────────────────────────────────────┐
+│   │  Alice calls John.                       │   │
+│   │         Hello John, how are you?         │   │
+│   │─────────────────────────────────────────►┃   │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ │          John, can you hear me?          ┃ │ │
+│ │ │─────────────────────────────────────────►┃ │ │
+│ │ │        Hi Alice, I can hear you!         ┃ │ │
+│ │ │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃ │ │
+│ └──────────────────────────────────────────────┘ │
+│   │              I feel great!               ┃   │
+│   │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃   │
+└──────────────────────────────────────────────────┘
+    │ Did you want to go to the game tonight?  │
+    │─────────────────────────────────────────►┃
+    │           Yeah! See you there.           ┃
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃
+@60 roles
+nnNNNNNnn                                   nnNNNNnn
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
+o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o o o          LLLLLLLLLLLLLLLLLLLLLL          o o o
+o o oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao o o
+o o o        LLLLLLLLLLLLLLLLLLLLLLLLL         o o o
+o o oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo o o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o   o              LLLLLLLLLLLLL               o   o
+o   oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo   o
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+    o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o           LLLLLLLLLLLLLLLLLLLL           o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+@80
+[ Alice ]                                   [ John ]
+┌──────────────────────────────────────────────────┐
+│   │  Alice calls John.                       │   │
+│   │         Hello John, how are you?         │   │
+│   │─────────────────────────────────────────►┃   │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ │          John, can you hear me?          ┃ │ │
+│ │ │─────────────────────────────────────────►┃ │ │
+│ │ │        Hi Alice, I can hear you!         ┃ │ │
+│ │ │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃ │ │
+│ └──────────────────────────────────────────────┘ │
+│   │              I feel great!               ┃   │
+│   │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃   │
+└──────────────────────────────────────────────────┘
+    │ Did you want to go to the game tonight?  │
+    │─────────────────────────────────────────►┃
+    │           Yeah! See you there.           ┃
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃
+@80 roles
+nnNNNNNnn                                   nnNNNNnn
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
+o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o o o          LLLLLLLLLLLLLLLLLLLLLL          o o o
+o o oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao o o
+o o o        LLLLLLLLLLLLLLLLLLLLLLLLL         o o o
+o o oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo o o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o   o              LLLLLLLLLLLLL               o   o
+o   oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo   o
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+    o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o           LLLLLLLLLLLLLLLLLLLL           o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+@120
+[ Alice ]                                   [ John ]
+┌──────────────────────────────────────────────────┐
+│   │  Alice calls John.                       │   │
+│   │         Hello John, how are you?         │   │
+│   │─────────────────────────────────────────►┃   │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ │          John, can you hear me?          ┃ │ │
+│ │ │─────────────────────────────────────────►┃ │ │
+│ │ │        Hi Alice, I can hear you!         ┃ │ │
+│ │ │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃ │ │
+│ └──────────────────────────────────────────────┘ │
+│   │              I feel great!               ┃   │
+│   │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃   │
+└──────────────────────────────────────────────────┘
+    │ Did you want to go to the game tonight?  │
+    │─────────────────────────────────────────►┃
+    │           Yeah! See you there.           ┃
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┃
+@120 roles
+nnNNNNNnn                                   nnNNNNnn
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+o   o oOOOOOOOOOOOOOOOOOo                      o   o
+o   o         LLLLLLLLLLLLLLLLLLLLLLLL         o   o
+o   oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao   o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o o o          LLLLLLLLLLLLLLLLLLLLLL          o o o
+o o oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao o o
+o o o        LLLLLLLLLLLLLLLLLLLLLLLLL         o o o
+o o oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo o o
+o oooooooooooooooooooooooooooooooooooooooooooooooo o
+o   o              LLLLLLLLLLLLL               o   o
+o   oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo   o
+oooooooooooooooooooooooooooooooooooooooooooooooooooo
+    o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o           LLLLLLLLLLLLLLLLLLLL           o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo

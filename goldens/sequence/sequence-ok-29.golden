@@ -1,0 +1,40 @@
+@60
+[ Client ]               [ Server ]
+    │  send the full order   │
+    │history with every line │
+    │ item, tax and discount │
+    │───────────────────────►│
+    │         200 OK         │
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+@60 roles
+nnNNNNNNnn               nnNNNNNNnn
+    o  LLLLLLLLLLLLLLLLLLL   o
+    oLLLLLLLLLLLLLLLLLLLLLLL o
+    o LLLLLLLLLLLLLLLLLLLLLL o
+    oeeeeeeeeeeeeeeeeeeeeeeeao
+    o         LLLLLL         o
+    oaeeeeeeeeeeeeeeeeeeeeeeeo
+@80
+[ Client ]                                                            [ Server ]
+    │ send the full order history with every line item, tax and discount  │
+    │────────────────────────────────────────────────────────────────────►│
+    │                               200 OK                                │
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+@80 roles
+nnNNNNNNnn                                                            nnNNNNNNnn
+    o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o                               LLLLLL                                o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+@120
+[ Client ]                                                            [ Server ]
+    │ send the full order history with every line item, tax and discount  │
+    │────────────────────────────────────────────────────────────────────►│
+    │                               200 OK                                │
+    │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+@120 roles
+nnNNNNNNnn                                                            nnNNNNNNnn
+    o LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  o
+    oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+    o                               LLLLLL                                o
+    oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo

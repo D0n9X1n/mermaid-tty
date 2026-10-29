@@ -1,0 +1,60 @@
+@60
+([ U ]) [ S ]
+   │ req  │
+   │─────►┃
+   │ res  ┃
+   │◄┄┄┄┄┄┃
+   │      │ log
+   │      │─┐
+   │      │◄┘
+     done
+@60 roles
+nnnNnnn nnNnn
+   o LLL  o
+   oeeeeeao
+   o LLL  o
+   oaeeeeeo
+   o      o LLL
+   o      oee
+   o      oae
+  oooOOOOooo
+@80
+([ U ]) [ S ]
+   │ req  │
+   │─────►┃
+   │ res  ┃
+   │◄┄┄┄┄┄┃
+   │      │ log
+   │      │─┐
+   │      │◄┘
+     done
+@80 roles
+nnnNnnn nnNnn
+   o LLL  o
+   oeeeeeao
+   o LLL  o
+   oaeeeeeo
+   o      o LLL
+   o      oee
+   o      oae
+  oooOOOOooo
+@120
+([ U ]) [ S ]
+   │ req  │
+   │─────►┃
+   │ res  ┃
+   │◄┄┄┄┄┄┃
+   │      │ log
+   │      │─┐
+   │      │◄┘
+     done
+@120 roles
+nnnNnnn nnNnn
+   o LLL  o
+   oeeeeeao
+   o LLL  o
+   oaeeeeeo
+   o      o LLL
+   o      oee
+   o      oae
+  oooOOOOooo
