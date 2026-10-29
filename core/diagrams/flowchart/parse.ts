@@ -378,11 +378,13 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 }
 
 // A bracket or edge label's text, or a subgraph title: trimmed, one enclosing pair of "…" stripped ("…" keeps
-// punctuation). A "`…`" markdown string fails. Its <br> stay: a node splits them into
+// punctuation). A "`…`" markdown string fails; so does, as 'syntax', a label with a " that no one "…" enclosing it
+// all accounts for: Mermaid draws "a" b as a b, and this parser fails closed. Its <br> stay: a node splits them into
 // lines, and an edge label keeps them for layout to split with labelLines.
 function label(raw: string): string | Fail {
   const trimmed = raw.trim()
   if (trimmed.startsWith('"`')) return fail('markdown-string')
+  if (trimmed.includes('"') && !/^"[^"]*"$/.test(trimmed)) return fail('syntax')
   return checked(trimmed.replace(/^"(.*)"$/s, '$1'))
 }
 

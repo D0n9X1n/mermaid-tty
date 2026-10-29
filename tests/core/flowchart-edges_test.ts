@@ -129,3 +129,14 @@ test('A1: an edge label blank once its one enclosing "…" is stripped and it is
   const src = ['A -->|""| B', 'A -->|  | B', 'A -->|" "| B', 'A -->|| B', 'A -- "" --> B', 'A --  --> B', 'A -. " " .-> B', 'A == "" ==> B']
   assert.deepEqual(src.map(s => [s, E(s)[0].label]), src.map(s => [s, null]))
 })
+
+test('A5.errors: a node or edge label, or a subgraph title, with a " that is not one "…" enclosing it all fails syntax:<n>', () => {
+  const bad = ['A -->|"a" b| B', 'A -->|a "b"| B', 'A["a" b]', 'A -- "a" b --> B', 'A[a "b" c]', 'A["a" "b"]', 'A["a "b" c"]',
+    'A -->|"a"b"c"| B', 'A -. "a" b .-> B', 'subgraph s ["a" b]\nend']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+})
+test('A1: a label that one "…" encloses whole still loses those quotes and keeps what they hold', () => {
+  const g = P('flowchart TD\nA["a, b: (c)"] -->|"a|b"| B[ "x [y]" ]\nB -- "a -- b" --> C\nsubgraph s ["T: 1, 2"]\nC\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges.map((e: any) => e.label), g.clusters[0].title],
+    [['a, b: (c)', 'x [y]', 'C'], ['a|b', 'a -- b'], 'T: 1, 2'])
+})
