@@ -50,6 +50,28 @@ export function releaseErrors(yml: string): string[] {
     ['GitHub marketplace install', j => hasRun(j, 'claude plugin marketplace add D0n9X1n/mermaid-tty')],
     ['A9 against the installed copy', j => hasRun(j, /^node scripts\/e2e\/run\.ts --installed "\$CLAUDE_CONFIG_DIR"(?:\s|$)/)]])];
 }
+// B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version, and records every result.
+export function versionsErrors(yml: string): string[] {
+  const { errors, value } = readWorkflow('claude-code-versions.yml', yml), w = value as any;
+  const list: Job = w?.jobs?.list ?? {}, a9: Job & { strategy?: { matrix?: { version?: unknown } } } = w?.jobs?.a9 ?? {}, rec: Job & { if?: string } = w?.jobs?.record ?? {};
+  const writers = Object.entries<any>(w?.jobs ?? {}).filter(([name, j]) => name !== 'record' && j?.permissions?.contents === 'write');
+  return [...errors, ...need('claude-code-versions.yml', w, [
+    ['a schedule of a few hours', w => w.on.schedule.length === 1 && /^\d+ \*\/\d+ \* \* \*$/.test(w.on.schedule[0].cron)],
+    ['workflow_dispatch with a version input', w => Object.hasOwn(w.on.workflow_dispatch.inputs, 'version')],
+    ['read-only workflow token', w => w.permissions.contents === 'read' && Object.values(w.permissions).every(v => v === 'read' || v === 'none')]]),
+    ...need('claude-code-versions.yml list job', list, [['untested-version list', j => hasRun(j, /^versions="\$\(node scripts\/cc-versions\.ts list /m)]]),
+    ...need('claude-code-versions.yml a9 job', a9, [...MATRIX.slice(0, 4),
+      ['a version per leg', j => j.strategy.matrix.version === '${{ fromJSON(needs.list.outputs.versions) }}'],
+      ['that version from npm', j => hasRun(j, 'npm install -g "@anthropic-ai/claude-code@${{ matrix.version }}"')],
+      ['A9 per version', j => hasRun(j, /^node scripts\/e2e\/run\.ts --claude-version "\$\{\{ matrix\.version \}\}"(?:\s|$)/)],
+      ['a result per leg', j => steps(j).some(s => s.if === 'always()' && action(s, 'upload-artifact') && s.with?.name === 'leg-${{ matrix.version }}-${{ matrix.os }}')]]),
+    ...need('claude-code-versions.yml record job', rec, [
+      ['record even when a version failed', j => j.if === "${{ !cancelled() && needs.list.outputs.versions != '[]' }}"],
+      ['record job with contents: write', j => j.permissions.contents === 'write'],
+      ['every result recorded', j => hasRun(j, /^node scripts\/cc-versions\.ts record /m)],
+      ['tested-version record', j => hasRun(j, 'git push origin HEAD:claude-code-tested')]]),
+    ...(w?.permissions?.contents === 'write' || writers.length ? ['claude-code-versions.yml: contents: write outside the record job'] : [])];
+}
 // Coverage must never silently accept IDs extracted from unreadable YAML or a shell script.
 export function stepIds(...ymls: string[]): Set<string> {
   return new Set(ymls.flatMap(yml => {
