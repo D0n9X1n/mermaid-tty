@@ -66,13 +66,25 @@ export function glyphXs(svg: string): [string, number][] {
   return [...svg.matchAll(/<text x="([^"]*)"[^>]*>([^<]*)<\/text>/g)].map(m => [m[2]!.replace(/&(?:amp|lt|gt|quot);/g, e => UNESC[e]!), Number(m[1])])
 }
 
-// The self-check: each glyph of rows that svg does not draw at x = col × cellW, or both glyph counts when they differ.
+// The self-check, which measures columns on its own rather than through glyphCells, the renderer's placement: it walks
+// each row's text a code point at a time, summing width(ch), and expects a glyph wherever ch is neither blank nor
+// zero-width, so a combining mark rides on its base. Returns each glyph svg does not draw, starting with its code point,
+// at x / cellW = its column, or both glyph counts when they differ. It counts code points, not graphemes: a base and a
+// spacing mark, which the renderer draws as one glyph, fail it, loudly rather than silently.
 export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
-  const want = glyphCells(rows, width), got = glyphXs(svg)
+  const want: { row: number; col: number; ch: string }[] = [], got = glyphXs(svg)
+  rows.forEach((row, r) => {
+    let col = 0
+    for (const ch of row.map(sp => sp.text).join('')) {
+      const w = width(ch)
+      if (w > 0 && ch.trim()) want.push({ row: r, col, ch })
+      col += w
+    }
+  })
   if (want.length !== got.length) return [`expected ${want.length} glyphs, found ${got.length}`]
   return want.flatMap((g, i) => {
-    const [ch, x] = got[i]!
-    return ch === g.text && x === g.col * cellW ? [] : [`row ${g.row} col ${g.col}: want ${g.text} at x=${g.col * cellW}, found ${ch} at x=${x}`]
+    const [text, x] = got[i]!
+    return text.startsWith(g.ch) && x / cellW === g.col ? [] : [`row ${g.row} col ${g.col}: want ${g.ch} at x=${g.col * cellW}, found ${text} at x=${x}`]
   })
 }
 

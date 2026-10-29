@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -87,3 +87,19 @@ test('VR.gallery: render-gallery.ts OUT_DIR --png runs rsvg-convert on each SVG,
     assert.deepEqual(files.filter(f => f.endsWith('.png')).sort(),
       files.filter(f => f.endsWith('.svg') && f !== 'cjk.svg').map(f => f.replace(/\.svg$/, '.png')).sort())
   })
+
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
+
+// A copy of the gallery whose glyphCells advances a W/F glyph one cell, not two, so the renderer draws each glyph after a
+// CJK one a cell early. A self-check that shared glyphCells would agree with that renderer and pass it.
+test('VR.gallery: the self-check measures columns on its own: a renderer that advances a W/F glyph one cell fails it, by file', t => {
+  const root = scratch(t)
+  for (const p of ['package.json', 'core', 'fixtures/flowchart', 'fixtures/sequence', 'scripts/render-gallery.ts', 'scripts/render-svg.ts', 'scripts/lib/svg.ts', 'scripts/lib/is-main.ts'])
+    cpSync(join(ROOT, p), join(root, p), { recursive: true })
+  const svgTs = join(root, 'scripts/lib/svg.ts'), src = readFileSync(svgTs, 'utf8'), mutated = src.replace('col += w;', 'col += Math.min(w, 1);')
+  assert.notEqual(mutated, src, "glyphCells's column advance, col += w;, is gone from scripts/lib/svg.ts")
+  writeFileSync(svgTs, mutated)
+  const r = spawnSync(process.execPath, [join(root, 'scripts/render-gallery.ts'), join(root, 'out')], { encoding: 'utf8' })
+  assert.equal(r.status, 1, r.stdout + r.stderr)
+  assert.match(r.stderr, /^render-gallery: flowchart-ok-40@80\.svg: /m)
+})

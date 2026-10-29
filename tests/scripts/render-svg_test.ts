@@ -66,6 +66,12 @@ test('VR.gallery: offGrid passes a true render, and reports a glyph moved off it
   assert.deepEqual(offGrid(svg.replace(/<text [^>]*>►<\/text>/, ''), rows, 10), ['expected 4 glyphs, found 3'])
 })
 
+// é is e + U+0301 COMBINING ACUTE ACCENT, one glyph; ​ is ZERO WIDTH SPACE, which draws nothing. Escapes, since a copy can lose either.
+test('VR.gallery: offGrid passes a combining mark riding on its base, and a zero-width space that draws nothing', () => {
+  const rows = [[{ text: 'éx​中y' }]]
+  assert.deepEqual(offGrid(rowsToSvg(rows, CELLS), rows, 10), [])
+})
+
 const RENDER_SVG = fileURLToPath(new URL('../../scripts/render-svg.ts', import.meta.url))
 const LR = 'flowchart LR\nA[alpha one] --> B[beta two] --> C[gamma three] --> D[delta four]\n'
 
