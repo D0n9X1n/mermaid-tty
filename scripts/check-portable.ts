@@ -1,6 +1,6 @@
 // node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
 // which has no Node and no DOM. In each .ts and .tsx file it flags process, Buffer, document, window,
-// globalThis, Reflect, require, eval, Function (a type too), import( and a \u escape outside
+// globalThis, Reflect, require, eval, Function (a type too), constructor, import( and a \u escape outside
 // literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
 // path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
 // package.json, since nothing is installed. Prints each problem as `file:line token` and exits 1 when
@@ -12,11 +12,12 @@ import { isMain } from './lib/is-main.ts'
 // Each forbidden token, and the pattern that finds it in lexed code. eval, require and Function are bare
 // words, so (0, eval)(s), const r = require and { make: Function } are found. Function is found in a type
 // position too: code here uses specific function types, and after a : it can be a value. No name in our
-// code needs a \u escape, which can spell any of them.
+// code needs a \u escape, which can spell any of them. constructor reaches Function without naming it, as in
+// (() => {}).constructor('return process')(), which typecheck allows too, so it is flagged as a bare word.
 const TOKENS: [string, RegExp][] = [
   ['process', /\bprocess\b/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g], ['window', /\bwindow\b/g],
   ['globalThis', /\bglobalThis\b/g], ['Reflect', /\bReflect\b/g], ['require', /\brequire\b/g], ['eval', /\beval\b/g],
-  ['Function', /\bFunction\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
+  ['Function', /\bFunction\b/g], ['constructor', /\bconstructor\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
 ]
 // The words after which a / starts a regex literal rather than a division.
 const BEFORE_REGEX = new Set(['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw', 'case', 'do', 'else', 'yield', 'await'])

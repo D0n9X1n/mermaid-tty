@@ -107,6 +107,13 @@ const RULES: [string, [string, string[]][]][] = [
     ['const g = f satisfies Function, h = <Function>f', ['1 Function', '1 Function']],
     ["const s = 'Function' // new Function(s)", []],
     ['const isFunction = (x: unknown): x is Functional => typeof x === "function"', []]]],
+  // A function's constructor is Function, so constructor reaches it without naming it: flagged as a bare word in every
+  // use. Portable code here declares no class constructor and reads no constructor property.
+  ['constructor is flagged in every use: it reaches Function without naming it', [
+    ["export const c = (() => {}).constructor('return process')().cwd()", ['1 constructor']],
+    ['const F = f.constructor, G = (0).constructor', ['1 constructor', '1 constructor']],
+    ['class A { constructor() {} }', ['1 constructor']],
+    ["const s = 'constructor' // x.constructor", []]]],
   // After a < a / starts a regex literal, as in a < /x/.test(s), unless it is right after the < and right
   // before a name or a >: then it is the </ of a JSX closing tag, as in </Text> or </>, and divides.
   ['a / after a < starts a regex literal, unless right after it and right before a name or >, as in </Text>', [
