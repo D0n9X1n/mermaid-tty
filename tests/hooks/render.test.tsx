@@ -54,15 +54,14 @@ test('A6.hook-tests: every drawn row fits the viewport, a CJK character counting
   const rows = (await ui.findAll({ type: 'Text' })).filter((x: any) => x.props.wrap === 'truncate-end').map((x: any) => width(x.text))
   expect(rows.length).toBeGreaterThan(0); expect(rows.filter((w: number) => w > 40)).toEqual([])
 })
-// The 7th role, note, is a sequence role: its test lands with sequence registration (T24), as this runner has no todo.
-const ROLES ='flowchart TD\nA[读取] -->|yes| B{ok?}\nsubgraph F [Frame]\nC[x]\nend\n'
+const ROLES ='flowchart TD\nA[读取] -->|yes| B{ok?}\nsubgraph F [Frame]\nC[x]\nend\n', SEQ = 'sequenceDiagram\nA->>B: hi\nNote over A: memo\n'
 // has(re, k, v): some colored Text whose text matches re carries props[k] === v.
 const inks = async (ui: any) => { const s = (await ui.findAll({ type: 'Text' })).filter((x: any) => x.props.color || x.props.backgroundColor)
   return (re: RegExp, k: string, v: unknown) => s.some((x: any) => re.test(x.text) && x.props[k] === v) }
 for (const theme of ['default', 'nord', 'dracula', 'gruvbox', 'solarized'] as const) {
-  test(`A7: the 6 flowchart roles draw in their ${theme} colors`, { options: { theme } }, async ($, on) => {
-    capture(on); const ui = await mount($, '```mermaid\n' + ROLES + '```\n'), r = THEMES[theme].roles, has = await inks(ui)
+  test(`A7: all 7 roles draw in their ${theme} colors`, { options: { theme } }, async ($, on) => {
+    capture(on); const ui = await mount($, '```mermaid\n' + ROLES + '```\n\n```mermaid\n' + SEQ + '```\n'), r = THEMES[theme].roles, has = await inks(ui)
     expect([has(/读取/, 'backgroundColor', r.node), has(/ok\?/, 'backgroundColor', r.decision), has(/[│─┌┐└┘┼]/, 'color', r.edge),
-      has(/[►◄▲▼]/, 'color', r.arrow), has(/yes/, 'color', r.label), has(/Frame/, 'color', r.frame)]).toEqual([true, true, true, true, true, true])
+      has(/[►◄▲▼]/, 'color', r.arrow), has(/yes/, 'color', r.label), has(/Frame/, 'color', r.frame), has(/memo/, 'color', r.note)]).toEqual([true, true, true, true, true, true, true])
   })
 }
