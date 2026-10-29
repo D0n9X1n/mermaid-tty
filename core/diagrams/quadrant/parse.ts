@@ -3,6 +3,7 @@
 import { parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
+import { drawable } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // A coordinate: its text as written, which prints, and its exact value.
@@ -41,7 +42,7 @@ function stop(reason: string): never { throw fail(reason) }
 // The model src's statements build, or why it cannot be drawn: 'header' (not quadrantChart alone), 'syntax:<n>' (a line on
 // source line n outside the subset: a point style, a lone -->, a markdown string, another coordinate, a keyword in another
 // case or starting a longer word; or an accDescr { there with no }), 'repeat:<n>' (a second title, from frontmatter or a
-// statement, x-axis, y-axis or quadrant-N), 'entity' (a #…; entity in a text) or 'unsupported-char U+XXXX'.
+// statement, x-axis, y-axis or quadrant-N), 'entity' or 'html' (text Mermaid shows otherwise) or 'unsupported-char U+XXXX'.
 export function parseQuadrant(src: Source): Quadrant | Fail {
   try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
 }
@@ -76,7 +77,7 @@ function statement(t: string, n: number, q: Quadrant, seen: Set<string>): void {
   const once = (key: string) => { if (seen.has(key)) stop(`repeat:${n}`); seen.add(key) }
   let m: RegExpExecArray | null
   if ((m = TITLE.exec(t))) {
-    once('title'); q.title = drawable(m[1]!.trim())
+    once('title'); q.title = shown(m[1]!.trim())
   } else if ((m = AXIS.exec(t))) {
     once(m[1]!)
     const pair: [string, string | null] = [text(m[2]!, n), m[3] === undefined ? null : text(m[3], n)]
@@ -96,13 +97,15 @@ function statement(t: string, n: number, q: Quadrant, seen: Set<string>): void {
 function text(s: string, n: number): string {
   const quoted = s.startsWith('"'), t = quoted ? s.slice(1, -1).trim() : s
   if (quoted ? s.startsWith('"`') : KEYWORD.test(s)) stop(`syntax:${n}`)
-  return drawable(t).replace(/ +/g, ' ')
+  return shown(t).replace(/ +/g, ' ')
 }
 
-// t, if it can be drawn. A #…; entity fails 'entity': Mermaid encodes it in the body and its SVG decodes it, so it would
-// draw as other text.
-function drawable(t: string): string {
-  if (/#\w+;/.test(t)) stop('entity')
+// t, if it can be drawn. Mermaid sanitizes every quadrant text (quadrantDb's textSanitizer; a title by setDiagramTitle), so
+// text it shows otherwise fails as drawable says for a sanitized field with no <br>: 'entity' for a marker, 'html' for any
+// <. Unquoted text cannot hold a <, as quadrant.jison reads it.
+function shown(t: string): string {
+  const f = drawable(t, 'sanitized', 'none')
+  if (f) throw f
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }

@@ -33,8 +33,9 @@ test('A5.common: entities, unsupported characters and blank label lines fall bac
   assert.deepEqual([m.entities[0].label, m.relations[0].label, m.entities[1].attrs[0].comment], ['C#', 'a # b', 'c#'])
   assert.deepEqual(P('A ||--|| B : "x\u200Dy"'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(P('CAR {\n  string id "a\u200Db"\n}'), { reason: 'unsupported-char U+200D' })
-  for (const body of ['A ||--|| B : "a<br><br>b"', 'p["a<br/><br>b"]', 'CAR {\n  string id "a<br><br>b"\n}'])
-    assert.deepEqual(P(body), { reason: 'label-blank-line' }, body)
+  assert.deepEqual(P('A ||--|| B : "a<br><br>b"'), { reason: 'label-blank-line' })
+  // An alias and a comment draw on one line, so any <br> there falls back first (X2).
+  for (const body of ['p["a<br/><br>b"]', 'CAR {\n  string id "a<br><br>b"\n}']) assert.deepEqual(P(body), { reason: 'html' }, body)
 })
 test('A5.common: headers and keywords are case-sensitive and whole; styling and accessibility are ignored', () => {
   for (const h of ['erdiagram', 'ERDIAGRAM', 'erDiagrams', 'erDiagram LR']) {

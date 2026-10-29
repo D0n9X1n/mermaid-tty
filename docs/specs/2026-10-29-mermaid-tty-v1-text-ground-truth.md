@@ -84,6 +84,13 @@ QA probes since (Mermaid 12.2.0, Chrome):
 | pie title, header or statement | sanitized | none | |
 | xychart title, category | sanitized | none | |
 | xychart axis titles, series name | sanitized | none | Not probed: given the title's rule. |
+| ER relation label | html | any | X2. Every ER text is an HTML label (erBox's createText). |
+| ER entity name or alias, attribute type, name and comment, subgraph id or title | html | **none** | X2. One-line pill, row or frame border. QA: `A["a<!--c-->b"]` showed `ab`. |
+| journey task, section | plain | literal | X2. Never split. |
+| journey actor | plain | **none** | X2. Mermaid shows a `<br>` as a space. |
+| journey title | sanitized | none | X2. |
+| quadrant title, axis, quadrant and point text | sanitized | none | X2. quadrantDb sanitizes all; unquoted text cannot hold `<`. |
+| gantt title | sanitized | none | X2. A section with no task falls back `section-empty`: Mermaid draws no header. |
 
 **Frontmatter title, every type:** sanitized, `br: none`. `explain` (`core/render.ts`) checks it right after `readSource`, before any parser. QA: Mermaid shows a frontmatter title `ﬂ°x¶ß` as `&x;` and `a<!--c-->b` as `ab`, in pie, flowchart and xychart alike: the title is sanitized, and `decodeEntities` runs over the whole SVG. Only those two cases were probed; the rest take column T. `#9829;` falls back conservatively, though `encodeEntities` never sees frontmatter and Mermaid may show it as written.
 

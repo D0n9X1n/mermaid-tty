@@ -6,6 +6,7 @@ import { isFail, type Fail } from '../../core/fail.ts'
 import { explain } from '../../core/render.ts'
 import { parseXy, type Xy } from '../../core/diagrams/xychart/parse.ts'; import { readSource } from '../../core/source.ts'
 import { parseSequence } from '../../core/diagrams/sequence/parse.ts'
+import { parseQuadrant, type Quadrant } from '../../core/diagrams/quadrant/parse.ts'
 
 const CASES = ['Q&A', 'Q & A', 'a < b', 'a<b', 'x > 5', '&lt;', '&amp;', '&lt', '#9829;', 'a<br>b', 'a<BR>b', 'a<br/>b', 'a<br />b',
   '<b>z</b>', 'a<!--c-->b', 'ﬂ°x¶ß']
@@ -127,6 +128,67 @@ test('A5.errors: ground truth: a frontmatter title draws each case as Mermaid sh
     { name: 'pie frontmatter', truth: TRUTH.title, draw: F('pie\n"a" : 1'), strict: [9, TAG] },
     { name: 'flowchart frontmatter', truth: TRUTH.title, draw: F('flowchart TD\nA'), strict: [9, TAG] },
     { name: 'xychart frontmatter', truth: TRUTH.title, draw: F('xychart-beta\nbar [1]'), strict: [9, TAG] },
+  ]
+  fields.forEach(check)
+})
+
+// X2. QA repro: Mermaid 12.2.0 shows ER A["a<!--c-->b"] as ab. Every ER text is an HTML label (erBox's createText). An
+// entity's label draws in a one-line pill, an attribute's comment in one row, and a subgraph's title on its frame's border,
+// so a <br> there falls back; a relation's label splits at each <br>.
+test('A5.errors: ground truth: an ER entity label, relation label, attribute comment and subgraph title draw each case as Mermaid shows it, or fall back', () => {
+  const E = (body: string, owner: string) => (c: string) => drawn(`erDiagram\n${body.replace('$', c)}`, owner)
+  const fields: Field[] = [
+    { name: 'entity label', truth: TRUTH.html, draw: E('A["$"]\nA ||--o{ B : owns', 'A'), strict: BRS },
+    { name: 'relation label', truth: TRUTH.html, draw: E('A ||--o{ B : "$"', 'r0:label') },
+    { name: 'attribute comment', truth: TRUTH.html, draw: E('A {\nstring x "$"\n}', 'A.a0.comment'), strict: BRS },
+    { name: 'subgraph title', truth: TRUTH.html, draw: E('subgraph S ["$"]\nA\nend', 'S'), strict: BRS },
+  ]
+  fields.forEach(check)
+})
+
+// X2. journey: a task or section never splits, so each <br> spelling draws as written (plain, literal); an actor shows a
+// <br> as a space, so any <br falls back; a title is sanitized with no <br>. Every field falls back on a marker.
+test('A5.errors: ground truth: a journey task, section, actor and title draw as Mermaid shows them, or fall back', () => {
+  const J = (body: string, owner: string) => (c: string) => drawn(`journey\n${body.replace('$', c)}`, owner)
+  const task = J('section s\n$: 3: me', 't0'), section = J('section $\nt: 3: me', 'sec0')
+  const actor = J('section s\nt: 3: $', 't0.a0'), title = J('title $\nsection s\nt: 3: me', 'title')
+  const fb = { reason: 'html' }, ent = { reason: 'entity' }
+  const cases: [string, (c: string) => string[] | Fail, string, string[] | Fail][] = [
+    ['task', task, 'ﬂ°x¶ß', ent], ['task', task, 'a<br>b', ['a<br>b']], ['task', task, 'a<!--c-->b', ['a<!--c-->b']],
+    ['task', task, 'Q&A', ['Q&A']], ['task', task, 'a < b', ['a < b']],
+    ['section', section, 'ﬂ°x¶ß', ent], ['section', section, 'a<BR>b', ['a<BR>b']], ['section', section, 'a < b', ['a < b']],
+    ['actor', actor, 'ﬂ°x¶ß', ent], ['actor', actor, 'a<br>b', fb], ['actor', actor, 'a</br>b', fb], ['actor', actor, 'Q&A', ['Q&A']],
+    ['actor', actor, 'a < b', ['a < b']],
+    ['title', title, 'ﬂ°x¶ß', ent], ['title', title, 'a<!--c-->b', fb], ['title', title, 'a < b', fb], ['title', title, 'a<br>b', fb],
+    ['title', title, 'Q&A', ['Q&A']], ['title', title, 'x > 5', ['x > 5']],
+  ]
+  assert.deepEqual(cases.map(([f, d, c]) => [f, c, d(c)]), cases.map(([f, , c, w]) => [f, c, w]))
+})
+
+// X2. Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T for
+// quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
+test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text keep each case as Mermaid shows it, or fall back', () => {
+  const Q = (body: string, pick: (m: Quadrant) => string | null | undefined) => (c: string): string[] | Fail => {
+    const s = readSource(`quadrantChart\n${body.replace('$', c)}`), m = isFail(s) ? s : parseQuadrant(s)
+    return isFail(m) ? m : [pick(m) ?? '']
+  }
+  const fields: Field[] = [
+    { name: 'quadrant title', truth: TRUTH.title, draw: Q('title $', m => m.title), strict: [9, TAG] },
+    { name: 'x-axis', truth: TRUTH.title, draw: Q('x-axis "$" --> hi', m => m.x?.[0]), strict: [9, TAG] },
+    { name: 'y-axis', truth: TRUTH.title, draw: Q('y-axis lo --> "$"', m => m.y?.[1]), strict: [9, TAG] },
+    { name: 'quadrant-1', truth: TRUTH.title, draw: Q('quadrant-1 "$"', m => m.quads[0]), strict: [9, TAG] },
+    { name: 'point', truth: TRUTH.title, draw: Q('"$": [0.5, 0.5]', m => m.points[0]?.name), strict: [9, TAG] },
+  ]
+  fields.forEach(check)
+  const bare = ['quadrant-1 Q&A', 'quadrant-1 ﬂ°x¶ß', 'x-axis ﬂ°x¶ß', 'ﬂ°x¶ß: [0.5, 0.5]']
+  assert.deepEqual(bare.map(b => [b, Q(b, m => m.quads[0])('')]),
+    [[bare[0], ['Q&A']], ...bare.slice(1).map(b => [b, { reason: 'entity' }])])
+})
+
+// X2. A gantt title, statement or frontmatter, is sanitized with no <br>, as a pie title is (column T).
+test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it, or falls back', () => {
+  const fields: Field[] = [
+    { name: 'gantt title', truth: TRUTH.title, draw: c => drawn(`gantt\ntitle ${c}\nT :2024-01-01, 1d`, 'title'), strict: [9, TAG] },
   ]
   fields.forEach(check)
 })

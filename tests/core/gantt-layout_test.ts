@@ -69,3 +69,9 @@ test('A4: a section splits at every <br> spelling; a task name draws <br>, tags 
   assert.deepEqual(text(d).slice(0, 6), ['One', 'two', 'three', 'four', 'five', '   Q&A <b>x</b> a<br>b 2024-01-01 · 2d ' + '█'.repeat(41)])
   assert.deepEqual(d.expect.labels.slice(0, 2), [{ owner: 'sec0', text: 'One\ntwo\nthree\nfour\nfive' }, { owner: 't0', text: 'Q&A <b>x</b> a<br>b' }])
 })
+// X2: Mermaid 12.2.0 draws no header for a section with no task, so one falls back wherever it stands.
+test('A5.errors: a section with no task falls back', () => {
+  for (const body of ['section A\nT :2024-01-01, 1d\nsection B', 'section A\nsection B\nT :2024-01-01, 1d', 'T :2024-01-01, 1d\nsection A'])
+    assert.deepEqual(X(body, 80), { reason: 'section-empty' }, body)
+  assert.equal(X('section A\nT :2024-01-01, 1d\nsection B\nU :2024-01-02, 1d', 80).step, 'natural')
+})

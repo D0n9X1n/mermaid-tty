@@ -37,9 +37,14 @@ const statusOf = (t: GanttTask): string =>
   (t.tags.includes('crit') ? '!' : ' ') + (t.tags.includes('done') ? '✓' : t.tags.includes('active') ? '▸' : ' ')
 
 // Why g's text would draw other text than Mermaid 12.2.0 shows: 'section-repeat' for two sections of one name, which
-// Mermaid merges into one label; 'entity' for a marker. A task name draws as written, a section name split at any <br>.
+// Mermaid merges into one label; 'section-empty' for a section with no task, whose header Mermaid does not draw; 'entity'
+// for a marker, or 'html' for a title Mermaid sanitizes. A task name draws as written, a section name split at any <br>,
+// and a title is sanitized, with no <br>.
 function undrawable(g: Gantt): Fail | null {
+  const title = g.title === null ? null : drawable(g.title, 'sanitized', 'none')
+  if (title) return title
   if (new Set(g.sections).size < g.sections.length) return fail('section-repeat')
+  if (g.sections.some((_, k) => !g.tasks.some(t => t.section === k))) return fail('section-empty')
   for (const t of g.tasks) { const bad = drawable(t.name, 'plain', 'literal'); if (bad) return bad }
   for (const s of g.sections) { const bad = drawable(s, 'plain', 'any'); if (bad) return bad }
   return null
