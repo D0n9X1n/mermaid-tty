@@ -32,12 +32,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, then C's end labels, bars, member rows and keys. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and keys. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -237,6 +237,16 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
+// The box frame id's own frame cells span: null if it has none, or they span less than two rows or two columns.
+type FrameBox = { top: number; bottom: number; left: number; right: number }
+function frameBox(all: readonly Spot[], id: string): FrameBox | null {
+  const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
+  if (mine.length === 0) return null
+  const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
+  const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
+  return top < bottom && left < right ? { top, bottom, left, right } : null
+}
+
 // A frame's corner glyphs, top-left, top-right, bottom-left, bottom-right, each in every light and heavy mix of its two arms.
 const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓', '└┕┖┗', '┘┙┚┛'].map(s => new Set(s))
 
@@ -251,11 +261,9 @@ const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓',
 function frames(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Set(d.expect.edges.map(e => e.id))
   for (const id of d.expect.frames) {
-    const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
-    if (mine.length === 0) return fail('frame-broken')
-    const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
-    const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
-    if (top >= bottom || left >= right) return fail('frame-broken')
+    const b = frameBox(all, id)
+    if (!b) return fail('frame-broken')
+    const { top, bottom, left, right } = b
     // Corner i, in CORNERS order, is its own frame cell drawing that corner's glyph.
     const corner = ([r, c]: readonly [number, number], i: number) => {
       const x = at(d, r, c)
@@ -284,6 +292,26 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     for (let c = left; c <= right; c++) if (!kept(top, c) || !kept(bottom, c)) return fail('frame-broken')
     for (let r = top + 1; r < bottom; r++) if (!kept(r, left) || !kept(r, right)) return fail('frame-broken')
+  }
+  return null
+}
+
+// V6: an edge between nodes of one frame stays inside it. A frame holds a node when every cell drawn for the node, by its
+// owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose own
+// border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and label cell
+// of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame. Run after frames,
+// so every listed frame spans a box.
+function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
+  const boxes = d.expect.frames.flatMap(id => frameBox(all, id) ?? [])
+  const within = (p: Spot, b: FrameBox) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
+  const drawn = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  const holds = (b: FrameBox, n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(p => within(p, b))
+  for (const e of d.expect.edges) {
+    const held = boxes.filter(b => holds(b, e.from) && holds(b, e.to))
+    if (held.length === 0) continue
+    const mine = all.filter(p => connects(p.cell, e.id))
+    if (held.some(b => !mine.every(p => within(p, b)))) return fail('edge-outside-frame')
   }
   return null
 }

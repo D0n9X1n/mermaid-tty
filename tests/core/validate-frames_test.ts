@@ -91,3 +91,17 @@ test('A5.mutation-tests: V5 a divider\'s tees pass, and so does the quadrant\'s 
   assert.ok(text(q.drawing).some(row => row.includes('┬')) && text(q.drawing).some(row => row.includes('┴')), show(q.drawing))
   assert.equal(validate(q.drawing), null, show(q.drawing))
 })
+
+// V6: frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws it.
+function inner(ink: (c: Canvas) => void, g: string): Drawing {
+  const c = createCanvas(6, 9, 9); c.frame(0, 0, 4, 8, 'frame', 'F', 'T'); c.text(2, 2, 'a', 'node', 'A'); c.text(2, 5, 'b', 'node', 'B'); ink(c)
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],
+    edges: [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'B', glyph: g }] }], edgeLabels: [], frames: ['F'] })
+}
+test('V6: an edge between two nodes of one frame that leaves it through its border and comes back fails edge-outside-frame', () => {
+  // Under a, along row 3, down through the bottom border at (4,4), back up at (4,5), ▲ into b: each crossing a straight │.
+  const out = inner(c => { line(c, [[3, 2, 3], [3, 3, 10], [3, 4, 12], [4, 4, 5], [5, 4, 3], [5, 5, 9], [4, 5, 5]]); c.arrow(3, 5, '▲', 'e') }, '▲')
+  assert.equal(validate(out)?.reason, 'edge-outside-frame', show(out))
+  const kept = inner(c => { line(c, [[2, 3, 10]]); c.arrow(2, 4, '►', 'e') }, '►')   // a─►b, inside F
+  assert.equal(validate(kept), null, show(kept))
+})

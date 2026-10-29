@@ -98,3 +98,9 @@ test('A3: a keyed TB or BT note draws its key beside its pill, joined by ┄┄,
     assert.ok(d.cells.flat().some(c => c?.kind === 'key' && c.ch === 'a' && c.owners.join() === 'A:note'), dir)
   }
 })
+test('V6: side-by-side LR regions draw each edge straight inside the composite, at natural, never through its border', async () => {
+  const { explain } = await import('../../core/render.ts')
+  const r: any = explain('stateDiagram-v2\ndirection LR\nstate P {\n  A --> B\n  --\n  C --> D\n}\n[*] --> P', { columns: 80, theme: 'mono' })
+  const t = text(r.drawing).join('\n'); assert.equal(r.step, 'natural', t); assert.equal(validate(r.drawing), null, t)
+  assert.match(t, /\( A \)─+►\( B \)/, t); assert.match(t, /\( C \)─+►\( D \)/, t)
+})
