@@ -20,9 +20,12 @@ export function percentile(xs: readonly number[], p: number): number {
   return s[Math.max(0, Math.ceil(p * s.length / 100) - 1)]!
 }
 
-// The p90 ceiling in ms: BENCH_P90_MS when it is set; otherwise 200 in CI and 50 on the reference Mac.
+// The p90 ceiling in ms: BENCH_P90_MS when it is set; otherwise 200 in CI and 50 on the reference Mac. A BENCH_P90_MS that
+// is not a positive finite number throws a RangeError: NaN would compare as over no p90, and the benchmark would always pass.
 export function ceiling(env: Record<string, string | undefined>): number {
-  return Number(env.BENCH_P90_MS ?? (env.CI ? 200 : 50))
+  const v = Number(env.BENCH_P90_MS ?? (env.CI ? 200 : 50))
+  if (!Number.isFinite(v) || v <= 0) throw new RangeError(`BENCH_P90_MS must be a positive number of ms, not ${JSON.stringify(env.BENCH_P90_MS)}`)
+  return v
 }
 
 // The paths of the files under dir, at any depth, whose names end in ext.

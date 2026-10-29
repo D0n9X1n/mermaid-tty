@@ -20,6 +20,9 @@ test('A8.benchmark: nearest-rank percentiles; ceiling 50 ms on the Mac and 200 m
   const xs = [5, 1, 4, 2, 3, 10, 9, 8, 7, 6]; assert.equal(percentile(xs, 50), 5); assert.equal(percentile(xs, 90), 9)
   assert.equal(ceiling({}), 50); assert.equal(ceiling({ CI: 'true' }), 200); assert.equal(ceiling({ BENCH_P90_MS: '80' }), 80)
 })
+test('A8.benchmark: a BENCH_P90_MS that is not a positive number throws rather than passing every run', () => {
+  for (const v of ['fast', '', '0', '-5', 'Infinity']) assert.throws(() => ceiling({ BENCH_P90_MS: v }), RangeError, JSON.stringify(v))
+})
 test('A8.benchmark: p = 100 is the largest sample and p = 0 the smallest; xs is not mutated', () => {
   const xs = [5, 1, 4, 2, 3, 10, 9, 8, 7, 6], before = [...xs]
   assert.equal(percentile(xs, 100), 10); assert.equal(percentile(xs, 0), 1)
