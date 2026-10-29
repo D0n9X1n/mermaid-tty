@@ -25,7 +25,7 @@ const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + r
 // border on each side, plus a pad cell on each side across the ranks, and at least its title + 4 wide, the content centred.
 // An open cluster is a strip of the level it is on, in that level's direction. An edge may end on a sealed cluster, never on
 // an open one.
-export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
+export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail {
   const across = g.dir === 'LR' || g.dir === 'RL', pr = across ? 2 : 1, pc = across ? 1 : 2  // a block's margin
   const ext = (z: Size): Extent => (across ? { cross: z.rows, main: z.cols } : { cross: z.cols, main: z.rows })
   const t = clusterTree(g), top = (x: string) => !ancestors(t.parent, x).some(c => t.sealed.has(c))
@@ -48,7 +48,7 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
   }
   for (const [i, c] of g.clusters.entries()) {
     if (!t.sealed.has(c.id) || !top(c.id)) continue
-    const sub = layoutGraph(subgraph(g, t, c), s), inner = g.nodes.filter(n => ancestors(t.parent, n.id).includes(c.id))
+    const sub = layoutGraph(subgraph(g, t, c), s, true), inner = g.nodes.filter(n => ancestors(t.parent, n.id).includes(c.id))
     if (isFail(sub)) return sub
     subs.set(c.id, sub)
     const key = inner.length > 0 ? Math.min(...inner.map(n => n.order)) : last + 1 + i
@@ -137,8 +137,11 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
     }
   }
   // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further out.
+  // A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's move here.
+  const blocked = new Set([...subs.values()].flatMap(x => x.graph.edges.map(e => e.id)))
   let outside = Math.max(...[...boxes, ...frames].map(([, b]) => across ? b.row + b.rows : b.col + b.cols)) + 2
-  for (const e of graph.edges.filter(e => e.reversed)) {
+  const backs = graph.edges.filter(e => e.reversed && !blocked.has(e.id))
+  for (const e of backs) {
     outside += room(e)
     const label = boxes.get(`${e.id}:label`)
     const lane = outside + (label ? (across ? label.rows : label.cols) >> 1 : 0)
@@ -148,7 +151,9 @@ export function layoutGraph(g: Graph, s: Spacing): Placed | Fail {
     if (label) boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
     outside += (label ? across ? label.rows : label.cols : 1) + 2
   }
-  const rows = Math.max(across ? p.wide : p.long, ...[...boxes.values()].map(b => b.row + b.rows))
-  const cols = Math.max(across ? p.long : p.wide, ...[...boxes.values()].map(b => b.col + b.cols))
+  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it goes.
+  const lanes = nested && backs.some(e => e.style !== 'invisible') ? outside - 2 : 0
+  const rows = Math.max(across ? p.wide : p.long, ...[...boxes.values()].map(b => b.row + b.rows), across ? lanes : 0)
+  const cols = Math.max(across ? p.long : p.wide, ...[...boxes.values()].map(b => b.col + b.cols), across ? 0 : lanes)
   return { graph, boxes, frames, rows, cols, bands, ...(notes.size > 0 ? { notes } : {}) }
 }

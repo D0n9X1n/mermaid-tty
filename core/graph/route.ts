@@ -165,12 +165,16 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
   const cross = (b: Box, side: number) => across ? (side > 0 ? b.row + b.rows : b.row - 1) : (side > 0 ? b.col + b.cols : b.col - 1)
   const at = (m: number, x: number): Point => across ? { r: x, c: m } : { r: m, c: x }
   const occupied = new Map(routes.flatMap(r => [...r.cells.map(c => [keyOf(c), c.dirs] as const), ...r.ends.map(c => [keyOf(c), 0] as const)]))
-  const frames = walls(p)
+  const frames = walls(p), fs = fences(p, e)
   const label = p.boxes.get(`${e.id}:label`), ink = labelInk(p, e)
   const boxes = routeObstacles(p, e)
-  const high = Math.max(...[...p.boxes.values(), ...frames].map(b => across ? b.row + b.rows : b.col + b.cols),
-    ...routes.flatMap(r => [...r.cells, ...r.ends].map(c => (across ? c.r : c.c) + 1))) + 2
-  const low = Math.min(...boxes.map(b => across ? b.row : b.col), ...frames.map(b => across ? b.row : b.col)) - 3
+  // V7: the lanes beside what lies inside the innermost frame holding both ends, where its layout left room for them.
+  const room = fs.toSorted((u, v) => u.rows * u.cols - v.rows * v.cols)[0]
+  const held = (b: Box) => !room || within({ r: b.row, c: b.col }, room) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, room)
+  const near = (c: Point) => !room || within(c, room)
+  const high = Math.max(...[...p.boxes.values(), ...frames].filter(held).map(b => across ? b.row + b.rows : b.col + b.cols),
+    ...routes.flatMap(r => [...r.cells, ...r.ends].filter(near).map(c => (across ? c.r : c.c) + 1))) + 2
+  const low = Math.min(...boxes.filter(held).map(b => across ? b.row : b.col), ...frames.filter(held).map(b => across ? b.row : b.col)) - 3
   const sides = [1, -1].sort((u, v) => Math.abs(cross(a, u) - (u > 0 ? high : low)) + Math.abs(cross(b, u) - (u > 0 ? high : low)) -
     Math.abs(cross(a, v) - (v > 0 ? high : low)) - Math.abs(cross(b, v) - (v > 0 ? high : low)))
   for (const side of sides) for (const [sourceSide, targetSide] of [[side, side], [side, -side], [-side, side]]) {
@@ -186,7 +190,6 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
     const tailCell = at(am, ax), headCell = at(bm, bx)
     const start = e.tail === 'none' ? tailCell : move(tailCell, face), end = e.head === 'none' ? headCell : move(headCell, targetFace)
     const forbidden = new Set(routes.flatMap(r => r.ends.flatMap(h => r.cells.filter(c => Math.abs(c.r - h.r) + Math.abs(c.c - h.c) === 1).map(keyOf))))
-    const fs = fences(p, e)
     const blocked = (c: Point) => !fenced(fs, c) || boxes.some(b => inside(c, b)) || occupied.get(keyOf(c)) === 0 ||
       (e.tail !== 'none' && keyOf(c) === keyOf(tailCell)) || (e.head !== 'none' && keyOf(c) === keyOf(headCell))
     const allowed = (c: Point, dirs: number) => {
