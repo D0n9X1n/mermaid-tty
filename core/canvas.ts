@@ -41,8 +41,9 @@ function mergeArms(a: string, b: string): string | null {
 // Write policy: text, cap, fill, arrow and title cells are exclusive, so a later text, cap, fill, arrow or line write on one is a
 // Conflict, and the old cell stays. A line on a line merges arm by arm when shares(old owner, new owner) holds for any old owner;
 // unrelated owners may only cross straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two weights, or any other meeting,
-// is a Conflict. A frame or lifeline draws only into empty cells, so on a drawn cell it is a no-op.
-// shares: may two owners merge a line cell (default a === b).
+// is a Conflict. An arrow on an arrow of the same glyph merges owners when shares holds for any old owner. A frame or lifeline
+// draws only into empty cells, so on a drawn cell it is a no-op.
+// shares: may two owners merge a line or arrow cell (default a === b).
 export function createCanvas(rows: number, cols: number, columns: number, shares: (a: string, b: string) => boolean = (a, b) => a === b): Canvas {
   const cells: (Cell | null)[][] = Array.from({ length: rows }, () => Array<Cell | null>(cols).fill(null))
   const conflicts: Conflict[] = []
@@ -84,7 +85,16 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
     fill(r, c, n, role, owner) {
       for (let i = 0; i < n; i++) put(r, c + i, { ch: ' ', role, kind: 'fill', owners: [owner], dirs: 0 })
     },
-    arrow(r, c, ch, owner) { put(r, c, { ch, role: 'arrow', kind: 'arrow', owners: [owner], dirs: 0 }) },
+    // An arrow on an arrow of the same glyph merges owners when shares holds for an old owner, so edges into one node end in
+    // one head that each owns. Any other write on an arrow is a Conflict (put).
+    arrow(r, c, ch, owner) {
+      const old = cells[r]?.[c]
+      if (old?.kind === 'arrow' && old.ch === ch && old.owners.some(o => shares(o, owner))) {
+        if (!old.owners.includes(owner)) cells[r]![c] = { ...old, owners: [...old.owners, owner] }
+        return
+      }
+      put(r, c, { ch, role: 'arrow', kind: 'arrow', owners: [owner], dirs: 0 })
+    },
     line(r, c, dirs, weight, role, owner) {
       if (!inGrid(r, c, owner)) return
       const k = weight === 'heavy' ? '2' : '1'
@@ -94,7 +104,7 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
         cells[r]![c] = { ch: glyph(dirs, arms, weight), role, kind: 'line', owners: [owner], dirs, arms, style: weight }
         return
       }
-      // Any other kind is exclusive: a Conflict at once, so only a line cell's owners ever reach shares.
+      // Any other kind is exclusive: a Conflict at once, so line asks shares only about a line cell's owners.
       if (old.kind !== 'line') { conflicts.push({ row: r, col: c, had: old.owners[0]!, by: owner }); return }
       const related = old.owners.some(o => shares(o, owner))
       const crossing = (old.dirs === 10 && dirs === 5) || (old.dirs === 5 && dirs === 10)

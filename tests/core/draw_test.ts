@@ -153,3 +153,12 @@ test('drawing is deterministic', () => {
   assert.equal(validate(make()), null)
   assert.deepEqual(make(), make())
 })
+
+test('fan-in: edges into one node share one arrowhead, owned by each, and validate', () => {
+  for (const specs of [['A>C', 'B>C'], ['A>B', 'B>C', 'A>C']]) {
+    const { d } = D(g('TB', specs))
+    assert.equal(validate(d), null, specs.join(' '))
+  }
+  const { d } = D(g('TB', ['A>C', 'B>C']))
+  assert.deepEqual(d.cells.flat().filter(c => c?.kind === 'arrow').map(c => c!.owners), [['e0', 'e1']])
+})
