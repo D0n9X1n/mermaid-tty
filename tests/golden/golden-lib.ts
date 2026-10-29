@@ -6,19 +6,24 @@ import { GLYPHS } from '../../core/glyphs.ts'
 import type { Ink } from '../../core/themes.ts'
 import { width } from '../../core/width.ts'
 
-// Each ink's role code on a drawn cell; a text cell (source text) takes it in uppercase. Series inks are digits.
+// Each ink's role code on a drawn cell. Series inks are digits.
 const CODE: Readonly<Record<Ink, string>> = {
   node: 'n', decision: 'd', edge: 'e', arrow: 'a', label: 'l', frame: 'f', note: 'o', title: 't', value: 'v',
   s1: '1', s2: '2', s3: '3', s4: '4', s5: '5', s6: '6', s7: '7', s8: '8',
 }
+// A text cell's (source text's) role code: its ink's code in uppercase, or for a series ink the shifted key of its digit,
+// !@#$%^&* for 1–8, so the glyph scan never reads source text as a drawn series glyph.
+const SHIFTED = '!@#$%^&*'
+const textCode = (code: string): string => (/^[1-8]$/.test(code) ? SHIFTED[Number(code) - 1]! : code.toUpperCase())
 const glyph = (c: Cell | null): string => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
-const code = (c: Cell | null): string => (c === null ? ' ' : c.kind === 'cont' ? '~' : c.kind === 'text' ? CODE[c.role].toUpperCase() : CODE[c.role])
+// A cell's role code: ' ' when empty, '~' on a cont cell, textCode on a text cell, and its ink's code on any other kind.
+export const roleCode = (c: Cell | null): string => (c === null ? ' ' : c.kind === 'cont' ? '~' : c.kind === 'text' ? textCode(CODE[c.role]) : CODE[c.role])
 // One row per canvas row, each cell mapped by f, right-trimmed of spaces only.
 const rows = (d: Drawing, f: (c: Cell | null) => string): string[] => d.cells.map(row => row.map(f).join('').replace(/ +$/, ''))
 
 // For each width: '@w' and its text rows, then '@w roles' and one role row per text row, cell for cell. One LF at the end.
 export function goldenOf(runs: readonly (readonly [number, Drawing])[]): string {
-  return runs.map(([w, d]) => [`@${w}`, ...rows(d, glyph), `@${w} roles`, ...rows(d, code)].join('\n')).join('\n') + '\n'
+  return runs.map(([w, d]) => [`@${w}`, ...rows(d, glyph), `@${w} roles`, ...rows(d, roleCode)].join('\n')).join('\n') + '\n'
 }
 
 // The widest right-trimmed row, in terminal columns.
@@ -40,7 +45,8 @@ export function drawnGlyphs(d: Drawing): string[] {
 }
 
 // 'file:line ch' for each drawn (lowercase) or series (digit) cell in dir's *.golden files, at any depth, whose glyph is not
-// allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase) is not checked.
+// allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase, or a series
+// ink's shifted digit) is not checked.
 export function goldenGlyphs(dir: string): string[] {
   const out: string[] = []
   const files = (readdirSync(dir, { recursive: true }) as string[]).filter(f => f.endsWith('.golden')).sort()
@@ -57,9 +63,10 @@ export function goldenGlyphs(dir: string): string[] {
   return out
 }
 
-// Is a role code a drawn or series cell (lowercase or digit), or source text (uppercase)? Neither for ' ', '~' or none.
+// Is a role code a drawn or series cell (lowercase or digit), or source text (uppercase, or a series ink's shifted digit)?
+// Neither for ' ', '~' or none.
 const drawn = (code: string | undefined): boolean => code !== undefined && /[a-z0-9]/.test(code)
-const sourceText = (code: string | undefined): boolean => code !== undefined && /[A-Z]/.test(code)
+const sourceText = (code: string | undefined): boolean => code !== undefined && /[A-Z!@#$%^&*]/.test(code)
 
 // Pairs a text row with its role row by column: a character takes width(ch) columns, and a zero-width code point joins the
 // cell before it, as canvas.text() joins it. So it is part of source text when that cell is source text, and is flagged
