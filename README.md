@@ -9,6 +9,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/D0n9X1n/mermaid-tty?style=flat)](https://github.com/D0n9X1n/mermaid-tty/stargazers)
 
+![A Claude Code reply with its mermaid fence drawn by mermaid-tty](assets/readme/preview.svg)
+
 A Claude Code plugin (mod) that redraws closed `mermaid` fences in Claude's replies as colored, flat, box-drawing diagrams sized to your terminal, with exact CJK widths. The transcript keeps the Mermaid source. If a diagram can't be drawn faithfully, you get the source—not an approximation.
 
 ## Install
