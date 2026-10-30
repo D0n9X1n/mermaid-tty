@@ -217,13 +217,16 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
   // E6: Claude Code 2.1.308 opens a picker, Full response first, then one entry per code block; choose flowchart LR's.
   const screen = await s.waitFor(/Select content to copy|Copied/, 5000).catch(() => '')
   if (screen.includes('Select content to copy')) {
-    const chosen = /❯\s+flowchart LR\b/
+    // Move one entry at a time and wait for the screen to show the move: on a slow ConPTY a fixed pause let the
+    // presses run past flowchart LR to "Always copy full response", which Enter then saved as a preference.
+    const chosen = /❯\s+flowchart LR\b/, at = (t: string) => /❯\s+(.*?)\s*$/m.exec(t.slice(t.lastIndexOf('Select content to copy')))?.[1]
     for (let i = 0; i < 10 && !chosen.test(await s.text()); i++) {
+      const was = at(await s.text())
       await s.key('down')
-      await sleep(150)
+      await poll(async () => (at(await s.text()) !== was ? true : undefined), 2000)
     }
-    if (!chosen.test(await s.text())) problems.push(`stored: the /copy picker has no flowchart LR entry; the screen:\n${await s.text()}`)
-    await s.key('enter')
+    if (chosen.test(await s.text())) await s.key('enter')
+    else { problems.push(`stored: the /copy picker has no flowchart LR entry; the screen:\n${await s.text()}`); await s.key('escape') }
   }
   const exact = (t: string | undefined) => t === want || t === `${want}\n`
   const stub = () => (existsSync(copied) ? readFileSync(copied, 'utf8') : undefined)
