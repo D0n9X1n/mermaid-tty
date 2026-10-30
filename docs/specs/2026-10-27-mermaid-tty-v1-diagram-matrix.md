@@ -1849,6 +1849,7 @@ The title follows common rule 3. No config key is honored.
 | sequence | a `rect` from one `box` into another, which would cross both borders, falls back | sequence-reject-09 |
 | sequence | with a `box`, a frame whose Mermaid extent turns on text width (a self-message), takes in a deactivation beyond its run, or nests 10 deep, falls back | sequence-reject-10, sequence-reject-11, sequence-reject-12, sequence-reject-13 |
 | sequence | with a `box`, a frame a wide note would widen over a lifeline beyond its run falls back | sequence-reject-14 |
+| sequence | without a `box`, a frame covers exactly the lifelines Mermaid's does: a self-message or a note on one lifeline that would widen it over another falls back | sequence-reject-15, sequence-reject-16, sequence-reject-17 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |

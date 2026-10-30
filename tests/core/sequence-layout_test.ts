@@ -235,3 +235,36 @@ test('A2: in a boxed diagram, a frame a wide note widens over a lifeline beyond 
   // The ladder reports its last step's reason: wrap cannot fit the 20-letter word.
   for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `@${w}`)
 })
+// #24: without a box, a frame covers exactly the lifelines Mermaid 12.2.0's frame covers, or the diagram falls back. Mermaid
+// sizes a frame to its contents' bounds, 10 px beyond them per frame open inside it; a self-message reaches max(text / 2,
+// 75) px from its lifeline and a note on one lifeline its own width, each widening only the gap on one side.
+test('A2: without a box, a frame that a self-message or a wide note widens over a lifeline Mermaid leaves out falls back', () => {
+  // Repro 1: Mermaid's outer rect ends at x=171, B at 275; ours enclosed B.
+  assert.deepEqual(L('participant A\nparticipant B\nrect\nrect\nA->>A: self\nend\nend'), { reason: 'frame-extent' })
+  // Repro 2: Mermaid's rect covers B only, x=175 to 375; ours enclosed A to D.
+  const two = 'participant A\nparticipant B\nparticipant C\nparticipant D\nrect\nNote over B: xxxxxxxxxxxxxxxxxxxx\nend\nC->>D: x'
+  assert.deepEqual(L(two), { reason: 'frame-extent' })
+  for (const t of ['participant A\nparticipant B\nrect\nrect\nA->>A: self\nend\nend', two]) for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `${t}@${w}`)
+})
+test('A2: without a box, a frame whose Mermaid edge turns on text width beside a lifeline falls back', () => {
+  for (const t of [
+    // A self-message's text widens no gap on its left: a long one reaches over A.
+    'participant A\nparticipant B\nA->>B: go\nrect\nB->>B: self\nend',
+    // A note right of A is as wide as A's pill or its text, so it may reach B.
+    'participant A\nparticipant B\nparticipant C\nrect\nNote right of A: n\nA->>B: x\nend\nB->>C: y',
+    // A note over one lifeline, 5 frames deep: 50 px beyond it, as far as its gap is sure to reach.
+    `participant A\nparticipant B\nparticipant C\nA->>C: x\n${'rect\n'.repeat(5)}Note over B: n\n${'end\n'.repeat(5)}`,
+  ]) assert.deepEqual(L(t), { reason: 'frame-extent' }, t)
+})
+test('A2: without a box, a self-message or a one-lifeline note draws where Mermaid\'s gaps keep its frame off the next lifeline', () => {
+  for (const t of ['participant A\nparticipant B\nrect\nA->>A: self\nA->>B: x\nend', 'participant A\nparticipant B\nrect\nNote right of A: n\nA->>B: x\nend',
+    'participant A\nparticipant B\nparticipant C\nA->>C: x\nrect\nNote over B: n\nend']) {
+    const d = L(t)
+    assert.ok(!('reason' in d), `${t}: ${d.reason}`)
+    assert.equal(validate(d), null, t)
+  }
+})
+test('A2: without a box, nested frames around a note over one lifeline fall back where our gaps cannot keep them off its neighbours', () => {
+  // Mermaid's two rects cover B only; ours would need wider gaps than measure gives a note over one lifeline.
+  assert.deepEqual(L(`participant A\nparticipant B\nparticipant C\nA->>C: x\n${'rect\n'.repeat(2)}Note over B: n\n${'end\n'.repeat(2)}`), { reason: 'frame-extent' })
+})
