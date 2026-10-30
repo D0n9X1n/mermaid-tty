@@ -16,6 +16,7 @@ import type { Ink } from '../../themes.ts'
 import type { Expect } from '../../validate.ts'
 import { validate } from '../../validate.ts'
 import { width } from '../../width.ts'
+import { boxFrames } from './boxed.ts'
 import type { Frame, Item, Msg, Note, Participant, Seq } from './parse.ts'
 import { parseSequence } from './parse.ts'
 
@@ -31,9 +32,11 @@ type Mark = { owner: string; r: number; c: number }
 type Pill = ReturnType<typeof pill>
 // What both passes read: the pills, each participant's index, each message, note and frame's number among its kind,
 // each message and note's label text and wrapped pieces, and the columns from each lifeline to the right border of the
-// box it ends (rb) and to the left border of the box it starts (lb), 0 for none.
+// box it ends (rb) and to the left border of the box it starts (lb), 0 for none; each frame's run, and the most frame
+// borders stacked right (fr) and left (fl) of each lifeline.
 type Ctx = { seq: Seq; pad: number; pills: Pill[]; at: ReadonlyMap<string, number>; no: ReadonlyMap<Item, number>
-  text: ReadonlyMap<Item, string>; pcs: ReadonlyMap<Item, Piece[]>; rb: number[]; lb: number[] }
+  text: ReadonlyMap<Item, string>; pcs: ReadonlyMap<Item, Piece[]>; rb: number[]; lb: number[]
+  outer: ReadonlyMap<Frame, Span>; fr: number[]; fl: number[] }
 
 // A label's pieces: each <br> line wrapped at wrapAt (null: unwrapped), each later line's first piece joined by '\n'.
 // null if a word is wider than wrapAt.
@@ -66,8 +69,8 @@ function drawPill(cv: Canvas, row: number, c: number, p: Participant): void {
 }
 
 // Numbers each message, note and frame among its kind in source order, a frame before its contents, wraps each
-// message's and note's label, a message's after its autonumber, and finds each box's borders. A Fail for a box with no
-// participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe integer.
+// message's and note's label, a message's after its autonumber, and finds each frame's run and each box's borders. A Fail
+// for a box with no participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe integer.
 function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (seq.boxes.some(b => b.ids.length === 0)) return fail('empty-box')
   const no = new Map<Item, number>(), text = new Map<Item, string>(), pcs = new Map<Item, Piece[]>()
@@ -85,15 +88,35 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   }
   walk(seq.items)
   if (wide) return fail('too-wide')
-  const pills = seq.participants.map(pill), at = new Map(seq.participants.map((p, i) => [p.id, i]))
-  // A box's borders stand 2 columns beyond its pills; a one-member box's right one beyond its title too, as draw puts it.
+  const pills = seq.participants.map(pill), at = new Map(seq.participants.map((p, i) => [p.id, i])), last = pills.length - 1
+  // A frame's run covers its contents' lifelines (every lifeline, if it has none), its borders one more than theirs.
+  const outer = new Map<Frame, Span>(), fr = pills.map(() => 0), fl = pills.map(() => 0)
+  const run = (items: readonly Item[]): Span | null => items.reduce<Span | null>((s, it) => join(s, span(it)), null)
+  const span = (it: Item): Span | null => {
+    if (it.kind === 'msg' || it.kind === 'note') {
+      const is = (it.kind === 'msg' ? [it.from, it.to] : it.ids).map(id => at.get(id)!)
+      return { lo: Math.min(...is), hi: Math.max(...is), l: 0, r: 0 }
+    }
+    if (it.kind !== 'frame') return null
+    const s = it.sections.reduce<Span | null>((a, x) => join(a, run(x.items)), null) ?? (last < 0 ? null : { lo: 0, hi: last, l: 0, r: 0 })
+    if (!s) return null
+    const o = { ...s, l: s.l + 1, r: s.r + 1 }
+    outer.set(it, o); fr[o.hi] = Math.max(fr[o.hi]!, o.r); fl[o.lo] = Math.max(fl[o.lo]!, o.l)
+    return o
+  }
+  run(seq.items)
+  // With a box, each frame draws only where Mermaid's own geometry puts it (boxed.ts).
+  const boxed = seq.boxes.length ? boxFrames(seq, outer) : null
+  if (boxed) return boxed
+  // A box's borders stand 2 columns beyond its pills, and a blank column beyond the frame borders stacked at its ends, 2
+  // columns each; a one-member box's right one beyond its title too, as draw puts it.
   const rb = pills.map(() => 0), lb = pills.map(() => 0)
   for (const b of seq.boxes) {
     const a = Math.min(...b.ids.map(id => at.get(id)!)), z = Math.max(...b.ids.map(id => at.get(id)!))
-    lb[a] = pills[a]!.left + 2
-    rb[z] = pills[z]!.right + 2 + (a === z ? Math.max(0, width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right) : 0)
+    lb[a] = Math.max(pills[a]!.left + 2, 2 * fl[a]! + 2)
+    rb[z] = Math.max(pills[z]!.right + 2 + (a === z ? Math.max(0, width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right) : 0), 2 * fr[z]! + 2)
   }
-  return { seq, pad, pills, at, no, text, pcs, rb, lb }
+  return { seq, pad, pills, at, no, text, pcs, rb, lb, outer, fr, fl }
 }
 
 // A run of lifelines lo..hi, with l and r frame borders stacked at its ends.
@@ -125,8 +148,9 @@ function stretch(c: Ctx, f: number, t: number, cap: number): [Bound, Bound] {
   return [bs[k]!, bs[k + 1]!]
 }
 
-// Each lifeline's column. The gap between neighbours is the largest of their pill halves + 2 (+ 2 per box border between
-// them), the widest label of a message spanning only that gap + pad, and 2 × the frame borders between them + 1; a
+// Each lifeline's column. The gap between neighbours is the largest of their pill halves + 2, the widest label of a
+// message spanning only that gap + pad, 2 × the frame borders between them + 1, and, where a box border stands between
+// them, what stands each side of the gap (that box's border, or a pill half or 2 × the frame borders) + 2; a
 // message spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 + its
 // width + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right of a
 // lifeline needs its box + 3 on that side; a message to a created participant needs the half of its pill facing the
@@ -140,24 +164,21 @@ function measure(c: Ctx): number[] {
   for (const b of c.seq.boxes) {
     const m = members(c, b.ids)
     if (!m) continue
-    const [a, z] = m, room = width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right
-    if (a > 0) need[a - 1] = need[a - 1]! + 2
-    if (z < last) need[z] = need[z]! + 2 + (a === z ? Math.max(0, room) : 0)
-    if (a < z) spread(a, z, room)
+    const [a, z] = m
+    if (a < z) spread(a, z, width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right)
   }
-  // The frame borders stacked right of lifeline g, and left of lifeline g + 1.
-  const right = need.map(() => 0), left = need.map(() => 0), born = new Set<string>()
-  const walk = (items: readonly Item[]): Span | null => items.reduce<Span | null>((s, it) => join(s, one(it)), null)
-  const one = (it: Item): Span | null => {
+  const born = new Set<string>()
+  const walk = (items: readonly Item[]): void => items.forEach(one)
+  const one = (it: Item): void => {
     if (it.kind === 'frame') return frame(it)
     if (it.kind === 'create') born.add(it.id)
     if (it.kind === 'note') {
       const is = it.ids.map(id => at.get(id)!), i = is[0]!, w = widest(c.pcs.get(it)!) + 4
       if (it.side === 'right of' && i < last) spread(i, i + 1, w + 3)
       if (it.side === 'left of' && i > 0) spread(i - 1, i, w + 3)
-      return { lo: Math.min(...is), hi: Math.max(...is), l: 0, r: 0 }
+      return
     }
-    if (it.kind !== 'msg') return null
+    if (it.kind !== 'msg') return
     const f = at.get(it.from)!, t = at.get(it.to)!, w = widest(c.pcs.get(it)!)
     // A created target's pill: the half facing the sender, or a self-message's right half, which its loop starts beyond.
     const cap = born.delete(it.to) ? (t > f ? pills[t]!.left : pills[t]!.right) : 0
@@ -166,21 +187,25 @@ function measure(c: Ctx): number[] {
       const [p, q] = stretch(c, f, t, cap), n = w + Math.max(pad - 1, p.cut || q.cut ? 2 : 0)
       spread(p.tie, q.tie, n + 1 + p.off - q.off)
     }
-    return { lo: Math.min(f, t), hi: Math.max(f, t), l: 0, r: 0 }
   }
-  // A frame's borders stack two columns beyond its contents' (every lifeline's, if it has none).
-  const frame = (f: Frame): Span | null => {
-    const s = f.sections.reduce<Span | null>((a, x) => join(a, walk(x.items)), null) ?? (last < 0 ? null : { lo: 0, hi: last, l: 0, r: 0 })
-    if (!s) return null
-    const o = { ...s, l: s.l + 1, r: s.r + 1 }, tw = Math.max(...titles(f).map(t => width(t)))
-    if (o.hi < last) right[o.hi] = Math.max(right[o.hi]!, o.r)
-    if (o.lo > 0) left[o.lo - 1] = Math.max(left[o.lo - 1]!, o.l)
+  // A frame's title fits between its borders, which context stacked two columns beyond its contents'.
+  const frame = (f: Frame): void => {
+    f.sections.forEach(x => walk(x.items))
+    const o = c.outer.get(f)
+    if (!o) return
+    const tw = Math.max(...titles(f).map(t => width(t)))
     if (o.lo < o.hi) spread(o.lo, o.hi, tw + 3 - 2 * (o.l + o.r))
     else if (o.hi < last) spread(o.hi, o.hi + 1, tw + 4 - 2 * o.l)
-    return o
   }
   walk(c.seq.items)
-  need.forEach((n, g) => { need[g] = Math.max(n, 2 * (right[g]! + left[g]!) + 1) })
+  // Right of lifeline g, its box's border, or its pill half or frame borders; left of lifeline g + 1 likewise.
+  const { rb, lb, fr, fl } = c
+  need.forEach((n, g) => {
+    need[g] = Math.max(n, 2 * (fr[g]! + fl[g + 1]!) + 1)
+    if (!rb[g] && !lb[g + 1]) return
+    const r = rb[g] || Math.max(pills[g]!.right, 2 * fr[g]!), l = lb[g + 1] || Math.max(pills[g + 1]!.left, 2 * fl[g + 1]!)
+    need[g] = Math.max(need[g]!, r + l + 2)
+  })
   const xs: number[] = []
   pills.forEach((_, i) => xs.push(i === 0 ? 0 : xs[i - 1]! + need[i - 1]!))
   return xs
@@ -267,6 +292,8 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     labels.push({ owner: id, text: plain(c.text.get(n)!) })
   }
   const frames: string[] = []                                     // each drawn frame's and box's owner id
+  // stray: with a box, a frame drawn over a lifeline beyond its run, which Mermaid's frame leaves out.
+  let stray = false
   // A frame: its top border carrying its title, its sections' rows with a ┄ divider row carrying [cond] before each one
   // after the first, then its bottom border; two columns beyond its contents, wider if its title needs it.
   const frame = (f: Frame) => {
@@ -276,6 +303,8 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (hi < lo) { lo = xs[0] ?? 0; hi = xs.at(-1) ?? 0 }
     const left = lo - 2, right = Math.max(hi + 2, left + Math.max(...ts.map(t => width(t))) + 3), bottom = row++
     lo = Math.min(olo, left); hi = Math.max(ohi, right)
+    const o = c.outer.get(f)
+    if (seq.boxes.length && o && ((o.lo > 0 && left <= xs[o.lo - 1]!) || (o.hi < xs.length - 1 && right >= xs[o.hi + 1]!))) stray = true
     const role: Ink = f.type === 'rect' ? 'note' : 'frame'
     back.push((cv, dx) => cv.frame(top, left + dx, bottom, right + dx, role, id, ts[0] || undefined))
     frames.push(id)
@@ -299,13 +328,15 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     else shift(it.id, it.kind === 'activate' ? row - 1 : row, it.kind === 'activate' ? 1 : -1)
   })
   walk(seq.items)
+  if (stray) return fail('box-frame')
   const last = row - 1                                            // the last body row
   seq.participants.forEach((p, i) => { labels.push({ owner: p.id, text: p.label }); if (!born.has(p.id)) pillAt(i, head) })
-  // A box: a titled frame around its members' pills, from above the header to below the last body row; drawn first.
+  // A box: a titled frame around its members' pills and the frames stacked at its ends, from above the header to below
+  // the last body row; drawn first.
   seq.boxes.forEach((b, i) => {
     const m = members(c, b.ids)
     if (!m) return
-    const left = xs[m[0]]! - c.pills[m[0]]!.left - 2, right = Math.max(xs[m[1]]! + c.pills[m[1]]!.right + 2, left + width(b.label ?? '') + 3)
+    const left = xs[m[0]]! - c.lb[m[0]]!, right = Math.max(xs[m[1]]! + c.rb[m[1]]!, left + width(b.label ?? '') + 3)
     back.unshift((cv, dx) => cv.frame(head - 1, left + dx, last + 1, right + dx, 'frame', `b${i}`, b.label ?? undefined))
     frames.push(`b${i}`)
     touch(left, right)

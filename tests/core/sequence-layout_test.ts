@@ -193,3 +193,45 @@ test('A2: validate rejects a note ┆ cap removed, given to another owner, or re
     }
   }
 })
+// #17: a box and the frames inside or beside it. A box's border stands a blank column clear of every frame it holds and
+// every frame beside it, however deep they nest; a rect that would cross a box's border still falls back.
+test('A2: nested rects inside a box draw, the box border a blank column beyond the outer rect', () => {
+  for (const t of ['box Team\nparticipant A\nparticipant B\nend\nparticipant C\nrect\nA->>B: hi\nrect\nB->>A: back\nend\nend\nB->>C: yo',
+    'box Team\nparticipant A\nparticipant B\nend\nrect\nrect\nrect\nA->>B: deep\nend\nend\nend']) {
+    const r = X(t, 80)
+    assert.ok(!('reason' in r), `${t}: ${r.reason}`)
+    assert.equal(validate(r.drawing), null, t)
+  }
+})
+test('A2: nested rects beside a box draw, clear of its border', () => {
+  const r = X('box L\nparticipant A\nend\nparticipant B\nparticipant C\nrect\nrect\nB->>C: hi\nend\nend', 80)
+  assert.ok(!('reason' in r), r.reason)
+  assert.equal(validate(r.drawing), null)
+})
+test('A2: a rect from one box into another, which would cross both borders, falls back', () => {
+  assert.deepEqual(X('box L\nparticipant A\nend\nbox R\nparticipant B\nend\nrect\nA->>B: hi\nend', 80), { reason: 'box-frame' })
+})
+// #17 review: a frame in a boxed diagram draws only where Mermaid 12.2.0's own geometry keeps it inside a box, or clear of
+// it, whatever the text widths; a self-message, a note on one lifeline, a deactivation outside the frame's run, or nesting
+// that reaches the box's border falls back. Each repro was checked against Mermaid 12.2.0.
+const TEAM = 'box Team\nparticipant A\nparticipant B\nend\n'
+const nest = (n: number, body: string) => `${'rect\n'.repeat(n)}${body}\n${'end\n'.repeat(n)}`
+test('A2: in a boxed diagram, a frame Mermaid draws other than we would falls back with box-frame', () => {
+  for (const t of [`${TEAM}rect\nrect\nA->>A: self\nend\nend`,
+    `${TEAM}participant C\nrect\nrect\nactivate C\nA->>B: hi\ndeactivate C\nend\nend`,
+    `${TEAM}rect\nrect\nrect\nA->>A: self\nA->>B: next\nend\nend\nend`,
+    `${TEAM}${nest(10, 'A->>B: hi')}`,
+    'box L\nparticipant A\nend\nbox R\nparticipant B\nend\nrect\nA->>B: hi\nend']) for (const w of [60, 80, 120]) assert.deepEqual(X(t, w), { reason: 'box-frame' }, `${t}@${w}`)
+})
+test('A2: nine nested rects inside a box draw: Mermaid keeps the outer one 9 px inside the box', () => {
+  const r = X(`${TEAM}${nest(9, 'A->>B: hi')}`, 120)
+  assert.ok(!('reason' in r), r.reason)
+  assert.equal(validate(r.drawing), null)
+})
+test('A2: in a boxed diagram, a frame a wide note widens over a lifeline beyond its run falls back with box-frame', () => {
+  // Mermaid's rect covers C and D only (its note spans their centers ± 25 px); ours would reach over E's lifeline.
+  const t = `participant C\nparticipant D\nparticipant E\nparticipant F\nparticipant G\nparticipant H\nbox Team\nparticipant A\nend\nrect\nNote over C,D: ${'x'.repeat(20)}\nend\nE->>F: x`
+  assert.deepEqual(L(t), { reason: 'box-frame' })
+  // The ladder reports its last step's reason: wrap cannot fit the 20-letter word.
+  for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `@${w}`)
+})

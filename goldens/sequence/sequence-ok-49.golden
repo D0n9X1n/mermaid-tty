@@ -1,0 +1,108 @@
+@60
+┌─Team─────────────────┐
+│     [ A ]  [ B ]     │  [ C ]
+│ ┌──────────────────┐ │    │
+│ │    ┆   n    ┆    │ │    │
+│ │ ┌──────────────┐ │ │    │
+│ │ │ ┌─alt [ok]─┐ │ │ │    │
+│ │ │ │ │  a   │ │ │ │ │    │
+│ │ │ │ │─────►│ │ │ │ │    │
+│ │ │ ├┄[no]┄┄┄┄┄┤ │ │ │    │
+│ │ │ │ │  b   │ │ │ │ │    │
+│ │ │ │ │◄─────│ │ │ │ │    │
+│ │ │ └──────────┘ │ │ │    │
+│ │ └──────────────┘ │ │    │
+│ └──────────────────┘ │    │
+│       │      │       │ c  │
+│       │      │───────────►│
+└──────────────────────┘
+@60 roles
+ffFFFFffffffffffffffffff
+f     nnNnn  nnNnn     f  nnNnn
+f oooooooooooooooooooo f    o
+f o    ooooOooooo    o f    o
+f o oooooooooooooooo o f    o
+f o o ffFFFFFFFFff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oeeeeeao f o o f    o
+f o o ffFFFFffffff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oaeeeeeo f o o f    o
+f o o ffffffffffff o o f    o
+f o oooooooooooooooo o f    o
+f oooooooooooooooooooo f    o
+f       o      o       f L  o
+f       o      oeeeeeeeeeeeao
+ffffffffffffffffffffffff
+@80
+┌─Team─────────────────┐
+│     [ A ]  [ B ]     │  [ C ]
+│ ┌──────────────────┐ │    │
+│ │    ┆   n    ┆    │ │    │
+│ │ ┌──────────────┐ │ │    │
+│ │ │ ┌─alt [ok]─┐ │ │ │    │
+│ │ │ │ │  a   │ │ │ │ │    │
+│ │ │ │ │─────►│ │ │ │ │    │
+│ │ │ ├┄[no]┄┄┄┄┄┤ │ │ │    │
+│ │ │ │ │  b   │ │ │ │ │    │
+│ │ │ │ │◄─────│ │ │ │ │    │
+│ │ │ └──────────┘ │ │ │    │
+│ │ └──────────────┘ │ │    │
+│ └──────────────────┘ │    │
+│       │      │       │ c  │
+│       │      │───────────►│
+└──────────────────────┘
+@80 roles
+ffFFFFffffffffffffffffff
+f     nnNnn  nnNnn     f  nnNnn
+f oooooooooooooooooooo f    o
+f o    ooooOooooo    o f    o
+f o oooooooooooooooo o f    o
+f o o ffFFFFFFFFff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oeeeeeao f o o f    o
+f o o ffFFFFffffff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oaeeeeeo f o o f    o
+f o o ffffffffffff o o f    o
+f o oooooooooooooooo o f    o
+f oooooooooooooooooooo f    o
+f       o      o       f L  o
+f       o      oeeeeeeeeeeeao
+ffffffffffffffffffffffff
+@120
+┌─Team─────────────────┐
+│     [ A ]  [ B ]     │  [ C ]
+│ ┌──────────────────┐ │    │
+│ │    ┆   n    ┆    │ │    │
+│ │ ┌──────────────┐ │ │    │
+│ │ │ ┌─alt [ok]─┐ │ │ │    │
+│ │ │ │ │  a   │ │ │ │ │    │
+│ │ │ │ │─────►│ │ │ │ │    │
+│ │ │ ├┄[no]┄┄┄┄┄┤ │ │ │    │
+│ │ │ │ │  b   │ │ │ │ │    │
+│ │ │ │ │◄─────│ │ │ │ │    │
+│ │ │ └──────────┘ │ │ │    │
+│ │ └──────────────┘ │ │    │
+│ └──────────────────┘ │    │
+│       │      │       │ c  │
+│       │      │───────────►│
+└──────────────────────┘
+@120 roles
+ffFFFFffffffffffffffffff
+f     nnNnn  nnNnn     f  nnNnn
+f oooooooooooooooooooo f    o
+f o    ooooOooooo    o f    o
+f o oooooooooooooooo o f    o
+f o o ffFFFFFFFFff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oeeeeeao f o o f    o
+f o o ffFFFFffffff o o f    o
+f o o f o  L   o f o o f    o
+f o o f oaeeeeeo f o o f    o
+f o o ffffffffffff o o f    o
+f o oooooooooooooooo o f    o
+f oooooooooooooooooooo f    o
+f       o      o       f L  o
+f       o      oeeeeeeeeeeeao
+ffffffffffffffffffffffff

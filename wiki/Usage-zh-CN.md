@@ -146,6 +146,7 @@ claude --debug
 | `semicolon`、`hash` | 状态图文本中的分号，或时序图 id、别名、标题、分组框标签中的井号，或 `#9829;` 这样的实体，会被解析为其他含义。时序图语句在 `;` 处拆分，消息、注释和条件文本在 `#` 处结束，与 Mermaid 一致。 |
 | `keyword`、`id`、`create`、`destroy`、`destroyed`、`inactive`、`undeclared` | 时序图消息或注释使用了关键字，或后跟空格的数字（Mermaid 会拒绝）；或不支持的生命周期或激活用法；或只出现在 `activate`、`deactivate`、`destroy` 中的 id（Mermaid 会失败）。`participant end`、`participant 42` 这样的声明可以绘制。 |
 | `box-color`、`box-split`、`empty-box`、`autonumber` | 不支持的时序图分组框声明或分组（包括以 `currentColor`、CSS 全局关键字或 `Canvas`、`Menu` 等系统颜色开头的标签，浏览器会将其读作颜色），或自动编号的起始值、步长或显示的编号不是安全整数。重新开始编号和 `autonumber off` 可以绘制。 |
+| `box-frame` | 在含 `box` 的时序图中，Mermaid 可能以不同方式绘制的框（`rect`、`loop`、`alt` 等）：跨越分组框边框、覆盖其内容未涉及的生命线，或边缘取决于文字宽度（自消息、位于单条生命线上或旁边的注释、`create` 或 `destroy`、深层嵌套）。完全位于一个分组框内或与所有分组框分离的框可以绘制。 |
 | `branch:<line>`、`checkout:<line>`、`merge:<line>`、`pick:<line>` | 无效的 gitGraph 分支操作、合并或 cherry-pick。 |
 | `link-ambiguous` | gitGraph 分支或合并会看起来连接了错误的提交。 |
 | `section-empty`、`section-repeat`、`empty-section`、`section:<line>` | 甘特图分区为空或重复，时间线分区为空，或时间线混用了有分区和无分区的时段。 |
