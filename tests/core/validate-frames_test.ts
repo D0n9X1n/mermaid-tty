@@ -10,12 +10,14 @@ const F = (t: string): Drawing => flowchart.layout(parseFlowchart(readSource(`fl
 const S = (t: string): Drawing => sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro, whose edge label's row once ran through both sides of S0: the router now keeps the label off S0's border, so it
-// validates. The validator half of the finding, a label drawn on a border, is pinned on a hand-built frame below.
-test('A5.mutation-tests: QA\'s cluster-border repro now draws its label off the border and validates', () => {
-  const d = F('BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1')
-  assert.deepEqual(d.expect.frames, ['S0', 'S1'])
-  assert.equal(validate(d), null, show(d))
+// QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2 in
+// flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where one is
+// due, so the router refuses it (edge-crosses-frame, #19) and the fence falls back. The validator half of the finding, a
+// label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between() further down.
+test('A5.mutation-tests: QA\'s cluster-border repro, its edge through S0 and back, falls back', () => {
+  const src = 'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
+  assert.deepEqual(flowchart.layout(parseFlowchart(readSource(src) as Source) as any, 'natural', 80), { reason: 'route-conflict' })
+  for (const columns of [60, 80, 120]) assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
 })
 test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {
   const label = (r: number, col: number) => framed(c => { straight(c); c.text(r, col, 'L', 'label', 'L1') }, ['F'], [{ owner: 'L1', text: 'L' }])
@@ -50,6 +52,17 @@ test('A5.mutation-tests: a frame passes with its title and a straight crossing; 
   assert.equal(validate(framed(along))?.reason, 'frame-broken')
   assert.equal(validate(framed(c => { straight(c); c.text(3, 6, 'L', 'label', 'L1') }, ['F'], [{ owner: 'L1', text: 'L' }]))?.reason, 'frame-broken')
   assert.equal(validate(framed(straight, ['F', 'G']))?.reason, 'frame-broken')
+})
+
+// #19: a node's pill sharing cells with a frame's border, across its top or down its side, is a true overlap: frame-broken.
+// Inside, beside the border, it passes. (A run of an edge along a border fails alike: framed(along) above.)
+test('#19: a node pill drawn on a frame\'s border fails frame-broken', () => {
+  // C's pill, a cap and its text, two cells from (r, col); F spans columns 0–6, and e runs down column 3.
+  const pill = (r: number, col: number) => framed(c => { straight(c); c.cap(r, col, '[', 'node', 'C'); c.text(r, col + 1, 'c', 'node', 'C') },
+    ['F'], [{ owner: 'C', text: 'c' }])
+  assert.equal(validate(pill(5, 1))?.reason, 'frame-broken')   // across the bottom border
+  assert.equal(validate(pill(2, 5))?.reason, 'frame-broken')   // over the right side
+  assert.equal(validate(pill(2, 1)), null)                     // inside, beside the left side
 })
 
 // Frame F, rows 0–2 and columns 0 to w - 1, with ink drawn over it; label is the text ink draws, as one label of owner L.
@@ -104,4 +117,28 @@ test('V6: an edge between two nodes of one frame that leaves it through its bord
   assert.equal(validate(out)?.reason, 'edge-outside-frame', show(out))
   const kept = inner(c => { line(c, [[2, 3, 10]]); c.arrow(2, 4, '►', 'e') }, '►')   // a─►b, inside F
   assert.equal(validate(kept), null, show(kept))
+})
+
+// #19: frame F, rows 1–5 and columns 1–7, between a at (0,4) above it and b at (7,4) below it; edge e from A to B, its head
+// ▼ at (6,4), as ink draws it. F holds neither end, so e must not cross its border at all.
+function between(ink: (c: Canvas) => void): Drawing {
+  const c = createCanvas(8, 9, 9); c.frame(1, 1, 5, 7, 'frame', 'F', 'T'); c.text(0, 4, 'a', 'node', 'A'); c.text(7, 4, 'b', 'node', 'B'); ink(c)
+  c.arrow(6, 4, '▼', 'e')
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],
+    edges: [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: ['F'] })
+}
+test('#19: an edge through a frame that holds neither of its ends fails edge-crosses-frame', () => {
+  // Down column 4, in through F's top border and out through its bottom, each crossing a straight │.
+  const through = between(c => line(c, [[1, 4, 5], [2, 4, 5], [3, 4, 5], [4, 4, 5], [5, 4, 5]]))
+  assert.equal(validate(through)?.reason, 'edge-crosses-frame', show(through))
+  // framed(straight) above is the passing case: F holds one end, and the edge crosses its border once.
+  assert.equal(validate(framed(straight)), null)
+})
+// #13's case 2 at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds neither end, and leaves through its
+// right wall. Every step of the ladder draws a frame crossed so, or another broken drawing, so the fence falls back.
+test('#19: #13 case 2 at 80 columns, its dotted edge crossing Data tier, falls back', () => {
+  const src = 'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
+    '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
+  const r = explain(src, { columns: 80 })
+  assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
 })

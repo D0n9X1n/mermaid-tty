@@ -36,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
+// labels, frames, edges kept inside their frames, edges crossing frames only as their ends need, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
+    inFrames(d, all) ?? crossFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -357,6 +357,29 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
     if (held.length === 0) continue
     const mine = all.filter(p => connects(p.cell, e.id))
     if (held.some(b => !mine.every(p => within(p, b)))) return fail('edge-outside-frame')
+  }
+  return null
+}
+
+// #19: an edge crosses a frame's border only as often as the frame's hold on its ends needs: once when the frame holds one
+// end, as inFrames reads holding, and never when it holds neither (or both, which inFrames checks). A crossing is a line cell
+// of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame holding neither
+// end, or leaves and re-enters it, reads as reaching into it. An edge ending at the frame itself is not checked: its mark
+// meets the border. Run after frames, so every listed frame spans a box.
+function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
+  const drawn = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  for (const id of d.expect.frames) {
+    const b = frameBox(all, id)
+    if (!b) continue
+    const within = (p: Spot) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
+    const onBorder = (p: Spot) => !within(p) && p.r >= b.top && p.r <= b.bottom && p.c >= b.left && p.c <= b.right
+    const holds = (n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(within)
+    for (const e of d.expect.edges) {
+      if (e.from === id || e.to === id) continue
+      const got = all.filter(p => p.cell.kind === 'line' && owns(p.cell, e.id) && onBorder(p)).length
+      if (got !== (holds(e.from) !== holds(e.to) ? 1 : 0)) return fail('edge-crosses-frame')
+    }
   }
   return null
 }

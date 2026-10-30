@@ -164,7 +164,7 @@ claude --debug
 | `label-missing`、`label-dup`、`label-misplaced`、`label-unbound` | 文字缺失、重复、错位，或脱离了所属节点或行。 |
 | `edge-disconnected`、`end-misplaced`、`head-extra`、`head-on-junction`、`line-dangling` | 连线、端点或箭头缺失、错位、多余或有歧义。 |
 | `crossing-ambiguous`、`merge-ambiguous`、`line-glyph` | 交叉、合并路径或线条字形会暗示错误的连接或线型。 |
-| `overwrite`、`frame-broken`、`edge-outside-frame` | 单元格冲突、边框未闭合，或内部连线越出了所属边框。 |
+| `overwrite`、`frame-broken`、`edge-outside-frame`、`edge-crosses-frame` | 单元格冲突、边框未闭合、内部连线越出了所属边框，或连线穿过了与其两端都无关的边框（或多次穿过同一边框）。 |
 | `label-not-adjacent`、`end-label`、`note-unbound`、`lifeline-unbound` | 连线标签、基数、注释或生命线没有绑定到正确对象。 |
 | `bar`、`bar-misplaced`、`bar-stray` | 条形的长度、位置或所有者错误。 |
 | `member`、`member-unlisted`、`member-outside`、`member-misplaced` | 类成员或 ER 属性缺失、未声明、越出节点框，或位于错误的行列。 |
