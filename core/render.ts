@@ -6,7 +6,7 @@ import { fail, isFail } from './fail.ts'
 import type { Step } from './fit.ts'
 import { fitLadder } from './fit.ts'
 import { createLru } from './lru.ts'
-import { lookup } from './registry.ts'
+import { lookup, type DiagramModule } from './registry.ts'
 import { readSource } from './source.ts'
 import { drawable as drawableText } from './text.ts'
 import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
@@ -31,18 +31,29 @@ const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && 
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
   if (!drawable(o.columns)) return fail('bad-columns')
   try {
-    const src = readSource(source)
-    if (isFail(src)) return src
-    const title = src.title === null ? null : drawableText(src.title, 'sanitized', 'none')
-    if (title) return title
-    const mod = lookup(src.header)
-    if (isFail(mod)) return mod
-    const model = mod.parse(src)
-    if (isFail(model)) return model
-    return fitLadder(mod, model, o.columns)
+    const p = parsed(source)
+    return isFail(p) ? p : fitLadder(p.mod, p.model, o.columns)
   } catch {
     return fail('internal-error')
   }
+}
+
+// The source's module and model, or the first Fail of source, title, lookup and parse: explain before the fit ladder.
+function parsed(source: string): { mod: DiagramModule; model: unknown } | Fail {
+  const src = readSource(source)
+  if (isFail(src)) return src
+  const title = src.title === null ? null : drawableText(src.title, 'sanitized', 'none')
+  if (title) return title
+  const mod = lookup(src.header)
+  if (isFail(mod)) return mod
+  const model = mod.parse(src)
+  return isFail(model) ? model : { mod, model }
+}
+
+// The Fail explain would give before the fit ladder, or null when the source parses: whether core accepts the diagram
+// at any width. Never throws: a throw below it is 'internal-error'.
+export function parseFail(source: string): Fail | null {
+  try { const p = parsed(source); return isFail(p) ? p : null } catch { return fail('internal-error') }
 }
 
 // The rows inner draws of source, in o's theme ('default' when none is given), or its Fail.
