@@ -118,7 +118,7 @@ You keep the text drawing, or the source when the text renderer can't draw it, w
 - the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
 - mermaid-tty can't parse the diagram, or its source is over 50,000 characters, Mermaid's limit;
 - the source has frontmatter beyond a plain `title`, a `%%{` directive, a `style`, `classDef`, `linkStyle`, `class`, `cssClass`, `click`, `link`, `call`, `callback`, `href`, `accTitle` or `accDescr` statement, a sequence `rect` or `box` colour other than `#hex`, `rgb()` or `rgba()`, an entity such as `#117;`, a space other than a plain space or tab, a control character, or anything that could name a URL or file (such as `url(`, `http:`, `file:`, `//` or a backslash);
-- the SVG Mermaid draws for it refers to anything outside itself, or holds an image, script, link or embedded object (mermaid-tty renders the SVG first and checks it before making the picture);
+- the SVG Mermaid draws for it uses an element or attribute outside the fixed set Mermaid's own diagrams use, or refers to anything outside itself (mermaid-tty renders the SVG first and checks it before making the picture);
 - `mmdc` is missing, fails, takes over 30 seconds, or makes a picture over 2 MiB, over 255 rows tall, or too wide to read at the available width.
 
 `claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings everywhere; `/mermaid-tty diagram` turns pictures back on. `/copy` still copies the source.

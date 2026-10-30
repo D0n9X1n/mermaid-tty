@@ -42,6 +42,18 @@ export const puppeteerConfig = (columns: number) => ({
   defaultViewport: { width: columns * PAGE, height: 600 },
 })
 
+// The Mermaid config mmdc gets with -c: securityLevel strict and the theme, nothing else.
+export const mermaidConfig = (look: Look) => ({ securityLevel: 'strict', theme: look })
+
+// mmdc's argv for one run: an SVG or the PNG of the source on stdin, on the same page, config and look. mmdc before 12
+// takes -w; 12 removed it and sizes its page by the puppeteer config's defaultViewport, and embeds fonts in an SVG as
+// data: URLs unless told --no-font-embed.
+export function mmdcArgs(o: { out: string; format: 'svg' | 'png'; look: Look; config: string; puppeteer: string; columns: number; major: number }): string[] {
+  return ['mmdc', '-i', '-', '-o', o.out, '-e', o.format, '-b', 'transparent', '-t', o.look, '-c', o.config, '-p', o.puppeteer,
+    ...(o.format === 'png' ? ['-s', String(SCALE)] : []), '-q',
+    ...(o.major < 12 ? ['-w', String(o.columns * PAGE)] : o.format === 'svg' ? ['--no-font-embed'] : [])]
+}
+
 // A store of pictures: at most `entries` kept and `bytes` of base64 PNG, and at most `tried` keys ever rendered.
 // idle() resolves once no render is queued.
 export function createPictures(limits: Partial<Limits> = {}): Pictures {
@@ -116,9 +128,7 @@ function keep(s: Pictures, key: string, p: Picture) {
 }
 
 // One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same source,
-// config and page: an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG. mmdc before 12 takes -w; 12
-// removed it and sizes its page by the puppeteer config's defaultViewport, and embeds fonts in an SVG as data: URLs
-// unless told --no-font-embed (layer A allows no data: at all).
+// config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
 async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
   const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
   const made = await $.process.run(['mktemp', '-d', `${base}XXXXXX`], { timeoutMs: SHORT_MS })
@@ -126,11 +136,10 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
   if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) return 'no temp dir'
   try {
     const config = `${dir}/config.json`, puppeteer = `${dir}/puppeteer.json`, svg = `${dir}/out.svg`, out = `${dir}/out.png`
-    await $.fs.write(config, JSON.stringify({ securityLevel: 'strict', theme: look }))
+    await $.fs.write(config, JSON.stringify(mermaidConfig(look)))
     await $.fs.write(puppeteer, JSON.stringify(puppeteerConfig(columns)))
-    const mmdc = (o: string, e: 'svg' | 'png') => $.process.run(['mmdc', '-i', '-', '-o', o, '-e', e, '-b', 'transparent', '-t', look,
-      '-c', config, '-p', puppeteer, ...(e === 'png' ? ['-s', String(SCALE)] : []), '-q',
-      ...(major < 12 ? ['-w', String(columns * PAGE)] : e === 'svg' ? ['--no-font-embed'] : [])], { stdin: body, timeoutMs: MMDC_MS })
+    const mmdc = (o: string, format: 'svg' | 'png') =>
+      $.process.run(mmdcArgs({ out: o, format, look, config, puppeteer, columns, major }), { stdin: body, timeoutMs: MMDC_MS })
     const v = await mmdc(svg, 'svg')
     if (v.exitCode !== 0) return `mmdc exited ${v.exitCode}: ${oneLine(v.stderr)}`
     if ((await $.fs.stat(svg)).size > MAX_SVG) return 'svg over 4 MiB'

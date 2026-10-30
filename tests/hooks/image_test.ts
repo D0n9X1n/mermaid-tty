@@ -172,10 +172,10 @@ test('A5.errors: an unsafe source never reaches mmdc: the themeCSS repro, and on
 // no PNG pass and no picture; one with only url(#arrowhead) markers makes the picture.
 test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture; the temp dir goes', async () => {
   for (const [svg, reason] of [
-    ['<svg><rect fill="url(/asset.svg#paint)"/></svg>', 'url'], ['<svg><a xlink:href="/asset.svg">x</a></svg>', 'href'],
-    ['<svg><image href="#x"/></svg>', 'token <image'], ["<svg><style>.a{background:url('file:///tmp/x.svg')}</style></svg>", 'url'],
-    ['<svg><foreignObject><img src="x.png"/></foreignObject></svg>', 'token <img'], ['<svg><style>@import "a.css";</style></svg>', 'token @import'],
-    ['<svg><script>1</script></svg>', 'token <script'], ['<svg><text>data:x</text></svg>', 'token data:'],
+    ['<svg><rect fill="url(/asset.svg#paint)"/></svg>', 'url'], ['<svg><a xlink:href="/asset.svg">x</a></svg>', 'element a'],
+    ['<svg><image href="#x"/></svg>', 'element image'], ["<svg><style>.a{background:url('file:///tmp/x.svg')}</style></svg>", 'url'],
+    ['<svg><foreignObject><img src="x.png"/></foreignObject></svg>', 'element img'], ['<svg><style>@import "a.css";</style></svg>', 'css @import'],
+    ['<svg><script>1</script></svg>', 'element script'], ['<svg><!-- x --></svg>', 'markup'],
   ] as const) {
     const f = fake({ svg }), s = createPictures()
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()

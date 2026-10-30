@@ -118,7 +118,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 - 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
 - mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
 - 源码含有纯文本 `title` 以外的 frontmatter、`%%{` 指令、`style`、`classDef`、`linkStyle`、`class`、`cssClass`、`click`、`link`、`call`、`callback`、`href`、`accTitle` 或 `accDescr` 语句、`#hex`、`rgb()` 或 `rgba()` 以外的时序图 `rect` 或 `box` 颜色、`#117;` 这样的实体、普通空格和制表符以外的空白、控制字符，或任何可能指向 URL 或文件的内容（如 `url(`、`http:`、`file:`、`//` 或反斜杠）；
-- Mermaid 为它绘制的 SVG 引用了自身以外的任何内容，或含有图片、脚本、链接或嵌入对象（mermaid-tty 先渲染 SVG 并检查，再生成图片）；
+- Mermaid 为它绘制的 SVG 使用了 Mermaid 自身图表所用固定集合以外的元素或属性，或引用了自身以外的任何内容（mermaid-tty 先渲染 SVG 并检查，再生成图片）；
 - `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。

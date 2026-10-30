@@ -119,7 +119,7 @@ test('A5.errors: a real mmdc whose SVG refers outside itself gets no PNG pass; t
   const w = world({ svg: '<svg><a xlink:href="/asset.svg"><text>x</text></a></svg>' }), s = createPictures()
   try {
     pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log); await s.idle()
-    assert.equal(w.calls().length, 1); assert.deepEqual(w.logs, ['image: unsafe svg (href)']); assert.deepEqual(w.redraws, []); assert.deepEqual(w.left(), [])
+    assert.equal(w.calls().length, 1); assert.deepEqual(w.logs, ['image: unsafe svg (element a)']); assert.deepEqual(w.redraws, []); assert.deepEqual(w.left(), [])
     assert.equal(pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log), undefined)
   } finally { w.done() }
 })
