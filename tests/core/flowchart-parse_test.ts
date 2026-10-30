@@ -1,4 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
+import { isFail } from '../../core/fail.ts'
 import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'; import { readSource, type Source } from '../../core/source.ts'
 import { ALIASES } from '../../core/caps.ts'
 const P = (t: string) => parseFlowchart(readSource(t) as Source) as any
@@ -119,16 +120,55 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
   assert.deepEqual(P('flowchart TD\nA@{ shape: cyl, label: "a\u{200D}b" }'), { reason: 'unsupported-char U+200D' })
 })
 
-test('A5.errors: a "`…`" markdown string falls back as markdown-string; a backquote elsewhere is text', () => {
-  const md = ['A["`**bold**`"]', 'A("`a b`")', 'A@{ label: "`b`" }', "A@{ label: '`b`' }"]
-  assert.deepEqual(md.map(s => [s, P(`flowchart TD\n${s}`)]), md.map(s => [s, { reason: 'markdown-string' }]))
+// Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and backquotes,
+// joined to any text after it, through marked. Emphasis or an escape falls back as any Markdown field's does.
+test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
+  const g = P('flowchart TD\nA["`plain text`"] -->|"`edge words`"| B["`a_b x*y`" more]\nC("`a b`") -- "`t`" --> D\nsubgraph s ["`title t`"]\nD\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges.map((e: any) => e.label), g.clusters[0].title],
+    [['plain text', 'a_b x*y more', 'a b', 'D'], ['edge words', 't'], 'title t'])
+  assert.deepEqual(P('flowchart TD\nA["`a<br>b`"]').nodes, [N('A', 'rect', 'node', 0, 'a', 'b')])
+})
+test('A5.errors: a Markdown string with emphasis or an escape falls back as markdown; a malformed one as syntax; a backquote elsewhere is text', () => {
+  const md = ['A["`**bold**`"]', 'A -->|"`**b**`"| B', 'subgraph s ["`*b*`"]\nend', 'A["`a \\* b`"]', 'A -- "`_i_`" --> B']
+  assert.deepEqual(md.map(s => [s, P(`flowchart TD\n${s}`)]), md.map(s => [s, { reason: 'markdown' }]))
+  const bad = ['A["`a`b`"]', 'A["``"]', 'A["`a` "b"]']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+  const yaml = ['A@{ label: "`b`" }', "A@{ label: '`b`' }"]
+  assert.deepEqual(yaml.map(s => [s, P(`flowchart TD\n${s}`)]), yaml.map(s => [s, { reason: 'markdown-string' }]))
   assert.deepEqual(P('flowchart TD\nA[`x`]\nB["x `y`"]').nodes, [N('A', 'rect', 'node', 0, '`x`'), N('B', 'rect', 'node', 1, 'x `y`')])
 })
 
-test('A5.errors: a #…; entity falls back as entity; # and ; apart are text', () => {
-  const ent = ['A["#quot;"]', 'A["a #35; b"]', 'A@{ label: "#9829;" }']
-  assert.deepEqual(ent.map(s => [s, P(`flowchart TD\n${s}`)]), ent.map(s => [s, { reason: 'entity' }]))
+// Mermaid 12.2.0 (encodeEntities, then the browser) shows a #…; code as its character: a decimal code, or a name it knows.
+test('A1: a #…; code draws as the character Mermaid shows: a decimal code or a known name; # and ; apart are text', () => {
+  const g = P('flowchart TD\nA["#quot;"] -->|#35; x| B[a #9829; #169; #59; b]\nC@{ label: "x #amp; y" }\nsubgraph s [t #lt; u]\nB\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges[0].label, g.clusters[0].title], [['"', 'a ♥ © ; b', 'x & y'], '# x', 't < u'])
   assert.deepEqual(P('flowchart TD\nA["C# 1; # x;"]').nodes, [N('A', 'rect', 'node', 0, 'C# 1; # x;')])
+})
+test('A5.errors: a #…; code Mermaid would not show as one drawable character falls back', () => {
+  const bad = [['A["#Hearts;"]', 'entity'], ['A[#nosuch;]', 'entity'], ['A[#0;]', 'entity'], ['A[#160;]', 'entity'], ['A[#1114112;]', 'entity'],
+    ['A["#35;35;"]', 'entity'], ['A-->B\nstyle A fill:#f9f;stroke:#333;', 'syntax:3'], ['A[#60;b#62;]', 'html'], ['A[fa#58;fa-user]', 'icon'], ['A-->B\nlinkStyle 0 stroke:#f00;', 'syntax:3']] as const
+  assert.deepEqual(bad.map(([s]) => [s, P(`flowchart TD\n${s}`)]), bad.map(([s, r]) => [s, { reason: r }]))
+  assert.equal(P('flowchart TD\nA-->B\nclick A href "https://x.y/#a;"').edges.length, 1)
+})
+
+// Mermaid 12.2.0 reads an @{ … } body with a line break as a YAML block mapping: key: value lines at one indent, then }.
+test('A1: an @{ … } split over lines, one key: value per line at one indent, draws as its one-line form', () => {
+  const pairs = [['A@{\n  shape: rounded\n  label: "x y"\n}', 'A@{ shape: rounded, label: "x y" }'],
+    ['X --> A@{\n    shape: diamond\n    label: \'q\'\n}', 'X --> A@{ shape: diamond, label: \'q\' }'],
+    ['A@{\nshape: cyl\nlabel: Store\n} --> B', 'A@{ shape: cyl, label: Store } --> B']]
+  assert.deepEqual(pairs.map(([m]) => P(`flowchart TD\n${m}`)), pairs.map(([, o]) => P(`flowchart TD\n${o}`)))
+})
+test('A5.errors: an @{ … } over lines falls back where its YAML may read otherwise: an uneven indent, a comma, a tab, a quote over lines', () => {
+  const bad = ['A@{\n  shape: rounded\n   label: x\n}', 'A@{\n  label: a, b\n}', 'A@{\n\tshape: cyl\n}', 'A@{\n  label: "x\n  y"\n}',
+    'A@{\n  shape: cyl', 'A@{\n  shape: cyl\n} x']
+  assert.deepEqual(bad.map(s => isFail(P(`flowchart TD\n${s}`))), bad.map(() => true))
+})
+
+// Mermaid 12.2.0 gives an @{ label } labelType markdown (flowDb sanitizeNodeLabelType): A@{ label: "a*b*c" } shows a<em>b</em>c.
+test('A5.errors: an @{ label } is a Markdown label: emphasis falls back as markdown, as in other Markdown fields', () => {
+  const bad = ['A@{ label: "a*b*c" }', 'A@{ label: "_a_" }', 'A@{ label: "a \\* b" }']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'markdown' }]))
+  assert.deepEqual(P('flowchart TD\nA@{ label: "snake_case a*b" }').nodes, [N('A', 'rect', 'node', 0, 'snake_case a*b')])
 })
 
 test('A1: Graph.title is the frontmatter title', () => {
@@ -150,9 +190,9 @@ test('A1: outside @{…} only "…" quotes, so an apostrophe is text and ; still
   assert.deepEqual(P("flowchart TD\nA[it's]; B[x]").nodes, [N('A', 'rect', 'node', 0, "it's"), N('B', 'rect', 'node', 1, 'x')])
 })
 
-test('A5.errors: an @{…} body that does not read whole as key: value pairs, each key once, fails syntax:<n>; so does one split over lines', () => {
+test('A5.errors: an @{…} body that does not read whole as key: value pairs, each key once, fails syntax:<n>; so does one split mid-line', () => {
   const bad = ['A@{ label: "x" label: "y" }', 'A@{ label: "x", label: "y" }', 'A@{ shape }', 'A@{ , shape: cyl }',
-    'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }', 'A@{\n  shape: cyl\n}']
+    'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
 })
 

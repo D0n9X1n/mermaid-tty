@@ -1787,6 +1787,12 @@ The title follows common rule 3. No config key is honored.
 | flowchart | thick bend: heavy corners | flowchart-ok-50 |
 | flowchart | light/heavy mixed junction | flowchart-ok-51 |
 | flowchart | dotted bend: light corner | flowchart-ok-52 |
+| flowchart | text-form two-headed links `<-- t -->`, `<-. t .->`, `<== t ==>` | flowchart-ok-53 |
+| flowchart | mixed end marks `<--o`, `x-->`: only the head, as Mermaid draws | flowchart-ok-54 |
+| flowchart | partly quoted labels `["a" b]` drawn as `a b` | flowchart-ok-55 |
+| flowchart | `#…;` codes `#35;`, `#quot;`, `#9829;` drawn as their characters | flowchart-ok-56 |
+| flowchart | `@{ … }` split over lines | flowchart-ok-57 |
+| flowchart | Markdown strings with no emphasis | flowchart-ok-58 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |

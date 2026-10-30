@@ -3,10 +3,12 @@
 // fence draws as source.
 import { shapeFromName, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
-import type { Dir, End, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
+import type { Dir, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { drawable, labelLines, type Br } from '../../text.ts'
+import { decoded, labelLines, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
+import { joinData } from './data.ts'
+import { NAME, readLink, type Ends } from './links.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
@@ -19,32 +21,17 @@ const DIR_LINE = /^direction\s+(TB|BT|RL|LR|TD)\s*;?$/
 // tries each where a statement starts.
 const ACC_LINE = /acc(?:Title|Descr)\s*:/y
 const ACC_BLOCK = /accDescr\s*\{/y
+// A #…; code at lastIndex: Mermaid encodes it before its lexer sees the ;, so it never ends a statement.
+const CODE_AT = /#\w+;/y
 // One space, as trim reads spaces.
 const SPACE = /\s/
 // A styling statement, which draws nothing: classDef, class, style, linkStyle or click, then a space.
 const DIRECTIVE = /^(?:classDef|class|style|linkStyle|click)\s/
-// Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
-const NAME = String.raw`[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*`
 const ID = new RegExp(`^${NAME}`, 'u')
 // A subgraph header: subgraph and spaces, then an id and what follows it, or a "title" alone.
 const SUBGRAPH = new RegExp(String.raw`^subgraph +(?:(${NAME}) *(.*)|("[^"]*"))$`, 'u')
 // A :::name class at lastIndex, after a node's id or shape. It draws nothing.
 const CLASS = new RegExp(String.raw`:::${NAME}`, 'uy')
-// A link in its basic form at lastIndex, with the spaces around it: an optional id@, then a
-// tail mark, a line (two or more - or =, or - dots -) and a head mark, each mark optional;
-// or three or more ~, with no marks. One |label| may follow (any "…" in it whole). Too short
-// a line, -- or == with no head, is no link: it opens a text form.
-const LINK = new RegExp(String.raw`\s*(?:(${NAME})@)?(?:([<ox])?(-{2,}|={2,}|-\.+-)([>ox])?|(~{3,}))\s*(?:\|((?:"[^"]*"|[^"|])*)\|\s*)?`, 'uy')
-// A link in a text form at lastIndex, with the spaces around it: an optional id@, an opener,
-// the text up to the first closer of the opener's kind (any "…" in it whole), then that
-// closer and an optional head mark: -- t -->, == t ==>, -. t .->.
-const TEXT = String.raw`((?:"[^"]*"|[^"])*?)`
-const TEXTS = [String.raw`--${TEXT}(-{2,})([>ox])?`, String.raw`==${TEXT}(={2,})([>ox])?`, String.raw`-\.${TEXT}(-?\.+-)([>ox])?`]
-  .map(form => new RegExp(String.raw`\s*(?:(${NAME})@)?${form}\s*`, 'uy'))
-// The head mark each tail mark pairs with: Mermaid draws both ends only of <…>, o…o and x…x.
-const PARTNER: Readonly<Record<string, string>> = { '<': '>', o: 'o', x: 'x' }
-// Mermaid caps an edge's length at 10.
-const MAX_MINLEN = 10
 // The & between two nodes of a group, spaces around it: Mermaid reads A&B as one id.
 const AMP = /\s+&\s+/y
 // Each opener with each closer it pairs with, longest opener first. [/ and [\ pair
@@ -64,7 +51,7 @@ type Mention = { id: string; end: number; shape?: Shape; lines?: string[]; data?
 // A node as the statements so far declare it; bare while no mention has given it a shape, a label or an @{…}.
 type Decl = { id: string; shape: Shape; lines: string[]; bare: boolean }
 // A link as one statement writes it: what its edges draw, its id@ if it has one, and how far it reads.
-type Link = { id?: string; end: number; style: GEdge['style']; tail: End; head: End; label: string | null; minlen: number }
+type Link = Ends & { id?: string; end: number; label: string | null }
 // An open subgraph: its cluster, and each id its block mentions, in order: its statements' nodes and the subgraphs closed in it.
 type Block = { cluster: GCluster; ids: string[] }
 // What the statements so far declare: nodes by id, in first-mention order; edges in source order; clusters in the order their
@@ -75,14 +62,14 @@ type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; o
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
 // whole), 'unclosed-subgraph', 'id-collision' (an edge id that a node, a cluster or an earlier edge also has),
-// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string', 'entity', 'html' or 'unsupported-char U+XXXX'.
+// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string' (an @{ label } in backquotes), 'markdown', 'entity', 'html' or 'unsupported-char U+XXXX'.
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
   if (!head) return fail('header')
   const dir = (head[3] === undefined || head[3] === 'TD' ? 'TB' : head[3]) as Dir
   const st: State = { nodes: new Map(), edges: [], clusters: [], open: [], parent: new Map(), descr: null }
-  for (const { n, text } of src.lines) {
+  for (const { n, text } of joinData(src.lines)) {
     const f = line(text.trim(), st, n)
     // A step that fails 'syntax' fails with its statement's source line.
     if (f) return f.reason === 'syntax' ? fail(`syntax:${n}`) : f
@@ -149,7 +136,9 @@ function line(t: string, st: State, n: number): Fail | null {
 // Reads one statement into st: a styling directive or an id@{…} of a known edge, which draw nothing; `end`; a subgraph
 // header; or nodes and links read whole. null, or why it fails.
 function stmt(s: string, st: State): Fail | null {
-  if (DIRECTIVE.test(s) || edgeData(s, st)) return null
+  // Mermaid's lexer has no token for an encoded #…; code outside "…" in a directive: style A fill:#f9f;stroke:#333; fails.
+  if (DIRECTIVE.test(s)) return /#\w+;/.test(s.replace(/"[^"]*"/g, '')) ? fail('syntax') : null
+  if (edgeData(s, st)) return null
   if (s === 'end') return closeSubgraph(st)
   // Mermaid's lexer reads subgraph as a keyword even where a longer word starts with it.
   if (s.startsWith('subgraph')) return openSubgraph(s, st)
@@ -176,7 +165,7 @@ function openSubgraph(s: string, st: State): Fail | null {
   if (rest && c?.at !== rest.length - 1) return fail('syntax')
   const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name, 'none')
   if (isFail(title)) return title
-  const id = name ?? title, d = st.nodes.get(id)
+  const id = name ?? quoted!.slice(1, -1).trim(), d = st.nodes.get(id)
   if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) return fail('syntax')
   const cluster: GCluster = { id, title, dir: null, nodes: [], clusters: [] }
   st.clusters.push(cluster)
@@ -214,7 +203,7 @@ function graph(dir: Dir, title: string | null, st: State): Graph {
 }
 
 // The end of the run that starts at i in line: the index of the ; that closes it, or the line's length. A "…" is one
-// span, and so is an @{…} whose body reads whole, quotes and all; a " with no partner runs to the end of the line. Only
+// span, and so is a #…; code, and an @{…} whose body reads whole, quotes and all; a " with no partner runs to the end of the line. Only
 // " quotes outside @{…}: A[it's] is an apostrophe.
 function runEnd(line: string, i: number): number {
   for (; i < line.length; i++) {
@@ -225,6 +214,9 @@ function runEnd(line: string, i: number): number {
     } else if (line.startsWith('@{', i)) {
       const d = data(line, i + 2)
       if (d) i = d.end - 1
+    } else if (line[i] === '#') {
+      CODE_AT.lastIndex = i
+      if (CODE_AT.test(line)) i = CODE_AT.lastIndex - 1
     } else if (line[i] === ';') return i
   }
   return line.length
@@ -298,47 +290,16 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
   }
 }
 
-// The link at `at`: a basic form, or else a text form. null if none starts there, or if its tail mark has no partner head
-// (<…>, o…o, x…x): Mermaid draws only the head of <--o, o--> or <---. Its label's Fail if that fails, and 'invisible-label'
-// for a label on ~~~, as how Mermaid draws one is unknown (only the basic form makes ~~~).
+// The link at `at`, as links.ts reads it: null if none Mermaid reads starts there. Its label's Fail if that fails, and
+// 'invisible-label' for a label on ~~~, as how Mermaid draws one is unknown.
 function link(text: string, at: number): Link | Fail | null {
-  LINK.lastIndex = at
-  const b = LINK.exec(text)
-  if (b) {
-    const [, id, tail, line, head, tildes = '', raw] = b
-    if (tail !== undefined && head !== PARTNER[tail]) return null
-    const s = stroke(line ?? tildes, head)
-    if (s.minlen > 0) {
-      const lbl = raw === undefined ? null : edgeLabel(raw)
-      if (isFail(lbl)) return lbl
-      if (s.style === 'invisible' && lbl !== null) return fail('invisible-label')
-      return { id, end: LINK.lastIndex, ...s, tail: endOf(tail), head: endOf(head), label: lbl }
-    }
-  }
-  for (const form of TEXTS) {
-    form.lastIndex = at
-    const t = form.exec(text)
-    if (!t) continue
-    const [, id, raw = '', line = '', head] = t
-    const s = stroke(line, head)
-    if (s.minlen < 1) return null
-    const lbl = edgeLabel(raw)
-    if (isFail(lbl)) return lbl
-    return { id, end: form.lastIndex, ...s, tail: 'none', head: endOf(head), label: lbl }
-  }
-  return null
+  const l = readLink(text, at)
+  if (!l) return null
+  const label = l.raw === undefined ? null : edgeLabel(l.raw)
+  if (isFail(label)) return label
+  if (l.style === 'invisible' && label !== null) return fail('invisible-label')
+  return { ...l, label }
 }
-
-// What a link's line draws: = thick, a dot dotted, ~ invisible, - solid; and minlen, 1 plus the line's length over its
-// form's base (-- or == with a head, --- or === without, ~~~, or one dot), at most MAX_MINLEN.
-function stroke(line: string, head?: string): { style: GEdge['style']; minlen: number } {
-  if (line.includes('.')) return { style: 'dotted', minlen: Math.min(MAX_MINLEN, line.replace(/[^.]/g, '').length) }
-  const style = line[0] === '=' ? 'thick' : line[0] === '~' ? 'invisible' : 'solid'
-  return { style, minlen: Math.min(MAX_MINLEN, line.length - (head ? 1 : 2)) }
-}
-
-// The end a mark draws: < or > an arrow, o a circle, x a cross; no mark, none.
-const endOf = (mark?: string): End => (mark === 'o' ? 'circle' : mark === 'x' ? 'cross' : mark ? 'arrow' : 'none')
 
 // Adds an edge for each pair of from × to, in source order. As Mermaid gives ids, the link's
 // id@ names the edge from the last of from to the first of to; any other edge is L_<from>_<to>_<n>,
@@ -369,7 +330,7 @@ function mention(text: string, at: number): Mention | Fail | null {
       const value = raw.trim().replace(/^(["'])(.*)\1$/s, '$2')
       if (key === 'shape') m.shape = shapeFromName(value)
       else if (key === 'label') {
-        const t = value.startsWith('`') ? fail('markdown-string') : checked(value)
+        const t = value.startsWith('`') ? fail('markdown-string') : checked(value, 'any', 'markdown')
         const ls = isFail(t) ? t : splitLabel(t)
         if (isFail(ls)) return ls
         m.lines = ls
@@ -405,15 +366,16 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
   return null
 }
 
-// A bracket or edge label's text, or a subgraph title: trimmed, one enclosing pair of "…" stripped ("…" keeps
-// punctuation). A "`…`" markdown string fails; so does, as 'syntax', a label with a " that no one "…" enclosing it
-// all accounts for: Mermaid draws "a" b as a b, and this parser fails closed. Its <br> stay: a node splits them into
-// lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
+// A bracket or edge label's text, or a subgraph title, as Mermaid 12.2.0 lexes it: one non-empty "…" or "`…`" first, if
+// any, then text with no ", the two joined and trimmed ("…" keeps punctuation): ["a" b] is a b. Any other " (a space or
+// text before the string, a second string, an empty one, a ` or " inside "`…`") and an empty label are a parse error, so
+// fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis falls back. Its <br>
+// stay: a node splits them into lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
 function label(raw: string, br: Br = 'any'): string | Fail {
-  const trimmed = raw.trim()
-  if (trimmed.startsWith('"`')) return fail('markdown-string')
-  if (trimmed.includes('"') && !/^"[^"]*"$/.test(trimmed)) return fail('syntax')
-  return checked(trimmed.replace(/^"(.*)"$/s, '$1'), br)
+  const md = raw.startsWith('"`')
+  const m = (md ? /^"`([^`"]+)`"([^"]*)$/ : /^(?:"([^"]+)")?([^"]*)$/).exec(raw)
+  if (!m || !raw) return fail('syntax')
+  return checked(((m[1] ?? '') + m[2]).trim(), br, md ? 'markdown' : 'html')
 }
 
 // An edge label as label reads it, but null if it is blank: a blank label would draw no cells. A blank line in it fails,
@@ -433,15 +395,16 @@ function splitLabel(t: string): string[] | Fail {
   return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : ls
 }
 
-// Label text as written, if it can be drawn: text Mermaid's HTML label shows otherwise fails as drawable says ('entity' or
-// 'html'), and so does an unsupported character. br: 'any' where the drawing splits each <br>; 'none' for a subgraph title,
-// which draws on one line.
-function checked(text: string, br: Br = 'any'): string | Fail {
-  const f = drawable(text, 'html', br)
-  if (f) return f
-  const bad = unsupported(text)
+// Label text as Mermaid shows it, if it can be drawn: its #…; codes decoded, as decoded says; text Mermaid's HTML label shows
+// otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where the drawing
+// splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label }, which
+// Mermaid's flowDb gives labelType markdown.
+function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html'): string | Fail {
+  const t = decoded(text, mode, br)
+  if (isFail(t)) return t
+  const bad = unsupported(t)
   if (bad) return fail(`unsupported-char ${bad}`)
-  return text
+  return t
 }
 
 // Declares m's node at its first mention; a later mention's shape or label replaces the one before. null, or 'syntax' for a

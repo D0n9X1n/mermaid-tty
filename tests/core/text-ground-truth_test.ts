@@ -25,7 +25,8 @@ const BRS = [9, 10, 11, 12], TAG = 13
 // A drawn field: the text it draws for a case, one string per row, or its Fail. strict: the cases it falls back on though
 // Mermaid shows them as written or split, where the drawing cannot match (a <br> in one-line text) or the field's mode
 // cannot tell (sanitized: any <).
-type Field = { name: string; truth: readonly string[]; draw: (c: string) => string[] | Fail; strict?: readonly number[] }
+// shows: the cases it draws as the text Mermaid shows, as the truth gives it (a #…; code decoded).
+type Field = { name: string; truth: readonly string[]; draw: (c: string) => string[] | Fail; strict?: readonly number[]; shows?: readonly number[] }
 
 // The rows that owner's text cells draw of src at 120 columns, in the mono theme, or the Fail.
 function drawn(src: string, owner: string): string[] | Fail {
@@ -41,7 +42,7 @@ function drawn(src: string, owner: string): string[] | Fail {
 function check(f: Field): void {
   const strict = new Set(f.strict ?? [])
   assert.ok([...strict].every(i => f.truth[i] === '=' || f.truth[i] === '⏎'), `${f.name}: strict lists only = and ⏎ cases`)
-  const want = (c: string, i: number) => strict.has(i) || !['=', '⏎'].includes(f.truth[i]!) ? 'fallback'
+  const want = (c: string, i: number) => f.shows?.includes(i) ? [f.truth[i]!] : strict.has(i) || !['=', '⏎'].includes(f.truth[i]!) ? 'fallback'
     : f.truth[i] === '=' ? [c] : c.split(/<br\s*\/?>/i)
   const got = (c: string) => { const d = f.draw(c); return isFail(d) ? 'fallback' : d }
   assert.deepEqual(CASES.map(c => [c, got(c)]), CASES.map((c, i) => [c, want(c, i)]), f.name)
@@ -50,9 +51,9 @@ function check(f: Field): void {
 // A subgraph title draws on one line, on its frame's border, so a <br> there falls back.
 test('A5.errors: ground truth: a flowchart node label, edge label and subgraph title draw each case as Mermaid shows it, or fall back', () => {
   const fields: Field[] = [
-    { name: 'node', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA["${c}"]`, 'A') },
-    { name: 'edge', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA -->|"${c}"| B`, 'L_A_B_0:label') },
-    { name: 'subgraph', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nsubgraph S ["${c}"]\nA\nend`, 'S'), strict: BRS },
+    { name: 'node', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA["${c}"]`, 'A'), shows: [8] },
+    { name: 'edge', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA -->|"${c}"| B`, 'L_A_B_0:label'), shows: [8] },
+    { name: 'subgraph', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nsubgraph S ["${c}"]\nA\nend`, 'S'), strict: BRS, shows: [8] },
   ]
   fields.forEach(check)
 })
