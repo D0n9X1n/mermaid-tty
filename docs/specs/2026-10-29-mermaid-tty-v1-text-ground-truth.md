@@ -200,3 +200,16 @@ A second review of cf4faef found six more inputs, each reproduced against Mermai
 - An `@{ … }` key must start with a letter or `_`, not be `true`, `false` or `null` in any case, and appear once: YAML reads `true`/`True` and `01`/`1` as duplicate keys and Mermaid throws. Edge metadata too.
 - A multi-line `@{` is joined only when its opening line is just `<id>@{`. After a link, in edge text, or in an acc statement it falls back.
 - An empty `accTitle:` or `accDescr:` (only whitespace after the colon) falls back: Mermaid's lexer reads the next line as its text. Verified per type: flowchart, class, ER, gantt, journey, quadrant, state, timeline and xychart swallow the line; pie and gitGraph keep it; mindmap has no acc statement; sequence is fixed separately. Test: `tests/core/acc-empty_test.ts`.
+
+## Flowchart ids the lexer reads as keywords (issue #4)
+
+Verified against `mermaid@12.2.0` from npm under JSDOM, with `flow.jison`'s lexer rules read from the package's source map. Jison tries rules in order and picks the first that matches; its keyword rules come before an id's own tokens, and it tries them at each token start inside an id: the id's start, after a leading run of ASCII digits (NUM), and after each non-ASCII character (UNICODE_TEXT, one character from a fixed table). Each id was probed at a statement's start, after a link and after `&`.
+
+- **Node ids, `:::class` names and directive ids** fail where a token start begins with `style`, `linkStyle`, `classDef`, `class`, `graph`, `flowchart`, `subgraph`, `end`, `interpolate`, `_self`, `_blank`, `_parent`, `_top`, `flowchart-elk` or `swimlane-beta` followed by no ASCII word character (end, `.`, `-` or non-ASCII): `style`, `style.x`, `end-x`, `styleé`, `1style`, `éend`. They also fail on `call`, `href` or `click` followed by whitespace (a line break included), and on `accTitle:`, `accDescr:` or `accDescr{`.
+- **Still drawn**, as Mermaid reads them: `styleX`, `classDefX`, `clickX`, `linkStyleX`, `endX`, `classX`, `subgraphX`, `endpoint`, `classic`, `style_x`, `a.style`, `a-end`, `1styleX`, `default.x`, `v.x`, `TB`, `accTitle`, `call;`, `call[x]`. The issue's `styleX --> B` is not rejected by Mermaid 12.2.0: `\b` stops `style` from matching inside it.
+- **Edge ids** (`id@`) read as one token unless a keyword matches at the start, where `default` also counts: `end@`, `style.x@` and `default.x@` fail; `defaultX@` and `call.x@` draw.
+- **Subgraph ids** take most keywords. They fail on `interpolate`, `default`, `_self`, `_blank`, `_parent` or `_top` (with `\b`), on `call`, `href` or `click` followed by whitespace, and on `end` alone on the line. `subgraph style` and `subgraph end [t]` draw.
+- **Non-ASCII ids** fail on a character outside UNICODE_TEXT's table (BMP letters only): `𝐀`, `²`, `٣`. `ā` and `中文` draw.
+- A styling directive whose id is no plain name (`style --> B`) also fails: Mermaid rejects the line.
+
+Code: `core/diagrams/flowchart/ids.ts`. Tests: `tests/core/flowchart-parse_test.ts`.

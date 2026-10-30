@@ -8,6 +8,7 @@ import type { Source } from '../../source.ts'
 import { decoded, labelLines, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 import { joinData, yamlValue } from './data.ts'
+import { misread } from './ids.ts'
 import { NAME, readLink, type Ends } from './links.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
@@ -56,8 +57,10 @@ type Link = Ends & { id?: string; end: number; label: string | null }
 type Block = { cluster: GCluster; ids: string[] }
 // What the statements so far declare: nodes by id, in first-mention order; edges in source order; clusters in the order their
 // subgraphs open; the subgraphs still open, innermost last; the cluster that took each id a closed subgraph's block mentions;
-// and the line of an accDescr { whose } has not come, else null.
-type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; open: Block[]; parent: Map<string, string>; descr: number | null }
+// the line of an accDescr { whose } has not come, else null; and what ends the statement being read: ';' right after its
+// text, else a line break (misread's rest).
+type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; open: Block[]; parent: Map<string, string>; descr: number | null
+  tail: string }
 
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
@@ -68,7 +71,7 @@ export function parseFlowchart(src: Source): Graph | Fail {
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
   if (!head) return fail('header')
   const dir = (head[3] === undefined || head[3] === 'TD' ? 'TB' : head[3]) as Dir
-  const st: State = { nodes: new Map(), edges: [], clusters: [], open: [], parent: new Map(), descr: null }
+  const st: State = { nodes: new Map(), edges: [], clusters: [], open: [], parent: new Map(), descr: null, tail: '\n' }
   for (const { n, text } of joinData(src.lines)) {
     const f = line(text.trim(), st, n)
     // A step that fails 'syntax' fails with its statement's source line.
@@ -129,6 +132,7 @@ function line(t: string, st: State, n: number): Fail | null {
       continue
     }
     const end = runEnd(t, p), s = t.slice(p, end).trim()
+    st.tail = t[end] === ';' && !/\s$/.test(t.slice(p, end)) ? ';' : '\n'
     const f = s ? stmt(s, st) : null
     if (f) return f
     p = end + 1
@@ -139,7 +143,7 @@ function line(t: string, st: State, n: number): Fail | null {
 // header; or nodes and links read whole. null, or why it fails.
 function stmt(s: string, st: State): Fail | null {
   // Mermaid's lexer has no token for an encoded #…; code outside "…" in a directive: style A fill:#f9f;stroke:#333; fails.
-  if (DIRECTIVE.test(s)) return /#\w+;/.test(s.replace(/"[^"]*"/g, '')) ? fail('syntax') : null
+  if (DIRECTIVE.test(s)) return /#\w+;/.test(s.replace(/"[^"]*"/g, '')) || directiveMisread(s, st.tail) ? fail('syntax') : null
   if (edgeData(s, st)) return null
   if (s === 'end') return closeSubgraph(st)
   // Mermaid's lexer reads subgraph as a keyword even where a longer word starts with it.
@@ -149,11 +153,24 @@ function stmt(s: string, st: State): Fail | null {
   return end < s.length ? fail('syntax') : null
 }
 
+// Whether a styling directive names an id that is no plain name (style --> B), or one the lexer would not read as that id: style's or click's id, classDef's or class's
+// comma-separated ids, and class's class name. Each is read with what follows it; a list's , and the line's end count.
+function directiveMisread(s: string, tail: string): boolean {
+  const m = /^(style|classDef|class|click)\s+(\S+)(.*)$/s.exec(s)
+  if (!m) return false
+  const [, kw, list = '', after = ''] = m, names = kw === 'style' || kw === 'click' ? [list] : list.split(',')
+  const cls = kw === 'class' ? /^\s+(\S+)/.exec(after)?.[1] : undefined
+  const read = (id: string, rest: string) => ID.exec(id)?.[0] !== id || misread(id, rest, 'node')
+  return names.some((n, k) => read(n, (k < names.length - 1 ? ',' : '') + after + tail)) || (cls !== undefined && read(cls, after.trimStart().slice(cls.length) + tail))
+}
+
 // Whether s is only id@{…}, its body read whole, for an id an edge already has. Mermaid then sets that edge's animation or
-// curve, which this renderer does not draw, and adds no node.
+// curve, which this renderer does not draw, and adds no node. At a statement's start Mermaid lexes the id as a node's, so an
+// id it misreads there is left to the node path, which fails it, though `A 1style@--> B` declared the edge.
 function edgeData(s: string, st: State): boolean {
   const id = ID.exec(s)?.[0]
-  return id !== undefined && st.edges.some(e => e.id === id) && s.startsWith('@{', id.length) && data(s, id.length + 2)?.end === s.length
+  return id !== undefined && st.edges.some(e => e.id === id) && s.startsWith('@{', id.length) && data(s, id.length + 2)?.end === s.length &&
+    !misread(id, s.slice(id.length) + st.tail, 'node')
 }
 
 // Opens the subgraph header s declares: `subgraph id`, `subgraph id [title]` (title "…" or not), or `subgraph "title"`, whose
@@ -163,6 +180,7 @@ function openSubgraph(s: string, st: State): Fail | null {
   const m = SUBGRAPH.exec(s)
   if (!m) return fail('syntax')
   const [, name, rest = '', quoted] = m
+  if (name !== undefined && misread(name, s.slice('subgraph '.length).trimStart().slice(name.length) + st.tail, 'subgraph')) return fail('syntax')
   const c = rest.startsWith('[') ? closer(rest, 1, [']']) : null
   if (rest && c?.at !== rest.length - 1) return fail('syntax')
   const raw = name === undefined ? quoted! : c ? rest.slice(1, c.at) : name
@@ -293,7 +311,7 @@ function statement(text: string, st: State): number | Fail {
 function group(text: string, at: number, st: State): { ids: string[]; end: number } | Fail | null {
   const ids: string[] = []
   for (;;) {
-    const m = mention(text, at)
+    const m = mention(text, at, st.tail)
     if (m === null || isFail(m)) return m
     const f = declare(st, m)
     if (f) return f
@@ -332,9 +350,11 @@ function connect(st: State, from: string[], to: string[], l: Link): void {
 
 // A node at `at`: its id, then at most one bracket shape or @{…}; a :::name class may follow the id or its shape.
 // null if no id starts there, or its opener has no closer.
-function mention(text: string, at: number): Mention | Fail | null {
+function mention(text: string, at: number, tail: string): Mention | Fail | null {
   const id = ID.exec(text.slice(at))?.[0]
   if (id === undefined) return null
+  // An id the lexer would read as a keyword, or not at all, is not this id (ids.ts).
+  if (misread(id, text.slice(at + id.length) + tail, 'node')) return fail('syntax')
   at += id.length
   if (text.startsWith('@{', at)) {
     const d = data(text, at + 2)
@@ -362,19 +382,27 @@ function mention(text: string, at: number): Mention | Fail | null {
     return m
   }
   const open = BRACKETS.find(([o]) => text.startsWith(o, at))?.[0]
-  if (open === undefined) return { id, end: classEnd(text, at) }
+  if (open === undefined) {
+    const e = classEnd(text, at, tail)
+    return e < 0 ? fail('syntax') : { id, end: e }
+  }
   const pairs = BRACKETS.filter(([o]) => o === open)
   const c = closer(text, at + open.length, pairs.map(([, close]) => close))
   if (!c) return null
   const t = label(text.slice(at + open.length, c.at)), ls = isFail(t) ? t : splitLabel(t)
   if (isFail(ls)) return ls
-  return { id, end: classEnd(text, c.at + c.close.length), shape: pairs.find(([, close]) => close === c.close)![2], lines: ls }
+  const e = classEnd(text, c.at + c.close.length, tail)
+  if (e < 0) return fail('syntax')
+  return { id, end: e, shape: pairs.find(([, close]) => close === c.close)![2], lines: ls }
 }
 
-// The index past a :::name class at i, else i.
-function classEnd(text: string, i: number): number {
+// The index past a :::name class at i, else i; -1 if the lexer would not read its name as a name.
+function classEnd(text: string, i: number, tail: string): number {
   CLASS.lastIndex = i
-  return CLASS.test(text) ? CLASS.lastIndex : i
+  const m = CLASS.exec(text)
+  if (!m) return i
+  // Its name is read as an id is: A:::style or A:::end.x is a keyword.
+  return misread(m[0].slice(3), text.slice(CLASS.lastIndex) + tail, 'node') ? -1 : CLASS.lastIndex
 }
 
 // The first of closes at or after i, outside "…": where it starts and which it is.

@@ -65,6 +65,16 @@ test('A9.harness: under mono, only the cells the diagram draws must carry no col
   assert.deepEqual(checkDiagramScreen(cells as never, MONO), [])
 })
 
+test('A9.harness: under mono, a blank cell the diagram covers may carry a foreground color: it shows none (#10, win32 run 41007958837)', () => {
+  const cells = lay(FLOW[0]!, FLOW[1]!) as any[][]
+  const y = cells.findIndex(r => r.map((c: any) => c.ch).join('').includes('读取配置文件')), x = cells[y]!.findIndex((c: any, i: number) => i >= 4 && c.ch === ' ')
+  cells[y]![x] = tint(cells[y]![x], CLAUDE)
+  assert.deepEqual(checkDiagramScreen(cells as never, MONO), [])
+  // A background shows on a blank cell, so it is still a problem.
+  cells[y]![x] = { ...cells[y]![x], bg: CLAUDE }
+  assert.match(checkDiagramScreen(cells as never, MONO).join('\n'), /diagram 1: expected no color, got ' '/)
+})
+
 test('A9.harness: under mono, a colored cell the diagram draws is a problem, on a label\'s row or not', () => {
   const tinted = (pick: (rows: string[]) => number, n: number) => {
     const cells = lay(FLOW[0]!, FLOW[1]!) as any[][], text = cells.map(r => r.map((c: any) => c.ch).join(''))

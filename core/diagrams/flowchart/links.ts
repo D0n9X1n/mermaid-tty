@@ -1,6 +1,7 @@
 // Reads a flowchart link as Mermaid 12.2.0's lexer (flow.jison) and flowDb's destructLink read it: which ends it draws, its
 // stroke and length, and its label's raw text. A link Mermaid cannot lex, or reads as INVALID, is null.
 import type { End, GEdge } from '../../graph/model.ts'
+import { misread } from './ids.ts'
 
 // Letters, digits and _, joined by single . or -: A-->B reads A, -->, B.
 export const NAME = String.raw`[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*`
@@ -30,11 +31,14 @@ const MARK: Readonly<Record<string, End>> = { point: 'arrow', circle: 'circle', 
 export function readLink(text: string, at: number): RawLink | null {
   BASIC.lastIndex = at
   const b = BASIC.exec(text)
+  // An id@ the lexer reads as a keyword first (end@, style.x@, default.x@) is no edge id.
+  if (b && b[1] !== undefined && misread(b[1], '@', 'edge')) return null
   if (b) return { id: b[1], end: BASIC.lastIndex, raw: b[3], ...(b[3] === undefined ? {} : { pipe: true as const }), ...ends(endLink(b[2]!)) }
   for (const f of FORMS) {
     f.open.lastIndex = at
     const o = f.open.exec(text)
     if (!o) continue
+    if (o[1] !== undefined && misread(o[1], '@', 'edge')) return null
     const t = edgeText(text, f.open.lastIndex, f.close, f.ch)
     if (!t) return null
     const s = startLink(o[2]!), e = endLink(t.closer)
