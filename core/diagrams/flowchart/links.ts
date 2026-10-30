@@ -6,8 +6,9 @@ import type { End, GEdge } from '../../graph/model.ts'
 export const NAME = String.raw`[\p{L}\p{N}_]+(?:[.-][\p{L}\p{N}_]+)*`
 // What a link's edges draw: ends, stroke and minlen.
 export type Ends = { style: GEdge['style']; tail: End; head: End; minlen: number }
-// A link as read: its id@ if any, how far it reads, its ends, and its label's raw text (|…| or a text form's), if any.
-export type RawLink = Ends & { id?: string; end: number; raw?: string }
+// A link as read: its id@ if any, how far it reads, its ends, and its label's raw text (|…| or a text form's), if any;
+// pipe when that text is a |…| label, which Mermaid lexes as node text, not as a text form's edge text.
+export type RawLink = Ends & { id?: string; end: number; raw?: string; pipe?: true }
 
 // A basic link at lastIndex, as Mermaid's rules lex it, with the spaces around it: an optional id@, then a line with its
 // marks (-- or ==, then one more of the line or a head mark; or - dots - with an optional head; or three or more ~); an
@@ -29,7 +30,7 @@ const MARK: Readonly<Record<string, End>> = { point: 'arrow', circle: 'circle', 
 export function readLink(text: string, at: number): RawLink | null {
   BASIC.lastIndex = at
   const b = BASIC.exec(text)
-  if (b) return { id: b[1], end: BASIC.lastIndex, raw: b[3], ...ends(endLink(b[2]!)) }
+  if (b) return { id: b[1], end: BASIC.lastIndex, raw: b[3], ...(b[3] === undefined ? {} : { pipe: true as const }), ...ends(endLink(b[2]!)) }
   for (const f of FORMS) {
     f.open.lastIndex = at
     const o = f.open.exec(text)

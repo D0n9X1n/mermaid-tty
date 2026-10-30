@@ -15,7 +15,7 @@ const PAIR_LINE = /^( *)([A-Za-z_][\w-]*): *("[^"\\]*"|'[^']*'|[\p{L}\p{N}_][\p{
 export function joinData(lines: readonly Line[]): Line[] {
   const out: Line[] = []
   for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]!, end = l.text.trimEnd().endsWith('@{') ? blockEnd(lines, i) : -1
+    const l = lines[i]!, end = opensData(l.text) ? blockEnd(lines, i) : -1
     if (end < 0) {
       out.push(l)
       continue
@@ -39,4 +39,26 @@ function blockEnd(lines: readonly Line[], i: number): number {
     indent = m[1]!
   }
   return -1
+}
+
+// Whether a line ends in an @{ that Mermaid's lexer reads as metadata: right after an id, outside any "…", bracket or
+// acc statement. An @{ inside a quoted or bracketed label is text, so its line is left alone (and fails to read).
+function opensData(text: string): boolean {
+  const t = text.trimEnd()
+  if (!/[\p{L}\p{N}_]@\{$/u.test(t) || /^\s*acc(?:Title|Descr)\b/.test(t)) return false
+  const bare = t.replace(/"[^"]*"/g, ''), n = (ch: string) => bare.split(ch).length - 1
+  return !bare.includes('"') && n('[') === n(']') && n('(') === n(')') && n('{') === n('}') + 1
+}
+
+// What one @{ … } value is, as Mermaid 12.2.0 reads it (its shape-data lexer, then js-yaml's JSON_SCHEMA): a string and
+// its text, or some other scalar (a bool, null or number), or null where it cannot tell or Mermaid fails. A "…" holds no
+// \ (an escape); a '…' no '' escape, }, ^ (the lexer protects only "…": } ends the body, ^ is no token) or lone "; a bare
+// string starts with a letter or _ and holds none of the characters YAML or the lexer reads otherwise. An empty string is
+// null: Mermaid keeps the label it had.
+export function yamlValue(raw: string): { kind: 'string'; text: string } | { kind: 'other' } | null {
+  const v = raw.trim()
+  if (/^"[^"\\]+"$/.test(v)) return { kind: 'string', text: v.slice(1, -1) }
+  if (/^'[^'}^]+'$/.test(v)) return (v.split('"').length - 1) % 2 === 0 ? { kind: 'string', text: v.slice(1, -1) } : null
+  if (/^(?:true|True|TRUE|false|False|FALSE|null|Null|NULL|~|[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)$/.test(v)) return { kind: 'other' }
+  return /^[\p{L}_][^:#{}[\]^"&*!|>%@`,]*$/u.test(v) ? { kind: 'string', text: v } : null
 }

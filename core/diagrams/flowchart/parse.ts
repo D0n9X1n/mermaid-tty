@@ -1,13 +1,13 @@
 // Reads a flowchart's header, nodes, shapes, labels, links and subgraphs (plan A, T13, T14, T15 and §7) into the
 // graph model; its styling and accessibility directives draw nothing. A statement it cannot read whole fails, so the
 // fence draws as source.
-import { shapeFromName, type Shape } from '../../caps.ts'
+import { ALIASES, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
 import { decoded, labelLines, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
-import { joinData } from './data.ts'
+import { joinData, yamlValue } from './data.ts'
 import { NAME, readLink, type Ends } from './links.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
@@ -165,7 +165,8 @@ function openSubgraph(s: string, st: State): Fail | null {
   if (rest && c?.at !== rest.length - 1) return fail('syntax')
   const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name, 'none')
   if (isFail(title)) return title
-  const id = name ?? quoted!.slice(1, -1).trim(), d = st.nodes.get(id)
+  // Mermaid's id for `subgraph "…"` is the string's text, trimmed: a "`…`" loses its backquotes too.
+  const id = name ?? quoted!.replace(/^"`?|`?"$/g, '').trim(), d = st.nodes.get(id)
   if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) return fail('syntax')
   const cluster: GCluster = { id, title, dir: null, nodes: [], clusters: [] }
   st.clusters.push(cluster)
@@ -236,7 +237,7 @@ function skipSpace(text: string, i: number): number {
 
 // The pairs of the @{…} body that starts at i, in source order, and the index just past its
 // }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
-// spaces, then }; and each key once.
+// spaces, then }; each key once; and each value one yamlValue reads.
 function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
   const pairs: [string, string][] = []
   for (;;) {
@@ -244,7 +245,7 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
     const m = PAIR.exec(text)
     if (!m) break
     const [, key = '', value = ''] = m
-    if (pairs.some(([k]) => k === key)) return null
+    if (pairs.some(([k]) => k === key) || !yamlValue(value)) return null
     pairs.push([key, value])
     i = PAIR.lastIndex
     if (text[i] !== ',') break
@@ -295,7 +296,7 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
 function link(text: string, at: number): Link | Fail | null {
   const l = readLink(text, at)
   if (!l) return null
-  const label = l.raw === undefined ? null : edgeLabel(l.raw)
+  const label = l.raw === undefined ? null : edgeLabel(l.raw, l.pipe === true)
   if (isFail(label)) return label
   if (l.style === 'invisible' && label !== null) return fail('invisible-label')
   return { ...l, label }
@@ -325,16 +326,24 @@ function mention(text: string, at: number): Mention | Fail | null {
     const d = data(text, at + 2)
     if (!d) return null
     const m: Mention = { id, end: d.end, data: true }
-    for (const [key, raw] of d.pairs) {
-      // As YAML reads it: one pair of matching quotes, "…" or '…', is not part of the value.
-      const value = raw.trim().replace(/^(["'])(.*)\1$/s, '$2')
-      if (key === 'shape') m.shape = shapeFromName(value)
-      else if (key === 'label') {
-        const t = value.startsWith('`') ? fail('markdown-string') : checked(value, 'any', 'markdown')
-        const ls = isFail(t) ? t : splitLabel(t)
-        if (isFail(ls)) return ls
-        m.lines = ls
-      }
+    const v = new Map(d.pairs.map(([k, raw]) => [k, yamlValue(raw)!]))
+    // icon and img make Mermaid draw another shape; a shape it does not know, or a typed label or labelType, it rejects or
+    // reads otherwise (flowDb addVertex).
+    if (v.has('icon') || v.has('img')) return fail('syntax')
+    const shape = v.get('shape'), lbl = v.get('label'), type = v.get('labelType')
+    if (shape) {
+      const s = shape.kind === 'string' ? ALIASES.get(shape.text) : undefined
+      if (!s) return fail('syntax')
+      m.shape = s
+    }
+    if (lbl) {
+      if (lbl.kind !== 'string' || (type && type.kind !== 'string')) return fail('syntax')
+      // labelType text or string makes an HTML label; any other, or none, Markdown (sanitizeNodeLabelType).
+      const mode = type?.kind === 'string' && (type.text === 'text' || type.text === 'string') ? 'html' : 'markdown'
+      const t = lbl.text.startsWith('`') ? fail('markdown-string') : checked(lbl.text.trim(), 'any', mode)
+      const ls = isFail(t) ? t : splitLabel(t)
+      if (isFail(ls)) return ls
+      m.lines = ls
     }
     return m
   }
@@ -371,17 +380,19 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 // text before the string, a second string, an empty one, a ` or " inside "`…`") and an empty label are a parse error, so
 // fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis falls back. Its <br>
 // stay: a node splits them into lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
-function label(raw: string, br: Br = 'any'): string | Fail {
+// token: the text after the string is Mermaid's text token (a node, |…| or subgraph label), which stops at ( ) [ ] { } |
+// and cannot start with ~~~; a text form's edge text (token false) takes any of them.
+function label(raw: string, br: Br = 'any', token = true): string | Fail {
   const md = raw.startsWith('"`')
   const m = (md ? /^"`([^`"]+)`"([^"]*)$/ : /^(?:"([^"]+)")?([^"]*)$/).exec(raw)
-  if (!m || !raw) return fail('syntax')
+  if (!m || !raw || (token && (/[[\](){}|]/.test(m[2]!) || /^\s*~~~/.test(m[2]!)))) return fail('syntax')
   return checked(((m[1] ?? '') + m[2]).trim(), br, md ? 'markdown' : 'html')
 }
 
 // An edge label as label reads it, but null if it is blank: a blank label would draw no cells. A blank line in it fails,
 // as splitLabel says, so one of only <br/> fails too.
-function edgeLabel(raw: string): string | null | Fail {
-  const t = label(raw)
+function edgeLabel(raw: string, token: boolean): string | null | Fail {
+  const t = label(raw, 'any', token)
   if (isFail(t)) return t
   const ls = splitLabel(t)
   return isFail(ls) ? ls : t.trim() ? t : null

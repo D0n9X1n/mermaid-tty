@@ -1753,7 +1753,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | shape asymmetric `> ]` | flowchart-ok-17 |
 | flowchart | shape double circle `((( )))` | flowchart-ok-18 |
 | flowchart | `@{ shape: … }` known name | flowchart-ok-19 |
-| flowchart | `@{ shape: … }` unknown name draws a rectangle | flowchart-ok-20 |
+| flowchart | `@{ shape: rect }` draws a rectangle | flowchart-ok-20 |
 | flowchart | quoted label | flowchart-ok-21 |
 | flowchart | `<br/>` label, one row per line | flowchart-ok-22 |
 | flowchart | edge solid `-->` | flowchart-ok-23 |

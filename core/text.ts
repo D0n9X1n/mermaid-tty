@@ -49,7 +49,7 @@ const CODE = /#(\w+);/g
 // The character a #…; code shows, or null: a decimal code for a scalar value that is not a control, whitespace or a
 // surrogate (the browser shows U+FFFD or a space there); or a name NAMED knows.
 function codeChar(name: string): string | null {
-  if (!/^\d+$/.test(name)) return NAMED[name] ?? null
+  if (!/^\d+$/.test(name)) return Object.hasOwn(NAMED, name) ? NAMED[name]! : null
   const n = Number(name)
   if (n < 0x20 || (n >= 0x7f && n <= 0x9f) || (n >= 0xd800 && n <= 0xdfff) || n > 0x10ffff) return null
   const ch = String.fromCodePoint(n)

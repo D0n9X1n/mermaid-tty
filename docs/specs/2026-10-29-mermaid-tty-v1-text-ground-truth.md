@@ -179,3 +179,14 @@ Verified against `mermaid@12.2.0` from npm, in a fresh temp dir: `flow.jison` an
 - Other diagrams keep failing `entity` on codes: their parsers are outside this change. Bold and italic label text (`` "`**b**`" ``) still falls back: drawing it needs styled cells in `core/canvas.ts`.
 
 Tests: `tests/core/flowchart-edges_test.ts`, `flowchart-parse_test.ts`, `flowchart-subgraph_test.ts`, `text-ground-truth_test.ts` (case 9 now drawn as `♥` in flowchart fields). Fixtures `flowchart-ok-53`…`58`.
+
+### X5 review: where we now fall back
+
+A cross-family review of 37a8ff2 found eight inputs drawn other than Mermaid 12.2.0 shows them. Each was reproduced under JSDOM, then narrowed:
+
+- `subgraph "`A`"` takes `A` as its id (the string's text, trimmed), so `A --> C` joins the cluster.
+- A `#…;` name is looked up as an own property only: `#__proto__;`, `#constructor;` fall back `entity`.
+- `@{ labelType }` decides the label's mode: `text` or `string` HTML (a literal `\n` falls back `newline`), any other Markdown.
+- Every `@{ … }` value must be one `yamlValue` reads (`core/diagrams/flowchart/data.ts`): a `"…"` with no `\`, a `'…'` with no `}`, `^` or lone `"` (Mermaid's shape-data lexer protects only `"…"`), or a bare string that starts with a letter or `_` and holds no YAML or lexer indicator. A bool, null, number or empty `label` falls back, as do `icon` and `img` (another shape), and any `@{ shape }` name Mermaid does not know (`No such shape`).
+- An `@{` joins following lines only right after an id, outside `"…"`, brackets and acc statements.
+- Unquoted text in a node, `|…|` or subgraph label is Mermaid's text token: `( ) [ ] { } |` anywhere, or `~~~` at its start, fail `syntax`. A text form's edge text (`-- a (b) -->`) still takes them.
