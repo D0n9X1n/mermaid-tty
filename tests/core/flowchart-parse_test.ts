@@ -265,6 +265,12 @@ test('A5.errors: an @{ … } pair with no space after its colon falls back: Merm
   assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
   assert.deepEqual(F('A@{ label : x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
 })
+test('A5.errors: an @{ … } body with a control character, or a space YAML does not read as one, falls back', () => {
+  const bad = ['A@{ label: x }', 'A@{ label : x }', 'A@{ ignored: "a\u0001b", label: x }', 'A@{ label: "a\u007Fb" }',
+    'A@{ label: x }', 'A@{　label: x }', 'A@{ label: "a\u0085b" }', 'A@{ label: ﻿x }', 'A@{\n  label: x\n}']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{\tlabel: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
 test('A5.errors: an @{ … } key YAML reads as no string, or that repeats as YAML compares keys, falls back', () => {
   const bad = ['A@{ true: x, True: y }', 'A@{ 01: x, 1: y }', 'A e1@--> B\ne1@{ true: x, True: y }', 'A@{ null: x }', 'A@{ ~: x }', 'A@{ 1: x }',
     'A@{ FALSE: x, label: y }']

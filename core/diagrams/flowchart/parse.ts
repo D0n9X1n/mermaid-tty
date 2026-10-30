@@ -240,10 +240,18 @@ function skipSpace(text: string, i: number): number {
   return i
 }
 
+// A character in an @{…} body that YAML reads as no plain text or no separator: a control other than tab, or a space
+// other than U+0020, such as NBSP. JS's \s takes those spaces where YAML does not, and js-yaml rejects most controls. A BOM
+// (U+FEFF) is one too; other format characters fail as the label check reports them.
+const DATA_ODD = /(?!\t)[\p{Cc}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u
+
 // The pairs of the @{…} body that starts at i, in source order, and the index just past its
 // }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
-// spaces, then }; each key once; and each value one yamlValue reads.
+// spaces, then }; each key once; each value one yamlValue reads; and no DATA_ODD character.
 function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
+  const close = text.indexOf('}', i)
+  const body = text.slice(i, close < 0 ? text.length : close)
+  if (DATA_ODD.test(body) || body.includes(String.fromCharCode(0xfeff))) return null
   const pairs: [string, string][] = []
   for (;;) {
     PAIR.lastIndex = i
