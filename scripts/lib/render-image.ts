@@ -21,8 +21,21 @@ export function styledRows(source: string, columns: number, theme: string, raw =
   const rows = renderMermaid(source, theme === 'default' ? { columns } : { columns, theme });
   return rows && rows.map((row) => row.map((sp) => ({ text: sp.text, ...spanStyle(sp) })));
 }
+// A reply as Claude Code shows it with the plugin on: each prose line as written, each closed mermaid fence drawn
+// by core. null if any fence falls back, so the preview never shows a fence core would not draw.
+export function replyRows(source: string, columns: number, theme: string): Styled[][] | null {
+  const out: Styled[][] = [], parts = source.trimEnd().split(/^```mermaid\r?\n([\s\S]*?)^```\r?$/m);
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) { for (const text of parts[i]!.replace(/^\r?\n|\r?\n$/g, '').split(/\r?\n/)) out.push(text ? [{ text, fg: DARK.text! }] : []); continue; }
+    const rows = styledRows(parts[i]!, columns, theme);
+    if (!rows) return null;
+    out.push([], ...rows, []);
+  }
+  return out;
+}
 export function renderImage(img: Image): { svg: string; rows: Styled[][] } {
-  const rows = styledRows(readFileSync(join(ROOT, img.source), 'utf8'), img.columns, img.theme, img.raw);
+  const src = readFileSync(join(ROOT, img.source), 'utf8');
+  const rows = img.reply ? replyRows(src, img.columns, img.theme) : styledRows(src, img.columns, img.theme, img.raw);
   if (!rows) throw new Error(`${img.source}: core fell back at ${img.columns} columns`);
   return { svg: toSvg(rows, width, basename(img.file, '.svg')), rows };
 }

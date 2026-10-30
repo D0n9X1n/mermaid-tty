@@ -26,7 +26,7 @@ test('--readme writes exactly the ten manifest images from core, independent of 
   const r = spawnSync(process.execPath, [join(root, 'scripts/render-svg.ts'), '--readme'], { cwd: tmpdir(), encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.stderr, '');
-  assert.equal(r.stdout, 'render-svg: wrote 15 images\n');
+  assert.equal(r.stdout, 'render-svg: wrote 16 images\n');
   assert.deepEqual(readdirSync(join(root, 'assets/readme')).filter((f) => f.endsWith('.svg')).sort(),
     IMAGES.map((img) => img.file.split('/').at(-1)).sort());
   for (const img of IMAGES) assert.equal(readFileSync(join(root, img.file), 'utf8'), renderImage(img).svg, img.file);
