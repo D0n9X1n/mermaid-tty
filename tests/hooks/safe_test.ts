@@ -63,14 +63,16 @@ test('A5.errors: (d) url(, image(, image-set(, @import, file:, data:, javascript
 // before this change. Core still parses each; the gate now stops each.
 const ch = (n: number) => String.fromCharCode(n), NB = ch(0xa0)
 const MARK = `${ch(0xfb02)}${ch(0xb0)}${ch(0xb0)}117${ch(0xb6)}${ch(0xdf)}` // Mermaid's marker for #117; (u)
-test('A5.errors: the five gap sources parse in core and are unsafe', () => {
-  for (const [src, reason] of [
-    [`sequenceDiagram\nrect ${MARK}rl(/asset.svg#paint)\nA->>B: hi\nend`, 'char U+FB02'],
-    [`---${NB}\nconfig:\n  themeCSS: '.nodeLabel::before {content: ${MARK}rl(/asset.svg)}'\n---${NB}\nflowchart TD\nA --> B`, 'char U+00A0'],
-    [`flowchart TD\nA --> B\n${NB}click A href "/asset.svg"`, 'char U+00A0'],
-    ['flowchart TD\nA --> B\naccDescr {x} click A href "/asset.svg"', 'statement accdescr'],
-    ['classDiagram\nA <|-- B\nlink A "/asset.svg"', 'statement link'],
-  ] as const) { assert.equal(parseFail(src), null, src); assert.equal(unsafeReason(src), reason, JSON.stringify(src)) }
+// Each gap source is unsafe here whatever core says. Core's config allowlist (#25) now also rejects the themeCSS one, as
+// config:themeCSS; the other four still parse in core, so this gate is what stops them.
+test('A5.errors: the five gap sources are unsafe; four of them parse in core', () => {
+  for (const [src, reason, core] of [
+    [`sequenceDiagram\nrect ${MARK}rl(/asset.svg#paint)\nA->>B: hi\nend`, 'char U+FB02', null],
+    [`---${NB}\nconfig:\n  themeCSS: '.nodeLabel::before {content: ${MARK}rl(/asset.svg)}'\n---${NB}\nflowchart TD\nA --> B`, 'char U+00A0', 'config:themeCSS'],
+    [`flowchart TD\nA --> B\n${NB}click A href "/asset.svg"`, 'char U+00A0', null],
+    ['flowchart TD\nA --> B\naccDescr {x} click A href "/asset.svg"', 'statement accdescr', null],
+    ['classDiagram\nA <|-- B\nlink A "/asset.svg"', 'statement link', null],
+  ] as const) { assert.equal(parseFail(src)?.reason ?? null, core, src); assert.equal(unsafeReason(src), reason, JSON.stringify(src)) }
 })
 
 test('A5.errors: a character outside the safe set is unsafe: Mermaid\'s entity markers, odd whitespace, Cc and Cf', () => {
