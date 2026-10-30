@@ -23,6 +23,8 @@ reviewers: [PM, cross-family:gpt-6-astra]
 | goldens/gitGraph/gitGraph-ok-13.golden | 4ee8cbc78ea2d016f032e70f8d78bcaa231a03b4b94db5b18216cff7d141dd0c |
 | goldens/gitGraph/gitGraph-ok-14.golden | 4ee8cbc78ea2d016f032e70f8d78bcaa231a03b4b94db5b18216cff7d141dd0c |
 | goldens/gitGraph/gitGraph-ok-15.golden | f581b952f29abeb3a2cca6eab6773ba57b3db56fe399cfb9f3b3ea744472cad2 |
+| goldens/gitGraph/gitGraph-ok-16.golden | 04dfe23d6d18a3cc75cd1969a34ef93800eb571d9f3c8854ac32e3cfed8d6e79 |
 ## Notes
 - PM inspected the rendered gallery (the largest gitGraph goldens at 80, and the fixed merge rows): lanes, forks, merges, tags and cherry-picks read as the source says.
 - The cross-family reviewer (gpt-6-astra) first failed five goldens: a lane that ended at a merge row drew a junction (┴) that read as joining the merge. Commit 69e5814 ends such a lane one row above and crosses an empty column; the re-review of all 15 goldens at 60, 80 and 120 passed.
+- v1.1.1 (#16): the cross-family reviewer (gpt-6-astra) read gitGraph-ok-16 (a %%{init}%% directive setting mainBranchName) against its source at 60, 80 and 120 columns: branches, topology and roles pass. Mermaid also shows the two bare commits' generated ids (0- or 1- plus a random suffix), which change on every render; the PM ruled they stay hidden, as wiki Usage documents.
