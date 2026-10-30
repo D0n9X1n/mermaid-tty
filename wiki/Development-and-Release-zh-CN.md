@@ -89,6 +89,12 @@ node scripts/render-svg.ts --readme
 
 `scripts/lib/images.ts` 是图片清单，记录各图的 Mermaid 源码、宽度和主题。它包括前后对比图、时序图、CJK 图，以及每个主题各一张图。SVG 中每个字形都有独立的 `<text>`，横坐标为 `x = column × cell width`，因此 CJK 对齐不依赖查看者的字体。如果 README 缺少清单中的图片、引用不存在的图片，或 `assets/readme/` 中有清单未列出的 SVG，`scripts/check-docs.ts` 会失败。
 
+其中 `picture.svg` 展示图片模式：首页那条回复，其 fence 显示为 Mermaid 自己的图片。它的 PNG `assets/readme/src/preview.png` 由 mermaid-cli 按插件自己的参数生成，因此重新生成前，先在 PATH 上装好 `mmdc` 11 或 12，再运行：
+
+```sh
+node scripts/render-picture.ts
+```
+
 插件图标 `.claude-plugin/icon.png` 由 `assets/icon.svg` 生成：
 
 ```sh

@@ -3,6 +3,8 @@
 export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = '#1e1f26';
 export type Styled = { text: string; fg: string; bg?: string; bold?: boolean; italic?: boolean };
 export type Glyph = { row: number; col: number; text: string; span: number };
+// A PNG over a block of cells, as the plugin's image mode shows a fence in kitty and Ghostty.
+export type Pic = { row: number; col: number; columns: number; rows: number; png: string };
 const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Segments each row's text whole, so a mark that begins a span joins the base before it. A grapheme belongs to the span
@@ -21,8 +23,8 @@ export function glyphCells(rows: { text: string }[][], width: (s: string) => num
   });
   return out;
 }
-export function toSvg(rows: Styled[][], width: (s: string) => number, title: string): string {
-  const cols = Math.max(1, ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)));
+export function toSvg(rows: Styled[][], width: (s: string) => number, title: string, pics: Pic[] = []): string {
+  const cols = Math.max(1, ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)), ...pics.map((p) => p.col + p.columns));
   const W = cols * CELL + 2 * PAD, H = rows.length * ROW + 2 * PAD + BAR, out: string[] = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`,
     `<rect width="${W}" height="${H}" rx="10" fill="${BG}"/>`,
@@ -36,6 +38,7 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
       col += w;
     }
   });
+  for (const p of pics) out.push(`<image x="${p.col * CELL}" y="${p.row * ROW}" width="${p.columns * CELL}" height="${p.rows * ROW}" href="data:image/png;base64,${p.png}"/>`);
   for (const g of glyphCells(rows, width)) {
     const sp = rows[g.row]![g.span]!;
     out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}${sp.italic ? ' font-style="italic"' : ''}>${esc(g.text)}</text>`);

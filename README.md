@@ -8,6 +8,14 @@
 [![Release](https://img.shields.io/github/v/release/D0n9X1n/mermaid-tty)](https://github.com/D0n9X1n/mermaid-tty/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/D0n9X1n/mermaid-tty?style=flat)](https://github.com/D0n9X1n/mermaid-tty/stargazers)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](https://docs.anthropic.com/en/docs/claude-code/plugins)
+[![Mermaid](https://img.shields.io/badge/diagram_types-13-FF3670?logo=mermaid&logoColor=white)](https://mermaid.js.org/intro/)
+[![Node](https://img.shields.io/badge/node-24%2B-339933?logo=nodedotjs&logoColor=white)](https://github.com/D0n9X1n/mermaid-tty/blob/main/package.json)
+[![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/D0n9X1n/mermaid-tty/blob/main/package.json)
+[![Platforms](https://img.shields.io/badge/platform-macOS_%7C_Linux_%7C_Windows-informational)](https://github.com/D0n9X1n/mermaid-tty/blob/main/.github/workflows/ci.yml)
+[![Top language](https://img.shields.io/github/languages/top/D0n9X1n/mermaid-tty)](https://github.com/D0n9X1n/mermaid-tty)
+[![Last commit](https://img.shields.io/github/last-commit/D0n9X1n/mermaid-tty)](https://github.com/D0n9X1n/mermaid-tty/commits/main)
+[![Issues](https://img.shields.io/github/issues/D0n9X1n/mermaid-tty)](https://github.com/D0n9X1n/mermaid-tty/issues)
 
 ![A Claude Code reply with its mermaid fence drawn by mermaid-tty](assets/readme/preview.svg)
 
@@ -35,6 +43,14 @@ Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows. Start a new Clau
 | ![A mindmap drawn by mermaid-tty](assets/readme/mindmap.svg) | ![A gitGraph drawn by mermaid-tty](assets/readme/gitgraph.svg) |
 | ![A gantt chart drawn by mermaid-tty](assets/readme/gantt.svg) | ![A class diagram drawn by mermaid-tty](assets/readme/class.svg) |
 | ![A pie chart drawn by mermaid-tty](assets/readme/pie.svg) | |
+
+## Images in kitty and Ghostty
+
+In a terminal that shows pixels, mermaid-tty swaps the text drawing for Mermaid's own picture once [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) renders it in the background. The reply from the top of this page, in Ghostty:
+
+![The same reply in Ghostty, its fence shown as Mermaid's own picture](assets/readme/picture.svg)
+
+See the FAQ below for what it needs and how to turn it off.
 
 ## Supported diagrams
 

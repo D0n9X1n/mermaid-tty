@@ -21,12 +21,12 @@ test('every README image renders through core without falling back', () => {
 test('--readme writes exactly the ten manifest images from core, independent of cwd', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'mtty-readme-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  for (const p of ['package.json', 'core', 'scripts/render-svg.ts', 'scripts/lib', 'assets/readme/src'])
+  for (const p of ['package.json', 'core', 'hooks', 'scripts/render-svg.ts', 'scripts/lib', 'assets/readme/src'])
     cpSync(join(ROOT, p), join(root, p), { recursive: true });
   const r = spawnSync(process.execPath, [join(root, 'scripts/render-svg.ts'), '--readme'], { cwd: tmpdir(), encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.stderr, '');
-  assert.equal(r.stdout, 'render-svg: wrote 16 images\n');
+  assert.equal(r.stdout, 'render-svg: wrote 17 images\n');
   assert.deepEqual(readdirSync(join(root, 'assets/readme')).filter((f) => f.endsWith('.svg')).sort(),
     IMAGES.map((img) => img.file.split('/').at(-1)).sort());
   for (const img of IMAGES) assert.equal(readFileSync(join(root, img.file), 'utf8'), renderImage(img).svg, img.file);
@@ -51,4 +51,12 @@ test('--stdout prints adapter SVG with default or explicit width and theme', () 
     assert.equal(r.stderr, '');
     assert.equal(r.stdout, toSvg(styledRows(source, Number(args[0] ?? '80'), args[1] ?? 'default')!, width, basename(file)));
   }
+});
+test('a picture reply draws its prose and puts the fence\'s PNG where the text drawing would be', () => {
+  const img = IMAGES.find((i) => i.picture)!;
+  assert.ok(img, 'the manifest has a picture image');
+  const { svg, rows } = renderImage(img), png = readFileSync(join(ROOT, img.picture!)).toString('base64');
+  assert.equal((svg.match(/<image /g) ?? []).length, 1);
+  assert.ok(svg.includes(`href="data:image/png;base64,${png}"`));
+  assert.ok(!rows.flat().some((s) => /[─-╿]/.test(s.text)), 'no box-drawing glyphs: the fence is a picture');
 });

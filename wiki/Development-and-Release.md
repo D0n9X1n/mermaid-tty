@@ -89,6 +89,12 @@ node scripts/render-svg.ts --readme
 
 `scripts/lib/images.ts` is the manifest: each image's Mermaid source, width and theme. It lists a before-and-after pair, a sequence diagram, a CJK diagram, and one image per theme. In each SVG, every glyph is its own `<text>` at `x = column × cell width`, so CJK alignment doesn't depend on the viewer's fonts. `scripts/check-docs.ts` fails when the README doesn't show a manifest image, shows an image that doesn't exist, or when `assets/readme/` holds an SVG the manifest doesn't list.
 
+One image, `picture.svg`, shows image mode: the hero reply with its fence as Mermaid's own picture. Its PNG, `assets/readme/src/preview.png`, comes from mermaid-cli with the plugin's own flags, so remake it with `mmdc` 11 or 12 on PATH before regenerating:
+
+```sh
+node scripts/render-picture.ts
+```
+
 The plugin icon, `.claude-plugin/icon.png`, is made from `assets/icon.svg`:
 
 ```sh

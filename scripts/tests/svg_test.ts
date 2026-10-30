@@ -70,3 +70,8 @@ test('spanStyle carries a span\'s bold and italic to its styled span', async () 
   const { spanStyle } = await import('../lib/render-image.ts');
   assert.deepEqual(spanStyle({ text: 'x', bold: true, italic: true }), { fg: spanStyle({ text: 'x' }).fg, bold: true, italic: true });
 });
+test('toSvg draws a picture as an <image> of its PNG over its cells, beside the glyphs', () => {
+  const svg = toSvg([[{ text: 'a', fg: '#fff' }], [], []], width, 'pic', [{ row: 1, col: 0, columns: 4, rows: 2, png: 'iVBORw0K' }]);
+  assert.ok(svg.includes(`<image x="0" y="${ROW}" width="${4 * CELL}" height="${2 * ROW}" href="data:image/png;base64,iVBORw0K"/>`));
+  assert.ok(svg.includes('<text x="0" y="14" fill="#fff">a</text>'));
+});
