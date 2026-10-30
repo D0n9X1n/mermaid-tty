@@ -62,8 +62,9 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
   // Code's cwd line (C:\Users\... on Windows), is not taken for it.
   const drawn = new Set<number>()
   // Under mono, only the cells each diagram's rows cover must carry no color: a cell outside them may be Claude Code's
-  // own UI, like its spinner, colored while the screen was read.
-  const colored = (c: Cell) => !plain(c.fg) || !plain(c.bg)
+  // own UI, like its spinner, colored while the screen was read. A blank cell shows no foreground, so only its background
+  // counts: Claude Code's spinner can leave its color on one (#10).
+  const colored = (c: Cell) => (c.ch.trim() !== '' && !plain(c.fg)) || !plain(c.bg)
   const noColor = (what: string, c: Cell | undefined) => {
     if (c) problems.push(`${what}: expected no color, got '${c.ch}' fg ${show(c.fg)} bg ${show(c.bg)}`)
   }
