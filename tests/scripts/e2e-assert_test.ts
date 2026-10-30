@@ -51,3 +51,28 @@ test('A9.harness: a label is checked where its diagram is drawn, not in other te
   const spec = { labels: { User: 'node' }, prose: [], diagrams: [['[ User ]']], color: 'truecolor', hex: { node: 0x88c0d0 } } as const
   assert.deepEqual(checkDiagramScreen(cells as never, spec), [])
 })
+
+// Claude Code's own UI colour (its spinner), which mono never draws.
+const CLAUDE = rgb(0xd77757)
+const tint = (c: object, fg: object) => ({ ...c, fg })
+test('A9.harness: under mono, only the cells the diagram draws must carry no color; Claude Code\'s own UI may color the rest', () => {
+  const cells = lay(FLOW[0]!, FLOW[1]!) as any[][]
+  const y = cells.findIndex(r => r.map((c: any) => c.ch).join('').includes('读取配置文件'))
+  // A blank margin cell and a blank cell past the drawing's end on the label's row, and a spinner row below it all.
+  cells[y]![0] = tint(cells[y]![0], CLAUDE)
+  cells[y]!.push({ ch: ' ', width: 1, fg: CLAUDE, bg: D })
+  cells.push([{ ch: '✻', width: 1, fg: CLAUDE, bg: D }, ...cellsOf(' Thinking…').map(c => tint(c, CLAUDE))])
+  assert.deepEqual(checkDiagramScreen(cells as never, MONO), [])
+})
+
+test('A9.harness: under mono, a colored cell the diagram draws is a problem, on a label\'s row or not', () => {
+  const tinted = (pick: (rows: string[]) => number, n: number) => {
+    const cells = lay(FLOW[0]!, FLOW[1]!) as any[][], text = cells.map(r => r.map((c: any) => c.ch).join(''))
+    const y = pick(text), x = cells[y]!.findIndex((c: any, i: number) => i >= 2 && /[─│►▼]/.test(c.ch))
+    cells[y]![x] = tint(cells[y]![x], CLAUDE)
+    return checkDiagramScreen(cells as never, MONO).join('\n').match(new RegExp(`diagram ${n}: expected no color, got '.' fg rgb #d77757`))
+  }
+  // A ► on the label's row, outside the label; a glyph of diagram 2 on a row that holds no label.
+  assert.ok(tinted(t => t.findIndex(r => r.includes('读取配置文件')), 1))
+  assert.ok(tinted(t => t.findIndex((r, y) => y > 5 && /[─│►▼]/.test(r) && !r.includes('ping')), 2))
+})

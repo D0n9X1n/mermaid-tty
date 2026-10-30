@@ -23,15 +23,22 @@ export function drawnDiagrams(reply: string, columns: number, theme: string): st
   })
 }
 
-// The first screen row at or after from where rows show, one per screen row, all after one left margin that is blank
-// or holds the reply bullet; -1 when there is none. Wide characters' second cells, whose ch is '', add nothing.
-function findRows(cells: Cell[][], rows: readonly string[], from: number): number {
+// The first screen row at or after from where rows show, one per screen row, all after one left margin of m cells that
+// is blank or holds the reply bullet; null when there is none. Wide characters' second cells, whose ch is '', add nothing.
+function findRows(cells: Cell[][], rows: readonly string[], from: number): { at: number; m: number } | null {
   const rest = (row: Cell[], m: number) => row.slice(m).map(c => c.ch).join('').trimEnd()
   const margin = (row: Cell[], m: number) => /^⏺?$/.test(row.slice(0, m).map(c => c.ch).join('').trim())
   for (let i = from; i + rows.length <= cells.length; i++) for (let m = 0; m <= 8; m++) {
-    if (rows.every((r, k) => margin(cells[i + k]!, m) && rest(cells[i + k]!, m) === r)) return i
+    if (rows.every((r, k) => margin(cells[i + k]!, m) && rest(cells[i + k]!, m) === r)) return { at: i, m }
   }
-  return -1
+  return null
+}
+
+// The cells of a screen row, from m on, that a drawn row of text covers, a wide character's second cell included.
+function span(row: Cell[], m: number, text: string): Cell[] {
+  let n = m, got = ''
+  while (n < row.length && (got.length < text.length || row[n]!.ch === '')) got += row[n++]!.ch
+  return row.slice(m, n)
 }
 
 // The roles drawn as filled pills, whose label shows on the role's background; every other role colors its text.
@@ -54,22 +61,27 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
   // The rows the diagrams were found on: a label is looked for there first, so other text that holds it, like Claude
   // Code's cwd line (C:\Users\... on Windows), is not taken for it.
   const drawn = new Set<number>()
+  // Under mono, only the cells each diagram's rows cover must carry no color: a cell outside them may be Claude Code's
+  // own UI, like its spinner, colored while the screen was read.
+  const colored = (c: Cell) => !plain(c.fg) || !plain(c.bg)
+  const noColor = (what: string, c: Cell | undefined) => {
+    if (c) problems.push(`${what}: expected no color, got '${c.ch}' fg ${show(c.fg)} bg ${show(c.bg)}`)
+  }
   spec.diagrams.forEach((rows, n) => {
-    const at = findRows(cells, rows, from)
-    if (at < 0) problems.push(`diagram ${n + 1}: not drawn; expected its rows:\n${rows.join('\n')}`)
-    else { from = at + rows.length; rows.forEach((_, k) => drawn.add(at + k)) }
+    const found = findRows(cells, rows, from)
+    if (!found) { problems.push(`diagram ${n + 1}: not drawn; expected its rows:\n${rows.join('\n')}`); return }
+    const { at, m } = found
+    from = at + rows.length
+    rows.forEach((_, k) => drawn.add(at + k))
+    if (spec.color === 'none') noColor(`diagram ${n + 1}`, rows.flatMap((r, k) => span(cells[at + k]!, m, r)).find(colored))
   })
   const all = cells.map((row, y) => ({ row, y, ...joined(row) }))
   for (const [label, role] of Object.entries(spec.labels)) {
     const holds = (r: typeof all[number]) => r.text.includes(label)
     const found = all.find(r => drawn.has(r.y) && holds(r)) ?? all.find(holds)
     if (!found) { problems.push(`${label}: not drawn`); continue }
-    if (spec.color === 'none') {
-      const bad = found.row.find(c => !plain(c.fg) || !plain(c.bg))
-      if (bad) problems.push(`${label}: expected no color, got '${bad.ch}' fg ${show(bad.fg)} bg ${show(bad.bg)}`)
-      continue
-    }
     const from = found.text.indexOf(label), own = [...new Set(found.at.slice(from, from + label.length))].map(i => found.row[i]!)
+    if (spec.color === 'none') { noColor(label, own.find(colored)); continue }
     const pill = PILLS.has(role), want = spec.hex?.[role], mode = spec.color === 'truecolor' ? 'rgb' : 'p256'
     const bad = own.map(c => (pill ? c.bg : c.fg)).find(c => c.mode !== mode || (mode === 'rgb' && want !== undefined && c.value !== want))
     if (bad) problems.push(`${label}: expected ${role} ${pill ? 'background' : 'foreground'} ${want === undefined ? mode : show({ mode: 'rgb', value: want })}, got ${show(bad)}`)
