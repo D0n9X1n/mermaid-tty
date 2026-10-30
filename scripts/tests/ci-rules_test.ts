@@ -34,11 +34,9 @@ test('coverage map: every check ID maps to an existing step id, and no unknown I
     [{ ...coverage, A8: ['check', 'gone'] }, 'step id gone is missing']] as const)
     assert.ok(coverageErrors(ids, c, new Set(['check'])).some(e => e.includes(want)), want);
 });
-test('check.sh runs B\'s checks after A\'s, ending with the CI coverage check (B7)', () => {
-  const lines = readFileSync(new URL('../check.sh', import.meta.url), 'utf8').replace(/\r\n/g, '\n').split('\n');
-  const b = ["node --test 'scripts/tests/*_test.ts' 'scripts/tests/*.docs-spec.ts'", 'node scripts/check-docs.ts', 'node scripts/check-wiki.ts',
-    'bash scripts/test-wiki-publish.sh', 'bash scripts/test-local-install.sh', 'node scripts/check-ci-coverage.ts'];
-  assert.deepEqual(lines.filter(l => b.includes(l)), b);
-  assert.ok(lines.indexOf('node scripts/check.ts all') < lines.indexOf(b[0]!), 'A\'s lines first');
-  assert.ok(lines.includes('[[ -d scripts/docs/node_modules ]] || npm ci --prefix scripts/docs  # D15c: install the pinned parser once'));
+test('the check job runs the wiki check and the CI coverage check on every OS (B7); check.sh stays plan A\'s', () => {
+  const yml = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(yml, /- id: wiki\n\s+run: node scripts\/check-wiki\.ts\n/);
+  assert.match(yml, /- id: ci-coverage\n[^\n]*\n\s+run: node scripts\/check-ci-coverage\.ts\n/);
+  assert.ok(!readFileSync(new URL('../check.sh', import.meta.url), 'utf8').includes('check-ci-coverage'));
 });

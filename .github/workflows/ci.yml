@@ -56,6 +56,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - id: review-hashes
         run: node scripts/check-review-hashes.ts
+      - id: wiki
+        run: node scripts/check-wiki.ts
+      - id: ci-coverage
+        name: Every acceptance check maps to a CI step (B7)
+        run: node scripts/check-ci-coverage.ts
       # Last, so a red docs check (README content lands late) never skips the gates above.
       - id: docs
         run: node scripts/check-docs.ts
