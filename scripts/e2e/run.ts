@@ -217,12 +217,23 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
   // E6: Claude Code 2.1.308 opens a picker, Full response first, then one entry per code block; choose flowchart LR's.
   const screen = await s.waitFor(/Select content to copy|Copied/, 5000).catch(() => '')
   if (screen.includes('Select content to copy')) {
-    const chosen = /❯\s+flowchart LR\b/
-    for (let i = 0; i < 10 && !chosen.test(await s.text()); i++) {
+    // One entry at a time, each move seen on screen before the next press: on a slow ConPTY a fixed pause let the presses
+    // run past flowchart LR to "Always copy full response", which Enter then saved as a preference. The selection is read
+    // only below the picker's header; a move not seen, or a header gone, stops with Escape rather than a guessed Enter.
+    const at = (t: string) => { const h = t.lastIndexOf('Select content to copy'); return h < 0 ? undefined : /❯\s+(.*?)\s*$/m.exec(t.slice(h))?.[1] }
+    let sel = at(await s.text()), why = sel === undefined ? 'no selection is visible' : ''
+    for (let i = 0; i < 10 && !why && !/^flowchart LR\b/.test(sel!); i++) {
+      const was = sel
       await s.key('down')
-      await sleep(150)
+      sel = await poll(async () => { const v = at(await s.text()); return v !== undefined && v !== was ? v : undefined }, 3000)
+      if (sel === undefined) why = `the selection did not move from ${JSON.stringify(was)}`
     }
-    if (!chosen.test(await s.text())) problems.push(`stored: the /copy picker has no flowchart LR entry; the screen:\n${await s.text()}`)
+    if (!why && !/^flowchart LR\b/.test(sel!)) why = 'flowchart LR was not reached in 10 moves'
+    if (why) {
+      problems.push(`stored: the /copy picker: ${why}; the screen:\n${await s.text()}`)
+      await s.key('escape')
+      return problems
+    }
     await s.key('enter')
   }
   const exact = (t: string | undefined) => t === want || t === `${want}\n`
