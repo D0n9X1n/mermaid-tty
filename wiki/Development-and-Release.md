@@ -73,7 +73,7 @@ For a faster loop:
 - **check**, on all three OSes: bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version.
 - **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
 - **gallery**, on Ubuntu only: renders the SVG gallery and uploads it as a build artifact for visual review.
-- **Compatibility gap at HEAD:** the release specification requires a scheduled A9 run for each newly published Claude Code version, but no scheduled workflow is checked in yet. Current CI tests the pinned version only.
+- **claude-code-versions**, every four hours: runs the A9 end-to-end harness against each newly published Claude Code version, so a release that breaks the plugin shows up within hours.
 
 Every step that runs a `.sh` script uses `shell: bash`, which is Git Bash on Windows, and every script runs under `set -euo pipefail`. So any failing command fails the job, the native Windows `claude plugin validate .` and `claude plugin test .` included. Actions are pinned by commit SHA.
 

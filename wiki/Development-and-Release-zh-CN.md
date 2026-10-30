@@ -73,7 +73,7 @@ node scripts/check-ci-coverage.ts
 - **check** 在三个系统上运行：裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。
 - **e2e** 在三个系统上运行真实 Claude Code 框架，使用 `--scenario all`，覆盖源码视图、存储文本、包括 `mono` 的主题和 256 色输出。Windows 使用 ConPTY，macOS 和 Linux 使用 tmux。
 - **gallery** 仅在 Ubuntu 上运行：渲染 SVG 图库并上传为构建产物，供视觉评审。
-- **HEAD 中的兼容性缺口。** 发布规范要求针对每个新发布的 Claude Code 版本定时运行 A9，但仓库尚无定时工作流。当前 CI 只测试固定版本。
+- **claude-code-versions** 每四小时运行一次：针对每个新发布的 Claude Code 版本运行 A9 端到端框架，新版本一旦破坏插件，几小时内即可发现。
 
 所有运行 `.sh` 脚本的步骤都使用 `shell: bash`，在 Windows 上即 Git Bash；脚本使用 `set -euo pipefail`。任一命令失败都会使作业失败，包括 Windows 原生的 `claude plugin validate .` 和 `claude plugin test .`。Actions 均固定到提交 SHA。
 
