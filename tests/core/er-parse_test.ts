@@ -64,15 +64,38 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
   for (const [body, why] of [['A ||--|| one : x', 'syntax:2'], ['only one to one B : x', 'syntax:2'], ['A ||--|| B : many', 'syntax:2'], ['1 one to one B : x', 'syntax:2'],
     ['2FA', 'syntax:2'], ['A ||--|| B : 3', 'syntax:2'], ['o{', 'syntax:2'], ['u-boat ||--|| B : x', 'syntax:2'], ['A ||--|| B:::1x : y', 'syntax:2'],
     ['A ||--|| accDescr : x', 'syntax:2'], ['subgraph s [zero or more]\nA\nend', 'syntax:2'], ['subgraph " s "\nA\nend', 'syntax:2'], ['p[" Person"]', 'syntax:2'],
-    ['CAR {\n  string pk\n}', 'syntax:3'], ['CAR {\n  List~string~ tags\n}', 'syntax:3'], ['CAR {\n  string `id`\n}', 'syntax:3'], ['CAR {\n  string id pk\n}', 'syntax:3'],
+    ['CAR {\n  string pk\n}', 'syntax:3'], ['CAR {\n  string `id`\n}', 'syntax:3'], ['CAR {\n  string id pk\n}', 'syntax:3'],
     ['`CAR`', 'markdown:2'], ['*CAR*', 'markdown:2'], ['p[`Person`]', 'markdown:2'], ['p["**a **b** c**"]', 'markdown:2'], ['A ||--o{ B : "a \\\\* b"', 'markdown:2'],
     ['A ||--o{ B : "*a *b* c*"', 'markdown:2'], ['subgraph s [`T`]\nA\nend', 'markdown:2'], ['subgraph s\nA', 'syntax:2'], ['end', 'syntax:2']] as const)
     assert.deepEqual(P(body), { reason: why }, body)
   assert.deepEqual(P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id), ['12', 'B', 'TOTAL'])
 })
-test('X2: a ~…~ pair in an alias or comment falls back, since erBox shows it as <…>; one ~ draws', () => {
-  assert.deepEqual(P('A["List~T~"]'), { reason: 'generic' }); assert.deepEqual(P('A {\n  string id "a~b~c"\n}'), { reason: 'generic' })
-  assert.ok(!('reason' in P('A["about ~5"]')))
+// #16. Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
+// and each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from the
+// outside in. A relation label and a subgraph title show ~ as written. Each case below was rendered under JSDOM.
+test('#16: ~…~ in an ER entity label with attributes and in attribute columns draws as <…>, as erBox shows it', () => {
+  const m = P(['A["List~T~"] {', '  List~T~? items PK', '  Map~K,V~ m', '  string x~T~', '  ~T~ t', '  string c "a b~c~"', '  string d "a ~b"', '}',
+    'B["x~T~"]', 'A ||--o{ B : "r~T~"', 'subgraph S ["t~T~"]', 'C', 'end'].join('\n'))
+  assert.deepEqual(m.entities.map((e: any) => [e.id, e.label]), [['A', 'List<T>'], ['B', 'x~T~'], ['C', 'C']])
+  const a = (type: string, name: string, keys = '', comment = '') => ({ type, name, keys, comment })
+  assert.deepEqual(m.entities[0].attrs, [a('List<T>?', 'items', 'PK'), a('Map<K,V>', 'm'), a('string', 'x<T>'), a('<T>', 't'),
+    a('string', 'c', '', 'a b<c>'), a('string', 'd', '', 'a ~b')])
+  assert.deepEqual([m.relations[0].label, m.subgraphs[0].title], ['r~T~', 't~T~'])
+  const shown = ['~A~B~~', 'a~b~c~', '~a~b~c', 'a~~b', 'a~b~,~c~', 'a~b,c~d', 'x~a&b~', '~~x~~', 'about ~5']
+  assert.deepEqual(shown.map(l => P(`A["${l}"] {\n  s i\n}`).entities[0].label),
+    ['<A<B>>', 'a<b~c>', '~a<b>c', 'a<>b', 'a<b>,<c>', 'a<b,c>d', 'x<a&b>', '<<x>>', 'about ~5'])
+})
+// Mermaid's lexer reads a word holding a ~ through the last ~ on its line as one attribute word, so a ~ in two columns, a
+// lone ~ in the type, or a ~ in a comment's first word with another after it is a parse error there; a <br> it would
+// show as written falls back.
+test('#16: an attribute line Mermaid misreads for its ~, or a generic forming <br>, falls back', () => {
+  for (const [body, why] of [['A {\n  List~T~ x~U~\n}', 'syntax:3'], ['A {\n  List~T~ id "c~d"\n}', 'syntax:3'], ['A {\n  ~T~ t "a ~b"\n}', 'syntax:3'],
+    ['A {\n  List~T~? items PK "a b~c~"\n}', 'syntax:3'],
+    ['A {\n  string id "a~b c~"\n}', 'syntax:3'], ['A {\n  string id "a~b~c"\n}', 'syntax:3'], ['A {\n  List~ id\n}', 'syntax:3'],
+    ['A["x~br~"] {\n  s i\n}', 'generic'],
+    // erBox runs parseGenericTypes before marked: how a ~ pair and bold or italic mix there is unverified.
+    ['A["**List~T~**"] {\n  s i\n}', 'generic'], ['A {\n  string id "a **b** ~c~"\n}', 'generic'], ['A ||--o{ B : "**r** ~T~"', 'generic']] as const)
+    assert.deepEqual(P(body), { reason: why }, body)
 })
 // X3. Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
 // default), and erBox draws each attribute column through createText with markdown on: marked renders all of them, and

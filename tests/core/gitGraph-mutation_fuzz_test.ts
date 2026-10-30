@@ -8,7 +8,7 @@ const COMMITS = '●⊗■◉◎', STARTS = '╷╵', CROSSES = '─│┼┴┬
 // Each real gitGraph drawing validates; each mutation of it must not: every label moved to another mark's row, every
 // declared glyph changed to another type's, and every crossing cell (two owners' arms) flipped to another line glyph.
 test('A5.mutation-tests: gitGraph fuzz: moved labels, retyped commits and flipped crossings all fail', t => {
-  assert.equal(SOURCES.length, 15)
+  assert.equal(SOURCES.length, 16)
   const n = { label: 0, glyph: 0, cross: 0 }
   for (const [f, src] of SOURCES) for (const columns of [40, 80]) {
     const r = explain(src, { columns, theme: 'mono' }) as any

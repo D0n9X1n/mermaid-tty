@@ -68,7 +68,7 @@ mermaid-tty 支持 Windows、macOS 和 Linux。`core/` 与 `hooks/` 中的运行
 | Git 提交图 | `gitGraph`、`gitGraph:`、`gitGraph LR:`、`gitGraph TB:` 或 `gitGraph BT:` |
 | 时间线 | `timeline`，可跟 `LR` 或 `TD` |
 | 用户旅程图 | `journey` |
-| XY 图 | `xychart`、`xychart-beta`；可跟 `vertical` 或 `horizontal` |
+| XY 图 | `xychart`、`xychart-beta`；可跟 `vertical` 或 `horizontal`。数值行显示 Mermaid 以柱高和折线点位置表示的数值，与 `showDataLabel` 的取值无关。 |
 | 象限图 | `quadrantChart` |
 
 关键字区分大小写。其他首行形式（包括 `flowchart-elk`）显示源码。
@@ -78,7 +78,7 @@ mermaid-tty 支持 Windows、macOS 和 Linux。`core/` 与 `hooks/` 中的运行
 - 只有该类型解析器接受的样式、交互和无障碍语句才会被忽略。例如，流程图接受 `classDef`、`class`、`:::`、`style`、`linkStyle`、`click`、`accTitle` 和 `accDescr`；类图中的 `class` 则不会被忽略。颜色由插件主题决定。
 - frontmatter 中受支持的 `title:` 会作为加粗标题显示在图表上方。
 
-**已知限制。** frontmatter 扫描器只读取严格的 YAML 子集，不支持任意 YAML。配置支持嵌套映射和单行标量，不支持列表、流式集合、锚点或多行值。未加引号的小数配置值（如 `0.5`）会以 `config:<key>` 回退；数值仅接受安全范围内的十进制整数（[issue #7](https://github.com/D0n9X1n/mermaid-tty/issues/7)）。加引号会将值变成字符串，并不等价于原来的数值配置。配置也不是任意调整终端布局的接口。
+**已知限制。** frontmatter 扫描器只读取严格的 YAML 子集，不支持任意 YAML。配置支持嵌套映射和单行标量，不支持列表、流式集合、锚点或多行值。未加引号的小数配置值（如 `0.5`）会以 `config:<key>` 回退；数值仅接受安全范围内的十进制整数（[issue #7](https://github.com/D0n9X1n/mermaid-tty/issues/7)）。加引号会将值变成字符串，并不等价于原来的数值配置。配置也不是任意调整终端布局的接口。来自 frontmatter 或指令的配置项，只有在允许列表中才会绘制：mermaid-tty 支持的设置（`gitGraph.mainBranchName`、`gitGraph.mainBranchOrder`、`mindmap.colorBy`、`timeline.disableMulticolor`、`htmlLabels: true`），与已绘制效果相同的 Mermaid 设置（`gitGraph.showBranches: true`、`gitGraph.showCommitLabel: true`、取值为 `true` 或 `false` 的 `xyChart.showDataLabel`），以及经 Mermaid 12.2.0 验证只改变像素的设置：`theme`（Mermaid 的五个主题之一）、`logLevel`、`markdownAutoWrap`、取值 0.5 至 1 的 `pie.textPosition`、取值 500 至 2000 的 `quadrantChart.chartWidth` 与 `chartHeight`，以及取值 `0.5px` 至 Mermaid 默认值 `2px` 的 `themeVariables.pieStrokeWidth` 与 `pieOuterStrokeWidth`。其他设置、类型不符或超出范围的值会以 `config:<key>` 回退，包括 `wrap`；会改变 Mermaid 断字位置的字号与字体；所有颜色，因为任何颜色都可能与其上下层颜色相同而遮住文字；文字大小，因为 `0px` 会隐藏文字；换行宽度；以及所有 `sequence.*` 几何设置。
 
 Git 提交图使用竖直分支泳道：`LR` 和 `TB` 的时间向下，`BT` 的时间向上。自动生成的提交 id 不显示；显式 id、消息和标签会显示。cherry-pick 使用 `◎` 和标签（默认 `cherry-pick:<id>`），不会画一条回到来源提交的连线。如果分支或合并的泳道会让人误认提交间的连接，就会回退。
 
@@ -106,8 +106,8 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 - 首行指定了不支持绘制的类型；
 - 语句超出支持的子集，或无法解析；
-- frontmatter 之后任意位置出现 `%%{`，即使在注释或引号内，或双引号外出现行内 `%%`；
-- frontmatter、标题或配置不在扫描器支持的子集内；
+- frontmatter 之后任意位置出现 `%%{`，即使在注释或引号内；但独占一行、设置项都在配置允许列表中的 `%%{init: …}%%` 或 `%%{initialize: …}%%` 指令除外；或双引号外出现行内 `%%`；
+- frontmatter、标题或配置不在扫描器支持的子集内，或某个配置项不在允许列表中（见“已知限制”）；
 - 标签或标题包含不同终端可能显示为不同宽度的字符；
 - 所有适配步骤都无法满足终端宽度，或所有绘制结果都未通过校验。
 
@@ -127,18 +127,18 @@ claude --debug
 |---|---|
 | `unknown-type`、`fallback:<keyword>`、`disabled:<type>` | 未知首行关键字、明确只显示源码的关键字，或不支持的图表类型。 |
 | `header`、`syntax`、`syntax:<line>` | 首行形式无效，或语句超出支持的子集。 |
-| `directive` | frontmatter 之后出现 `%%{`，或双引号外出现行内 `%%`。 |
+| `directive` | frontmatter 之后出现的 `%%{` 不是独占一行、设置为严格 JSON 的 `init` 或 `initialize` 指令（不得含 `null`、数组、空对象或 `config` 键），或双引号外出现行内 `%%`。 |
 | `frontmatter`、`title`、`repeat:<line>`、`repeat:header` | 不支持的 YAML 或标题形式，或标题、id、声明重复。 |
-| `config:htmlLabels` | `htmlLabels` 或嵌套的 `*.htmlLabels` 不是布尔值 `true`；Mermaid 的非 HTML 标签采用不同的文本规则。 |
-| `config:<key>` | 不支持的类似数值的配置标量，或无效的 gitGraph 主分支名称或顺序。 |
+| `config:htmlLabels` | 除取值为布尔值 `true` 的 `htmlLabels` 或 `flowchart.htmlLabels` 外的任何 `htmlLabels` 设置；Mermaid 的非 HTML 标签采用不同的文本规则。 |
+| `config:<key>` | 不在允许列表中的配置项（包括 `%%{wrap}%%` 设置的 `wrap`）、Mermaid 不接受的值类型、不支持的类似数值的配置标量，或无效的 gitGraph 主分支名称或顺序。 |
 | `empty`、`root:<line>`、`blank:<line>`、`label-blank-line` | 缺少内容、出现第二个思维导图根节点，或该类型无法保留的空标签或空行。 |
 | `entity` | Mermaid 会解码实体或内部实体标记，而不是原样显示。 |
 | `html` | 无法在该字段中重现标记、净化、转义或换行效果。 |
 | `markdown-string`、`markdown` | Mermaid 会显示粗体和斜体以外的 Markdown：反引号包裹的 `@{ label }`、转义、代码片段、同种样式的嵌套，或不绘制强调的位置（类名、注解或成员，ER 实体名，状态图复合状态标题）中的强调。 |
-| `icon`、`math`、`newline` | Mermaid 会替换图标、渲染数学公式，或将字面的 `\n` 转为换行。 |
+| `icon`、`math`、`newline` | Mermaid 会替换图标、渲染数学公式，或在 mermaid-tty 不画换行的位置（如子图标题）将字面的 `\n` 转为换行。流程图节点或连线标签中的字面 `\n` 会像 Mermaid 一样画成换行。 |
 | `whitespace` | 图表词法分析器不接受的空白，例如饼图或 gitGraph 中引号外的不换行空格。 |
 | `unsupported-char U+XXXX` | 该字符在终端中的宽度不可靠，详见“宽度与 CJK”。 |
-| `generic` | ER 文本包含多个 `~`；Mermaid 会将 `~...~` 转为 `<...>`，而非原样显示。 |
+| `generic` | ER 实体标签或属性列中的 `~...~` 被 Mermaid 显示为 `<...>` 后会拼出 `<br>`。其他 `~...~` 在 Mermaid 显示为 `<...>` 的位置画成 `<...>`，其余位置原样显示。 |
 | `id-collision`、`id-clash` | id 与节点、边框或内部生成的所有者 id 冲突。 |
 | `unclosed-subgraph`、`unclosed-frame`、`cluster-edge` | 块未闭合，或图布局无法放置指向簇的连线。 |
 | `invisible-label` | 无法忠实显示不可见流程图连线上的标签。 |

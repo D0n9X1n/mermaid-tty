@@ -58,7 +58,7 @@ test('A5.errors: an entity, a keyword in another case or starting a longer word,
   assert.deepEqual(explain('quadrantChart x\nA: [0.1, 0.1]', { columns: 80 }), { reason: 'header' })
 })
 test('A5: classDef, :::name, accTitle, accDescr and config are ignored; a frontmatter title heads the chart', () => {
-  const src = '---\ntitle: Plan\nconfig:\n  quadrantChart:\n    chartWidth: 400\n---\nquadrantChart\naccTitle: T\naccDescr { one\n two }\n' +
+  const src = '---\ntitle: Plan\nconfig:\n  quadrantChart:\n    chartWidth: 500\n---\nquadrantChart\naccTitle: T\naccDescr { one\n two }\n' +
     'classDef c1 color: #109060, radius : 10\nPoint A:::c1: [0.9, 0.0]'
   const t = text((explain(src, { columns: 30, theme: 'mono' }) as any).drawing)
   assert.deepEqual([t[0], t.at(-1)], ['Plan', '1 Point A (0.9, 0.0)'])

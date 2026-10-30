@@ -11,13 +11,14 @@ export type Scalar = string | number | boolean | null
 export type Source = { header: string; title: string | null; config: Readonly<Record<string, Scalar>>
   lines: readonly { n: number; text: string }[] }
 
-// Fails with 'directive' (a `%%{` line, or `%%` after text outside double
-// quotes), 'frontmatter' (a block frontmatter() rejects, frontmatter readConfig
+// Fails with 'directive' (a `%%{` line that is not a whole directive() reads, or
+// `%%` after text outside double quotes), 'frontmatter' (a block frontmatter() rejects, frontmatter readConfig
 // rejects, or a title scalar() rejects), 'title' (a second frontmatter title, one js-yaml
 // would read another way, or one that is true or numeric), 'unsupported-char
 // U+XXXX' (a title character no terminal draws reliably, checked here for every
 // diagram type), 'config:<dotted key>' (a numeric-looking plain config scalar
-// that is not a safe integer or a finite plain decimal) or 'empty' (no header, or nothing after it).
+// that is not a safe integer or a finite plain decimal, or a setting allowed() refuses) or 'empty' (no header, or nothing
+// after it).
 // Mermaid's encodeEntities (utils.ts), before any diagram parses, drops the last ; of whatever matches style…:…#…; or
 // classDef…:…#…; on a line, wherever it sits, label text included. Each kept line is read as Mermaid's parser reads it.
 const encodeColours = (t: string): string =>
@@ -29,6 +30,18 @@ const cleanup = (t: string): string => t.replace(/\r\n?/g, '\n')
   .replace(/<(\w+)([^>]*)>/g, (_, tag: string, attrs: string) => `<${tag}${attrs.replace(/="([^"]*)"/g, "='$1'")}>`)
 
 export function readSource(text: string): Source | Fail {
+  const src = scanSource(text)
+  if (isFail(src)) return src
+  for (const [key, value] of Object.entries(src.config)) {
+    const why = allowed(key, value)
+    if (why) return fail(why)
+  }
+  return src
+}
+
+// readSource before it checks each setting: every scalar the frontmatter config and the directives set, merged as Mermaid
+// merges them. Exported for the tests of the scanner itself.
+export function scanSource(text: string): Source | Fail {
   // The only line-ending normalization in the pipeline.
   const all = cleanup(text).split('\n')
   let title: string | null = null
@@ -49,23 +62,40 @@ export function readSource(text: string): Source | Fail {
     for (const [key, raw] of Object.entries(read)) {
       const value = raw.quoted ? raw.text : typed(raw.text)
       if (value === undefined) return fail(`config:${key}`)
-      // X4. Mermaid 12.2.0 reads htmlLabels and flowchart.htmlLabels (getEffectiveHtmlLabels); any value but true draws
-      // SVG text through markdownToLines, which drops tokens every drawn-text mode keeps. Any other *.htmlLabels falls
-      // back too, to be safe.
-      if (/(?:^|\.)htmlLabels$/.test(key) && value !== true) return fail('config:htmlLabels')
       put(config, key, value)
     }
+    // processFrontmatter sets a top-level displayMode as gantt.displayMode, over the config block's.
+    const mode = front.find(l => /^displayMode[ \t]*:/.test(l))
+    if (mode !== undefined) put(config, 'gantt.displayMode', mode.slice(mode.indexOf(':') + 1).trim())
     start = end + 1
   }
   const kept: { n: number; text: string }[] = []
+  // Each init directive's settings, in order, and whether a %%{wrap}%% was seen.
+  const inits: Record<string, Scalar>[] = []
+  let wrap = false
   for (let i = start; i < all.length; i++) {
     const line = all[i]!
     const t = line.trimStart()
-    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4).
-    if (line.includes('%%{')) return fail('directive')
+    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4). Only a
+    // line that is one whole directive is read; Mermaid removes it, leaving a blank line.
+    if (line.includes('%%{')) {
+      const d = directive(line)
+      if (!d) return fail('directive')
+      if (d === 'wrap') wrap = true
+      else inits.push(d)
+      all[i] = ''
+      continue
+    }
     if (t === '' || t.startsWith('%%')) continue
     if (t.replace(/"[^"]*"/g, '').includes('%%')) return fail('directive')
     kept.push({ n: i + 1, text: encodeColours(line) })
+  }
+  // processDirectives sets wrap after merging the inits, and cleanAndMerge lays the lot over the frontmatter config.
+  for (const d of [...inits, ...(wrap ? [{ wrap: true }] : [])]) {
+    for (const [key, value] of Object.entries(d)) {
+      if (Object.keys(config).some(k => k.startsWith(`${key}.`) || key.startsWith(`${k}.`))) return fail('directive')
+      put(config, key, value)
+    }
   }
   const [head, ...lines] = kept
   if (!head || lines.length === 0) return fail('empty')
@@ -74,6 +104,90 @@ export function readSource(text: string): Source | Fail {
   // terminal reads `pie title Fruit;` as "Fruit;", and a header that takes no ; then fails its own parser.
   const h = head.text.trim(), header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
   return { header, title, config, lines }
+}
+
+// #25. Why setting key, value cannot be drawn, or null. A setting draws only if a renderer here honours it, or if Mermaid
+// 12.2.0 was seen (JSDOM, every ok fixture type but mindmap) to change only pixels with it, its value of a type Mermaid
+// takes; any other falls back as 'config:<key>'. X4: Mermaid reads htmlLabels and flowchart.htmlLabels
+// (getEffectiveHtmlLabels); any value but true draws SVG text through markdownToLines, which drops tokens every drawn-text
+// mode keeps, so any *.htmlLabels but those two set true falls back 'config:htmlLabels'.
+function allowed(key: string, value: Scalar): string | null {
+  if (/(?:^|\.)htmlLabels$/.test(key)) return (key === 'htmlLabels' || key === 'flowchart.htmlLabels') && value === true ? null : 'config:htmlLabels'
+  const ok = Object.hasOwn(ALLOW, key) && ALLOW[key]!(value)
+  return ok ? null : `config:${key}`
+}
+
+const bool = (v: Scalar): boolean => typeof v === 'boolean'
+const any = (): boolean => true
+// A number in [lo, hi].
+const range = (lo: number, hi: number) => (v: Scalar): boolean => typeof v === 'number' && v >= lo && v <= hi
+// A px length in [lo, hi], as a string.
+const px = (lo: number, hi: number) => (v: Scalar): boolean =>
+  typeof v === 'string' && /^\d+(?:\.\d+)?px$/.test(v) && parseFloat(v) >= lo && parseFloat(v) <= hi
+// Each setting by its dotted key, and the values it may take.
+const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
+  // Read here: the gitGraph, mindmap and timeline parsers check and use these as Mermaid does.
+  'gitGraph.mainBranchName': any, 'gitGraph.mainBranchOrder': any, 'mindmap.colorBy': any, 'timeline.disableMulticolor': any,
+  // Mermaid's defaults, which these drawings show: branch names, commit labels. showDataLabel only toggles text over
+  // Mermaid's bars; xychart's value rows print what Mermaid encodes as bar heights and line points either way (PM ruling,
+  // vr-C-xychart), so any boolean draws.
+  'gitGraph.showBranches': v => v === true, 'gitGraph.showCommitLabel': v => v === true, 'xyChart.showDataLabel': bool,
+  // Seen to change only pixels: theme colours and gradients, and log output. Any other theme name, or a number, Mermaid
+  // ignores, so it falls back.
+  theme: v => ['default', 'base', 'dark', 'forest', 'neutral'].includes(v as string),
+  logLevel: v => (typeof v === 'number' ? Number.isInteger(v) && v >= 0 && v <= 5 : ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(v as string)),
+  // Pie slice labels sit at textPosition of the radius: at 0 they all meet at the centre, past 1 they leave the chart.
+  // From 0.5 (two thirds of the default 0.75's distance) to 1 none was seen to meet another or leave the viewBox.
+  'pie.textPosition': range(0.5, 1),
+  // Below Mermaid's default 500 more quadrant texts overlap (5 pairs at 400, 19 at 200, 100 at 100, against 3); from 500 to
+  // 2000 no more than at 500, and every text stays in the viewBox.
+  'quadrantChart.chartWidth': range(500, 2000), 'quadrantChart.chartHeight': range(500, 2000),
+  // &nbsp; for a Markdown label's spaces: only where a line breaks, which the drawing chooses anyway. A wrapping width
+  // (flowchart.wrappingWidth, mindmap.maxNodeWidth) falls back: JSDOM lays out no text, so what a narrow one hides is
+  // unverified.
+  markdownAutoWrap: bool,
+  // The pie's slice and outer ring strokes, up to Mermaid's 2px default. Slice labels are drawn after them, but wider black
+  // strokes cover more of a thin slice's label (a 1% slice beside a 90% one: 21% of its box at 2px, 52% at 5px, all of it
+  // at 20px, where the ring also reaches the title). Every colour falls back: any one can match the colour drawn under or over it
+  // (base's primaryTextColor equal to its primaryColor; a mainBkg of #333 under the default's #28253D text), so text
+  // vanishes. Text sizes fall back too: 0px hides text, and wrapLabel measures with them.
+  'themeVariables.pieStrokeWidth': px(0.5, 2), 'themeVariables.pieOuterStrokeWidth': px(0.5, 2),
+}
+
+// #16. A line that is one whole directive as Mermaid 12.2.0 reads it (detectDirective, detectInit, processDirectives):
+// `%%{wrap}%%` gives 'wrap'; `%%{init: {…}}%%` or `%%{initialize: {…}}%%`, in lowercase, its JSON object's settings
+// under dotted keys, as frontmatter config gives them. Mermaid makes every ' a " before JSON.parse, as here, and drops every
+// init when one fails to parse ({"a": "it's"} among them). Null, so that the source falls back, for any other line:
+// another directive type, text around the directive, a %% inside it, a body JSON.parse rejects or that is not an object,
+// a "config" key (which detectInit moves under the diagram type), or a setting flat() rejects. readSource then checks
+// each setting as frontmatter config's.
+function directive(line: string): Record<string, Scalar> | 'wrap' | null {
+  const t = line.trim()
+  if (/^%%\{\s*wrap\s*\}%%$/.test(t)) return 'wrap'
+  const m = /^%%\{\s*(?:init|initialize)\s*:\s*(\{.*\})\s*\}%%$/.exec(t)
+  if (!m || m[1]!.includes('%%')) return null
+  let body: unknown
+  try { body = JSON.parse(m[1]!.replaceAll("'", '"')) } catch { return null }
+  if (!plainObject(body) || Object.hasOwn(body, 'config')) return null
+  const out: Record<string, Scalar> = {}
+  return flat(body, '', out) ? out : null
+}
+
+const plainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+// Puts each leaf of o into out under its dotted key, prefix first. False for a key that is not a plain name (or is
+// __proto__), an empty object, an array, null (which sanitizeDirective deletes), or a number that is not finite.
+function flat(o: Record<string, unknown>, prefix: string, out: Record<string, Scalar>): boolean {
+  const keys = Object.keys(o)
+  if (keys.length === 0 && prefix) return false
+  for (const k of keys) {
+    if (!/^[A-Za-z_][\w-]*$/.test(k) || k === '__proto__') return false
+    const key = prefix + k, v = o[k]
+    if (plainObject(v)) { if (!flat(v, `${key}.`, out)) return false; continue }
+    if (typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isFinite(v))) return false
+    put(out, key, v)
+  }
+  return true
 }
 
 // X4. Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.

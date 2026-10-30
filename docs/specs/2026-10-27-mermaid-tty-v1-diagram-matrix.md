@@ -12,8 +12,8 @@ These rules apply to every type. A type's section can add to them but never cont
 2. **Headers and comments.**
    - Headers are case-sensitive, as in Mermaid's detectors, and sit alone on their line unless a section says otherwise.
    - Blank lines and whole-line `%%` comments are skipped.
-   - A trailing `%%` and a `%%{…}%%` init directive fall back.
-3. **Frontmatter.** `title` adds a bold title row. A second title, whether from frontmatter or a statement, falls back. The config keys a section names are honored; every other config key is ignored.
+   - A trailing `%%` falls back. A line that is one whole `%%{init: {…}}%%` or `%%{initialize: {…}}%%` directive sets config as frontmatter config does (common rule 3), laid over it as Mermaid merges them; `%%{wrap}%%` sets `wrap`, which falls back; any other `%%{` falls back.
+3. **Frontmatter.** `title` adds a bold title row. A second title, whether from frontmatter or a statement, falls back. Only allowlisted config settings draw (`core/source.ts`, `ALLOW`): those a section honours, Mermaid defaults a drawing already shows, and settings checked against Mermaid 12.2.0 to change only pixels, with a value of a type Mermaid takes. Every other setting, including any `sequence.*` geometry, falls back as `config:<key>`.
 4. **Styling and accessibility are ignored.** `style`, `classDef`, `class`, `:::name`, `linkStyle`, `click`, `accTitle` and `accDescr` (including their `{…}` forms) are parsed and ignored wherever the type's Mermaid grammar defines them as statements. They never cause a fallback, and nothing they set is drawn. In a type whose grammar does not define a keyword, a line starting with that word is ordinary text: a node, card or event, which is counted under rule 10.
 5. **Keywords.** A line that starts with one of its type's keywords is only that keyword's statement. A keyword in another case, or one that starts a longer word (`Section A`, `titled`), falls back. Mermaid's lexers ignore case, and some ignore word ends. The exception is a type whose section says its keywords match in any case; requirement fields are one, because Mermaid's requirement grammar sets `%options case-insensitive`.
 6. **Text.**
@@ -395,8 +395,9 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules. Mermaid's ER parser
 
 **Not supported (falls back):**
 - the undocumented `u` parent marker;
-- `~…~` and backtick attribute words;
+- backtick attribute words, and an attribute line whose `~` Mermaid's lexer reads across columns (a `~` in two columns, a lone `~` in the type or name, or a `~` in a comment's first word with another after it);
 - entity names containing `*`, a backtick, or `_` at either end of a word, because Mermaid renders them as Markdown; in aliases, relation labels, subgraph titles and attribute comments, Markdown other than bold and italic (a code span, a style nested in itself, an escape).
+- a `~…~` pair together with bold or italic in one text, as how Mermaid's parseGenericTypes and marked then combine is unverified (`generic`);
 
 These also fall back, because Mermaid keeps only the first:
 - a second alias for one entity;
@@ -434,6 +435,7 @@ An id used for both an entity and a subgraph also falls back.
 | `-19`…`22` | First fitting ladder step: tighter gaps, wrapped comments, LR→TB, keyed labels |
 | `-23` | Two entities with identical aliases both render |
 | `-24` | `style CUSTOMER fill:#f9f` parsed and ignored |
+| `-26` | `~T~` drawn as `<T>` in the label of an entity with attributes and in attribute columns, and as written in a relation label and an entity with none |
 
 **Rejection fixtures:**
 
@@ -447,7 +449,7 @@ An id used for both an entity and a subgraph also falls back.
 | `-06` | Repeated: `p[Person]`, then `p[Human]` |
 | `-07` | Duplicate: `CAR` listed in two subgraphs |
 | `-08` | Duplicate: `Sales` used as an entity, then as a subgraph id |
-| `-09` | Valid prefix, then the attribute `List~string~ tags` in an entity block |
+| `-09` | Valid prefix, then the attribute `List~string~ tags "a~b"`, which Mermaid's lexer reads as one word through the last `~` |
 | `-10` | Valid prefix, then an attribute name in backticks, `` string `id` `` |
 | `-11` | Valid prefix, then Markdown nesting bold in bold in an alias, `p["**a **b** c**"]` |
 | `-12` | Valid prefix, then a code span in a relation label, `` C \|\|--o{ D : "`owns`" `` |
@@ -747,7 +749,7 @@ A task name is any text without `:`; names may repeat, as in the docs. The previ
 - `M` and `y` durations; a fractional `d` or `w` duration (`1.5d`); any other duration token (the docs say Mermaid silently turns `3dX` into zero); a date that doesn't match `dateFormat`; a format token not listed above.
 - A repeated or unknown id, a reference cycle, a first task with no start, an end before its start, more than 3 items after the tags.
 - A task name with `%` as its first or second character, one that starts with a `YYYY-MM-DD` date, or one whose first word is `call`: Mermaid's lexer reads these as a comment or as tokens.
-- `displayMode: compact` is ignored: every task keeps its own row.
+- `displayMode: compact`, in `config.gantt` or at the frontmatter's top level, which packs tasks into shared rows.
 
 **Amendment (plan C fix cycle 1, 2026-10-29):** a fractional `d` or `w` duration falls back. Mermaid's `ganttDb.js` adds a duration with Day.js `add(n, unit)`, which rounds a fractional day or week to whole days (`1.5d` adds 2 days); this design does not reproduce that rounding. Day.js adds a fractional `h`, `m`, `s` or `ms` exactly, so those stay supported.
 
@@ -809,7 +811,7 @@ c 2024-01-31 · 0d
 - `gantt-ok-07`: `500ms`, `30s`, `1.5s`, `1.5m` and `1.5h` print as written (not `1500ms`, `90s` or `90m`) and span exactly 1.5 s, 90 s and 90 min; a `0d` task draws no bar and prints its timing; tasks before any section.
 - `gantt-ok-08`: `dateFormat YYYY-MM-DDTHH:mm:ss.SSS`, `axisFormat %y/%j %H:%M:%S.%L`: timings keep the `dateFormat` text; tick labels use `axisFormat`.
 - `gantt-ok-09`: `dateFormat D/M/YYYY H:m:s`, `axisFormat %a %e %b`: timings keep the unpadded dates as written.
-- `gantt-ok-10`: `%%` comments, frontmatter title, `displayMode: compact` (ignored), `todayMarker off`.
+- `gantt-ok-10`: `%%` comments, frontmatter title, `todayMarker off`.
 - `gantt-ok-11`: CJK task and section names.
 - `gantt-ok-12`: a natural row of exactly 60 cells at W = 20: step 1 at 60; at 59, step 2 moves the timings into the legend.
 - `gantt-ok-13`: wrapped names with keyed timings; step 3 first fits at 60 (names wrap to 34 cells).
@@ -845,6 +847,7 @@ c 2024-01-31 · 0d
 - `gantt-reject-25`: valid chart, then `todayMarker stroke-width:5px`.
 - `gantt-reject-26`: duration `1y`.
 - `gantt-reject-27`: `B :crit, b1, 2024-01-04, 3d, 4d` (four items after the tags).
+- `gantt-reject-28`: `config.gantt.displayMode: compact`.
 
 ### pie
 
@@ -859,7 +862,7 @@ title <text>
   value  [1-9][0-9]* or [0-9]+\.[0-9]+ (NUMBER_PIE without its sign or 0)
 ```
 
-`showData` is accepted; values print anyway. Pie config (`textPosition`, `donutHole`, `legendPosition`, `highlightSlice`) is ignored.
+`showData` is accepted; values print anyway. Pie config `textPosition` from 0.5 to 1, and `pieStrokeWidth` and `pieOuterStrokeWidth` from 0.5px to Mermaid's default 2px, change only pixels and draw; other values, and any other pie setting (`donutHole`, `legendPosition`, `highlightSlice`) falls back (common rule 3).
 
 **Not supported (falls back):** a value of 0 or less (the docs require positive values); a repeated label; a backslash in a label; a pie with no slices.
 
@@ -885,7 +888,7 @@ Rats █▉                                                            15  3.1%
 
 **Required fixtures** (60, 80 and 120 columns):
 - `pie-ok-01`: docs' Pets example: Dogs 79.4%, Cats 17.5%, Rats 3.1%. At 80 and 120 (W = 60): 381, 84, 15 eighths. At 60 (W = 45): 286, 63, 11.
-- `pie-ok-02`: docs' `showData` example (frontmatter config ignored): Potassium, Calcium, Magnesium, Iron; 46.3%, 39.8%, 9.3%, 4.6%. At 120 (W = 60): 222, 191, 44, 22 eighths. At 80 (W = 58): 215, 185, 43, 21.
+- `pie-ok-02`: docs' `showData` example, with `pieOuterStrokeWidth` 2px for the docs' 5px, which covers more of a thin slice's label (its `textPosition` and stroke width change only pixels): Potassium, Calcium, Magnesium, Iron; 46.3%, 39.8%, 9.3%, 4.6%. At 120 (W = 60): 222, 191, 44, 22 eighths. At 80 (W = 58): 215, 185, 43, 21.
 - `pie-ok-03`: `"A" : 15` and `"B" : 1`: 93.8% and 6.3% (half up; the printed sum is 100.1). At 80 and 120 (W = 60): 450 and 30 eighths. At 60 (W = 49): 368 and 25, both rounded up from exact halves.
 - `pie-ok-04`: equal values keep source order; single-quoted labels; decimal values.
 - `pie-ok-05`: `pie showData title …` on one line; `%%` comments.
@@ -924,7 +927,7 @@ line [<text>] [<n>, <n>, …]
   n     [+-]?(\d+(\.\d+)?|\.\d+)
 ```
 
-Both axes are optional. Every series has one value per category; with no categories, the first series sets the number of groups, which stay unlabelled. With no y range, `y0 = min(0, smallest value)` and `y1 = max(0, largest value)`, so bars start at 0; the docs say only that the range is generated from the data. Config (`chartOrientation`, `showDataLabel`, `showLegend`, `plotColorPalette`) is ignored: the header word sets the orientation, and values and names always print.
+Both axes are optional. Every series has one value per category; with no categories, the first series sets the number of groups, which stay unlabelled. With no y range, `y0 = min(0, smallest value)` and `y1 = max(0, largest value)`, so bars start at 0; the docs say only that the range is generated from the data. The header word sets the orientation, and values and names always print. `showDataLabel` (`true` or `false`: the value rows print what Mermaid encodes as bar and point positions either way) draws; any other xyChart setting (`chartOrientation`, `showLegend`, an axis's `showLabel`, and any colour such as `themeVariables.xyChart.plotColorPalette`) falls back (common rule 3).
 
 **Not supported (falls back):**
 - A numeric x range (`x-axis 0 --> 100`); point labels (`line [540 "PaLM", …]`); markdown strings.
@@ -975,7 +978,7 @@ a      20  75  50
 - `xychart-ok-02`: docs' legend example (`xychart-beta`): three named lines, markers `●◆▲`; midpoint tick 99.1; vertical (55 cells) at every width.
 - `xychart-ok-03`: docs' simplest example: no axes, 4 unlabelled groups; ticks `-0.34`, `1.03`, `2.4`; points in rows 5, 3, 8, 1; values print `+1.3`, `.6`, `2.4`, `-.34`.
 - `xychart-ok-04`: docs' Genres example (`showDataLabel` ignored): bars 26, 4, 43, 53, 36, 51 eighth-rows; quoted `"non fiction"`. Vertical (76 cells) at 80 and 120; horizontal at 60 (W = 43).
-- `xychart-ok-05`: docs' palette example (palette ignored): each group draws line, bar, bar, line in source order, tagged `●`, `a`, `b`, `◆`; quoted axis titles.
+- `xychart-ok-05`: docs' palette example, without its `plotColorPalette` (a colour, which falls back): each group draws line, bar, bar, line in source order, tagged `●`, `a`, `b`, `◆`; quoted axis titles.
 - `xychart-ok-06`: `xychart horizontal`, `title Revenue`, `x-axis Quarter [2023, 2024]`, `y-axis 0 --> 100` (no title); two named bars and a named line; legend `a`, `b`, `●`.
 - `xychart-ok-07`: `xychart vertical`, `x-axis Month`, `y-axis Units` (titles only): unlabelled groups; range 0 to the largest value; a zero bar draws nothing and prints `0`.
 - `xychart-ok-08`: CJK title, categories and series names (quoted).
@@ -1073,7 +1076,7 @@ Reach
 - `quadrant-ok-04`: `A` and `B` in one cell and `C` (0.32 vs 0.3) in the next cell share key 1, with three legend rows; a second point named `A` elsewhere takes key 2.
 - `quadrant-ok-05`: 12 points; keys 10–12 take two cells.
 - `quadrant-ok-06`: unquoted CJK title, quadrant texts and point names.
-- `quadrant-ok-07`: docs' config example (`"Important ❤"`; config ignored): no points, so no legend.
+- `quadrant-ok-07`: docs' config example (`"Important ❤"`), with chart size 500 and no `quadrant1TextFill`: a size outside 500–2000 and any colour fall back: no points, so no legend.
 - `quadrant-ok-08`: a 28-cell quadrant text: in place at 59 and 60 (q = 28); at 58 (q = 27) every quadrant and x-axis text is keyed.
 - `quadrant-ok-09`: a legend row of exactly 60 cells: one row at 60, wrapped at 59.
 - `quadrant-ok-10`: docs' class example (`Point A:::class1: [0.9, 0.0]` … `classDef class3 color: #f00fff, radius : 10`): `:::name` and `classDef` parsed and ignored (common rule 4). Points C and D, both at (0.7, 0.2), share key 3; four legend rows.
@@ -1452,6 +1455,7 @@ Attributes go in any order. The title follows common rule 3. Honored config keys
 - `gitGraph-ok-11`: valid graph, then `accTitle: Log`; accTitle parsed and ignored.
 - `gitGraph-ok-12`, `-13`, `-14`: headers `gitGraph:`, `gitGraph LR:` and `gitGraph TB:`, each drawn as `gitGraph`.
 - `gitGraph-ok-15`: a cherry-pick with an explicit `tag:`, which replaces `cherry-pick:<id>`.
+- `gitGraph-ok-16`: an `%%{init: …}%%` directive setting `theme` (ignored) and `mainBranchName`.
 
 **Rejection fixtures:**
 - `gitGraph-reject-01`: `checkout` of an unknown branch.
@@ -1794,6 +1798,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | `@{ … }` split over lines | flowchart-ok-57 |
 | flowchart | Markdown strings with no emphasis | flowchart-ok-58 |
 | flowchart | Markdown bold and italic in a node, edge label and `@{ label }`, drawn bold and italic | flowchart-ok-59 |
+| flowchart | a literal `\n` in a node or edge label drawn as a line break | flowchart-ok-60 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |
@@ -1968,6 +1973,7 @@ The title follows common rule 3. No config key is honored.
 | er | identical aliases on distinct entities | er-ok-23 |
 | er | `style` ignored | er-ok-24 |
 | er | Markdown bold and italic in an alias, relation label and attribute comment | er-ok-25 |
+| er | `~T~` as `<T>` where erBox shows it | er-ok-26 |
 | requirement | header `requirementDiagram` | requirement-ok-01 |
 | requirement | frontmatter `title` | requirement-ok-01 |
 | requirement | type `requirement` | requirement-ok-01 |
@@ -2112,7 +2118,8 @@ The title follows common rule 3. No config key is honored.
 | gantt | timing column: start and end as written | gantt-ok-01, gantt-ok-02, gantt-ok-03, gantt-ok-04, gantt-ok-05, gantt-ok-07, gantt-ok-08, gantt-ok-09 |
 | gantt | timings move into the keyed legend | gantt-ok-05, gantt-ok-12, gantt-ok-13, gantt-ok-15 |
 | gantt | time axis: scale, ticks, labels | gantt-ok-02, gantt-ok-04 |
-| gantt | `todayMarker off`; frontmatter title; `displayMode` ignored | gantt-ok-10 |
+| gantt | `todayMarker off`; frontmatter title | gantt-ok-10 |
+| gantt | `displayMode: compact` falls back | gantt-reject-28 |
 | gantt | CJK width | gantt-ok-11 |
 | gantt | fit ladder steps 1-3 and fallback | gantt-ok-12, gantt-ok-13, gantt-reject-14 |
 | gantt | `click` parsed and ignored (common rule 4) | gantt-ok-14 |
@@ -2127,7 +2134,7 @@ The title follows common rule 3. No config key is honored.
 | pie | sort by value, ties in source order | pie-ok-01, pie-ok-02, pie-ok-04 |
 | pie | bar eighths `round(8·v/Σv·W)` | pie-ok-01, pie-ok-02, pie-ok-03, pie-ok-06 |
 | pie | percentages, one decimal, half up | pie-ok-01, pie-ok-02, pie-ok-03 |
-| pie | config ignored | pie-ok-02 |
+| pie | pixel-only config draws | pie-ok-02 |
 | pie | repeated label falls back | pie-reject-03 |
 | pie | CJK width | pie-ok-07 |
 | pie | fit ladder steps 1-2 and fallback | pie-ok-08, pie-ok-09, pie-reject-06 |
@@ -2145,7 +2152,7 @@ The title follows common rule 3. No config key is honored.
 | xychart | mixed series in source order; tags | xychart-ok-05, xychart-ok-06 |
 | xychart | signed and leading-dot numbers; tick labels | xychart-ok-02, xychart-ok-03 |
 | xychart | horizontal layout and legend | xychart-ok-01, xychart-ok-06 |
-| xychart | config ignored | xychart-ok-04, xychart-ok-05 |
+| xychart | `showDataLabel` draws | xychart-ok-04 |
 | xychart | unquoted-text limits | xychart-reject-06, xychart-reject-07, xychart-reject-08 |
 | xychart | CJK width | xychart-ok-08 |
 | xychart | fit ladder steps 1-3 and fallback | xychart-ok-09, xychart-ok-10, xychart-reject-12 |
@@ -2162,7 +2169,7 @@ The title follows common rule 3. No config key is honored.
 | quadrant | repeated point names | quadrant-ok-04 |
 | quadrant | legend with coordinates as written | quadrant-ok-01, quadrant-ok-04 |
 | quadrant | `%%` comments | quadrant-ok-03 |
-| quadrant | config ignored; no points, no legend | quadrant-ok-07 |
+| quadrant | chart size 500–2000 draws; no points, no legend | quadrant-ok-07 |
 | quadrant | CJK width | quadrant-ok-06 |
 | quadrant | fit ladder: field keys, legend wrap, fallback | quadrant-ok-08, quadrant-ok-09, quadrant-reject-09 |
 | quadrant | point styles fall back | quadrant-reject-01 |
@@ -2238,7 +2245,7 @@ The title follows common rule 3. No config key is honored.
 | gitGraph | branch, checkout, switch | gitGraph-ok-02, gitGraph-reject-01, gitGraph-reject-03 |
 | gitGraph | merge with id, tag and type | gitGraph-ok-02, gitGraph-ok-03, gitGraph-reject-02 |
 | gitGraph | cherry-pick with tags and `parent:` | gitGraph-ok-04, gitGraph-reject-05, gitGraph-ok-15 |
-| gitGraph | `order:`, `mainBranchOrder`, `mainBranchName` | gitGraph-ok-05 |
+| gitGraph | `order:`, `mainBranchOrder`, `mainBranchName` | gitGraph-ok-05, gitGraph-ok-16 |
 | gitGraph | quoted and `feature/x.y` branch names | gitGraph-ok-07 |
 | gitGraph | `title`, comments | gitGraph-ok-07 |
 | gitGraph | branch before the first commit | gitGraph-ok-08 |

@@ -211,9 +211,23 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
 // nonMarkdownToHTML turns a literal \n into <br />.
 test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
   for (const [s, why] of [['A[fa:fa-book]', 'icon'], ['A["fab:fa-github x"]', 'icon'], ['A -->|fa:fa-car| B', 'icon'], ['A["$$x^2$$"]', 'math'],
-    ['A -->|"$$x$$"| B', 'math'], ['subgraph S ["fa:fa-a"]\nA\nend', 'icon'], ['A["a\\nb"]', 'newline'], ['A -->|"a\\nb"| B', 'newline']])
+    ['A -->|"$$x$$"| B', 'math'], ['subgraph S ["fa:fa-a"]\nA\nend', 'icon'], ['subgraph S ["a\\nb"]\nA\nend', 'newline']])
     assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s)
   assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
+})
+
+// #16. Mermaid 12.2.0's nonMarkdownToHTML replaces /\\n|\n/ with <br /> in every HTML label before decodeEntities, so a
+// literal \n in a node, |…| or text-form edge label, or an @{ labelType: text } label, renders exactly as <br /> does
+// (byte-identical SVG under JSDOM, wrapping included); \\n shows \ then a break. A Markdown label shows it as written.
+test('#16: a literal \\n in an HTML flowchart label is a line break, as Mermaid draws it', () => {
+  const rows = (s: string) => F(s).nodes.map((n: any) => n.rows.map((r: any) => r.text))
+  assert.deepEqual(rows('A["a\\nb"]'), [['a', 'b']])
+  assert.deepEqual(rows('A(a\\nb)'), [['a', 'b']])
+  assert.deepEqual(rows('A["a\\\\nb"]'), [['a\\', 'b']])
+  assert.deepEqual(rows('A["`a\\nb`"]'), [['a\\nb']])
+  assert.deepEqual(rows("A@{ label: 'a\\nb' }"), [['a\\nb']])
+  for (const s of ['A -->|"a\\nb"| B', 'A -->|a\\nb| B', 'A -- a\\nb --> B']) assert.deepEqual(F(s).edges.map((e: any) => e.label), ['a<br />b'], s)
+  assert.deepEqual(['A["a\\n"]', 'A["a\\n\\nb"]', 'A["a\\n<br>b"]'].map(s => F(s).reason), ['label-blank-line', 'label-blank-line', 'label-blank-line'])
 })
 
 // Cross-family review of 37a8ff2: each repro verified against Mermaid 12.2.0 under JSDOM. Where we would draw other than
@@ -228,7 +242,7 @@ test('A5.errors: a #…; code named like an Object property falls back as entity
   assert.deepEqual(bad.map(s => [s, F(s)]), bad.map(s => [s, { reason: 'entity' }]))
 })
 test('A1: an @{ labelType } of text or string makes the label HTML, as Mermaid does; any other leaves it Markdown', () => {
-  assert.deepEqual(F("A@{ labelType: text, label: 'a\\nb' }"), { reason: 'newline' })
+  assert.deepEqual(F("A@{ labelType: text, label: 'a\\nb' }").nodes, [N('A', 'rect', 'node', 0, 'a', 'b')])
   assert.deepEqual(F('A@{ labelType: text, label: "a*b*c" }').nodes, [N('A', 'rect', 'node', 0, 'a*b*c')])
   assert.deepEqual(F('A@{ labelType: markdown, label: "a*b*c" }').nodes[0].rows[0].text, emphasize('a*b*c'))
 })

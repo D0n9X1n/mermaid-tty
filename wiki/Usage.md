@@ -68,7 +68,7 @@ The diagram type comes from the block's first line, after any frontmatter and `%
 | Git graph | `gitGraph`, `gitGraph:`, `gitGraph LR:`, `gitGraph TB:` or `gitGraph BT:` |
 | Timeline | `timeline`, optionally `LR` or `TD` |
 | User journey | `journey` |
-| XY chart | `xychart`, `xychart-beta`; optionally `vertical` or `horizontal` |
+| XY chart | `xychart`, `xychart-beta`; optionally `vertical` or `horizontal`. The value rows show the values Mermaid encodes as bar heights and line points, whatever `showDataLabel` is. |
 | Quadrant chart | `quadrantChart` |
 
 Keywords are case-sensitive. Any other header, `flowchart-elk` included, shows its source.
@@ -78,7 +78,7 @@ A block is drawn only if every statement in it is in its type's supported subset
 - Styling, interaction and accessibility statements are ignored only where that type's parser accepts them. For example, flowchart accepts `classDef`, `class`, `:::`, `style`, `linkStyle`, `click`, `accTitle` and `accDescr`; `class` is not ignored in a class diagram. The plugin theme picks the colors.
 - A supported `title:` in the frontmatter is drawn as a bold row above the diagram.
 
-**Known limits.** The frontmatter scanner reads a strict YAML subset, not arbitrary YAML. Its config supports nested mappings with one-line scalar values, not lists, flow collections, anchors or multiline values. Unquoted decimal config values, such as `0.5`, fall back with `config:<key>`; only safe decimal integers are accepted as numbers ([issue #7](https://github.com/D0n9X1n/mermaid-tty/issues/7)). Quoting a value makes it a string, not an equivalent numeric setting. Config is not a general way to customize the terminal layout.
+**Known limits.** The frontmatter scanner reads a strict YAML subset, not arbitrary YAML. Its config supports nested mappings with one-line scalar values, not lists, flow collections, anchors or multiline values. Unquoted decimal config values, such as `0.5`, fall back with `config:<key>`; only safe decimal integers are accepted as numbers ([issue #7](https://github.com/D0n9X1n/mermaid-tty/issues/7)). Quoting a value makes it a string, not an equivalent numeric setting. Config is not a general way to customize the terminal layout. A config setting, from frontmatter or a directive, draws only if it is on an allowlist: settings mermaid-tty honours (`gitGraph.mainBranchName`, `gitGraph.mainBranchOrder`, `mindmap.colorBy`, `timeline.disableMulticolor`, `htmlLabels: true`), Mermaid settings it already draws (`gitGraph.showBranches: true`, `gitGraph.showCommitLabel: true`, `xyChart.showDataLabel` as `true` or `false`), and settings checked against Mermaid 12.2.0 to change only pixels: `theme` (one of Mermaid's five), `logLevel`, `markdownAutoWrap`, `pie.textPosition` from 0.5 to 1, `quadrantChart.chartWidth` and `chartHeight` from 500 to 2000, and `themeVariables.pieStrokeWidth` and `pieOuterStrokeWidth` from `0.5px` to Mermaid's default `2px`. Any other setting, or a value of another type or outside its range, falls back with `config:<key>`. That includes `wrap`; font sizes and families, which change where Mermaid hyphenates; every colour, since any colour can match the one under or over it and hide text; text sizes, since `0px` hides text; wrapping widths; and every `sequence.*` geometry setting.
 
 A gitGraph is drawn as vertical branch lanes: time runs down for `LR` and `TB`, and up for `BT`. Auto-generated commit ids are hidden; explicit ids, messages and tags are shown. A cherry-pick is a `◎` with its tag (by default `cherry-pick:<id>`), not a line back to the source commit. A fork or merge whose lane would connect the wrong commits falls back.
 
@@ -106,8 +106,8 @@ When mermaid-tty can't draw a diagram exactly, it shows the original code block,
 
 - its header names a type mermaid-tty doesn't draw;
 - a statement is outside the supported subset, or doesn't parse;
-- it has `%%{` anywhere after the frontmatter, even inside a comment or quoted label, or an inline `%%` outside double quotes;
-- its frontmatter, title or config is outside the scanner's subset;
+- it has `%%{` anywhere after the frontmatter, even inside a comment or quoted label, other than a line that is one whole `%%{init: …}%%` or `%%{initialize: …}%%` directive whose settings are on the config allowlist; or an inline `%%` outside double quotes;
+- its frontmatter, title or config is outside the scanner's subset, or a config setting is not on the allowlist (see Known limits);
 - a label or title has a character that terminals draw at differing widths;
 - no step of the fit ladder fits the terminal's width, or the validator rejects every drawing.
 
@@ -127,18 +127,18 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 |---|---|
 | `unknown-type`, `fallback:<keyword>`, `disabled:<type>` | Unknown header, explicitly source-only keyword, or unsupported diagram type. |
 | `header`, `syntax`, `syntax:<line>` | Invalid header form, or a statement outside the supported subset. |
-| `directive` | `%%{` anywhere after frontmatter, or inline `%%` outside double quotes. |
+| `directive` | `%%{` after frontmatter that is not a whole-line `init` or `initialize` directive with strict JSON settings (no `null`, array, empty object or `config` key), or a `%%{wrap}%%`; or inline `%%` outside double quotes. |
 | `frontmatter`, `title`, `repeat:<line>`, `repeat:header` | Unsupported YAML or title form, duplicate title, id or declaration. |
-| `config:htmlLabels` | An `htmlLabels` or nested `*.htmlLabels` setting is not boolean `true`; Mermaid's non-HTML labels follow different text rules. |
-| `config:<key>` | Unsupported numeric-looking config scalar, or invalid gitGraph main-branch name or order. |
+| `config:htmlLabels` | An `htmlLabels` setting other than `htmlLabels` or `flowchart.htmlLabels` set to boolean `true`; Mermaid's non-HTML labels follow different text rules. |
+| `config:<key>` | A config setting not on the allowlist (`wrap` from `%%{wrap}%%` included), a value of a type Mermaid rejects, an unsupported numeric-looking config scalar, or an invalid gitGraph main-branch name or order. |
 | `empty`, `root:<line>`, `blank:<line>`, `label-blank-line` | Missing content, a second mindmap root, or a blank label/line the type cannot preserve. |
 | `entity` | Mermaid would decode an entity or its internal entity markers rather than show the text as written. |
 | `html` | Markup, sanitization, escaping or a line break cannot be reproduced in that field. |
 | `markdown-string`, `markdown` | Mermaid would show Markdown other than bold and italic: a backquoted `@{ label }`, an escape, a code span, a style nested in itself, or emphasis where it is not drawn (a class name, annotation or member, an ER entity name, a state composite title). |
-| `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break. |
+| `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break where mermaid-tty draws none, such as a subgraph title. A literal `\n` in a flowchart node or edge label draws as a line break, as in Mermaid. |
 | `whitespace` | Whitespace the diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph. |
 | `unsupported-char U+XXXX` | A character whose terminal width is not reliable. See Width and CJK. |
-| `generic` | ER text contains multiple `~` characters; Mermaid turns a `~...~` pair into `<...>` rather than showing it literally. |
+| `generic` | An ER entity label or attribute column whose `~...~` pairs Mermaid shows as `<...>` would then spell a `<br>`. Other `~...~` pairs draw as `<...>` where Mermaid shows them so, and as written elsewhere. |
 | `id-collision`, `id-clash` | An id collides with a node, frame or internally generated owner id. |
 | `unclosed-subgraph`, `unclosed-frame`, `cluster-edge` | An unclosed block, or an edge to a cluster the graph layout cannot place. |
 | `invisible-label` | A label on an invisible flowchart edge cannot be shown faithfully. |
