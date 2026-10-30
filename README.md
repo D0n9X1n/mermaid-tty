@@ -84,6 +84,8 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **Why do I sometimes see the Mermaid source?** mermaid-tty falls back to the original fence when it can't parse a diagram, doesn't support its syntax or type, or can't draw it faithfully within the available width. Unclosed fences stay as text. `claude --debug` logs fallback reasons.
 
+**Which Mermaid features always show the source?** A few can't be drawn as Mermaid shows them in a terminal, so they fall back by design: `fa:` icons render as SVG or through Font Awesome CSS, `$$…$$` math needs typesetting, and `htmlLabels: false` follows different text rules. Whitespace that pie and gitGraph reject, such as an unquoted no-break space, fails in Mermaid too.
+
 **How wide are diagrams?** No drawn row exceeds the terminal's columns. Depending on the type, mermaid-tty tightens gaps, wraps labels, turns horizontal graphs vertical, or moves text into a keyed legend. If nothing fits, it shows the source.
 
 **Do CJK labels line up?** Yes. Wide characters count as 2 columns and combining marks as 0. Characters with unreliable terminal widths fall back rather than break alignment.
