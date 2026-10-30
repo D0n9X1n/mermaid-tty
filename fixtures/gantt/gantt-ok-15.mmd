@@ -1,0 +1,9 @@
+%% expect 120 natural
+%% expect 80 natural
+%% expect 60 keyed
+gantt
+    dateFormat YYYY-MM-DD HH:mm
+    axisFormat %H:%M
+    Load trucks :l, 2024-03-01 08:00, 2024-03-01 11:30
+    Drive :d, after l, 2024-03-01 15:00
+    Unload :after d, 90m

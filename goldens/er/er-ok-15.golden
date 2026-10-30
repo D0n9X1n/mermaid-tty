@@ -1,0 +1,132 @@
+@60
+   [ CUSTOMER ]
+        │
+        │1
+        │
+      pays
+        │
+        │0..*
+        │
+┌─Billing─────┐
+│ [ INVOICE ] │
+│      │      │
+│      │1     │
+│    ┌─┘      │
+│   has       │
+│    │        │
+│    │0..*    │
+│    │        │
+│ [ LINE ]    │
+└─────────────┘
+       │
+       │1
+      ┌┘
+    posts
+      │
+      │1
+      │
+ [ LEDGER ]
+@60 roles
+   nnNNNNNNNNnn
+        e
+        eA
+        e
+      LLLL
+        e
+        eAAAA
+        e
+ffFFFFFFFffffff
+f nnNNNNNNNnn f
+f      e      f
+f      eA     f
+f    eee      f
+f   LLL       f
+f    e        f
+f    eAAAA    f
+f    e        f
+f nnNNNNnn    f
+fffffffffffffff
+       e
+       eA
+      ee
+    LLLLL
+      e
+      eA
+      e
+ nnNNNNNNnn
+@80
+                            ┌─Billing───┐
+                            │           │
+                            │[ INVOICE ]│
+                            │     │     │
+                            │     │1    │
+                            │   ┌─┘     │
+                            │   │       │
+                            │   │       │            1
+                            │   │       │ 1┌──posts────[ LEDGER ]
+                       0..* │  has      │──┘
+             1┌──pays───────│   │       │
+[ CUSTOMER ]──┘             │   │       │
+                            │   │       │
+                            │   │0..*   │
+                            │   │       │
+                            │[ LINE ]   │
+                            │           │
+                            └───────────┘
+@80 roles
+                            ffFFFFFFFffff
+                            f           f
+                            fnnNNNNNNNnnf
+                            f     e     f
+                            f     eA    f
+                            f   eee     f
+                            f   e       f
+                            f   e       f            A
+                            f   e       f AeeeLLLLLeeeennNNNNNNnn
+                       AAAA f  LLL      feee
+             AeeeLLLLeeeeeeef   e       f
+nnNNNNNNNNnneee             f   e       f
+                            f   e       f
+                            f   eAAAA   f
+                            f   e       f
+                            fnnNNNNnn   f
+                            f           f
+                            fffffffffffff
+@120
+                            ┌─Billing───┐
+                            │           │
+                            │[ INVOICE ]│
+                            │     │     │
+                            │     │1    │
+                            │   ┌─┘     │
+                            │   │       │
+                            │   │       │            1
+                            │   │       │ 1┌──posts────[ LEDGER ]
+                       0..* │  has      │──┘
+             1┌──pays───────│   │       │
+[ CUSTOMER ]──┘             │   │       │
+                            │   │       │
+                            │   │0..*   │
+                            │   │       │
+                            │[ LINE ]   │
+                            │           │
+                            └───────────┘
+@120 roles
+                            ffFFFFFFFffff
+                            f           f
+                            fnnNNNNNNNnnf
+                            f     e     f
+                            f     eA    f
+                            f   eee     f
+                            f   e       f
+                            f   e       f            A
+                            f   e       f AeeeLLLLLeeeennNNNNNNnn
+                       AAAA f  LLL      feee
+             AeeeLLLLeeeeeeef   e       f
+nnNNNNNNNNnneee             f   e       f
+                            f   e       f
+                            f   eAAAA   f
+                            f   e       f
+                            fnnNNNNnn   f
+                            f           f
+                            fffffffffffff

@@ -1,0 +1,68 @@
+@60
+[ A ]        [ C ]
+  │            │
+  │1           │1
+  │            │
+  │            │
+  a            b
+  │            │
+  │            │
+  │0..*        │0..*
+  │            │
+[ B ]        [ D ]
+a Abcdefghijklmnopqrstuvwxyzabcd
+b Zyxwvutsrqponmlkjihgfedcbazyxw
+@60 roles
+nnNnn        nnNnn
+  e            e
+  eA           eA
+  e            e
+  e            e
+  l            l
+  e            e
+  e            e
+  eAAAA        eAAAA
+  e            e
+nnNnn        nnNnn
+l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+@80
+             [ A ]                           [ C ]
+               │                               │
+               │1                              │1
+               │                               │
+Abcdefghijklmnopqrstuvwxyzabcd  Zyxwvutsrqponmlkjihgfedcbazyxw
+               │                               │
+               │0..*                           │0..*
+               │                               │
+            [ B ]                           [ D ]
+@80 roles
+             nnNnn                           nnNnn
+               e                               e
+               eA                              eA
+               e                               e
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+               e                               e
+               eAAAA                           eAAAA
+               e                               e
+            nnNnn                           nnNnn
+@120
+             [ A ]                           [ C ]
+               │                               │
+               │1                              │1
+               │                               │
+Abcdefghijklmnopqrstuvwxyzabcd  Zyxwvutsrqponmlkjihgfedcbazyxw
+               │                               │
+               │0..*                           │0..*
+               │                               │
+            [ B ]                           [ D ]
+@120 roles
+             nnNnn                           nnNnn
+               e                               e
+               eA                              eA
+               e                               e
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+               e                               e
+               eAAAA                           eAAAA
+               e                               e
+            nnNnn                           nnNnn

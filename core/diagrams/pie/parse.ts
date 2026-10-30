@@ -3,6 +3,7 @@
 import { parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
+import { drawable, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // A slice: its label, its value as written and as an exact decimal, and its source index.
@@ -21,9 +22,11 @@ const SLICE = /^(?:"([^"]*)"|'([^']*)')[ \t]*:[ \t]*(.*)$/
 const TOKEN = /^[+-]?\d+(\.\d+)?$/
 const POSITIVE = /^(?:[1-9]\d*|\d+\.\d+)$/
 
-// Why text cannot be drawn, or null. Mermaid encodes each #…; of the diagram body as an entity, which the SVG decodes.
-function undrawable(text: string): Fail | null {
-  if (/#\w+;/.test(text)) return fail('entity')
+// Why text cannot be drawn, or null: text Mermaid shows otherwise in a field of mode and br fails as drawable says, and so
+// does an unsupported character. A slice is plain, each <br> drawn as written; a title is sanitized, with no <br>.
+function undrawable(text: string, mode: Mode, br: Br): Fail | null {
+  const f = drawable(text, mode, br)
+  if (f) return f
   const bad = unsupported(text)
   return bad ? fail(`unsupported-char ${bad}`) : null
 }
@@ -31,7 +34,7 @@ function undrawable(text: string): Fail | null {
 // The pie src declares, or why it cannot be drawn: 'header' (a header outside the subset), 'syntax:<n>' (a line that is
 // no statement, a label with a backslash, a value that is no token, or an accDescr { block left open or not ending its
 // line), 'domain:<n>' (a token outside the subset: 0, a sign or a leading 0), 'repeat:<n>' (a label seen before, or a
-// second title), 'repeat:header' (a header title after a frontmatter one: Source numbers neither line), 'entity' or
+// second title), 'repeat:header' (a header title after a frontmatter one: Source numbers neither line), 'entity', 'html' or
 // 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no slice).
 export function parsePie(src: Source): Pie | Fail {
   const head = HEADER.exec(src.header)
@@ -69,7 +72,7 @@ function statement(pie: Pie, t: string, n: number): Fail | null {
 // Sets pie's title to text, trimmed, read at where: its line, or 'header'. Fails 'repeat:<where>' if pie has a title.
 function titled(pie: Pie, text: string, where: number | 'header'): Fail | null {
   if (pie.title !== null) return fail(`repeat:${where}`)
-  const t = text.trim(), bad = undrawable(t)
+  const t = text.trim(), bad = undrawable(t, 'sanitized', 'none')
   if (bad) return bad
   pie.title = t
   return null
@@ -82,7 +85,7 @@ function slice(pie: Pie, m: RegExpExecArray, n: number): Fail | null {
   const value = POSITIVE.test(raw) ? parseDec(raw) : null
   if (!value || value.n <= 0n) return fail(`domain:${n}`)
   if (pie.slices.some(s => s.label === label)) return fail(`repeat:${n}`)
-  const bad = undrawable(label)
+  const bad = undrawable(label, 'plain', 'literal')
   if (bad) return bad
   pie.slices.push({ label, raw, value, order: pie.slices.length })
   return null

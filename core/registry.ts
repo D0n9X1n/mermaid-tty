@@ -31,8 +31,7 @@ export const KEYWORDS: Readonly<Record<string, DiagramType | null>> = {
   'packet-beta': 'packet', packet: 'packet',
 }
 
-// The types C draws (plan C §4). Each has its own core/diagrams/<type>/layout.ts, which files a stub (diagrams/stub.ts)
-// until the type's own task replaces it.
+// The types C draws (plan C §4). Each has its own core/diagrams/<type>/{parse,layout}.ts, loaded by diagrams/all.ts.
 export const TIER1: readonly DiagramType[] =
   ['state', 'class', 'er', 'mindmap', 'gantt', 'pie', 'gitGraph', 'timeline', 'journey', 'xychart', 'quadrant']
 // The types C gates (plan C §9): each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens, and

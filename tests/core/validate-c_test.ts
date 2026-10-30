@@ -142,3 +142,34 @@ test('A5.mutation-tests: with members set, text with two distinct owners, the se
   assert.equal(validate(relist(member(['U', 'U']), [])), null); assert.deepEqual(validate(relist(member(['U', 'V']), [])), { reason: 'member-unlisted' })
   assert.equal(validate(relist(member(['U.m0', 'U']), undefined)), null)                    // members unset, as in every A drawing: no row is checked
 })
+// Pill U, caps at columns 0 and 9 over rows 0-2, its head 'U' on row 0; members U.m0 '+a' and U.m1 '+b' drawn at the
+// given cells, each placed by its offset from the pill's top-left cell, (1,2) and (2,2). Row 3 is free.
+function placed(m0: [number, number], m1: [number, number]): Drawing {
+  const c = createCanvas(4, 10, 10)
+  for (const r of [0, 1, 2]) { c.cap(r, 0, '[', 'node', 'U'); c.cap(r, 9, ']', 'node', 'U') }
+  c.text(0, 2, 'U', 'node', 'U'); c.text(m0[0], m0[1], '+a', 'label', ['U.m0', 'U']); c.text(m1[0], m1[1], '+b', 'label', ['U.m1', 'U'])
+  return c.toDrawing({ labels: [{ owner: 'U', text: 'U' }, { owner: 'U.m0', text: '+a' }, { owner: 'U.m1', text: '+b' }], edges: [], edgeLabels: [],
+    frames: [], members: [{ id: 'U.m0', parent: 'U', place: { r: 1, c: 2 } }, { id: 'U.m1', parent: 'U', place: { r: 2, c: 2 } }] })
+}
+test('A5.mutation-tests: a placed member sits in its own pill, on its own row, in source order, left-aligned as drawn', () => {
+  assert.equal(validate(placed([1, 2], [2, 2])), null)
+  assert.deepEqual(validate(placed([1, 2], [3, 2])), { reason: 'member-outside' })            // moved below its pill
+  assert.deepEqual(validate(placed([2, 2], [1, 2])), { reason: 'member-misplaced' })          // rows swapped: out of order
+  assert.deepEqual(validate(placed([1, 2], [2, 3])), { reason: 'member-misplaced' })          // one cell right: not left-aligned
+  assert.deepEqual(validate(placed([1, 2], [1, 5])), { reason: 'member-misplaced' })          // on another member's row
+})
+// Pill S on row 1 and side note n 'ab' joined to it by ' ┄┄' caps owned by n:link; the note's first cell at (r, c).
+// Right: ( s ) at columns 1-3, ┄┄ at 4-5, ' ' at 6, the note from 7. Left: the note ending at 2, ' ' at 3, ┄┄ at 4-5, ( s ) at 6-8.
+function noted(side: 'left' | 'right', r: number, c: number): Drawing {
+  const cv = createCanvas(3, 11, 11), p = side === 'right' ? 1 : 6, l = side === 'right' ? 4 : 3
+  cv.cap(1, p, '(', 'node', 'S'); cv.text(1, p + 1, 's', 'node', 'S'); cv.cap(1, p + 2, ')', 'node', 'S')
+  if (side === 'right') { cv.cap(1, l, '┄┄', 'note', 'n:link'); cv.cap(1, l + 2, ' ', 'note', 'n:link') }
+  else { cv.cap(1, l, ' ', 'note', 'n:link'); cv.cap(1, l + 1, '┄┄', 'note', 'n:link') }
+  cv.text(r, c, 'ab', 'note', 'n')
+  return cv.toDrawing({ labels: [{ owner: 'S', text: 's' }, { owner: 'n', text: 'ab' }], edges: [], edgeLabels: [], frames: [] })
+}
+test('A5.mutation-tests: a side note is bound to its link: on its row, against it, left-aligned', () => {
+  assert.equal(validate(noted('right', 1, 7)), null); assert.equal(validate(noted('left', 1, 1)), null)
+  for (const [r, c] of [[0, 7], [2, 7], [1, 8]]) assert.deepEqual(validate(noted('right', r, c)), { reason: 'note-unbound' }, `right ${r},${c}`)
+  for (const [r, c] of [[0, 1], [2, 1], [1, 0]]) assert.deepEqual(validate(noted('left', r, c)), { reason: 'note-unbound' }, `left ${r},${c}`)
+})

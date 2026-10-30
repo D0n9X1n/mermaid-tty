@@ -12,8 +12,11 @@ function random(seed: number) {
 }
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
 // Strict clearance can require another spacing attempt; both rates have a two-point regression allowance.
-const ceilings = { dag: 3.0, mixed: 6.2, clusters: 8.4, loops: 11.8 }
-const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 18.2, loops: 23.0 }
+const ceilings = { dag: 3.0, mixed: 6.2, clusters: 7.8, loops: 11.8 }
+// clusters rose with V6 (raw 17.6 -> 22.0, retry 6.8 -> 11.6): each graph lost had an edge between nodes of its frame,
+// most often a back edge on the outside lane, routed out of the frame and back, which validate rejects (edge-outside-frame).
+// V8 won most back: a back edge between nodes of one open frame takes a lane inside it (raw 18.2, retry 7.4).
+const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 18.6, loops: 23.0 }
 
 function graphFor(kind: typeof classes[number], index: number, next: (n: number) => number) {
   const count = 2 + next(11), names = Array.from({ length: count }, (_, i) => `N${i}`)

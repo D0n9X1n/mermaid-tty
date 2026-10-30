@@ -25,7 +25,7 @@ To update, run `claude plugin update mermaid-tty@mermaid-tty`, then restart Clau
 
 ## Platforms and terminals
 
-mermaid-tty works the same on Windows, macOS and Linux: it has no OS-specific code, and CI runs its tests on all three.
+mermaid-tty runs on Windows, macOS and Linux. The runtime in `core/` and `hooks/` has no OS-specific code; CI runs the checks and real-Claude-Code end-to-end tests on all three. The test harness uses ConPTY on Windows and tmux on macOS and Linux; users need neither harness nor its dependencies.
 
 It draws only in Claude Code's terminal interface. On any other surface, a reply passes through untouched and keeps that surface's own drawing.
 
@@ -57,26 +57,32 @@ The diagram type comes from the block's first line, after any frontmatter and `%
 
 | Diagram | Header keywords |
 |---|---|
-| Flowchart | `flowchart`, `graph` |
+| Flowchart | `flowchart`, `graph`; optionally followed by `TD`, `TB`, `BT`, `LR` or `RL` |
 | Sequence | `sequenceDiagram` |
 | State | `stateDiagram`, `stateDiagram-v2` |
 | Class | `classDiagram`, `classDiagram-v2` |
 | Entity relationship (ER) | `erDiagram` |
 | Mindmap | `mindmap` |
 | Gantt | `gantt` |
-| Pie | `pie` |
-| Git graph | `gitGraph` |
-| Timeline | `timeline` |
+| Pie | `pie`, optionally `showData`, then optionally `title <text>` |
+| Git graph | `gitGraph`, `gitGraph:`, `gitGraph LR:`, `gitGraph TB:` or `gitGraph BT:` |
+| Timeline | `timeline`, optionally `LR` or `TD` |
 | User journey | `journey` |
-| XY chart | `xychart`, `xychart-beta` |
+| XY chart | `xychart`, `xychart-beta`; optionally `vertical` or `horizontal` |
 | Quadrant chart | `quadrantChart` |
 
 Keywords are case-sensitive. Any other header, `flowchart-elk` included, shows its source.
 
 A block is drawn only if every statement in it is in its type's supported subset. If one statement isn't, the whole block shows its source: mermaid-tty never draws part of a diagram.
 
-- `classDef`, `class`, `:::`, `style`, `linkStyle`, `click`, `accTitle` and `accDescr` are read and ignored. The theme picks the colors.
-- A `title:` in the frontmatter is drawn as a bold row above the diagram.
+- Styling, interaction and accessibility statements are ignored only where that type's parser accepts them. For example, flowchart accepts `classDef`, `class`, `:::`, `style`, `linkStyle`, `click`, `accTitle` and `accDescr`; `class` is not ignored in a class diagram. The plugin theme picks the colors.
+- A supported `title:` in the frontmatter is drawn as a bold row above the diagram.
+
+**Known limits.** The frontmatter scanner reads a strict YAML subset, not arbitrary YAML. Its config supports nested mappings with one-line scalar values, not lists, flow collections, anchors or multiline values. Unquoted decimal config values, such as `0.5`, fall back with `config:<key>`; only safe decimal integers are accepted as numbers ([issue #7](https://github.com/D0n9X1n/mermaid-tty/issues/7)). Quoting a value makes it a string, not an equivalent numeric setting. Config is not a general way to customize the terminal layout.
+
+A gitGraph is drawn as vertical branch lanes: time runs down for `LR` and `TB`, and up for `BT`. Auto-generated commit ids are hidden; explicit ids, messages and tags are shown. A cherry-pick is a `◎` with its tag (by default `cherry-pick:<id>`), not a line back to the source commit. A fork or merge whose lane would connect the wrong commits falls back.
+
+The fence scanner recognizes LF, CRLF and lone CR as line endings, not Unicode line separators. A closing fence is indented at most three spaces and has only spaces or tabs after it. Block-quote prefixes and four-space-indented fences are not recognized as diagram fences.
 
 ## Source view
 
@@ -100,8 +106,8 @@ When mermaid-tty can't draw a diagram exactly, it shows the original code block,
 
 - its header names a type mermaid-tty doesn't draw;
 - a statement is outside the supported subset, or doesn't parse;
-- it has a `%%{` directive, or a `%%` comment after other text on a line;
-- its frontmatter has no closing `---`, or two titles;
+- it has `%%{` anywhere after the frontmatter, even inside a comment or quoted label, or an inline `%%` outside double quotes;
+- its frontmatter, title or config is outside the scanner's subset;
 - a label or title has a character that terminals draw at differing widths;
 - no step of the fit ladder fits the terminal's width, or the validator rejects every drawing.
 
@@ -111,22 +117,68 @@ The reason never appears on screen. To see it, start Claude Code in debug mode:
 claude --debug
 ```
 
-Each fallback writes one line to the debug log: `mermaid-tty fallback: <reason>`. To write the debug log to a file, use `claude --debug-file <path>`. Results are cached by source, width and theme, so a diagram logs its reason once for each width and theme.
+Each uncached fallback writes `mermaid-tty fallback: <reason>` to the debug log. Use `claude --debug-file <path>` to choose the log file. Results are cached by source, width and theme; a reason logs again after eviction or a new session.
+
+Reason codes can carry a source line suffix, such as `html:3`; line numbers count from the fence body's first line, including frontmatter. The table groups related codes.
 
 | Reason | Meaning |
 |---|---|
-| `unknown-type` | The header isn't a Mermaid keyword that mermaid-tty knows. |
-| `fallback:<keyword>`, `disabled:<type>` | A Mermaid type that mermaid-tty doesn't draw. |
-| `syntax:<line>` | The statement on that line of the block is outside the supported subset, or doesn't parse. |
-| `directive` | A `%%{` directive, or a `%%` comment after text outside double quotes. |
-| `frontmatter`, `title` | The frontmatter has no closing `---`, or has a second `title:`. |
-| `empty` | The block has no header, or nothing after it. |
-| `unsupported-char U+XXXX` | A label or title has that character. See Width and CJK below. |
-| `too-wide`, `row-too-wide`, `word-too-wide` | No layout fits the terminal's width. `word-too-wide` means a word in a flowchart label is too wide to wrap. |
-| `label-missing`, `label-dup`, `edge-disconnected`, `line-dangling`, `overwrite` | The validator rejected the drawing. See [Architecture](Architecture). |
-| `internal-error` | A bug in mermaid-tty. |
+| `unknown-type`, `fallback:<keyword>`, `disabled:<type>` | Unknown header, explicitly source-only keyword, or unsupported diagram type. |
+| `header`, `syntax`, `syntax:<line>` | Invalid header form, or a statement outside the supported subset. |
+| `directive` | `%%{` anywhere after frontmatter, or inline `%%` outside double quotes. |
+| `frontmatter`, `title`, `repeat:<line>`, `repeat:header` | Unsupported YAML or title form, duplicate title, id or declaration. |
+| `config:htmlLabels` | An `htmlLabels` or nested `*.htmlLabels` setting is not boolean `true`; Mermaid's non-HTML labels follow different text rules. |
+| `config:<key>` | Unsupported numeric-looking config scalar, or invalid gitGraph main-branch name or order. |
+| `empty`, `root:<line>`, `blank:<line>`, `label-blank-line` | Missing content, a second mindmap root, or a blank label/line the type cannot preserve. |
+| `entity` | Mermaid would decode an entity or its internal entity markers rather than show the text as written. |
+| `html` | Markup, sanitization, escaping or a line break cannot be reproduced in that field. |
+| `markdown-string`, `markdown` | Mermaid's Markdown label form, emphasis or escapes would change the text. |
+| `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break. |
+| `whitespace` | Whitespace the diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph. |
+| `unsupported-char U+XXXX` | A character whose terminal width is not reliable. See Width and CJK. |
+| `generic` | ER text contains multiple `~` characters; Mermaid turns a `~...~` pair into `<...>` rather than showing it literally. |
+| `id-collision`, `id-clash` | An id collides with a node, frame or internally generated owner id. |
+| `unclosed-subgraph`, `unclosed-frame`, `cluster-edge` | An unclosed block, or an edge to a cluster the graph layout cannot place. |
+| `invisible-label` | A label on an invisible flowchart edge cannot be shown faithfully. |
+| `scope:<line>`, `mark-label:<line>` | A state crosses incompatible scopes, or a special state mark is given a description. |
+| `semicolon`, `hash` | A semicolon in state/sequence text or a hash in sequence text would be parsed differently. |
+| `keyword`, `id`, `create`, `destroy`, `destroyed`, `inactive` | Unsupported sequence participant id, lifecycle or activation use. |
+| `box-color`, `box-split`, `empty-box`, `autonumber` | Unsupported sequence box declaration/grouping or automatic numbering. |
+| `branch:<line>`, `checkout:<line>`, `merge:<line>`, `pick:<line>` | Invalid gitGraph branch operation, merge or cherry-pick. |
+| `link-ambiguous` | A gitGraph fork or merge would appear to connect the wrong commits. |
+| `section-empty`, `section-repeat`, `empty-section`, `section:<line>` | Empty or repeated gantt sections, an empty timeline section, or mixed sectioned/unsectioned timeline periods. |
+| `ref:<line>`, `start:<line>`, `date:<line>`, `order:<line>`, `ref-order:<line>`, `cycle` | Gantt reference, start/date, ordering or cyclic timing that cannot be resolved like Mermaid. |
+| `format-token`, `format-ymd`, `axis-format` | Unsupported gantt date or axis format. |
+| `domain`, `domain:<line>`, `length`, `series` | Invalid chart range/value, mismatched data length, or unsupported series count. |
+| `too-wide`, `row-too-wide`, `word-too-wide` | The drawing or an indivisible word cannot fit. |
+| `route-conflict`, `key-collision` | No unambiguous route, or quadrant keys would collide. |
+| `bad-columns`, `columns-mismatch`, `step`, `unregistered:<type>`, `internal-error` | Invalid width or an internal integration failure; not ordinary unsupported Mermaid syntax. |
 
-Other reasons name the syntax or the layout step that failed, such as `unclosed-subgraph`, `markdown-string`, `entity` or `route-conflict`. If you see `internal-error`, please report it, with the diagram's source, on the [GitHub repository](https://github.com/D0n9X1n/mermaid-tty).
+**The drawing would mislead.** The following validator failures mean the drawing cannot safely be shown, even if the source parsed. See [Architecture](Architecture) for the gate.
+
+| Reason | Meaning |
+|---|---|
+| `label-missing`, `label-dup`, `label-misplaced`, `label-unbound` | Text is missing, repeated, misplaced or no longer attached to its node/row. |
+| `edge-disconnected`, `end-misplaced`, `head-extra`, `head-on-junction`, `line-dangling` | An edge, endpoint or arrowhead is missing, misplaced, extra or ambiguous. |
+| `crossing-ambiguous`, `merge-ambiguous`, `line-glyph` | A crossing, merged route or line glyph would imply the wrong connections or line style. |
+| `overwrite`, `frame-broken`, `edge-outside-frame` | Cells conflict, a frame is open, or an internal edge leaves its frame. |
+| `label-not-adjacent`, `end-label`, `note-unbound`, `lifeline-unbound` | An edge label, cardinality, note or lifeline is not bound to its intended item. |
+| `bar`, `bar-misplaced`, `bar-stray` | A bar has the wrong length, position or owner. |
+| `member`, `member-unlisted`, `member-outside`, `member-misplaced` | A class member or ER attribute is missing, unlisted, outside its pill or in the wrong row/column. |
+| `key-missing`, `key-dup`, `key-mismatch`, `key-unbound`, `key-unplaced`, `key-adjacent`, `key-stray`, `key-class`, `key-partial` | A legend key is absent, repeated, wrong, detached, misplaced, visually joined, unexpected or inconsistently applied. |
+| `order-broken`, `glyph-wrong`, `glyph-misplaced` | Event order, a semantic mark or its position changed. |
+
+If you see `internal-error`, report it with the diagram's source on the [GitHub repository](https://github.com/D0n9X1n/mermaid-tty).
+
+**Text is field-specific.** The rules follow what Mermaid 12.2.0 actually displays, not just what its parser accepts (`docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md`, X1–X4):
+
+- HTML-style fields reject entity references and markup that Mermaid decodes, removes or rewrites. Ordinary `Q&A`, `Q & A` and `a < b` can stay literal; `a<b` cannot in an HTML label. All text modes reject Mermaid's `#name;`/`#123;` entities and internal entity markers.
+- Flowchart labels reject Markdown strings, icon tokens such as `fa:fa-user`, `$$...$$` math and a literal `\n`. State, class, ER and mindmap labels also reject Markdown emphasis and punctuation escapes that change the text. Ordinary `snake_case`, `_private`, `a*b` and `C:\Users` can remain literal. A literal `\n` in a class note stays as written.
+- Supported multiline fields split `<br>`, `<BR>`, `<br/>` and `<br />`. One-line fields, such as aliases and frame titles, may reject them even when Mermaid supports them. Timeline splits only lowercase `<br>`; pie slices and journey tasks/sections keep breaks literal; journey actors reject them. Titles are conservatively checked for sanitization, so any `<` falls back.
+- Turning HTML labels off changes Mermaid's text rendering. Any frontmatter `htmlLabels` or nested `*.htmlLabels` value other than boolean `true` falls back, even a quoted `"true"`.
+- Whitespace is not interchangeable in every grammar: pie and gitGraph reject unusual whitespace outside double quotes; mindmap and quadrant reject it in headers and blank lines. Ordinary spaces and tabs are the safest separators.
+
+These rules sometimes fall back conservatively on text Mermaid could show unchanged. That is intentional: source is better than a misleading approximation.
 
 ## Width and CJK
 
@@ -150,16 +202,32 @@ Long labels wrap at spaces. CJK text, which has no spaces, can also wrap between
 flowchart LR
   N[Natural spacing] -->|no fit| T[Tighter gaps]
   T -->|no fit| W[Wrapped labels]
-  W -->|no fit| R[LR or RL redrawn as TD or BT]
-  R -->|no fit| S[Show the source]
+  W -->|if applicable| R[Horizontal graph turned vertical]
+  R -->|if applicable| K[Keys with full text in a legend]
+  K -->|no fit| S[Show the source]
 ```
 
-- **Natural spacing**, then **tighter gaps**: closer ranks and nodes in a flowchart, less padding around message labels in a sequence diagram.
-- **Wrapped labels**: labels wrap at 24 columns, then 20, 16, 12 and 8.
-- **LR or RL redrawn as TD or BT**: a left-to-right flowchart is redrawn top-down, and a right-to-left one bottom-up. Only LR and RL flowcharts take this step.
-- **Show the source**: when no step fits, the block falls back.
+This is the shared graph ladder, with conditional steps. The exact ladders are:
 
-Sequence diagrams take the first three steps. The other types have ladders of their own, and every ladder ends in the source, so a diagram is drawn whole at your width, or not at all.
+| Type | Steps, in order |
+|---|---|
+| Flowchart | `natural` → `tight` → `wrap` → `lrToTd` only for `LR`/`RL`; no keys |
+| State, class, ER | `natural` → `tight` → `wrap` → `lrToTd` for `LR`/`RL` → `keyed` for supported keyable items |
+| Sequence | `natural` → `tight` → `wrap` |
+| Mindmap | `natural` → `compact` → `wrap` → `outline` |
+| Gantt | `natural` → `keyed` → `keyedWrap` |
+| Pie | `natural` → `wrap` |
+| Git graph | `natural` → `wrap` |
+| Timeline, `LR` or default | `natural` → `tight` → `wrap` → `lrToTd` |
+| Timeline, `TD` | `natural` → `wrap` |
+| Journey | `natural` → `wrap` → `oneActor` |
+| XY chart, vertical or default | `natural` → `horizontal` → `wrap` |
+| XY chart, horizontal | `natural` → `wrap` |
+| Quadrant | `natural` → `keyed` |
+
+Graphs and sequence diagrams try wrapping at 24, 20, 16, 12 and 8 columns. Mindmap uses those widths too, then tries an outline. Graph `lrToTd` turns `LR` into `TB` (top-down) and `RL` into `BT`; graph `keyed` also turns horizontal layouts vertical. Other charts use their own available-width calculations, not that universal wrap-width list.
+
+Keys replace eligible text in place and keep the full text in a legend: state notes; class notes and relation labels; ER comments and relation labels; gantt timings; quadrant point labels. `keyedWrap` also wraps gantt task names. Journey's `oneActor` gives each actor a separate row, and XY's `horizontal` turns a vertical plot sideways. Every ladder ends in the source when no drawing passes validation.
 
 ## Uninstall
 

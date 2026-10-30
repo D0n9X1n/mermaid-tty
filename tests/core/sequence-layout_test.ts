@@ -44,7 +44,7 @@ test('A2: autonumber numbers each message start + i × step, and a dotted reply 
 test('A2: a note left of and right of a participant sits one column off its lifeline', () => {
   const d = L('participant A\nparticipant B\nNote left of A: L\nNote right of B: R')
   assert.equal(validate(d), null)
-  assert.deepEqual(text(d), ['  [ A ] [ B ]', ' L  │     │', '    │     │  R'])
+  assert.deepEqual(text(d), ['    [ A ] [ B ]', '┆ L ┆ │     │', '      │     │ ┆ R ┆'])
 })
 test('A2: +/- activation draws ┃ from the activating line through the deactivating one', () => {
   const d = L('A->>+B: go\nB-->>-A: done')
@@ -155,5 +155,34 @@ test('A2: no sequence golden draws a label on a frame border or beside one of it
   for (const f of readdirSync('fixtures/sequence').filter(f => f.includes('-ok-'))) for (const w of [60, 80, 120]) {
     const r = explain(readFileSync(`fixtures/sequence/${f}`, 'utf8'), { columns: w, theme: 'mono' }) as any
     assert.deepEqual(touching(r.drawing), [], `${f}@${w}`)
+  }
+})
+// vr-A: mono has no fill, so a note must show itself by glyphs: ┆ caps either side of each line, the note's own.
+const mono = (t: string) => (explain(`sequenceDiagram\n${t}`, { columns: 60, theme: 'mono' }) as any).drawing
+test('A2: in mono a note reads apart from a message label: Note right of A then A->>B differs from A->>B: n<br/>x', () => {
+  const a = mono('Note right of A: n\nA->>B: x'), b = mono('A->>B: n<br/>x')
+  assert.equal(validate(a), null); assert.equal(validate(b), null)
+  assert.notDeepEqual(text(a), text(b))
+})
+test('A2: each note line is framed by ┆ caps in the note role, owned by the note', () => {
+  const d = L('participant A\nparticipant B\nNote over A,B: hi<br/>there')
+  assert.equal(validate(d), null)
+  const rows = d.cells.filter((row: any[]) => row.some(c => c?.kind === 'text' && c.owners[0] === 'n0'))
+  assert.equal(rows.length, 2)
+  for (const row of rows) {
+    const caps = row.filter((c: any) => c?.kind === 'cap' && c.owners[0] === 'n0')
+    assert.deepEqual(caps.map((c: any) => [c.ch, c.role]), [['┆', 'note'], ['┆', 'note']])
+  }
+})
+test('A2: validate rejects a note ┆ cap removed, given to another owner, or redrawn', () => {
+  for (const src of ['Note right of A: n\nA->>B: x', 'A->>B: hi\nNote over A,B: n<br/>m', 'A->>B: hi\nNote left of A: n']) {
+    const d = mono(src), caps = d.cells.flatMap((row: any[], r: number) => row.flatMap((c: any, k: number) => (c?.kind === 'cap' && /^n\d/.test(c.owners[0]) ? [[r, k]] : [])))
+    assert.ok(caps.length >= 2, src)
+    for (const [r, k] of caps) {
+      const old = d.cells[r][k]
+      for (const x of [null, { ...old, owners: ['A'] }, { ...old, ch: '│' }, { ...old, kind: 'fill', ch: ' ' }]) {
+        d.cells[r][k] = x; assert.notEqual(validate(d), null, `${src} (${r},${k}) ${JSON.stringify(x)}`); d.cells[r][k] = old
+      }
+    }
   }
 })

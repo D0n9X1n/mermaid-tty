@@ -31,7 +31,7 @@ test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.me
   assert.deepEqual(uses, [])
 })
 
-// One shared guard, not a copy per script: the copies compared the paths exactly, so on a Windows
+// One shared guard, not a copy per script (an async main() is awaited): the copies compared the paths exactly, so on a Windows
 // UNC path, whose host realpath keeps in its case and the module URL lowercases, each one skipped
 // main() and exited 0 without checking anything.
 test('A8.portability: every script with a main() guards it with isMain(import.meta) from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
@@ -39,7 +39,7 @@ test('A8.portability: every script with a main() guards it with isMain(import.me
   for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) assert.ok(mains.includes(f), `${f} was not scanned`)
   const bad = mains.flatMap(f => {
     const text = readFileSync(join(ROOT, f), 'utf8')
-    return [...(text.includes('if (isMain(import.meta)) process.exitCode = main()') ? [] : [`${f}: no isMain(import.meta) guard`]),
+    return [...(/if \(isMain\(import\.meta\)\) process\.exitCode = (await )?main\(\)/.test(text) ? [] : [`${f}: no isMain(import.meta) guard`]),
       ...(/process\.argv\[1\]|realpathSync/.test(text) ? [`${f}: an inline argv[1] or realpath guard`] : [])]
   })
   assert.deepEqual(bad, [])

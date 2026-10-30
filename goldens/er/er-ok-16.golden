@@ -1,0 +1,108 @@
+@60
+[ A ]
+  │
+  │1
+  │
+  x
+  │
+  │0..*
+  │
+[ B ]
+  │
+  │1
+  │
+  y
+  │
+  │1
+  │
+[ C ]
+@60 roles
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eAAAA
+  e
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eA
+  e
+nnNnn
+@80
+[ A ]
+  │
+  │1
+  │
+  x
+  │
+  │0..*
+  │
+[ B ]
+  │
+  │1
+  │
+  y
+  │
+  │1
+  │
+[ C ]
+@80 roles
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eAAAA
+  e
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eA
+  e
+nnNnn
+@120
+[ A ]
+  │
+  │1
+  │
+  x
+  │
+  │0..*
+  │
+[ B ]
+  │
+  │1
+  │
+  y
+  │
+  │1
+  │
+[ C ]
+@120 roles
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eAAAA
+  e
+nnNnn
+  e
+  eA
+  e
+  L
+  e
+  eA
+  e
+nnNnn

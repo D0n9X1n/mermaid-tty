@@ -20,8 +20,9 @@ export const pointKey = (i: number): string => String(i + 1)
 // a separator such as ' · ', drawn as caps.
 export type LegendPart = { text: string; ink: Ink; owner: string | null }
 // A keyed item's legend row: key in keyInk, then parts. item is the keyed thing's own id, such as a note, `r3:label` or
-// `t2.t`, which owns the key; the first part, which the key binds to, must be owned by item too. cls is item's class.
-export type LegendRow = { key: string; keyInk: Ink; item: string; cls: string; parts: readonly LegendPart[] }
+// `t2.t`, which owns the key; the first part, which the key binds to, must be owned by item too. cls is item's class. at:
+// the cell its in-place key starts at, in the drawing withLegend is given, when the item has one place.
+export type LegendRow = { key: string; keyInk: Ink; item: string; cls: string; parts: readonly LegendPart[]; at?: { r: number; c: number } }
 
 // s packed greedily into a line of field cells whose first used cells are taken, one space after them, then into more
 // lines: wrap packs a stand-in word used cells wide, then s, so s breaks exactly where wrap breaks a label. The first piece
@@ -64,9 +65,13 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
   const laid: { row: LegendRow; runs: Run[]; lines: number }[] = []
   for (const row of rows) { const l = layout(row, columns); if (!l) return fail('word-too-wide'); laid.push({ row, ...l }) }
   const wide = Math.max(0, ...laid.map(({ row, runs }) => Math.max(width(row.key), ...runs.map(x => x.col + width(x.text)))))
-  const c = createCanvas(laid.reduce((n, l) => n + l.lines, 0), wide, columns)
+  const c = createCanvas(laid.reduce((n, l) => n + l.lines, 0), wide, columns), labels: Expect['labels'][number][] = []
   let top = 0
   for (const { row, runs, lines } of laid) {
+    for (const p of row.parts) {                                    // an owned part is placed at its first run
+      const x = runs.find(y => y.part === p)
+      if (p.owner !== null) labels.push(x ? { owner: p.owner, text: p.text, at: { r: top + x.line, c: x.col } } : { owner: p.owner, text: p.text })
+    }
     c.key(top, 0, row.key, row.keyInk, row.item, true)
     for (const x of runs) {
       if (x.part.owner === null) c.cap(top + x.line, x.col, x.text, x.part.ink, row.item)
@@ -74,7 +79,6 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
     }
     top += lines
   }
-  const labels = rows.flatMap(r => r.parts.flatMap(p => (p.owner === null ? [] : [{ owner: p.owner, text: p.text }])))
   return c.toDrawing({ labels, edges: [], edgeLabels: [], frames: [] })
 }
 
@@ -85,6 +89,6 @@ export function withLegend(d: Drawing | Fail, rows: readonly LegendRow[], column
   if (isFail(d)) return d
   const legend = rows.length > 0 ? legendRows(rows, columns) : null
   if (isFail(legend)) return legend
-  const out = legend ? stack([d, legend], columns) : d, keys = rows.map(r => ({ key: r.key, item: r.item, cls: r.cls }))
+  const out = legend ? stack([d, legend], columns) : d, keys = rows.map(r => ({ key: r.key, item: r.item, cls: r.cls, ...(r.at ? { at: r.at } : {}) }))
   return { ...out, expect: { ...out.expect, keys: [...(out.expect.keys ?? []), ...keys], keyable: [...(out.expect.keyable ?? []), ...keyable] } }
 }

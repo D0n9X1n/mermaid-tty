@@ -1,0 +1,96 @@
+@60
+An Example Chart
+Seconds
+198.2 ┤                           ▲       ▲
+      │
+      │
+      │   ▲               ▲                       ▲
+ 99.1 ┤           ▲
+      │                         ●◆      ●       ●
+      │ ●◆      ●◆      ●◆               ◆       ◆
+      │
+    0 └─┬───────┬───────┬───────┬───────┬───────┬──────
+        90d     60d     30d     7d      1d      Current
+● avg      48.1    41.5    45.7    72.8    67.7    59.9
+◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
+▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
+@60 roles
+TTTTTTTTTTTTTTTT
+LLLLLLL
+VVVVV f                           3       3
+      f
+      f
+      f   3               3                       3
+ VVVV f           3
+      f                         12      1       1
+      f 12      12      12               2       2
+      f
+    V fffffffffffffffffffffffffffffffffffffffffffffffff
+        LLL     LLL     LLL     LL      LL      LLLLLLL
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL     VVVVV    VVVV   VVVVV   VVVVV   VVVVV   VVVVV
+@80
+An Example Chart
+Seconds
+198.2 ┤                           ▲       ▲
+      │
+      │
+      │   ▲               ▲                       ▲
+ 99.1 ┤           ▲
+      │                         ●◆      ●       ●
+      │ ●◆      ●◆      ●◆               ◆       ◆
+      │
+    0 └─┬───────┬───────┬───────┬───────┬───────┬──────
+        90d     60d     30d     7d      1d      Current
+● avg      48.1    41.5    45.7    72.8    67.7    59.9
+◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
+▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
+@80 roles
+TTTTTTTTTTTTTTTT
+LLLLLLL
+VVVVV f                           3       3
+      f
+      f
+      f   3               3                       3
+ VVVV f           3
+      f                         12      1       1
+      f 12      12      12               2       2
+      f
+    V fffffffffffffffffffffffffffffffffffffffffffffffff
+        LLL     LLL     LLL     LL      LL      LLLLLLL
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL     VVVVV    VVVV   VVVVV   VVVVV   VVVVV   VVVVV
+@120
+An Example Chart
+Seconds
+198.2 ┤                           ▲       ▲
+      │
+      │
+      │   ▲               ▲                       ▲
+ 99.1 ┤           ▲
+      │                         ●◆      ●       ●
+      │ ●◆      ●◆      ●◆               ◆       ◆
+      │
+    0 └─┬───────┬───────┬───────┬───────┬───────┬──────
+        90d     60d     30d     7d      1d      Current
+● avg      48.1    41.5    45.7    72.8    67.7    59.9
+◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
+▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
+@120 roles
+TTTTTTTTTTTTTTTT
+LLLLLLL
+VVVVV f                           3       3
+      f
+      f
+      f   3               3                       3
+ VVVV f           3
+      f                         12      1       1
+      f 12      12      12               2       2
+      f
+    V fffffffffffffffffffffffffffffffffffffffffffffffff
+        LLL     LLL     LLL     LL      LL      LLLLLLL
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
+LLLLL     VVVVV    VVVV   VVVVV   VVVVV   VVVVV   VVVVV

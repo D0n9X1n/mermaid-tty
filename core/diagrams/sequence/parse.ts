@@ -1,6 +1,6 @@
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
-import { labelLines } from '../../text.ts'
+import { drawable, labelLines, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // The sequence model (matrix, sequence): participants in column order, the boxes
@@ -81,18 +81,24 @@ const ARROWS: [string, Msg['line'], Msg['tail'], Msg['head']][] = [['<<-->>', 'd
 function stop(reason: string): never { throw fail(reason) }
 
 // Drawn text, trimmed: every label line of it must be supported. Mermaid reads a # as the start of a comment, or of
-// an entity such as #9829;, so it would draw other text.
-function text(s: string): string {
+// an entity such as #9829;, so it would draw other text; and text it shows otherwise in a field of mode and br fails as
+// drawable says. A message or note splits each <br>; an alias, condition or box label draws on one line (br 'none'); a
+// title, statement or frontmatter, is sanitized with no <br>, as Mermaid shows title a<!--c-->b as ab.
+function text(s: string, mode: Mode, br: Br): string {
   const t = s.trim()
   if (t.includes('#')) stop('hash')
+  const f = drawable(t, mode, br)
+  if (f) stop(f.reason)
   for (const line of labelLines(t)) { const u = unsupported(line); if (u) stop(`unsupported-char ${u}`) }
   return t
 }
 // Mermaid reads a wrap: or nowrap: at the start of a message, note, condition, alias or box label as a directive, not
 // text; a title keeps it. The fit ladder wraps anyway, so the directive is dropped.
 function unwrap(s: string): string { return s.trim().replace(/^:?(?:no)?wrap:/, '') }
-// A condition or box label, after any directive: null if absent or empty.
-function optText(s: string | null | undefined): string | null { return s === null || s === undefined ? null : text(unwrap(s)) || null }
+// A condition or box label, after any directive: null if absent or empty. A box label is sanitized, a condition plain.
+function optText(s: string | null | undefined, mode: Mode): string | null {
+  return s === null || s === undefined ? null : text(unwrap(s), mode, 'none') || null
+}
 
 // Whether an accDescr { block closes in rest. Not in the plan: its first } closes it, and must end the line.
 function closes(rest: string, n: number): boolean {
@@ -109,7 +115,7 @@ export function parseSequence(src: Source): Seq | Fail {
 function walk(src: Source): Seq {
   const seq: Seq = { title: src.title, participants: [], boxes: [], autonumber: null, items: [] }
   // A frontmatter title is drawn, so it is checked like any label.
-  if (src.title !== null) text(src.title)
+  if (src.title !== null) text(src.title, 'sanitized', 'none')
   const frames: Frame[] = [], destroyed = new Set<string>()
   // Each participant's activation depth: Mermaid fails on deactivating one that is not active.
   const depth = new Map<string, number>()
@@ -150,7 +156,7 @@ function walk(src: Source): Seq {
       if (m[1] && known) stop('create')
       // Not in the plan: as in Mermaid, declaring a known participant again changes it only with an as alias.
       const p = seq.participants.find(q => q.id === id)!
-      if (!known || m[4] !== undefined) { p.kind = m[2] as Participant['kind']; p.label = m[4] === undefined ? id : text(unwrap(m[4])) }
+      if (!known || m[4] !== undefined) { p.kind = m[2] as Participant['kind']; p.label = m[4] === undefined ? id : text(unwrap(m[4]), 'plain', 'none') }
       if (box) {
         // Not in the plan: as in Mermaid, a participant belongs to one box.
         if (seq.boxes.some(b => b !== box && b.ids.includes(id))) stop('box-split')
@@ -170,19 +176,19 @@ function walk(src: Source): Seq {
       // Not in the plan: as in Mermaid's grammar, only over takes two participants.
       if (m[3] && m[1] !== 'over') stop(`syntax:${n}`)
       const ids = m[3] ? [m[2]!, m[3]] : [m[2]!]
-      ids.forEach(mention); add({ kind: 'note', side: m[1] as Note['side'], ids, text: text(unwrap(m[4]!)) })
+      ids.forEach(mention); add({ kind: 'note', side: m[1] as Note['side'], ids, text: text(unwrap(m[4]!), 'plain', 'any') })
     } else if ((m = FRAME.exec(t))) {
-      open(m[1] as Frame['type'], optText(m[2]))
+      open(m[1] as Frame['type'], optText(m[2], 'plain'))
     } else if (RECT.test(t)) {
       open('rect', null)
     } else if ((m = SECTION.exec(t))) {
       const f = frames.at(-1)
       if (!f || f.type !== DIVIDES[m[1]!]) stop(`syntax:${n}`)
-      f.sections.push({ cond: optText(m[2]), items: [] })
+      f.sections.push({ cond: optText(m[2], 'plain'), items: [] })
     } else if ((m = BOX.exec(t))) {
       // Not in the plan: a box sits in no rect, however deep, but may sit in another frame.
       if (frames.some(f => f.type === 'rect')) stop(`syntax:${n}`)
-      box = { label: optText(boxLabel(m[1] ?? '')), ids: [] }; seq.boxes.push(box)
+      box = { label: optText(boxLabel(m[1] ?? ''), 'sanitized'), ids: [] }; seq.boxes.push(box)
     } else if (t === 'end') {
       if (!frames.pop()) stop(`syntax:${n}`)
     } else if ((m = AUTONUMBER.exec(t))) {
@@ -193,7 +199,7 @@ function walk(src: Source): Seq {
       seq.autonumber = { start, step }
     } else if ((m = TITLE.exec(t))) {
       if (seq.title !== null) stop('title')
-      seq.title = text(m[1]!)
+      seq.title = text(m[1]!, 'sanitized', 'none')
     } else if (ACC.test(t)) {
       // Accessibility text is not drawn.
     } else if ((m = ACC_BLOCK.exec(t))) {
@@ -229,7 +235,7 @@ function message(t: string): Msg | null {
   const to = TO.exec(rest.slice(arrow[0].length))
   if (!to) return null
   const [, line, tail, head] = arrow
-  return { kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(unwrap(to[3]!)), activate: to[1] === '+', deactivate: to[1] === '-' }
+  return { kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(unwrap(to[3]!), 'plain', 'any'), activate: to[1] === '+', deactivate: to[1] === '-' }
 }
 
 // A box's label: its text after a leading CSS color, which is not drawn; null if none is left. As in Mermaid, a lowercase

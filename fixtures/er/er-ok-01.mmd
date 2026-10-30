@@ -1,0 +1,7 @@
+---
+title: Orders
+---
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    DELIVERY-ADDRESS }|..|{ CUSTOMER : uses

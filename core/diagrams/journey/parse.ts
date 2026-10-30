@@ -3,6 +3,7 @@
 import { cmp, dec, parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
+import { drawable, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // A task: its name, its score as an exact decimal and as written, and its actors, each trimmed.
@@ -22,9 +23,13 @@ const UNREAD = /[#;]|%%/
 const KEYWORD = /^(?:title|section|journey|accTitle|accDescr)/i
 const MIN = dec(1), MAX = dec(5)
 
-// Why texts cannot be drawn, or null.
-function undrawable(...texts: string[]): Fail | null {
+// Why texts, in a field of mode and br, cannot be drawn, or null: text Mermaid shows otherwise fails as drawable says, and
+// so does an unsupported character. A task or section never splits, each <br> drawn as written (plain, literal); an actor
+// shows a <br> as a space, so any <br falls back (plain, none); a title is sanitized, with no <br>.
+function undrawable(mode: Mode, br: Br, ...texts: string[]): Fail | null {
   for (const t of texts) {
+    const f = drawable(t, mode, br)
+    if (f) return f
     const bad = unsupported(t)
     if (bad) return fail(`unsupported-char ${bad}`)
   }
@@ -35,7 +40,8 @@ function undrawable(...texts: string[]): Fail | null {
 // that is no statement: a #, ; or %% outside accessibility text, a keyword in another case or starting a longer word, a
 // ':' in a section, a task without exactly two ':', an empty name or actor, or an accDescr { block left open or not ending
 // its line), 'domain:<n>' (a score that is no decimal from 1 to 5), 'repeat:<n>' (an actor twice in one task, or a second
-// title), 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no task).
+// title), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (text that cannot be drawn), or
+// 'empty' (no task).
 export function parseJourney(src: Source): Journey | Fail {
   if (src.header !== 'journey') return fail('header')
   // A frontmatter title is the first title (common rule 3); readSource has checked its characters.
@@ -66,13 +72,13 @@ function statement(journey: Journey, t: string, n: number): Fail | null {
   if (title !== undefined) {
     if (journey.title !== null) return fail(`repeat:${n}`)
     journey.title = title.trim()
-    return undrawable(journey.title)
+    return undrawable('sanitized', 'none', journey.title)
   }
   const section = SECTION.exec(t)?.[1]?.trim()
   if (section !== undefined) {
     if (section.includes(':')) return fail(`syntax:${n}`)
     journey.groups.push({ name: section, tasks: [] })
-    return undrawable(section)
+    return undrawable('plain', 'literal', section)
   }
   return KEYWORD.test(t) ? fail(`syntax:${n}`) : task(journey, t, n)
 }
@@ -87,7 +93,7 @@ function task(journey: Journey, t: string, n: number): Fail | null {
   const score = parseDec(raw)
   if (!score || cmp(score, MIN) < 0 || cmp(score, MAX) > 0) return fail(`domain:${n}`)
   if (new Set(actors).size < actors.length) return fail(`repeat:${n}`)
-  const bad = undrawable(name, ...actors)
+  const bad = undrawable('plain', 'literal', name) ?? undrawable('plain', 'none', ...actors)
   if (bad) return bad
   if (journey.groups.length === 0) journey.groups.push({ name: null, tasks: [] })
   journey.groups.at(-1)!.tasks.push({ name, score, raw, actors })

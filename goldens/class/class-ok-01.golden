@@ -1,0 +1,96 @@
+@60
+Animal example
+ [     Animal     ]                      can fly
+ [ +int age       ]   From Duck till     can swim
+ [ +String gender ]   Zebra              can dive
+ [ +isMammal()    ]                      can help in
+ [ +mate()        ]                      debugging
+        △△△                                   ┆
+        │││                                   ┆
+        └┼┼──────────────────┐                └┐
+         └┼──────────────────┼────────────────┐┆
+         ┌┘                  │          [    Duck    ]
+[      Fish       ]  [     Zebra     ]  [ +String    ]
+[ -int sizeInFeet ]  [ +bool is_wild ]  [  beakColor ]
+[ -canEat()       ]  [ +run()        ]  [ +swim()    ]
+                                        [ +quack()   ]
+@60 roles
+TTTTTTTTTTTTTT
+ nnnnnnNNNNNNnnnnnn                     oOOOOOOOooooo
+ nlLLLLLLLLllllllln  oOOOOOOOOOOOOOOo   oOOOOOOOOoooo
+ nlLLLLLLLLLLLLLLln  oOOOOOoooooooooo   oOOOOOOOOoooo
+ nlLLLLLLLLLLLlllln                     oOOOOOOOOOOOo
+ nlLLLLLLLlllllllln                     oOOOOOOOOOooo
+        aaa                                   e
+        eee                                   e
+        eeeeeeeeeeeeeeeeeeeeee                ee
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+         ee                  e          nnnnnNNNNnnnnn
+nnnnnnnNNNNnnnnnnnn  nnnnnnNNNNNnnnnnn  nlLLLLLLLlllln
+nlLLLLLLLLLLLLLLLln  nlLLLLLLLLLLLLLln  nllLLLLLLLLLln
+nlLLLLLLLLLllllllln  nlLLLLLLlllllllln  nlLLLLLLLlllln
+                                        nlLLLLLLLLllln
+@80
+Animal example
+ [     Animal     ]                               can fly
+ [ +int age       ]                               can swim
+ [ +String gender ]   From Duck till Zebra        can dive
+ [ +isMammal()    ]                               can help in debugging
+ [ +mate()        ]                                         ┆
+        △△△                                                 ┆
+        │││                                                 ┆
+        └┼┼──────────────────┐                              ┆
+         └┼──────────────────┼─────────────────────────┐    ┆
+         ┌┘                  │                         │┌┄┄┄┘
+[      Fish       ]  [     Zebra     ]       [       Duck        ]
+[ -int sizeInFeet ]  [ +bool is_wild ]       [ +String beakColor ]
+[ -canEat()       ]  [ +run()        ]       [ +swim()           ]
+                                             [ +quack()          ]
+@80 roles
+TTTTTTTTTTTTTT
+ nnnnnnNNNNNNnnnnnn                              oOOOOOOOooooooooooooooo
+ nlLLLLLLLLllllllln                              oOOOOOOOOoooooooooooooo
+ nlLLLLLLLLLLLLLLln  oOOOOOOOOOOOOOOOOOOOOo      oOOOOOOOOoooooooooooooo
+ nlLLLLLLLLLLLlllln                              oOOOOOOOOOOOOOOOOOOOOOo
+ nlLLLLLLLlllllllln                                         e
+        aaa                                                 e
+        eee                                                 e
+        eeeeeeeeeeeeeeeeeeeeee                              e
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee    e
+         ee                  e                         eeeeee
+nnnnnnnNNNNnnnnnnnn  nnnnnnNNNNNnnnnnn       nnnnnnnnNNNNnnnnnnnnn
+nlLLLLLLLLLLLLLLLln  nlLLLLLLLLLLLLLln       nlLLLLLLLLLLLLLLLLLln
+nlLLLLLLLLLllllllln  nlLLLLLLlllllllln       nlLLLLLLLllllllllllln
+                                             nlLLLLLLLLlllllllllln
+@120
+Animal example
+ [     Animal     ]                               can fly
+ [ +int age       ]                               can swim
+ [ +String gender ]   From Duck till Zebra        can dive
+ [ +isMammal()    ]                               can help in debugging
+ [ +mate()        ]                                         ┆
+        △△△                                                 ┆
+        │││                                                 ┆
+        └┼┼──────────────────┐                              ┆
+         └┼──────────────────┼─────────────────────────┐    ┆
+         ┌┘                  │                         │┌┄┄┄┘
+[      Fish       ]  [     Zebra     ]       [       Duck        ]
+[ -int sizeInFeet ]  [ +bool is_wild ]       [ +String beakColor ]
+[ -canEat()       ]  [ +run()        ]       [ +swim()           ]
+                                             [ +quack()          ]
+@120 roles
+TTTTTTTTTTTTTT
+ nnnnnnNNNNNNnnnnnn                              oOOOOOOOooooooooooooooo
+ nlLLLLLLLLllllllln                              oOOOOOOOOoooooooooooooo
+ nlLLLLLLLLLLLLLLln  oOOOOOOOOOOOOOOOOOOOOo      oOOOOOOOOoooooooooooooo
+ nlLLLLLLLLLLLlllln                              oOOOOOOOOOOOOOOOOOOOOOo
+ nlLLLLLLLlllllllln                                         e
+        aaa                                                 e
+        eee                                                 e
+        eeeeeeeeeeeeeeeeeeeeee                              e
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee    e
+         ee                  e                         eeeeee
+nnnnnnnNNNNnnnnnnnn  nnnnnnNNNNNnnnnnn       nnnnnnnnNNNNnnnnnnnnn
+nlLLLLLLLLLLLLLLLln  nlLLLLLLLLLLLLLln       nlLLLLLLLLLLLLLLLLLln
+nlLLLLLLLLLllllllln  nlLLLLLLlllllllln       nlLLLLLLLllllllllllln
+                                             nlLLLLLLLLlllllllllln

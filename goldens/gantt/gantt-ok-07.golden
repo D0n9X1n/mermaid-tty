@@ -1,0 +1,66 @@
+@60
+   Tick 2024-01-01 · 500ms
+   Wait 30s
+   Cook 1.5h               ██
+   Brew 1.5m
+   Pour 1.5s
+   Mark 0d
+Later
+   Ship 1d                  ███████████████████████████████
+                           ┬──────────────┬─────────────────
+                           2024-01-01     2024-01-01
+@60 roles
+   LLLL VVVVVVVVVVVVVVVVVV
+   LLLL VVV
+   LLLL VVVV               11
+   LLLL VVVV
+   LLLL VVVV
+   LLLL VV
+@@@@@
+   LLLL VV                  2222222222222222222222222222222
+                           fffffffffffffffffffffffffffffffff
+                           VVVVVVVVVV     VVVVVVVVVV
+@80
+   Tick 2024-01-01 · 500ms
+   Wait 30s
+   Cook 1.5h               ███▏
+   Brew 1.5m
+   Pour 1.5s
+   Mark 0d
+Later
+   Ship 1d                    █████████████████████████████████████████████████▉
+                           ┬───────────┬───────────┬────────────┬───────────────
+                           2024-01-01  2024-01-01  2024-01-01   2024-01-01
+@80 roles
+   LLLL VVVVVVVVVVVVVVVVVV
+   LLLL VVV
+   LLLL VVVV               1111
+   LLLL VVVV
+   LLLL VVVV
+   LLLL VV
+@@@@@
+   LLLL VV                    22222222222222222222222222222222222222222222222222
+                           fffffffffffffffffffffffffffffffffffffffffffffffffffff
+                           VVVVVVVVVV  VVVVVVVVVV  VVVVVVVVVV   VVVVVVVVVV
+@120
+   Tick 2024-01-01 · 500ms
+   Wait 30s
+   Cook 1.5h               ███▌
+   Brew 1.5m
+   Pour 1.5s
+   Mark 0d
+Later
+   Ship 1d                    ████████████████████████████████████████████████████████▍
+                           ┬─────────────┬─────────────┬─────────────┬─────────────────
+                           2024-01-01    2024-01-01    2024-01-01    2024-01-01
+@120 roles
+   LLLL VVVVVVVVVVVVVVVVVV
+   LLLL VVV
+   LLLL VVVV               1111
+   LLLL VVVV
+   LLLL VVVV
+   LLLL VV
+@@@@@
+   LLLL VV                    222222222222222222222222222222222222222222222222222222222
+                           ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                           VVVVVVVVVV    VVVVVVVVVV    VVVVVVVVVV    VVVVVVVVVV

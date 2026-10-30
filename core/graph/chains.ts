@@ -15,14 +15,19 @@ export type Level = { items: Item[]; segs: Seg[]; edges: GEdge[] }
 // labels: each labelled edge's label extent; common: the innermost strip cluster that holds both of two owners.
 export function buildLevel(units: readonly Unit[], edges: readonly GEdge[], labels: ReadonlyMap<string, Extent>,
   common: (a: string | null, b: string | null) => string | null): Level {
+  // A labelled edge, or one with an end label, spans at least two ranks: the room its label, or each end's, takes.
+  const long = (e: GEdge) => e.label !== null || e.tailLabel !== undefined || e.headLabel !== undefined
   const links = edges.filter(e => e.from !== e.to)
-    .map((e): Link => ({ id: e.id, from: e.from, to: e.to, minlen: Math.max(e.minlen, e.label === null ? 1 : 2) }))
+    .map((e): Link => ({ id: e.id, from: e.from, to: e.to, minlen: Math.max(e.minlen, long(e) ? 2 : 1) }))
   const ids = units.map(u => u.id), back = backLinks(ids, links)
   const rank = longestPath(ids, links.map(l => (back.has(l.id) ? { ...l, from: l.to, to: l.from } : l)))
   const owner = new Map(units.map(u => [u.id, u.owner]))
   const items: Item[] = units.map(u => ({ ...u, rank: rank.get(u.id)! })), segs: Seg[] = []
   const K = 1 + Math.max(-1, ...units.map(u => u.key))
-  const out = edges.map(e => (back.has(e.id) ? { ...e, from: e.to, to: e.from, tail: e.head, head: e.tail, reversed: true as const } : e))
+  // A back edge is reversed with its ends, and each end's label, swapped; a missing label stays missing.
+  const swap = ({ tailLabel, headLabel, ...e }: GEdge): GEdge => ({ ...e, from: e.to, to: e.from, tail: e.head, head: e.tail, reversed: true,
+    ...(headLabel === undefined ? {} : { tailLabel: headLabel }), ...(tailLabel === undefined ? {} : { headLabel: tailLabel }) })
+  const out = edges.map(e => (back.has(e.id) ? swap(e) : e))
   for (const e of out) {
     const lo = rank.get(e.from)!, span = e.from === e.to ? (e.label === null ? 0 : 1) : rank.get(e.to)! - lo
     const mid = e.label === null ? -1 : e.from === e.to ? 1 : Math.floor(span / 2), own = common(owner.get(e.from) ?? null, owner.get(e.to) ?? null)

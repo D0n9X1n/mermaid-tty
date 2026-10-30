@@ -2,7 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
 import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'; import { explain } from '../../core/render.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
-import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'
+import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'; import { junction } from '../../core/glyphs.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
   return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
@@ -33,7 +33,7 @@ test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', ()
   wrongOwner.expect = { ...wrongOwner.expect, edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [] }] }
   assert.equal(validate(wrongOwner)?.reason, 'line-dangling')
   const loop = two()
-  const line = (dirs: number, owners = ['A>B']) => ({ ch: '─', kind: 'line' as const, role: 'edge' as const, owners, dirs })
+  const line = (dirs: number, owners = ['A>B']) => ({ ch: junction(dirs, 'light'), kind: 'line' as const, role: 'edge' as const, owners, dirs })
   // A disconnected loop has two arms per cell: valid arms first, then one missing reciprocal bit.
   loop.cells[0]![4] = line(6)
   loop.cells[0]![5] = line(12)
@@ -473,4 +473,74 @@ test('merge-ambiguous: an honest self-loop, alone or on a stem it shares, and a 
   assert.equal(validate(loopFan(['e1'])), null)
   assert.equal(validate(loopFan(['e0', 'e1'])), null)
   assert.equal(validate(path(['▲', 5, '▼'], ['A▲', 'B▼'])), null)
+})
+// Unmarked edges joined in one line show no direction, so each end seems to lead to every other: only edges that all leave
+// one node, or all enter one, read true. A and B over C: e0 from A and e1 from B meet at ┬ and run down one stem into C.
+const open = (edges: string[]) => sketch(4, 5, [['A', 0, 0], ['B', 0, 4], ['C', 3, 2]], [['e0', 1, 0, 5], ['e0', 2, 0, 3],
+  ['e0', 2, 1, 10], ['e0', 2, 2, 12], ['e1', 1, 4, 5], ['e1', 2, 4, 9], ['e1', 2, 3, 10], ['e1', 2, 2, 6]], edges)
+// └ ┬ ┘ then ┌ ┴ ┐: e0 from A to D and e1 from B to C share the stem between, then cross to each other's side.
+const cross = () => sketch(5, 3, [['A', 0, 0], ['B', 0, 2], ['C', 4, 0], ['D', 4, 2]], [['e0', 1, 0, 3], ['e0', 1, 1, 12],
+  ['e0', 2, 1, 5], ['e0', 3, 1, 3], ['e0', 3, 2, 12], ['e1', 1, 2, 9], ['e1', 1, 1, 6], ['e1', 2, 1, 5], ['e1', 3, 1, 9], ['e1', 3, 0, 6]], ['e0 A D', 'e1 B C'])
+test('merge-ambiguous: unmarked edges joined in one line pass only when all leave one node or all enter one', () => {
+  assert.equal(validate(open(['e0 A C', 'e1 B C'])), null)                       // fan-in to C
+  assert.equal(validate(open(['e0 C A', 'e1 C B'])), null)                       // fan-out from C
+  assert.equal(validate(open(['e0 A C', 'e1 C B']))?.reason, 'merge-ambiguous')  // A seems linked to B
+  assert.equal(validate(open(['e0 C A', 'e1 B C']))?.reason, 'merge-ambiguous')  // B seems linked to A
+  assert.deepEqual(text(cross()), ['A B', '└┬┘', ' │', '┌┴┐', 'C D'])
+  assert.equal(validate(cross())?.reason, 'merge-ambiguous')                     // A seems linked to C, B to D
+})
+// QA's mixed merge: A, B over C, D, each edge on one trunk along row 2 and, to H, down a stem in column 3 into H's ▼. Open
+// A---B runs along the trunk and open A---C down column 0. Edges are named by their ends: 'AB', 'AH'.
+const leg = (id: string, n: string): Mark[] => {
+  const c = 'AC'.includes(n) ? 0 : 6, up = 'AB'.includes(n)
+  return [[id, up ? 1 : 3, c, 5], [id, 2, c, (up ? 1 : 4) | (c ? 8 : 2)]]
+}
+const hub = (ids: string[]) => marked(8, 7, [['A', 0, 0], ['B', 0, 6], ['C', 4, 0], ['D', 4, 6], ['H', 7, 3]], ids.flatMap((id): Mark[] => {
+  const left = 'AC'.includes(id[0]!)
+  if (id[1] === 'H') return [...leg(id, id[0]!), ...h(id, 2, left ? 1 : 4, left ? 2 : 5), [id, 2, 3, left ? 12 : 6], ...v(id, 3, 3, 5), [id, 6, 3, '▼']]
+  return id === 'AB' ? [...leg(id, 'A'), ...h(id, 2, 1, 5), ...leg(id, 'B')] : v(id, 0, 1, 3)
+}), ids.map(id => `${id} ${id[0]} ${id[1]}${id[1] === 'H' ? ' H▼' : ''}`))
+test('merge-ambiguous: marked and unmarked edges on one line are one network, and edges that share no node must imply only real links', () => {
+  assert.deepEqual(text(hub(['AB', 'AC', 'AH', 'BH', 'CH', 'DH'])), ['A     B', '│     │', '├──┬──┤', '│  │  │', 'C  │  D', '   │', '   ▼', '   H'])
+  assert.equal(validate(hub(['AB', 'AC', 'AH', 'BH', 'CH', 'DH']))?.reason, 'merge-ambiguous')  // QA: D seems linked to A, B and C
+  assert.equal(validate(hub(['AB', 'AH', 'BH'])), null)                                        // a fan-in to H that A---B shares
+  assert.equal(validate(hub(['AB', 'AH', 'BH', 'DH']))?.reason, 'merge-ambiguous')             // D seems linked to A and B
+})
+// QA: A <--> B (e0) and A <--> C (e1) share A's ▲ and one trunk along row 3 to B's and C's ▼, and an open self-loop A --- A
+// (e2) runs round it. Every end is a head or bare, and a two-headed edge's heads may start a link, so B and C seem linked.
+const twoHeads = (ids: string[]) => marked(8, 9, [['A', 0, 4], ['B', 7, 0], ['C', 7, 8]], ([
+  ['e0', 1, 4, '▲'], ['e0', 2, 4, 5], ['e0', 3, 4, 9], ...h('e0', 3, 1, 3), ['e0', 3, 0, 6], ...v('e0', 0, 4, 5), ['e0', 6, 0, '▼'],
+  ['e1', 1, 4, '▲'], ['e1', 2, 4, 5], ['e1', 3, 4, 3], ...h('e1', 3, 5, 7), ['e1', 3, 8, 12], ...v('e1', 8, 4, 5), ['e1', 6, 8, '▼'],
+  ['e2', 0, 3, 6], ...v('e2', 3, 1, 2), ['e2', 3, 3, 3], ['e2', 3, 4, 10], ['e2', 3, 5, 9], ...v('e2', 5, 1, 2), ['e2', 0, 5, 12],
+] as Mark[]).filter(m => ids.includes(m[0])), ['e0 A B A▲ B▼', 'e1 A C A▲ C▼', 'e2 A A'].filter(s => ids.includes(s.slice(0, 2))))
+test('merge-ambiguous: heads of two-headed edges on one line imply a link between their nodes, with or without a bare end', () => {
+  assert.deepEqual(text(twoHeads(['e0', 'e1', 'e2'])), ['   ┌A┐', '   │▲│', '   │││', '┌──┴┴┴──┐', '│       │', '│       │', '▼       ▼', 'B       C'])
+  assert.equal(validate(twoHeads(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous')  // QA: B seems linked to C
+  assert.equal(validate(twoHeads(['e0', 'e1']))?.reason, 'merge-ambiguous')        // so without the loop
+  assert.equal(validate(twoHeads(['e0', 'e2'])), null)                             // A <--> B with a loop at A is true
+})
+// A lifeline is read as the participant whose pill heads it, so each lifeline cell lies in its own pill's columns: header
+// pills of one width swapped over their lifelines reverse every message.
+test('lifeline-unbound: a lifeline under another participant\'s pill fails', () => {
+  const r = explain('sequenceDiagram\nparticipant A\nparticipant B\nA->>B: hi', { columns: 80, theme: 'mono' }) as { drawing: Drawing }
+  const d = structuredClone(r.drawing)
+  assert.equal(validate(d), null)
+  assert.deepEqual(text(d)[0], '[ A ] [ B ]')
+  const row = d.cells[0]!, a = row.slice(0, 5), b = row.slice(6, 11)
+  row.splice(0, 5, ...b); row.splice(6, 5, ...a)
+  assert.deepEqual(text(d)[0], '[ B ] [ A ]')
+  assert.equal(validate(d)?.reason, 'lifeline-unbound')
+})
+// A node's label reads as the node only inside its own pill: the box of the cap, fill and frame cells it draws. Moved a
+// row off it, the pill is left empty and the label floats beside a line it does not end.
+test('label-unbound: a node label moved off its pill fails', () => {
+  for (const [src, id, dr] of [['mindmap\nRoot\n  A\n  B', 'm0', 1], ['flowchart TD\nA & B --> C & D', 'D', -1]] as const) {
+    const r = explain(src, { columns: 80, theme: 'mono' }) as { drawing: Drawing }
+    const d = structuredClone(r.drawing)
+    assert.equal(validate(d), null, src)
+    const mine = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'text' && x.owners[0] === id ? [[y, c] as const] : [])))
+    for (const [y, c] of mine) assert.equal(d.cells[y + dr]?.[c] ?? null, null, src)
+    for (const [y, c] of mine) { d.cells[y + dr]![c] = d.cells[y]![c]!; d.cells[y]![c] = null }
+    assert.equal(validate(d)?.reason, 'label-unbound', src)
+  }
 })

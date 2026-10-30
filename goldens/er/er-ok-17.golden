@@ -1,0 +1,66 @@
+@60
+           [ 客户 ]
+              │
+              │1
+              │
+            下单
+              │
+              │0..*
+              │
+[          订单           ]
+[ string 编号 PK 唯一编号 ]
+@60 roles
+           nnN~N~nn
+              e
+              eA
+              e
+            L~L~
+              e
+              eAAAA
+              e
+nnnnnnnnnnnN~N~nnnnnnnnnnnn
+nlLLLLLLlL~L~lLLlO~O~O~O~ln
+@80
+           [ 客户 ]
+              │
+              │1
+              │
+            下单
+              │
+              │0..*
+              │
+[          订单           ]
+[ string 编号 PK 唯一编号 ]
+@80 roles
+           nnN~N~nn
+              e
+              eA
+              e
+            L~L~
+              e
+              eAAAA
+              e
+nnnnnnnnnnnN~N~nnnnnnnnnnnn
+nlLLLLLLlL~L~lLLlO~O~O~O~ln
+@120
+           [ 客户 ]
+              │
+              │1
+              │
+            下单
+              │
+              │0..*
+              │
+[          订单           ]
+[ string 编号 PK 唯一编号 ]
+@120 roles
+           nnN~N~nn
+              e
+              eA
+              e
+            L~L~
+              e
+              eAAAA
+              e
+nnnnnnnnnnnN~N~nnnnnnnnnnnn
+nlLLLLLLlL~L~lLLlO~O~O~O~ln

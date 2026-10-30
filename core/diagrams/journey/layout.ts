@@ -6,7 +6,7 @@ import { createCanvas, type Drawing } from '../../canvas.ts'
 import { hbar } from '../../charts/bars.ts'
 import { dec } from '../../charts/decimal.ts'
 import { eighths } from '../../charts/scale.ts'
-import { heading, stack } from '../../charts/sheet.ts'
+import { heading, placed, stack } from '../../charts/sheet.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
 import { register, type DiagramModule } from '../../registry.ts'
@@ -84,16 +84,16 @@ function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
     b.pieces.forEach((x, j) => cv.text(r + j, 2, x.text, 'label', id, j > 0 ? x.join : undefined))
     cv.cap(r, N + 3, hbar(e).padEnd(10), ink, id)
     cv.text(r, N + S + 14 - width(t.raw), t.raw, 'value', `${id}.v`)
-    labels.push({ owner: id, text: t.name }, { owner: `${id}.v`, text: t.raw })
-    bars.push({ owner: id, eighths: e, axis: 'h' })
+    labels.push(placed(id, t.name, b.pieces, r, 2), { owner: `${id}.v`, text: t.raw, at: { r, c: N + S + 14 - width(t.raw) } })
+    bars.push({ owner: id, eighths: e, axis: 'h', at: { r, c: N + 3 } })
     b.rows.forEach(([from, to], j) => {
       let c = N + S + 16
       for (let k = from; k < to; k++) {
         const owner = `${id}.a${k}`, sep = k === t.actors.length - 1 ? '' : k < to - 1 ? ', ' : ','
+        labels.push({ owner, text: t.actors[k]!, at: { r: r + j, c } })
         c += cv.text(r + j, c, t.actors[k]!, 'label', owner)
         cv.cap(r + j, c, sep, 'label', owner)
         c += sep.length
-        labels.push({ owner, text: t.actors[k]! })
       }
     })
     return tall(b)
@@ -104,7 +104,7 @@ function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
     if (g.name !== null) {
       const id = `sec${sec++}`
       heads[gi]!.forEach((x, j) => cv.text(r + j, 0, x.text, ink, id, j > 0 ? x.join : undefined))
-      labels.push({ owner: id, text: g.name }); r += heads[gi]!.length
+      labels.push(placed(id, g.name, heads[gi]!, r, 0)); r += heads[gi]!.length
     }
     for (const t of g.tasks) { r += task(t, i, r, ink); i++ }
   })

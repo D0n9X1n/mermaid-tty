@@ -82,7 +82,7 @@ async function gone(pid: number): Promise<boolean> {
 }
 const SKIP = { pty: false, tmux: process.platform === 'win32' || spawnSync('tmux', ['-V']).status !== 0 }
 
-for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: the ${driver} driver runs a program at 100×40 in the env given, types keys into it, reads its cells, text and OSC 52 copy, and stops it`, { skip: SKIP[driver] }, async () => {
+for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: the ${driver} driver runs a program at 100×40 in the env given, types keys into it, reads its cells, text, ANSI and OSC 52 copy, and stops it`, { skip: SKIP[driver] }, async () => {
   const s = await start(driver)
   try {
     // The program takes a while to start, so waitFor finds ready only on a later poll; it resolves to the screen's text.
@@ -96,9 +96,12 @@ for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: the ${driver} d
     await s.key('enter')
     await s.key('ctrl-o')
     await s.key('escape')
-    await s.waitFor(/u001b"/, 10000)
+    await s.key('down')
+    await s.waitFor(/u001b\[B"/, 10000)
     const screen = await s.text()
-    assert.equal(screen.split('\n')[3], String.raw`got "-hi\r\u000f\u001b"`)
+    assert.equal(screen.split('\n')[3], String.raw`got "-hi\r\u000f\u001b\u001b[B"`)
+    // ansi() is what the screen was drawn from: the pty stream, or capture-pane -e; its colors as escape codes.
+    assert.match(await s.ansi(), /\x1b\[[0-9;]*38;2;94;129;172m读/)
     // The enter made the program copy.
     assert.equal(await s.clipboard(), '读 hi')
     await assert.rejects(s.waitFor(/never/, 300), { message: `waitFor /never/ timed out after 300 ms; the screen:\n${screen}` })
@@ -167,6 +170,28 @@ for (const early of [false, true]) for (const driver of ['pty', 'tmux'] as const
     assert.deepEqual([await gone(parent), await gone(child)], [true, true])
   } finally {
     if (child > 0) try { process.kill(child, 'SIGKILL') } catch {}
+    await s.stop()
+  }
+})
+
+// On Windows, closing the console ends the program and what shares its console, but not a process detached from it, as
+// a program's background work may be; stop() must kill the tree while the program still roots it.
+writeFileSync(join(dir, 'detach.mjs'), [
+  "import { spawn } from 'node:child_process'",
+  "const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore', detached: true })",
+  "console.log('parent ' + process.pid + ' child ' + child.pid)",
+  'setInterval(() => {}, 1000)',
+].join('\n'))
+test('A9.harness: on Windows the pty driver\'s stop() kills a child detached from the program\'s console, with the program', { skip: process.platform !== 'win32' }, async () => {
+  const s = await startSession({ driver: 'pty', argv: [process.execPath, join(dir, 'detach.mjs')], cwd: dir, env: envFor('pty') })
+  let pids: number[] = []
+  try {
+    const m = /parent (\d+) child (\d+)/.exec(await s.waitFor(/parent \d+ child \d+/, 10000))
+    pids = [Number(m?.[1]), Number(m?.[2])]
+    await s.stop()
+    assert.deepEqual([await gone(pids[0]!), await gone(pids[1]!)], [true, true])
+  } finally {
+    for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
     await s.stop()
   }
 })

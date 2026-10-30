@@ -1,0 +1,102 @@
+@60
+      ●
+      │
+      ▼
+   ( s1 )
+     └┐
+      │
+A transition
+      │
+      ▼
+  ( s2 )
+    │
+  done
+   ┌┘
+   │
+   ▼
+   ◉
+@60 roles
+      n
+      e
+      a
+   nnNNnn
+     ee
+      e
+LLLLLLLLLLLL
+      e
+      a
+  nnNNnn
+    e
+  LLLL
+   ee
+   e
+   a
+   n
+@80
+      ●
+      │
+      ▼
+   ( s1 )
+     └┐
+      │
+A transition
+      │
+      ▼
+  ( s2 )
+    │
+  done
+   ┌┘
+   │
+   ▼
+   ◉
+@80 roles
+      n
+      e
+      a
+   nnNNnn
+     ee
+      e
+LLLLLLLLLLLL
+      e
+      a
+  nnNNnn
+    e
+  LLLL
+   ee
+   e
+   a
+   n
+@120
+      ●
+      │
+      ▼
+   ( s1 )
+     └┐
+      │
+A transition
+      │
+      ▼
+  ( s2 )
+    │
+  done
+   ┌┘
+   │
+   ▼
+   ◉
+@120 roles
+      n
+      e
+      a
+   nnNNnn
+     ee
+      e
+LLLLLLLLLLLL
+      e
+      a
+  nnNNnn
+    e
+  LLLL
+   ee
+   e
+   a
+   n

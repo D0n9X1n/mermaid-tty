@@ -1,0 +1,266 @@
+@60
+                            ●
+                            │
+                            ▼
+┌─Active───────────────────────────────────────────────┐
+│              ●                                       │
+│              │                                       │
+│              ▼                                       │
+│       ( NumLockOff )◄────────────────────┐           │
+│             │                            │           │
+│    Ev NumLock Pressed           Ev NumLock Pressed   │
+│             └─────────┐                  │           │
+│                       │                  │           │
+│                       ▼                  │           │
+│                 ( NumLockOn )────────────┘           │
+│                                                      │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                      │
+│             ●                                        │
+│             │                                        │
+│             ▼                                        │
+│      ( CapsLockOff )◄────────────────────┐           │
+│           ┌─┘                            │           │
+│           │                              │           │
+│  Ev CapsLock Pressed            Ev CapsLock Pressed  │
+│           └──────────┐                   │           │
+│                      │                   │           │
+│                      ▼                   │           │
+│                ( CapsLockOn )────────────┘           │
+│                                                      │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                      │
+│              ●                                       │
+│              │                                       │
+│              ▼                                       │
+│      ( ScrollLockOff )◄───────────────┐              │
+│             ┌┘                        │              │
+│             │                         │              │
+│       Ev ScrollLock             Ev ScrollLock        │
+│          Pressed                   Pressed           │
+│             └───────┐                 │              │
+│                     │                 │              │
+│                     ▼                 │              │
+│              ( ScrollLockOn )─────────┘              │
+└──────────────────────────────────────────────────────┘
+@60 roles
+                            n
+                            e
+                            a
+ffFFFFFFffffffffffffffffffffffffffffffffffffffffffffffff
+f              n                                       f
+f              e                                       f
+f              a                                       f
+f       nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeee           f
+f             e                            e           f
+f    LLLLLLLLLLLLLLLLLL           LLLLLLLLLLLLLLLLLL   f
+f             eeeeeeeeeee                  e           f
+f                       e                  e           f
+f                       a                  e           f
+f                 nnNNNNNNNNNnneeeeeeeeeeeee           f
+f                                                      f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                      f
+f             n                                        f
+f             e                                        f
+f             a                                        f
+f      nnNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeee           f
+f           eee                            e           f
+f           e                              e           f
+f  LLLLLLLLLLLLLLLLLLL            LLLLLLLLLLLLLLLLLLL  f
+f           eeeeeeeeeeee                   e           f
+f                      e                   e           f
+f                      a                   e           f
+f                nnNNNNNNNNNNnneeeeeeeeeeeee           f
+f                                                      f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                      f
+f              n                                       f
+f              e                                       f
+f              a                                       f
+f      nnNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeee              f
+f             ee                        e              f
+f             e                         e              f
+f       LLLLLLLLLLLLL             LLLLLLLLLLLLL        f
+f          LLLLLLL                   LLLLLLL           f
+f             eeeeeeeee                 e              f
+f                     e                 e              f
+f                     a                 e              f
+f              nnNNNNNNNNNNNNnneeeeeeeeee              f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+@80
+                               ●
+                               │
+                               ▼
+┌─Active─────────────────────────────────────────────────────┐
+│                 ●                                          │
+│                 │                                          │
+│                 ▼                                          │
+│          ( NumLockOff )◄─────────────────────┐             │
+│                │                             │             │
+│       Ev NumLock Pressed            Ev NumLock Pressed     │
+│                └──────────┐                  │             │
+│                           │                  │             │
+│                           ▼                  │             │
+│                     ( NumLockOn )────────────┘             │
+│                                                            │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                            │
+│                ●                                           │
+│                │                                           │
+│                ▼                                           │
+│         ( CapsLockOff )◄─────────────────────┐             │
+│              ┌─┘                             │             │
+│              │                               │             │
+│     Ev CapsLock Pressed             Ev CapsLock Pressed    │
+│              └───────────┐                   │             │
+│                          │                   │             │
+│                          ▼                   │             │
+│                    ( CapsLockOn )────────────┘             │
+│                                                            │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                            │
+│              ●                                             │
+│              │                                             │
+│              ▼                                             │
+│      ( ScrollLockOff )◄───────────────────────┐            │
+│            ┌─┘                                │            │
+│            │                                  │            │
+│  Ev ScrollLock Pressed              Ev ScrollLock Pressed  │
+│            └────────────┐                     │            │
+│                         │                     │            │
+│                         ▼                     │            │
+│                  ( ScrollLockOn )─────────────┘            │
+└────────────────────────────────────────────────────────────┘
+@80 roles
+                               n
+                               e
+                               a
+ffFFFFFFffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                 n                                          f
+f                 e                                          f
+f                 a                                          f
+f          nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeee             f
+f                e                             e             f
+f       LLLLLLLLLLLLLLLLLL            LLLLLLLLLLLLLLLLLL     f
+f                eeeeeeeeeeee                  e             f
+f                           e                  e             f
+f                           a                  e             f
+f                     nnNNNNNNNNNnneeeeeeeeeeeee             f
+f                                                            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                            f
+f                n                                           f
+f                e                                           f
+f                a                                           f
+f         nnNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeee             f
+f              eee                             e             f
+f              e                               e             f
+f     LLLLLLLLLLLLLLLLLLL             LLLLLLLLLLLLLLLLLLL    f
+f              eeeeeeeeeeeee                   e             f
+f                          e                   e             f
+f                          a                   e             f
+f                    nnNNNNNNNNNNnneeeeeeeeeeeee             f
+f                                                            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                            f
+f              n                                             f
+f              e                                             f
+f              a                                             f
+f      nnNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeee            f
+f            eee                                e            f
+f            e                                  e            f
+f  LLLLLLLLLLLLLLLLLLLLL              LLLLLLLLLLLLLLLLLLLLL  f
+f            eeeeeeeeeeeeee                     e            f
+f                         e                     e            f
+f                         a                     e            f
+f                  nnNNNNNNNNNNNNnneeeeeeeeeeeeee            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+@120
+                               ●
+                               │
+                               ▼
+┌─Active─────────────────────────────────────────────────────┐
+│                 ●                                          │
+│                 │                                          │
+│                 ▼                                          │
+│          ( NumLockOff )◄─────────────────────┐             │
+│                │                             │             │
+│       Ev NumLock Pressed            Ev NumLock Pressed     │
+│                └──────────┐                  │             │
+│                           │                  │             │
+│                           ▼                  │             │
+│                     ( NumLockOn )────────────┘             │
+│                                                            │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                            │
+│                ●                                           │
+│                │                                           │
+│                ▼                                           │
+│         ( CapsLockOff )◄─────────────────────┐             │
+│              ┌─┘                             │             │
+│              │                               │             │
+│     Ev CapsLock Pressed             Ev CapsLock Pressed    │
+│              └───────────┐                   │             │
+│                          │                   │             │
+│                          ▼                   │             │
+│                    ( CapsLockOn )────────────┘             │
+│                                                            │
+│┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+│                                                            │
+│              ●                                             │
+│              │                                             │
+│              ▼                                             │
+│      ( ScrollLockOff )◄───────────────────────┐            │
+│            ┌─┘                                │            │
+│            │                                  │            │
+│  Ev ScrollLock Pressed              Ev ScrollLock Pressed  │
+│            └────────────┐                     │            │
+│                         │                     │            │
+│                         ▼                     │            │
+│                  ( ScrollLockOn )─────────────┘            │
+└────────────────────────────────────────────────────────────┘
+@120 roles
+                               n
+                               e
+                               a
+ffFFFFFFffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                 n                                          f
+f                 e                                          f
+f                 a                                          f
+f          nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeee             f
+f                e                             e             f
+f       LLLLLLLLLLLLLLLLLL            LLLLLLLLLLLLLLLLLL     f
+f                eeeeeeeeeeee                  e             f
+f                           e                  e             f
+f                           a                  e             f
+f                     nnNNNNNNNNNnneeeeeeeeeeeee             f
+f                                                            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                            f
+f                n                                           f
+f                e                                           f
+f                a                                           f
+f         nnNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeee             f
+f              eee                             e             f
+f              e                               e             f
+f     LLLLLLLLLLLLLLLLLLL             LLLLLLLLLLLLLLLLLLL    f
+f              eeeeeeeeeeeee                   e             f
+f                          e                   e             f
+f                          a                   e             f
+f                    nnNNNNNNNNNNnneeeeeeeeeeeee             f
+f                                                            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                                                            f
+f              n                                             f
+f              e                                             f
+f              a                                             f
+f      nnNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeee            f
+f            eee                                e            f
+f            e                                  e            f
+f  LLLLLLLLLLLLLLLLLLLLL              LLLLLLLLLLLLLLLLLLLLL  f
+f            eeeeeeeeeeeeee                     e            f
+f                         e                     e            f
+f                         a                     e            f
+f                  nnNNNNNNNNNNNNnneeeeeeeeeeeeee            f
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff

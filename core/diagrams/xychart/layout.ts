@@ -7,7 +7,7 @@ import { axisRows } from '../../charts/axis.ts'
 import { hbar, vbar } from '../../charts/bars.ts'
 import { add, cmp, dec, div, sub, toExact, type Dec } from '../../charts/decimal.ts'
 import { cellOf, eighths, rowAt } from '../../charts/scale.ts'
-import { heading, stack } from '../../charts/sheet.ts'
+import { heading, placed, stack } from '../../charts/sheet.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
 import { register, type DiagramModule } from '../../registry.ts'
@@ -19,8 +19,10 @@ import { parseXy, type Xy } from './parse.ts'
 
 type Label = Expect['labels'][number]
 type Bar = NonNullable<Expect['bars']>[number]
+type Glyph = NonNullable<Expect['glyphs']>[number]
 const widest = (xs: readonly string[]): number => Math.max(0, ...xs.map(width))
-const expect = (labels: Label[], bars: Bar[] = []): Expect => ({ labels, edges: [], edgeLabels: [], frames: [], bars })
+// Every label, bar and glyph states its cell (at), so a tick, category, value, bar or point cannot leave its place.
+const expect = (labels: Label[], bars: Bar[] = [], glyphs: Glyph[] = []): Expect => ({ labels, edges: [], edgeLabels: [], frames: [], bars, glyphs })
 // A part of a sheet: a drawing, a Fail, or null for an absent one, as a missing axis title is.
 type Part = Drawing | Fail | null
 // text's heading rows in ink, owned by owner; null without text.
@@ -70,25 +72,38 @@ function vertical(xy: Xy, sc: Scale, ss: Drawn[], columns: number): Part[] | Fai
   const lane = ss.map(s => { const x = at; at += s.kind === 'line' ? 1 : share; return x })   // each series' sub-column
   const left = (j: number) => G + 2 + j * (c + 1)                                         // group j's first content cell
   // Canvas rows 0 … 7 are plot rows 8 … 1, row 8 is the axis row and row 9 the categories.
-  const plot = createCanvas(H + 1 + (xy.categories ? 1 : 0), wide, columns), labels: Label[] = [], bs: Bar[] = []
-  for (let r = 0; r <= H; r++) plot.cap(r, G, r === H ? '└' : r % (H / 2) === 0 ? '┤' : '│', 'frame', 'axis')
+  const plot = createCanvas(H + 1 + (xy.categories ? 1 : 0), wide, columns), labels: Label[] = [], bs: Bar[] = [], gs: Glyph[] = []
+  for (let r = 0; r <= H; r++) {
+    const ch = r === H ? '└' : r % (H / 2) === 0 ? '┤' : '│'
+    plot.cap(r, G, ch, 'frame', 'axis'); gs.push({ owner: 'axis', ch, at: { r, c: G } })
+  }
   plot.cap(H, G + 1, Array.from({ length: n * (c + 1) }, (_, x) => (x % (c + 1) === 1 ? '┬' : '─')).join(''), 'frame', 'axis')
+  for (let j = 0; j < n; j++) gs.push({ owner: 'axis', ch: '┬', at: { r: H, c: left(j) } })
   const ticks = [[H, sc.lo], [0, sc.hi], [H / 2, sc.mid]] as const
-  ticks.forEach(([r, t], i) => { plot.text(r, G - 1 - width(t), t, 'value', `axis.t${i}`); labels.push({ owner: `axis.t${i}`, text: t }) })
-  cats.forEach((cat, j) => { plot.text(H + 1, left(j), cat, 'label', `c${j}`); labels.push({ owner: `c${j}`, text: cat }) })
+  ticks.forEach(([r, t], i) => {
+    const at = { r, c: G - 1 - width(t) }
+    plot.text(at.r, at.c, t, 'value', `axis.t${i}`); labels.push({ owner: `axis.t${i}`, text: t, at })
+  })
+  cats.forEach((cat, j) => { plot.text(H + 1, left(j), cat, 'label', `c${j}`); labels.push({ owner: `c${j}`, text: cat, at: { r: H + 1, c: left(j) } }) })
   for (const s of ss) s.values.forEach(({ v }, j) => {
     const x = left(j) + lane[s.k]!
-    if (s.kind === 'line') { plot.cap(H - rowAt(v, sc.M, H), x, s.tag, s.ink, `x${s.k}:mark`); return }
+    if (s.kind === 'line') {
+      const at = { r: H - rowAt(v, sc.M, H), c: x }
+      plot.cap(at.r, at.c, s.tag, s.ink, `x${s.k}:mark`); gs.push({ owner: `x${s.k}:mark`, ch: s.tag, at }); return
+    }
     const e = eighths(v, sc.M, H)
     vbar(e, H).forEach((g, r) => { if (g !== ' ') plot.cap(r, x, g.repeat(share), s.ink, `x${s.k}.b${j}`) })
-    bs.push({ owner: `x${s.k}.b${j}`, eighths: e, axis: 'v', lanes: share })
+    bs.push({ owner: `x${s.k}.b${j}`, eighths: e, axis: 'v', lanes: share, at: { r: H - 1, c: x } })
   })
   const rows = createCanvas(ss.length, wide, columns), named: Label[] = []
   for (const s of ss) {
-    rows.text(s.k, 0, s.text, 'label', `x${s.k}`); named.push({ owner: `x${s.k}`, text: s.text })
-    s.values.forEach(({ raw }, j) => { rows.text(s.k, left(j) + c - width(raw), raw, 'value', `x${s.k}.v${j}`); named.push({ owner: `x${s.k}.v${j}`, text: raw }) })
+    rows.text(s.k, 0, s.text, 'label', `x${s.k}`); named.push({ owner: `x${s.k}`, text: s.text, at: { r: s.k, c: 0 } })
+    s.values.forEach(({ raw }, j) => {
+      const at = { r: s.k, c: left(j) + c - width(raw) }
+      rows.text(at.r, at.c, raw, 'value', `x${s.k}.v${j}`); named.push({ owner: `x${s.k}.v${j}`, text: raw, at })
+    })
   }
-  return [head(xy.yTitle, 'label', 'yTitle', columns), plot.toDrawing(expect(labels, bs)), head(xy.xTitle, 'label', 'xTitle', columns), rows.toDrawing(expect(named))]
+  return [head(xy.yTitle, 'label', 'yTitle', columns), plot.toDrawing(expect(labels, bs, gs)), head(xy.xTitle, 'label', 'xTitle', columns), rows.toDrawing(expect(named))]
 }
 
 // The horizontal drawing's parts: the x-axis title; per category, one row per series, each the category (first row only,
@@ -109,23 +124,24 @@ function horizontal(xy: Xy, sc: Scale, ss: Drawn[], columns: number, wrapped: bo
   const tops: number[] = []                                                               // each group's first row
   let h = 0
   for (let j = 0; j < n; j++) { tops.push(h); h += Math.max(ss.length, cats[j]?.ps.length ?? 0) }
-  const grid = createCanvas(h, C + W + V + 4, columns), labels: Label[] = [], bs: Bar[] = []
+  const grid = createCanvas(h, C + W + V + 4, columns), labels: Label[] = [], bs: Bar[] = [], gs: Glyph[] = []
   cats.forEach(({ text, ps }, j) => {
     ps.forEach((p, i) => grid.text(tops[j]! + i, 0, p.text, 'label', `c${j}`, i > 0 ? p.join : undefined))
-    labels.push({ owner: `c${j}`, text })
+    labels.push(placed(`c${j}`, text, ps, tops[j]!, 0))
   })
   for (const s of ss) s.values.forEach(({ raw, v }, j) => {
-    const r = tops[j]! + s.k
-    grid.cap(r, C + 1, s.tag, 'label', `x${s.k}:mark`)
-    if (s.kind === 'line') grid.cap(r, C + 3 + Math.min(W - 1, cellOf(v, sc.M, W)), s.tag, s.ink, `x${s.k}:mark`)
+    const r = tops[j]! + s.k, mark = (c: number, ink: Ink) => { grid.cap(r, c, s.tag, ink, `x${s.k}:mark`); gs.push({ owner: `x${s.k}:mark`, ch: s.tag, at: { r, c } }) }
+    mark(C + 1, 'label')
+    if (s.kind === 'line') mark(C + 3 + Math.min(W - 1, cellOf(v, sc.M, W)), s.ink)
     else {
       const e = eighths(v, sc.M, W)
-      grid.cap(r, C + 3, hbar(e), s.ink, `x${s.k}.b${j}`); bs.push({ owner: `x${s.k}.b${j}`, eighths: e, axis: 'h', lanes: 1 })
+      grid.cap(r, C + 3, hbar(e), s.ink, `x${s.k}.b${j}`); bs.push({ owner: `x${s.k}.b${j}`, eighths: e, axis: 'h', lanes: 1, at: { r, c: C + 3 } })
     }
-    grid.text(r, C + W + 4 + V - width(raw), raw, 'value', `x${s.k}.v${j}`); labels.push({ owner: `x${s.k}.v${j}`, text: raw })
+    const at = { r, c: C + W + 4 + V - width(raw) }
+    grid.text(at.r, at.c, raw, 'value', `x${s.k}.v${j}`); labels.push({ owner: `x${s.k}.v${j}`, text: raw, at })
   })
   const axis = axisRows(C + 3, W, [{ cell: 0, label: sc.lo, align: 'left' }, { cell: W - 1, label: sc.hi, align: 'right' }], columns, 'axis')
-  return [head(xy.xTitle, 'label', 'xTitle', columns), grid.toDrawing(expect(labels, bs)), axis, head(xy.yTitle, 'label', 'yTitle', columns), legend(ss, columns)]
+  return [head(xy.xTitle, 'label', 'xTitle', columns), grid.toDrawing(expect(labels, bs, gs)), axis, head(xy.yTitle, 'label', 'yTitle', columns), legend(ss, columns)]
 }
 
 // The legend: a row per named series, in source order, its tag, a space, then its name wrapped to columns − 2, each later
@@ -142,7 +158,7 @@ function legend(ss: Drawn[], columns: number): Part {
   let r = 0
   for (const { s, ps } of rows) {
     ps.forEach((p, i) => cv.text(r + i, i > 0 ? 2 : 0, i > 0 ? p.text : `${s.tag} ${p.text}`, 'label', `x${s.k}`, i > 0 ? p.join : undefined))
-    labels.push({ owner: `x${s.k}`, text: s.text }); r += ps.length
+    labels.push(placed(`x${s.k}`, s.text, [{ text: s.tag }, ...ps.slice(1)], r, 0, 2)); r += ps.length
   }
   return cv.toDrawing(expect(labels))
 }

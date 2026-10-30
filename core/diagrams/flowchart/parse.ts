@@ -5,7 +5,7 @@ import { shapeFromName, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, End, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { labelLines } from '../../text.ts'
+import { drawable, labelLines, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
@@ -75,7 +75,7 @@ type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; o
 // The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
 // alone or with a direction), 'syntax:<n>' (a statement on source line n not read
 // whole), 'unclosed-subgraph', 'id-collision' (an edge id that a node, a cluster or an earlier edge also has),
-// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string', 'entity' or 'unsupported-char U+XXXX'.
+// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string', 'entity', 'html' or 'unsupported-char U+XXXX'.
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
@@ -174,7 +174,7 @@ function openSubgraph(s: string, st: State): Fail | null {
   const [, name, rest = '', quoted] = m
   const c = rest.startsWith('[') ? closer(rest, 1, [']']) : null
   if (rest && c?.at !== rest.length - 1) return fail('syntax')
-  const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name)
+  const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name, 'none')
   if (isFail(title)) return title
   const id = name ?? title, d = st.nodes.get(id)
   if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) return fail('syntax')
@@ -408,12 +408,12 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 // A bracket or edge label's text, or a subgraph title: trimmed, one enclosing pair of "…" stripped ("…" keeps
 // punctuation). A "`…`" markdown string fails; so does, as 'syntax', a label with a " that no one "…" enclosing it
 // all accounts for: Mermaid draws "a" b as a b, and this parser fails closed. Its <br> stay: a node splits them into
-// lines, and an edge label keeps them for layout to split with labelLines.
-function label(raw: string): string | Fail {
+// lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
+function label(raw: string, br: Br = 'any'): string | Fail {
   const trimmed = raw.trim()
   if (trimmed.startsWith('"`')) return fail('markdown-string')
   if (trimmed.includes('"') && !/^"[^"]*"$/.test(trimmed)) return fail('syntax')
-  return checked(trimmed.replace(/^"(.*)"$/s, '$1'))
+  return checked(trimmed.replace(/^"(.*)"$/s, '$1'), br)
 }
 
 // An edge label as label reads it, but null if it is blank: a blank label would draw no cells. A blank line in it fails,
@@ -433,10 +433,12 @@ function splitLabel(t: string): string[] | Fail {
   return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : ls
 }
 
-// Label text as written, if it can be drawn: a #…; entity or an unsupported character fails.
-function checked(text: string): string | Fail {
-  // Mermaid decodes #name; and #123; as HTML entities.
-  if (/#\w+;/.test(text)) return fail('entity')
+// Label text as written, if it can be drawn: text Mermaid's HTML label shows otherwise fails as drawable says ('entity' or
+// 'html'), and so does an unsupported character. br: 'any' where the drawing splits each <br>; 'none' for a subgraph title,
+// which draws on one line.
+function checked(text: string, br: Br = 'any'): string | Fail {
+  const f = drawable(text, 'html', br)
+  if (f) return f
   const bad = unsupported(text)
   if (bad) return fail(`unsupported-char ${bad}`)
   return text

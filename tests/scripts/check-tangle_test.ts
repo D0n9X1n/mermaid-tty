@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { isFail } from '../../core/fail.ts'
 import { explain } from '../../core/render.ts'
 import { corpus, fences, fixtures, main, report } from '../../scripts/check-tangle.ts'
+import { TIER1 } from '../../core/registry.ts'
 
 const SCRIPT = fileURLToPath(new URL('../../scripts/check-tangle.ts', import.meta.url))
 const run = (...args: string[]) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' })
@@ -44,10 +45,17 @@ test('VR.tangled: report lists each id that hit, once, for --corpus, and only th
     { hits: 6, lines: ['check-tangle --private: 3 blocks, 6 hits at 60, 80 and 120 columns'] })
 })
 
-test('VR.tangled: the goldens are the -ok- fixtures of flowchart and sequence; --corpus reads fixtures/corpus/*.mmd', () => {
+test('VR.tangled: report with types adds <type>: <n> ok after the counts, n the blocks of that type with no hit, then each hit', () => {
+  const typed = [{ id: 'pie-ok-01', source: CLEAN }, { id: 'pie-ok-02', source: 'not a diagram' }, { id: 'flowchart-ok-01', source: CLEAN }]
+  assert.deepEqual(report('check-tangle', typed, 'types', headless), { hits: 6, lines: ['check-tangle: 3 blocks, 6 hits at 60, 80 and 120 columns',
+    'pie: 1 ok', 'flowchart: 0 ok', '  pie-ok-01@60 ambiguous-head', '  pie-ok-01@80 ambiguous-head', '  pie-ok-01@120 ambiguous-head',
+    '  flowchart-ok-01@60 ambiguous-head', '  flowchart-ok-01@80 ambiguous-head', '  flowchart-ok-01@120 ambiguous-head'] })
+})
+
+test('VR.tangled: the goldens are the -ok- fixtures of every fixtures/ folder but corpus; --corpus reads fixtures/corpus/*.mmd', () => {
   const ids = fixtures().map(b => b.id)
-  assert.ok(ids.includes('flowchart-ok-30') && ids.includes('sequence-ok-01'), ids.join())
-  assert.deepEqual(ids.filter(id => !/^(flowchart|sequence)-ok-\d+$/.test(id)), [])
+  for (const t of ['flowchart', 'sequence', ...TIER1]) assert.ok(ids.includes(`${t}-ok-01`), t)
+  assert.deepEqual(ids.filter(id => !/^[A-Za-z]+-ok-\d+$/.test(id) || id.startsWith('corpus-')), [])
   assert.ok(corpus().length > 0 && corpus().every(b => /^corpus-\d+$/.test(b.id)))
 })
 
@@ -61,9 +69,10 @@ test('VR.tangled: --private reads every closed mermaid fence of the .md files un
   assert.deepEqual(fences(d).map(b => b.source), ['flowchart TD\nA --> B', 'flowchart LR\nC --> D'])
 })
 
-test('VR.tangled: no golden is tangled: the CLI prints the goldens\' counts and exits 0', () => {
-  const r = run()
-  assert.equal(r.stdout, `check-tangle: ${fixtures().length} blocks, 0 hits at 60, 80 and 120 columns\n`)
+test('VR.tangled: no golden is tangled: the CLI prints the goldens\' counts, then <type>: <n> ok per type, and exits 0', () => {
+  const r = run(), types = [...new Set(fixtures().map(b => b.id.slice(0, b.id.indexOf('-'))))]
+  assert.equal(r.stdout, [`check-tangle: ${fixtures().length} blocks, 0 hits at 60, 80 and 120 columns`,
+    ...types.map(t => `${t}: ${fixtures().filter(b => b.id.startsWith(`${t}-`)).length} ok`)].map(l => `${l}\n`).join(''))
   assert.equal(r.stderr, ''); assert.equal(r.status, 0)
 })
 
@@ -71,7 +80,7 @@ test('VR.tangled: --corpus adds the corpus\'s counts and the ids that hit; --pri
   const d = tmp(t)
   writeFileSync(join(d, 'n.md'), NOTE)
   const r = run('--private', d, '--corpus')
-  const want = [report('check-tangle', fixtures(), 'hits'), report('check-tangle --corpus', corpus(), 'ids'), report('check-tangle --private', fences(d), 'counts')]
+  const want = [report('check-tangle', fixtures(), 'types'), report('check-tangle --corpus', corpus(), 'ids'), report('check-tangle --private', fences(d), 'counts')]
   assert.equal(r.stdout, want.flatMap(w => w.lines).map(l => `${l}\n`).join(''))
   assert.ok(!r.stdout.includes('SECRET') && !r.stdout.includes(d))
   assert.equal(r.stderr, ''); assert.equal(r.status, want.some(w => w.hits > 0) ? 1 : 0)

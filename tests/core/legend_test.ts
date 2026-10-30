@@ -28,7 +28,8 @@ test("A4: a row packs its parts' words one space apart: a null-owner part is cap
   const d = withLegend(body([['a', 't1.t'], ['b', 't2.t']]), [a, row('b', 't2.t', '设计评审会议记录')], 14,
     [{ item: 't1.t', cls: 'timing' }, { item: 't2.t', cls: 'timing' }]) as Drawing
   assert.deepEqual(text(d), ['a  b', 'a Design · two', '  weeks', 'b 设计评审会议', '  记录']); assert.equal(validate(d), null)
-  assert.deepEqual(d.expect.labels, [{ owner: 't1.t', text: 'Design' }, { owner: 't1.d', text: 'two weeks' }, { owner: 't2.t', text: '设计评审会议记录' }])
+  assert.deepEqual(d.expect.labels, [{ owner: 't1.t', text: 'Design', at: { r: 1, c: 2 } }, { owner: 't1.d', text: 'two weeks', at: { r: 1, c: 11 } },
+    { owner: 't2.t', text: '设计评审会议记录', at: { r: 3, c: 2 } }])
   assert.deepEqual([d.cells[1]![9]!.kind, d.cells[1]![9]!.role, d.cells[1]![9]!.owners], ['cap', 'note', ['t1.t']])
   assert.deepEqual([d.cells[1]![11]!.join, d.cells[2]![2]!.join, d.cells[3]![2]!.join, d.cells[4]![2]!.join], [undefined, ' ', undefined, ''])
 })

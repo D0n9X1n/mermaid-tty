@@ -1,0 +1,60 @@
+@60
+     [ Person ]
+         │
+         │1
+         │
+       owns
+         │
+         │0..*
+         │
+[ Customer Account ]
+@60 roles
+     nnNNNNNNnn
+         e
+         eA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+nnNNNNNNNNNNNNNNNNnn
+@80
+     [ Person ]
+         │
+         │1
+         │
+       owns
+         │
+         │0..*
+         │
+[ Customer Account ]
+@80 roles
+     nnNNNNNNnn
+         e
+         eA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+nnNNNNNNNNNNNNNNNNnn
+@120
+     [ Person ]
+         │
+         │1
+         │
+       owns
+         │
+         │0..*
+         │
+[ Customer Account ]
+@120 roles
+     nnNNNNNNnn
+         e
+         eA
+         e
+       LLLL
+         e
+         eAAAA
+         e
+nnNNNNNNNNNNNNNNNNnn

@@ -1,51 +1,114 @@
-# Interim CI until plan B's T8 lands the full ci.yml: every automatic check that exists today, on all three OSes.
-name: ci
+name: CI
+
 on:
   pull_request:
   push:
-    branches: [main]
+
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Claude Code is pinned here; version compatibility has its own workflow.
 jobs:
-  test:
+  check:
+    name: check (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
+    env:
+      GIT_AUTHOR_NAME: ci
+      GIT_AUTHOR_EMAIL: ci@users.noreply.github.com
+      GIT_COMMITTER_NAME: ci
+      GIT_COMMITTER_EMAIL: ci@users.noreply.github.com
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: git config --global user.name ci && git config --global user.email ci@users.noreply.github.com
       - run: npm install -g @anthropic-ai/claude-code@2.1.308
-      - run: node --test
-      - run: node scripts/typecheck.ts
-      - run: npm ci --prefix scripts/docs && node --test 'scripts/tests/*.docs-spec.ts'
-      - run: claude plugin validate .
-      - run: claude plugin test .
-      - run: bash scripts/test-wiki-publish.sh
-      - run: bash scripts/test-local-install.sh
-  # The e2e package (node-pty, @xterm/headless) must install and load on every OS before the e2e job can run there.
-  e2e-deps:
+      # check.sh currently discovers tests/ only, not scripts/tests/ or docs specs.
+      - id: node-tests
+        run: node --test
+      - id: typecheck
+        run: node scripts/typecheck.ts
+      - id: docs-tooling
+        run: npm ci --prefix scripts/docs
+      - id: docs-tests
+        run: node --test 'scripts/tests/*.docs-spec.ts'
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - id: wiki-publish-test
+        shell: bash
+        run: bash scripts/test-wiki-publish.sh
+      - id: local-install-test
+        shell: bash
+        run: bash scripts/test-local-install.sh
+      - id: check
+        name: Must-pass suite (Git Bash on Windows; fails on any command)
+        shell: bash
+        run: bash scripts/check.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - id: review-hashes
+        run: node scripts/check-review-hashes.ts
+      - id: wiki
+        run: node scripts/check-wiki.ts
+      - id: ci-coverage
+        name: Every acceptance check maps to a CI step (B7)
+        run: node scripts/check-ci-coverage.ts
+      # Last, so a red docs check (README content lands late) never skips the gates above.
+      - id: docs
+        run: node scripts/check-docs.ts
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  e2e:
+    name: e2e (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm ci --prefix scripts/e2e
-      - run: cd scripts/e2e && node -e "import('node-pty').then(m => console.log('node-pty spawn:', typeof m.spawn))"
-      # The screen reader and the PTY/tmux drivers on each OS; tmux tests skip where tmux is absent (Windows).
-      - run: node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts
+      - run: npm install -g @anthropic-ai/claude-code@2.1.308
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y tmux
+      - if: runner.os == 'macOS'
+        run: brew install tmux
+      - id: e2e-tooling
+        name: Pinned PTY and screen tooling on every OS
+        run: npm ci --prefix scripts/e2e
+      - id: e2e-native
+        working-directory: scripts/e2e
+        run: node -e "import('node-pty').then(m => console.log('node-pty spawn:', typeof m.spawn))"
+      - id: e2e-drivers
+        run: node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts
+      - id: e2e
+        name: A9 in real Claude Code, all scenarios, themes and 256-color coverage
+        env:
+          LC_ALL: ${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}
+        run: node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all
+
+  gallery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - id: gallery
+        run: node scripts/render-gallery.ts gallery
+      - id: gallery-upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gallery
+          path: gallery/

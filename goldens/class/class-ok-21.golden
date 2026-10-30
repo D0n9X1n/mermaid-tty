@@ -1,0 +1,48 @@
+@60
+┌─Shapes────────┐
+│  three sides  │
+│       ┆       │  ┌─Base types─────────────┐
+│       ┆       │  │ [ Shape ]    abstract  │
+│       ┆       │  └────────────────────────┘
+│ [ Triangle ]  │
+└───────────────┘
+@60 roles
+ffFFFFFFfffffffff
+f oOOOOOOOOOOOo f
+f       e       f  ffFFFFFFFFFFffffffffffffff
+f       e       f  f nnNNNNNnn   oOOOOOOOOo f
+f       e       f  ffffffffffffffffffffffffff
+f nnNNNNNNNNnn  f
+fffffffffffffffff
+@80
+┌─Shapes────────┐
+│  three sides  │
+│       ┆       │  ┌─Base types─────────────┐
+│       ┆       │  │ [ Shape ]    abstract  │
+│       ┆       │  └────────────────────────┘
+│ [ Triangle ]  │
+└───────────────┘
+@80 roles
+ffFFFFFFfffffffff
+f oOOOOOOOOOOOo f
+f       e       f  ffFFFFFFFFFFffffffffffffff
+f       e       f  f nnNNNNNnn   oOOOOOOOOo f
+f       e       f  ffffffffffffffffffffffffff
+f nnNNNNNNNNnn  f
+fffffffffffffffff
+@120
+┌─Shapes────────┐
+│  three sides  │
+│       ┆       │  ┌─Base types─────────────┐
+│       ┆       │  │ [ Shape ]    abstract  │
+│       ┆       │  └────────────────────────┘
+│ [ Triangle ]  │
+└───────────────┘
+@120 roles
+ffFFFFFFfffffffff
+f oOOOOOOOOOOOo f
+f       e       f  ffFFFFFFFFFFffffffffffffff
+f       e       f  f nnNNNNNnn   oOOOOOOOOo f
+f       e       f  ffffffffffffffffffffffffff
+f nnNNNNNNNNnn  f
+fffffffffffffffff

@@ -1,4 +1,4 @@
-import test from 'node:test'; import assert from 'node:assert/strict'; import { labelLines, wrap } from '../../core/text.ts'
+import test from 'node:test'; import assert from 'node:assert/strict'; import { drawable, labelLines, wrap, type Br, type Mode } from '../../core/text.ts'
 test('A3: <br> variants split label lines', () => assert.deepEqual(labelLines('a<br>b<br/>c<br />d'), ['a', 'b', 'c', 'd']))
 test('A4.fit-ladder: wrap at spaces and between W/F chars; a word wider than max fails', () => {
   assert.deepEqual(wrap('alpha beta gamma', 10), [{ text: 'alpha beta', join: '' }, { text: 'gamma', join: ' ' }])
@@ -62,4 +62,90 @@ test('A3: a blank line, empty or only spaces, wraps to one empty piece', () => {
 
 test('A4.fit-ladder: a piece split off between W/F characters joins with nothing, one split at a space with a space', () => {
   assert.deepEqual(wrap('读取 配置文件', 4), [{ text: '读取', join: '' }, { text: '配置', join: ' ' }, { text: '文件', join: '' }])
+})
+
+// drawable: whether text draws as Mermaid 12.2.0 shows it (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md).
+const MODES: Mode[] = ['html', 'plain', 'sanitized', 'escaped', 'member'], BRS: Br[] = ['any', 'lower', 'literal', 'none']
+const D = (t: string, mode: Mode, br: Br = 'any') => drawable(t, mode, br)?.reason ?? null
+test('A5.errors: drawable: a #…; entity or a ﬂ° or ¶ß marker fails entity in every mode and br; a lone #, ﬂ, ° or ¶ is text', () => {
+  for (const m of MODES) for (const b of BRS) {
+    assert.deepEqual(['#9829;', 'I #quot; x', 'aﬂ°b', 'a¶ßb', 'ﬂ°x¶ß'].map(t => D(t, m, b)), Array(5).fill('entity'), `${m} ${b}`)
+    assert.equal(D('C# 1; ﬂ ° ¶ ß', m, b), null, `${m} ${b}`)
+  }
+})
+test('A5.errors: drawable: br any splits every <br> spelling, lower only <br>, literal leaves them to the mode, none fails html', () => {
+  const all = ['a<br>b', 'a<BR>b', 'a<br/>b', 'a<br />b', 'a<Br  />b']
+  assert.deepEqual(all.map(t => D(t, 'sanitized', 'any')), Array(5).fill(null))
+  assert.deepEqual(all.map(t => D(t, 'sanitized', 'lower')), [null, 'html', 'html', 'html', 'html'])
+  assert.deepEqual(all.map(t => [D(t, 'plain', 'literal'), D(t, 'html', 'literal')]), Array(5).fill([null, 'html']))
+  assert.deepEqual([...all, 'a<br'].map(t => D(t, 'plain', 'none')), Array(6).fill('html'))
+  assert.equal(D('a<br>b<b>', 'html', 'any'), 'html')
+})
+test('A5.errors: drawable: html fails a tag-like < and an & before # or two letters; Q&A, AT&T, a < b and x > 5 pass', () => {
+  const ok = ['Q&A', 'Q & A', 'AT&T', 'a&b', 'a < b', 'x > 5', 'a <3', '1<2', 'a<', 'a& b', 'éé&é']
+  assert.deepEqual(ok.map(t => D(t, 'html')), Array(ok.length).fill(null))
+  const tags = ['a<b', '<b>z</b>', 'a</b', 'a<!--c-->b', '<?x', 'x<Y']
+  assert.deepEqual(tags.map(t => D(t, 'html')), Array(tags.length).fill('html'))
+  const ents = ['&lt;', '&amp;', '&lt', 'a&#60;', '&#x41', 'Tom&Jerry', '&nbsp']
+  assert.deepEqual(ents.map(t => D(t, 'html')), Array(ents.length).fill('entity'))
+})
+test('A5.errors: drawable: plain draws < > and & as written; sanitized fails any <; escaped any < or >', () => {
+  const t = ['a<b', '<b>z</b>', 'a < b', 'x > 5', '&lt;', '&amp;', 'a<!--c-->b']
+  assert.deepEqual(t.map(s => D(s, 'plain')), Array(t.length).fill(null))
+  assert.deepEqual(t.map(s => D(s, 'sanitized')), ['html', 'html', 'html', null, null, null, 'html'])
+  assert.deepEqual(t.map(s => D(s, 'escaped')), ['html', 'html', 'html', 'html', null, null, 'html'])
+  assert.deepEqual(['Q&A', 'Q & A'].map(s => [D(s, 'sanitized'), D(s, 'escaped')]), [[null, null], [null, null]])
+})
+test('A5.errors: drawable: member fails any < and an & before # or two letters of any script', () => {
+  assert.deepEqual(['a < b', 'a<b', '&lt', '&#9', 'a&éé', 'Q&A', 'x > 5'].map(s => D(s, 'member')), ['html', 'html', 'entity', 'entity', 'entity', null, null])
+  assert.equal(D('a&éé', 'html'), null)
+})
+
+// HTML ends a tag name only at its whitespace (space, tab, newline, form feed, return), / or >: <br /> is no br tag.
+const ODD = [' ', ' ', '　'].map(s => `a<br${s}/>b`)
+test('A3: <br> splits only with HTML whitespace before its slash', () => {
+  assert.deepEqual(labelLines('a<br\t/>b<br\n/>c<br\f/>d<br\r/>e<br />f'), ['a', 'b', 'c', 'd', 'e', 'f'])
+  assert.deepEqual(ODD.map(t => labelLines(t)), ODD.map(t => [t]))
+})
+// Mermaid's own splitter (common.ts lineBreakRegex, /<\/?br\s*\/?>/gi) splits at those and at </br> too; a field whose <br>
+// splits would draw them as written, so it falls back, as a field with no <br> does.
+test('A5.errors: drawable: a <br> with another space, or a </br>, fails html where a <br> splits or none may be drawn', () => {
+  const odd = [...ODD, 'a</br>b', 'a</BR >b']
+  for (const m of MODES) assert.deepEqual(odd.map(t => [D(t, m, 'any'), D(t, m, 'none')]), odd.map(() => ['html', 'html']), m)
+  assert.deepEqual(odd.map(t => D(t, 'plain', 'literal')), odd.map(() => null))
+})
+test('A5.errors: drawable: br any and lower remove every <br>, not only the first', () => {
+  assert.deepEqual(['a<br>b<br>c', 'a<br><br>'].map(t => D(t, 'sanitized', 'lower')), [null, null])
+  assert.deepEqual(['a<br>b<br/>c', 'a<BR><br />'].map(t => D(t, 'sanitized', 'any')), [null, null])
+  assert.equal(D('a<br>b<BR>c', 'sanitized', 'lower'), 'html')
+})
+test('X2: a removed <br> joins nothing, so text on either side is checked on its own', () => {
+  assert.equal(drawable('Q&A<br>x', 'html', 'any'), null); assert.equal(drawable('Q&A<br>x', 'html', 'lower'), null)
+  assert.deepEqual(drawable('a&<br>amp;', 'html', 'any'), null); assert.deepEqual(drawable('&am<br>p', 'html', 'any'), { reason: 'entity' })
+})
+
+// X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a markdown
+// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a plain one
+// turns a literal \n into <br />.
+const RENDERED: Mode[] = ['html', 'markdown', 'member']
+test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in every HTML-label mode, and nowhere else', () => {
+  const icons = ['fa:fa-book', 'x fab:fa-github y', 'fas:fa-a-b', 'fak:fa-x', 'fal:fa-x', 'far:fa-x', 'fad:fa-x', 'sofa:fa-x']
+  for (const m of RENDERED) {
+    assert.deepEqual(icons.map(t => D(t, m)), icons.map(() => 'icon'), m)
+    assert.deepEqual(['$$x^2$$', 'a $$b$$ c', '$$$$'].map(t => D(t, m)), ['math', 'math', 'math'], m)
+    assert.deepEqual(['fa:book', 'fa-book', 'fa:fa-', '$5', 'a $$ b', '$$$'].map(t => D(t, m)), Array(6).fill(null), m)
+  }
+  for (const m of ['plain', 'sanitized', 'escaped'] as Mode[]) assert.deepEqual(['fa:fa-book', '$$x$$'].map(t => D(t, m)), [null, null], m)
+})
+test('X3: drawable: markdown and member fail emphasis marked renders and a \\ escaping punctuation; html does not', () => {
+  const md = ['**bold**', '*a*', '_a_', '__init__', '+__init__()', 'x._y_', '(_a_)', 'a*b*c', 'a\\*b', 'a\\\\b', 'a \\# b', 'a * b * c']
+  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(md.map(t => D(t, m)), md.map(() => 'markdown'), m)
+  const ok = ['bold', 'snake_case', 'my_var_name', 'a_b_c', '_private', 'x_', 'a*b', '+someMethod()*', 'C:\\Users', 'a\\nb', '`code`',
+    '# h', '- item', '[x](y)', 'Q&A']
+  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(ok.map(t => D(t, m)), ok.map(() => null), m)
+  assert.equal(D('a < b', 'markdown'), null)
+  assert.deepEqual(md.map(t => D(t, 'html')), md.map(() => null))
+})
+test('X3: drawable: a literal \\n fails newline in html, where Mermaid splits it, and draws in markdown', () => {
+  assert.deepEqual(['a\\nb', 'x\\n'].map(t => [D(t, 'html'), D(t, 'markdown')]), [['newline', null], ['newline', null]])
 })

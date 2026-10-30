@@ -1,0 +1,102 @@
+@60
+┌────────────────────────────┬────────────────────────────┐
+│                            │Expand into adjacent markets│
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │1                           │
+├────────────────────────────┼────────────────────────────┤
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+│                            │                            │
+└────────────────────────────┴────────────────────────────┘
+1 A (0.5, 0.5)
+@60 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            fLLLLLLLLLLLLLLLLLLLLLLLLLLLLf
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f1                           f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+f                            f                            f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV
+@80
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │ Expand into adjacent markets │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │1                             │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+└──────────────────────────────┴──────────────────────────────┘
+1 A (0.5, 0.5)
+@80 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f LLLLLLLLLLLLLLLLLLLLLLLLLLLL f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f1                             f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV
+@120
+┌──────────────────────────────┬──────────────────────────────┐
+│                              │ Expand into adjacent markets │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │1                             │
+├──────────────────────────────┼──────────────────────────────┤
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+│                              │                              │
+└──────────────────────────────┴──────────────────────────────┘
+1 A (0.5, 0.5)
+@120 roles
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f LLLLLLLLLLLLLLLLLLLLLLLLLLLL f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f1                             f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+f                              f                              f
+fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1 L VVVVVVVVVV

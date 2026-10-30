@@ -1,0 +1,9 @@
+gantt
+    title Release v1
+    dateFormat YYYY-MM-DD
+    section Build
+    Parser      :done, p, 2026-10-20, 3d
+    Layout      :active, l, after p, 4d
+    section Ship
+    Review      :r, after l, 2d
+    Release     :milestone, after r, 0d

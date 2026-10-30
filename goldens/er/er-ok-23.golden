@@ -1,0 +1,60 @@
+@60
+ [ Same ]
+    │
+    │1
+    │
+    x
+    │
+    │0..*
+    │
+[ Same ]
+@60 roles
+ nnNNNNnn
+    e
+    eA
+    e
+    L
+    e
+    eAAAA
+    e
+nnNNNNnn
+@80
+ [ Same ]
+    │
+    │1
+    │
+    x
+    │
+    │0..*
+    │
+[ Same ]
+@80 roles
+ nnNNNNnn
+    e
+    eA
+    e
+    L
+    e
+    eAAAA
+    e
+nnNNNNnn
+@120
+ [ Same ]
+    │
+    │1
+    │
+    x
+    │
+    │0..*
+    │
+[ Same ]
+@120 roles
+ nnNNNNnn
+    e
+    eA
+    e
+    L
+    e
+    eAAAA
+    e
+nnNNNNnn

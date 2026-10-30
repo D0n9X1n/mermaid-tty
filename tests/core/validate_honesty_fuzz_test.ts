@@ -15,7 +15,7 @@ import { falsePairs as drawnFalsePairs, g } from './graph-fixture.ts'
 function random(seed: number) { return (n: number) => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) % n } }
 function pick<T>(next: (n: number) => number, xs: readonly T[]): T { return xs[next(xs.length)]! }
 
-// Graph i: TB or LR, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a back edge to the
+// Graph i: TB, LR, BT or RL in turn, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a back edge to the
 // parent or the root, a repeat of an earlier pair, or a self-loop. A quarter of the edges are labelled; some ends are
 // circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the graphs frame a run of nodes.
 function graphFor(i: number, next: (n: number) => number): Graph {
@@ -34,14 +34,18 @@ function graphFor(i: number, next: (n: number) => number): Graph {
   }
   const labels: Record<string, string> = {}
   for (let k = 0; k < count; k++) if (next(5) === 0) labels[name(k)] = pick(next, ['two<br/>lines', '读取配置', 'a wider node'])
-  const graph = g(i % 2 ? 'LR' : 'TB', specs, labels)
+  const graph = g((['TB', 'LR', 'BT', 'RL'] as const)[i % 4]!, specs, labels)
   for (const e of graph.edges) {
     if (next(6) === 0) e.tail = pick<End>(next, ['arrow', 'circle', 'cross'])
     if (next(8) === 0) e.head = pick<End>(next, ['none', 'circle', 'cross'])
   }
   if (next(3) === 0) {
     const lo = next(count), hi = lo + 1 + next(count - lo)
-    graph.clusters = [{ id: 'S', title: next(2) ? '组' : null, dir: null, nodes: Array.from({ length: hi - lo }, (_, k) => name(lo + k)), clusters: [] }]
+    const nodes = Array.from({ length: hi - lo }, (_, k) => name(lo + k))
+    graph.clusters = [{ id: 'S', title: next(2) ? '组' : null, dir: null, nodes, clusters: [] }]
+    // Every other framed graph of three or more nodes nests its first two in T, with no draw from next, so the stream is A1's.
+    if (nodes.length >= 3 && i % 2 === 0) graph.clusters = [{ ...graph.clusters[0]!, nodes: nodes.slice(2), clusters: ['T'] },
+      { id: 'T', title: 'T', dir: null, nodes: nodes.slice(0, 2), clusters: [] }]
   }
   return graph
 }
@@ -166,7 +170,7 @@ function falsePairs(src: readonly Src[], cells: ReadonlyMap<string, Spot[]>, pat
 
 // Each way d's cells mislead about src's edges: (i) an edge that is not one simple path between its ends, (ii) an edge that
 // turns in a line cell where two unrelated edges meet, (iii) an arrow cell owned by an edge that does not end there, (iv) a
-// merged line that seems to draw an edge src does not have.
+// merged line that seems to draw an edge src does not have, (v) an edge between nodes of one frame that leaves it.
 function honesty(d: Drawing, src: readonly Src[]): string[] {
   const byId = new Map(src.map(e => [e.id, e])), cells = new Map(src.map(e => [e.id, [] as Spot[]]))
   const lines: Spot[] = [], arrows: Spot[] = [], out: string[] = []
@@ -193,6 +197,17 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
     if (!graphs.get(o)?.get(`${p.r},${p.c}`)?.ends.length) out.push(`(iii) ${o} owns the arrow at ${p.r},${p.c} but does not end there`)
   }
   out.push(...falsePairs(src, cells, paths))
+  // (v): a frame's box, from its own frame cells, holds a node when every cell owned by the node is strictly inside it; an
+  // edge between two nodes one frame holds draws no line or arrow cell on that frame's border or past it.
+  for (const f of d.expect.frames) {
+    const own: [number, number][] = [], drawnFor = (id: string) => { const at: [number, number][] = []
+      d.cells.forEach((row, r) => row.forEach((x, c) => { if (x?.owners.includes(id)) at.push([r, c]) })); return at }
+    d.cells.forEach((row, r) => row.forEach((x, c) => { if (x?.kind === 'frame' && x.owners[0] === f) own.push([r, c]) }))
+    const rs = own.map(([r]) => r), cs = own.map(([, c]) => c)
+    const strictly = ([r, c]: [number, number]) => r > Math.min(...rs) && r < Math.max(...rs) && c > Math.min(...cs) && c < Math.max(...cs)
+    const holds = (id: string) => { const at = drawnFor(id); return at.length > 0 && at.every(strictly) }
+    for (const e of src) if (holds(e.from) && holds(e.to) && !cells.get(e.id)!.every(p => strictly([p.r, p.c]))) out.push(`(v) ${e.id} leaves frame ${f}`)
+  }
   return out
 }
 
@@ -240,5 +255,7 @@ test('A1: Q2a compaction keeps every seeded drawing\'s verdict but width', t => 
   }
   t.diagnostic(`drawn ${count}, fitted at 40 columns by compaction ${fitted}, other verdicts changed ${bad.length}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} verdicts changed`)
+  // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back (V6); V8 draws a back edge
+  // between nodes of one open frame inside it, 1002 drawn.
   assert.ok(count >= 1000 && fitted > 0, `drawn ${count}, fitted ${fitted}`)
 })

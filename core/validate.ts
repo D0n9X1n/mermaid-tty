@@ -3,18 +3,22 @@
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
+import { lineGlyph } from './canvas.ts'
 import { width } from './width.ts'
 
 export type Expect = {
-  labels: readonly { owner: string; text: string }[]                                     // every label instance, keyed by owner id
+  labels: readonly { owner: string; text: string; at?: { r: number; c: number } }[]    // every label instance, keyed by owner id; C: at, its first cell
   edges: readonly { id: string; from: string; to: string; ends: readonly End[]           // drawn edges; ~~~ is not listed
     endLabels?: readonly { node: string; owner: string }[] }[]   // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
-  bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number }[]  // C: each bar; lanes: its width across the axis, default 1
-  members?: readonly { id: string; parent: string }[]                                    // C: each drawn member row or column
+  bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]  // C: each bar; lanes: its width across the axis, default 1; at: its base cell
+  members?: readonly { id: string; parent: string; place?: { r: number; c: number } }[]  // C: each drawn member row or column; place: its first cell, from its pill's top-left
   keys?: readonly { key: string; item: string; cls: string; at?: { r: number; c: number } }[]  // C: each keyed item, its key, class and own cell
   keyable?: readonly { item: string; cls: string }[]                                     // C: each item a class may key
+  order?: readonly { ids: readonly string[]; column: boolean }[]                         // C: owners drawn in this row order
+  glyphs?: readonly { owner: string; ch: string; at?: { r: number; c: number } }[]       // C: marks drawn as exactly this glyph; at: drawn exactly there
+  rows?: readonly { mark: string; owners: readonly string[] }[]                          // C: each mark, in row order, and its labels
 }
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
@@ -32,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, then C's end labels, bars, member rows and keys. null if none.
+// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? merges(d, all) ??
+  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    endLabels(d, all) ?? bars(d, all) ?? members(d) ?? keys(d, all)
+    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -147,12 +151,34 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
     if (mine.length === 0) continue
     if (degree(p.cell) < 2) return fail('line-dangling')
     for (const s of SIDES.filter(s => p.cell.dirs & s.bit)) {
-      const n = beside(d, p, s)
-      const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => p.cell.owners.includes(id))) ||
-        mine.some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
+      // The owners that draw this arm, by the dirs the cell records for each; all of them if it records none.
+      const by = p.cell.segs ? p.cell.segs.filter(x => x.dirs & s.bit).map(x => x.owner) : p.cell.owners
+      const n = beside(d, p, s), others = by.filter(id => !edges.has(id))
+      const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => by.includes(id))) ||
+        (n.kind !== 'line' && n.owners.some(id => others.includes(id))) ||
+        mine.filter(e => by.includes(e.id)).some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
           ((n.kind === 'text' || n.kind === 'cont' || n.kind === 'key') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
       if (!connected) return fail('line-dangling')
     }
+  }
+  return null
+}
+
+// A line cell shows exactly the arms and style it records: its glyph is the one the canvas draws for them (lineGlyph:
+// light and heavy arms by weight, a mixed crossing in its mixed glyph, a dotted cell ┄ ┆ or its light bend), its arms are
+// its dirs, and its dirs are the union of the dirs each owner drew there. So a glyph cannot show an arm no owner drew, hide
+// one, or show another line style: ┆ for │ reads a dependency as an association. The one other glyph is a row mark's
+// corner (C, gitGraph's fork), which draws round. A cell that records no arms or style, as a hand-built one may not, is
+// read as light, as canvas.line records a light line.
+const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
+function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
+  const marks = new Set((d.expect.rows ?? []).map(x => x.mark))
+  for (const { cell: x } of all) {
+    if (x.kind !== 'line') continue
+    const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
+    if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
+    const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
+    if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
   return null
 }
@@ -199,25 +225,44 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// Merged lines imply only real edges. Edges on one drawn line, as joined reads them, read as one line, so an end of one
-// edge drawn with no mark seems to lead to every node a mark of another edge on that line points at, its own node
-// included. Each such pair of a bare end t and a head h must be an edge of the drawing from t to h, a self-loop when t = h;
-// one edge's own bare end and mark are its own direction. A fan-out, a fan-in and a complete bipartite merge pass; any
-// other merge seems to draw an edge that is not there.
+// Merged lines imply only real links. Edges on one drawn line, as joined reads them, read as one line, so each end that may
+// start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark), or if it
+// is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such start t and:
+// - each mark h of another edge must be an edge of the drawing from t to h (real); for a bare t, a self-loop when t = h,
+//   while a head t and a head h at one node are one shared head;
+// - each endpoint of another edge with no marks, which shows no direction, must be t's own node or one some edge joins to
+//   t, either way (linked);
+// and edges with no marks at all on one line must fan (fans). A fan-out, a fan-in and a complete bipartite merge pass; any
+// other merge seems to draw a link that is not there, as two two-headed edges A <--> B and A <--> C on one line seem to link
+// B and C.
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const line = joined(d, all), groups = new Map<string, Edge[]>()
   for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
   // How many of e's end marks name n; e's endpoints at a node no mark covers, a self-loop's node counting twice.
   const marks = (e: Edge, n: string) => e.ends.filter(x => x.node === n).length
   const bare = (e: Edge) => [...new Set([e.from, e.to])].filter(n => Number(e.from === n) + Number(e.to === n) > marks(e, n))
+  // The ends of e that may start a link: its bare ends, or the marks of an edge marked at every end.
+  const starts = (e: Edge) => (bare(e).length > 0 || e.ends.length === 0 ? bare(e).map(n => ({ n, head: false })) : e.ends.map(x => ({ n: x.node, head: true })))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
   const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
-  for (const group of groups.values()) for (const a of group) for (const b of group) {
-    if (a !== b && bare(a).some(t => b.ends.some(x => !real(t, x.node)))) return fail('merge-ambiguous')
+  const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
+  for (const group of groups.values()) {
+    for (const a of group) for (const b of group) {
+      if (a === b) continue
+      for (const t of starts(a)) {
+        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node))) return fail('merge-ambiguous')
+        if (a.ends.length > 0 && b.ends.length === 0 && (!linked(t.n, b.from) || !linked(t.n, b.to))) return fail('merge-ambiguous')
+      }
+    }
+    if (!fans(group.filter(e => e.ends.length === 0))) return fail('merge-ambiguous')
   }
   return null
 }
+// Whether unmarked edges on one line read true. With no mark to tell them apart, each end seems to lead to every other, so
+// they must all leave one node, as a mindmap's siblings do, or all enter one; a line of one edge is just that edge.
+const fans = (open: readonly Edge[]): boolean =>
+  open.length < 2 || open.every(e => e.from === open[0]!.from) || open.every(e => e.to === open[0]!.to)
 
 // No row is wider than the budget, measured exactly as toRows emits it: an empty cell is a space, a cont cell adds nothing,
 // a drawn cell counts whatever its ch, a space included, and only trailing empty cells drop.
@@ -237,12 +282,23 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
+// The box frame id's own frame cells span: null if it has none, or they span less than two rows or two columns.
+type FrameBox = { top: number; bottom: number; left: number; right: number }
+function frameBox(all: readonly Spot[], id: string): FrameBox | null {
+  const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
+  if (mine.length === 0) return null
+  const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
+  const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
+  return top < bottom && left < right ? { top, bottom, left, right } : null
+}
+
 // A frame's corner glyphs, top-left, top-right, bottom-left, bottom-right, each in every light and heavy mix of its two arms.
 const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓', '└┕┖┗', '┘┙┚┛'].map(s => new Set(s))
 
 // Each frame stays closed. Its own frame cells span a real box, at least two rows and two columns, whose four corners are
 // its own frame cells drawing its corner glyphs: text that erases a border and its corners leaves cells that span a smaller
-// box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own or one of:
+// box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own drawing
+// that border (V5), ─ or ━ across and │ or ┃ down a side, or a tee ┬ ┴ ├ ┤ one of its own dividers continues inside; or:
 // its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its own dividers `${id}.${k}`,
 // ├ on its left side or ┤ on its right; or a line only edges cross straight through, each by the dirs it drew there: │ (5)
 // through the top or bottom, ─ (10) through a side. A lifeline needs no exception: a frame draws first, and a lifeline only
@@ -250,11 +306,9 @@ const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑┒┓',
 function frames(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Set(d.expect.edges.map(e => e.id))
   for (const id of d.expect.frames) {
-    const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
-    if (mine.length === 0) return fail('frame-broken')
-    const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
-    const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
-    if (top >= bottom || left >= right) return fail('frame-broken')
+    const b = frameBox(all, id)
+    if (!b) return fail('frame-broken')
+    const { top, bottom, left, right } = b
     // Corner i, in CORNERS order, is its own frame cell drawing that corner's glyph.
     const corner = ([r, c]: readonly [number, number], i: number) => {
       const x = at(d, r, c)
@@ -262,9 +316,18 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     if (!([[top, left], [top, right], [bottom, left], [bottom, right]] as const).every(corner)) return fail('frame-broken')
     const divider = (o: string) => o.startsWith(`${id}.`) && /^\d+$/.test(o.slice(id.length + 1))
+    // Whether the line cell at (r, c) is this frame's divider and points back, by bit, at the border cell beside it.
+    const stem = (r: number, c: number, bit: number) => {
+      const y = at(d, r, c)
+      return y?.kind === 'line' && (y.dirs & bit) !== 0 && y.owners.length > 0 && y.owners.every(divider)
+    }
+    // A frame cell of its own on a border draws that border: ─ ━ across, │ ┃ down a side, or a tee a divider continues.
+    const drawn = (ch: string, r: number, c: number, across: boolean) => across
+      ? '─━'.includes(ch) || ch === (r === top ? '┬' : '┴') && stem(r === top ? r + 1 : r - 1, c, r === top ? 1 : 4)
+      : '│┃'.includes(ch) || ch === (c === left ? '├' : '┤') && stem(r, c === left ? c + 1 : c - 1, c === left ? 8 : 2)
     const kept = (r: number, c: number): boolean => {
       const x = at(d, r, c), across = r === top || r === bottom, side = c === left || c === right
-      if (x?.kind === 'frame') return x.owners[0] === id
+      if (x?.kind === 'frame') return x.owners[0] === id && (across && side || drawn(x.ch, r, c, across))
       if (!x || (across && side)) return false
       if (x.kind === 'text' || x.kind === 'cont') return r === top && x.owners[0] === id
       if (x.kind !== 'line' || x.owners.length === 0) return false
@@ -274,6 +337,26 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     for (let c = left; c <= right; c++) if (!kept(top, c) || !kept(bottom, c)) return fail('frame-broken')
     for (let r = top + 1; r < bottom; r++) if (!kept(r, left) || !kept(r, right)) return fail('frame-broken')
+  }
+  return null
+}
+
+// V6: an edge between nodes of one frame stays inside it. A frame holds a node when every cell drawn for the node, by its
+// owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose own
+// border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and label cell
+// of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame. Run after frames,
+// so every listed frame spans a box.
+function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
+  const boxes = d.expect.frames.flatMap(id => frameBox(all, id) ?? [])
+  const within = (p: Spot, b: FrameBox) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
+  const drawn = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  const holds = (b: FrameBox, n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(p => within(p, b))
+  for (const e of d.expect.edges) {
+    const held = boxes.filter(b => holds(b, e.from) && holds(b, e.to))
+    if (held.length === 0) continue
+    const mine = all.filter(p => connects(p.cell, e.id))
+    if (held.some(b => !mine.every(p => within(p, b)))) return fail('edge-outside-frame')
   }
   return null
 }
@@ -332,14 +415,18 @@ function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
 // or a ◆ its owner draws is none; a bar's runs are the maximal runs of the bar cells whose owners[0] is its owner. A bar of 0
 // has no cell. A positive bar has exactly lanes ?? 1 runs, one in each of that many adjacent rows (h) or columns (v), all on
 // one baseline, each its full cells then at most one partial, summing to eighths, so each ⌈eighths / 8⌉ cells long. Else
-// bar. A bar cell whose owners[0] is no listed bar's owner is bar-stray.
+// bar. A bar with at has its first run's base cell there, its left cell (h) or its bottom cell (v), else bar-misplaced, so
+// a bar cannot leave the row or column of its category, slice or task. A bar cell whose owners[0] is no listed bar's owner
+// is bar-stray.
 function bars(d: Drawing, all: readonly Spot[]): Fail | null {
   const cells = all.filter(p => p.cell.kind === 'cap' && BAR.has(p.cell.ch)), listed = d.expect.bars ?? []
-  for (const { owner, eighths, axis, lanes } of listed) {
+  for (const { owner, eighths, axis, lanes, at: pos } of listed) {
     const rs = runs(cells.filter(p => p.cell.owners[0] === owner), axis), n = lanes ?? 1
     const ok = eighths === 0 ? rs.length === 0 : n >= 1 && rs.length === n &&
       rs.every((x, i) => x.lane === rs[0]!.lane + i && x.base === rs[0]!.base && eighthsOf(x.glyphs, axis) === eighths)
     if (!ok) return fail('bar')
+    const base = rs[0] && (axis === 'h' ? { r: rs[0].lane, c: rs[0].base } : { r: -rs[0].base, c: rs[0].lane })
+    if (pos && base && (base.r !== pos.r || base.c !== pos.c)) return fail('bar-misplaced')
   }
   const owners = new Set(listed.map(b => b.owner))
   return cells.some(p => !owners.has(p.cell.owners[0]!)) ? fail('bar-stray') : null
@@ -366,6 +453,24 @@ function members(d: Drawing): Fail | null {
   const unlisted = (x: Cell) => (x.kind === 'text' || x.kind === 'key') && new Set(x.owners).size >= 2 && !edges.has(x.owners[1]!) &&
     !listed.some(m => m.id === x.owners[0] && m.parent === x.owners[1])
   return cells.some(unlisted) ? fail('member-unlisted') : null
+}
+
+// C: each placed member is bound to its place in its own pill, the box of the cap, fill and frame cells its parent draws as
+// owners[0]. Every cell it draws in its row, owners [id, parent], lies in that box, else member-outside; its first, in reading
+// order, is place from the box's top-left, else member-misplaced. place is relative, so compaction, which never cuts a pill's
+// rows or columns, keeps it; and a member on another's row, out of source order, or off its left edge is misplaced.
+function memberPlaces(d: Drawing, all: readonly Spot[]): Fail | null {
+  for (const { id, parent, place } of d.expect.members ?? []) {
+    if (!place) continue
+    const box = all.filter(p => (p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && p.cell.owners[0] === parent)
+    const mine = all.filter(p => p.cell.owners[0] === id && p.cell.owners[1] === parent)
+    if (box.length === 0 || mine.length === 0) return fail('member-outside')
+    const top = Math.min(...box.map(p => p.r)), bottom = Math.max(...box.map(p => p.r))
+    const left = Math.min(...box.map(p => p.c)), right = Math.max(...box.map(p => p.c))
+    if (mine.some(p => p.r < top || p.r > bottom || p.c < left || p.c > right)) return fail('member-outside')
+    if (mine[0]!.r !== top + place.r || mine[0]!.c !== left + place.c) return fail('member-misplaced')
+  }
+  return null
 }
 
 // C: a key run is a maximal row run of key cells with one owners[0], its owner, and one legend flag. Its owners are those of
@@ -419,4 +524,129 @@ function keys(d: Drawing, all: readonly Spot[]): Fail | null {
   const has = (a: { item: string; cls: string }) => listed.some(k => k.item === a.item && k.cls === a.cls)
   const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && has(a) !== has(b)))
   return partial ? fail('key-partial') : null
+}
+
+// C: each order list's owners are each drawn on exactly one cell, in strictly increasing rows, and all in one column when
+// column is set, so marks that only their position links (a gitGraph's commits on adjacent rows of a lane) cannot swap.
+function order(d: Drawing, all: readonly Spot[]): Fail | null {
+  if (!d.expect.order) return null
+  const cells = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) cells.set(o, [...(cells.get(o) ?? []), p])
+  for (const { ids, column } of d.expect.order) {
+    const ps = ids.map(id => cells.get(id) ?? [])
+    if (ps.some(x => x.length !== 1)) return fail('order-broken')
+    const at = ps.map(x => x[0]!)
+    if (at.some((p, i) => i > 0 && (p.r <= at[i - 1]!.r || (column && p.c !== at[0]!.c)))) return fail('order-broken')
+  }
+  return null
+}
+
+// C: each listed owner with no at draws exactly one cell as owners[0], and it shows exactly its glyph, so a mark whose glyph
+// is its meaning (a gitGraph commit's type) cannot show another's. An owner's entries with at state where it draws a glyph:
+// the non-text cells it draws as owners[0] in that glyph are exactly those cells, else glyph-misplaced, so a tick mark or a
+// point cannot move, and none can be added.
+function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
+  const placed = new Map<string, Set<string>>()
+  for (const { owner, ch, at: pos } of d.expect.glyphs ?? []) {
+    const mine = all.filter(p => p.cell.owners[0] === owner)
+    if (pos) placed.set(`${owner}|${ch}`, (placed.get(`${owner}|${ch}`) ?? new Set()).add(`${pos.r},${pos.c}`))
+    else if (mine.length !== 1 || mine[0]!.cell.ch !== ch) return fail('glyph-wrong')
+  }
+  for (const [k, want] of placed) {
+    const got = all.filter(p => `${p.cell.owners[0]}|${p.cell.ch}` === k && p.cell.kind !== 'text' && p.cell.kind !== 'cont')
+    if (got.length !== want.size || got.some(p => !want.has(`${p.r},${p.c}`))) return fail('glyph-misplaced')
+  }
+  return null
+}
+
+// C: each label stated at a cell is drawn there: the first text cell its owner draws as owners[0], in reading order, is
+// that cell. So text that only its place gives meaning (an axis tick, a category, a header, a legend part) cannot move or
+// swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its title
+// first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
+function places(d: Drawing, all: readonly Spot[]): Fail | null {
+  const first = new Map<string, Spot>()
+  for (const p of all) if (p.cell.kind === 'text' && !first.has(p.cell.owners[0]!)) first.set(p.cell.owners[0]!, p)
+  const title = first.get('title')
+  if (title && title.cell.role === 'title' && (title.r !== 0 || title.c !== 0)) return fail('label-misplaced')
+  for (const { owner, text, at: pos } of d.expect.labels) {
+    if (!pos || norm(text) === '') continue
+    const p = first.get(owner)
+    if (!p || p.r !== pos.r || p.c !== pos.c) return fail('label-misplaced')
+  }
+  return null
+}
+
+// C: each row's labels are bound to its mark, so a label cannot read as another's. Each mark owns exactly one cell, in
+// strictly increasing rows; its block runs from its row to the row before the next mark's. Every text or cont cell its
+// owners draw lies in its block, right of its mark, in reading order owner by owner, the first on the mark's own row.
+function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
+  if (!d.expect.rows) return null
+  const text = (o: string) => all.filter(p => (p.cell.kind === 'text' || p.cell.kind === 'cont') && p.cell.owners[0] === o)
+  const marks = d.expect.rows.map(x => all.filter(p => owns(p.cell, x.mark)))
+  if (marks.some(m => m.length !== 1)) return fail('label-unbound')
+  const at = marks.map(m => m[0]!)
+  for (const [i, { owners }] of d.expect.rows.entries()) {
+    const m = at[i]!, next = at[i + 1]?.r ?? d.cells.length, ps = owners.flatMap(text)   // spots run in reading order
+    if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) return fail('label-unbound')
+    if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) return fail('label-unbound')
+  }
+  return null
+}
+
+// C: a side note reads as its node's only beside its link, the cap cells `${id}:link` draws. Its text and cont cells, owner
+// id, start on the link's row, each row from one column, and sit against the link: right of it, the first cell just past
+// it; left of it, the widest row's last cell just before it. Else note-unbound. Compaction never cuts a column between
+// them, which the widest row fills. A keyed note, whose text is its legend row's, is bound by keys instead; a link of line
+// cells is an edge's, checked as one.
+function notes(all: readonly Spot[]): Fail | null {
+  const text = new Map<string, Spot[]>(), link = new Map<string, Spot[]>()
+  for (const p of all) {
+    const o = p.cell.owners[0]!
+    if (p.cell.kind === 'text' || p.cell.kind === 'cont') text.set(o, [...(text.get(o) ?? []), p])
+    else if (p.cell.kind === 'cap' && o.endsWith(':link')) link.set(o.slice(0, -5), [...(link.get(o.slice(0, -5)) ?? []), p])
+  }
+  for (const [id, ls] of link) {
+    const ps = text.get(id)
+    if (!ps || all.some(p => p.cell.kind === 'key' && p.cell.owners[0] === id)) continue
+    const lo = Math.min(...ls.map(p => p.c)), hi = Math.max(...ls.map(p => p.c)), c0 = ps[0]!.c   // spots run in reading order
+    const aligned = ps.every((p, j) => j === 0 || p.r !== ps[j - 1]!.r || p.c > ps[j - 1]!.c) &&
+      ps.every((p, j) => (j > 0 && p.r === ps[j - 1]!.r) || p.c === c0)
+    const against = c0 > hi ? c0 === hi + 1 : Math.max(...ps.map(p => p.c)) === lo - 1
+    if (ps[0]!.r !== ls[0]!.r || !aligned || !against) return fail('note-unbound')
+  }
+  return null
+}
+
+// A lifeline reads as the participant whose pill heads it, so each lifeline cell lies within its own pill's columns, the
+// cap cells its owner draws: pills of one width swapped over their lifelines would reverse every message.
+function lifelines(all: readonly Spot[]): Fail | null {
+  const span = new Map<string, [number, number]>()
+  for (const p of all) if (p.cell.kind === 'cap') {
+    const id = p.cell.owners[0]!, [lo, hi] = span.get(id) ?? [p.c, p.c]
+    span.set(id, [Math.min(lo, p.c), Math.max(hi, p.c)])
+  }
+  for (const p of all) if (p.cell.kind === 'lifeline') {
+    const s = span.get(p.cell.owners[0]!)
+    if (!s || p.c < s[0] || p.c > s[1]) return fail('lifeline-unbound')
+  }
+  return null
+}
+
+// A node's label reads as the node only inside its own pill: each text or cont cell a node draws as owners[0] lies in the
+// box of the cap, fill and frame cells it draws so. Moved off it, the pill is left empty and the label floats beside a line
+// it does not end. A node that draws no such cell (a gitGraph commit's labels are its row's) has no pill to leave; a keyed
+// node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead. A node is an edge's end,
+// or any owner that draws a fill cell, as a pill no edge reaches and a sequence note do.
+function inPills(d: Drawing, all: readonly Spot[]): Fail | null {
+  const nodes = new Set([...d.expect.edges.flatMap(e => [e.from, e.to]), ...all.flatMap(p => (p.cell.kind === 'fill' ? [p.cell.owners[0]!] : []))]), box = new Map<string, [number, number, number, number]>()
+  for (const p of all) if ((p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && nodes.has(p.cell.owners[0]!)) {
+    const id = p.cell.owners[0]!, b = box.get(id) ?? [p.r, p.r, p.c, p.c]
+    box.set(id, [Math.min(b[0], p.r), Math.max(b[1], p.r), Math.min(b[2], p.c), Math.max(b[3], p.c)])
+  }
+  for (const p of all) if (p.cell.kind === 'key') box.delete(p.cell.owners[0]!)
+  for (const p of all) if (p.cell.kind === 'text' || p.cell.kind === 'cont') {
+    const b = box.get(p.cell.owners[0]!)
+    if (b && (p.r < b[0] || p.r > b[1] || p.c < b[2] || p.c > b[3])) return fail('label-unbound')
+  }
+  return null
 }

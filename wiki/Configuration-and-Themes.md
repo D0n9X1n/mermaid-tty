@@ -95,4 +95,5 @@ Series-colored items take `s1` to `s8` instead of a role. See Palettes above.
 - Each node shape has its own pair of end caps, which echo Mermaid's brackets: `[ … ]` rectangle, `( … )` round, `([ … ])` stadium, `[[ … ]]` subroutine, `[( … )]` cylinder, `(( … ))` circle, `{ … }` decision, `{{ … }}` hexagon, `/ … /` and `\ … \` parallelograms, `/ … \` and `\ … /` trapezoids, and `> … ]` asymmetric. No two shapes share a pair, and every theme draws them.
 - Line weight shows the edge kind: a solid edge draws light lines, `─` and `│`; a thick edge heavy lines, `━` and `┃`; a dotted edge `┄` and `┆`.
 - Edge ends are glyphs, not colors: `►`, `◄`, `▲` and `▼` point at the node they reach, `o` is a circle end, and `x` a cross end.
+- Sequence notes have dotted end caps `┆ … ┆` in every theme, so they stay distinct from message labels in `mono`.
 - The title is bold, and a frame's title sits in its top border.

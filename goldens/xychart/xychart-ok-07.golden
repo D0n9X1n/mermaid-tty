@@ -1,0 +1,78 @@
+@60
+Units
+  7 ┤     █
+    │     █
+    │     █
+    │   ▅ █
+3.5 ┤   █ █
+    │   █ █
+    │   █ █
+    │   █ █
+  0 └─┬─┬─┬
+Month
+a     0 4 7
+@60 roles
+LLLLL
+  V f     1
+    f     1
+    f     1
+    f   1 1
+VVV f   1 1
+    f   1 1
+    f   1 1
+    f   1 1
+  V fffffff
+LLLLL
+L     V V V
+@80
+Units
+  7 ┤     █
+    │     █
+    │     █
+    │   ▅ █
+3.5 ┤   █ █
+    │   █ █
+    │   █ █
+    │   █ █
+  0 └─┬─┬─┬
+Month
+a     0 4 7
+@80 roles
+LLLLL
+  V f     1
+    f     1
+    f     1
+    f   1 1
+VVV f   1 1
+    f   1 1
+    f   1 1
+    f   1 1
+  V fffffff
+LLLLL
+L     V V V
+@120
+Units
+  7 ┤     █
+    │     █
+    │     █
+    │   ▅ █
+3.5 ┤   █ █
+    │   █ █
+    │   █ █
+    │   █ █
+  0 └─┬─┬─┬
+Month
+a     0 4 7
+@120 roles
+LLLLL
+  V f     1
+    f     1
+    f     1
+    f   1 1
+VVV f   1 1
+    f   1 1
+    f   1 1
+    f   1 1
+  V fffffff
+LLLLL
+L     V V V

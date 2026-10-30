@@ -7,6 +7,13 @@ import type { Ink } from '../themes.ts'
 import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
 
+// A label as a chart lists it: its owner and text, and at, its first drawn cell, when pieces ps are drawn one a row down
+// from row r at column c, a later piece at c + indent: the first piece with text. No at if none has text, as none draws.
+export function placed(owner: string, text: string, ps: readonly { text: string }[], r: number, c: number, indent = 0): Expect['labels'][number] {
+  const j = ps.findIndex(p => p.text !== '')
+  return j < 0 ? { owner, text } : { owner, text, at: { r: r + j, c: c + (j > 0 ? indent : 0) } }
+}
+
 // text's <br> lines, each wrapped at columns, drawn one row per piece in ink and owned by owner (matrix common rules 3
 // and 6). The first piece has no join, a later piece its wrap join, and the first piece of each later line '\n', so validate
 // reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br> label.
@@ -20,7 +27,7 @@ export function heading(text: string, ink: Ink, owner: string, columns: number):
   }
   const c = createCanvas(pieces.length, Math.max(0, ...pieces.map(p => width(p.text))), columns)
   pieces.forEach((p, r) => c.text(r, 0, p.text, ink, owner, p.join))
-  return c.toDrawing({ labels: [{ owner, text: lines.join('\n') }], edges: [], edgeLabels: [], frames: [] })
+  return c.toDrawing({ labels: [placed(owner, lines.join('\n'), pieces, 0, 0)], edges: [], edgeLabels: [], frames: [] })
 }
 
 // parts top to bottom in one drawing, columns wide so that validate measures every row against the budget. Each row is
@@ -36,9 +43,11 @@ export function stack(parts: readonly Drawing[], columns: number): Drawing {
   return { columns, cells, conflicts, expect: merge(expects) }
 }
 
-// A part's expect as it sits dr rows down: a key's at names a cell, so it moves with the part's cells.
-const shift = (e: Expect, dr: number): Expect =>
-  dr === 0 || !e.keys ? e : { ...e, keys: e.keys.map(k => (k.at ? { ...k, at: { r: k.at.r + dr, c: k.at.c } } : k)) }
+// A part's expect as it sits dr rows down: an entry's at, in any field (a key's, a label's, a bar's, a glyph's), names a
+// cell, so it moves with the part's cells.
+type At = { at?: { r: number; c: number } }
+const shift = (e: Expect, dr: number): Expect => dr === 0 ? e : Object.fromEntries(Object.entries(e).map(([k, v]) =>
+  [k, Array.isArray(v) ? v.map((x: At) => (x && typeof x === 'object' && x.at ? { ...x, at: { r: x.at.r + dr, c: x.at.c } } : x)) : v])) as Expect
 
 // Every array field of the expects, each concatenated in their order by name: A's labels, edges (with their ends and
 // endLabels), edgeLabels and frames, C's bars, members, keys and keyable, and any field a later task adds. A's four start

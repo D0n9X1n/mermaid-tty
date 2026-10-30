@@ -1,0 +1,132 @@
+@60
+Simple sample
+       ●
+      ┌┘
+      │
+      ▼
+  ( Still )◄───────┐
+     ┌┤            │
+     │└─────────┐  │
+     ▼          │  │
+ ( Moving )┐    │ ┌┘
+     │     │    │ │
+    ┌┘     └────┼─┘
+    │           │
+    ▼        ┌──┘
+( Crash )    │
+    │        │
+    │   ┌┐   │
+    │   │└───┘
+    │   ▼
+    └──┐◉◄─┐
+       └───┘
+@60 roles
+TTTTTTTTTTTTT
+       n
+      ee
+      e
+      a
+  nnNNNNNnnaeeeeeeee
+     ee            e
+     eeeeeeeeeeee  e
+     a          e  e
+ nnNNNNNNnne    e ee
+     e     e    e e
+    ee     eeeeeeee
+    e           e
+    a        eeee
+nnNNNNNnn    e
+    e        e
+    e   ee   e
+    e   eeeeee
+    e   a
+    eeeenaee
+       eeeee
+@80
+Simple sample
+       ●
+      ┌┘
+      │
+      ▼
+  ( Still )◄───────┐
+     ┌┤            │
+     │└─────────┐  │
+     ▼          │  │
+ ( Moving )┐    │ ┌┘
+     │     │    │ │
+    ┌┘     └────┼─┘
+    │           │
+    ▼        ┌──┘
+( Crash )    │
+    │        │
+    │   ┌┐   │
+    │   │└───┘
+    │   ▼
+    └──┐◉◄─┐
+       └───┘
+@80 roles
+TTTTTTTTTTTTT
+       n
+      ee
+      e
+      a
+  nnNNNNNnnaeeeeeeee
+     ee            e
+     eeeeeeeeeeee  e
+     a          e  e
+ nnNNNNNNnne    e ee
+     e     e    e e
+    ee     eeeeeeee
+    e           e
+    a        eeee
+nnNNNNNnn    e
+    e        e
+    e   ee   e
+    e   eeeeee
+    e   a
+    eeeenaee
+       eeeee
+@120
+Simple sample
+       ●
+      ┌┘
+      │
+      ▼
+  ( Still )◄───────┐
+     ┌┤            │
+     │└─────────┐  │
+     ▼          │  │
+ ( Moving )┐    │ ┌┘
+     │     │    │ │
+    ┌┘     └────┼─┘
+    │           │
+    ▼        ┌──┘
+( Crash )    │
+    │        │
+    │   ┌┐   │
+    │   │└───┘
+    │   ▼
+    └──┐◉◄─┐
+       └───┘
+@120 roles
+TTTTTTTTTTTTT
+       n
+      ee
+      e
+      a
+  nnNNNNNnnaeeeeeeee
+     ee            e
+     eeeeeeeeeeee  e
+     a          e  e
+ nnNNNNNNnne    e ee
+     e     e    e e
+    ee     eeeeeeee
+    e           e
+    a        eeee
+nnNNNNNnn    e
+    e        e
+    e   ee   e
+    e   eeeeee
+    e   a
+    eeeenaee
+       eeeee

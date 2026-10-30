@@ -1,0 +1,72 @@
+@60
+╷     main
+●     ZERO
+├─╮   develop
+│ ●   A
+● │   ONE
+│ ●   B
+│ ├─╮ release
+│ │ ● R
+◉─┤ │ MERGE
+│ │ ◎ [cherry-pick:ONE]
+╵ ╵ ◎ [cherry-pick:MERGE|parent:B]
+@60 roles
+1     !!!!
+1     LLLL
+222   @@@@@@@
+1 2   L
+1 2   LLL
+1 2   L
+1 333 #######
+1 2 3 L
+122 3 LLLLL
+1 2 3 OOOOOOOOOOOOOOOOO
+1 2 3 OOOOOOOOOOOOOOOOOOOOOOOOOOOO
+@80
+╷     main
+●     ZERO
+├─╮   develop
+│ ●   A
+● │   ONE
+│ ●   B
+│ ├─╮ release
+│ │ ● R
+◉─┤ │ MERGE
+│ │ ◎ [cherry-pick:ONE]
+╵ ╵ ◎ [cherry-pick:MERGE|parent:B]
+@80 roles
+1     !!!!
+1     LLLL
+222   @@@@@@@
+1 2   L
+1 2   LLL
+1 2   L
+1 333 #######
+1 2 3 L
+122 3 LLLLL
+1 2 3 OOOOOOOOOOOOOOOOO
+1 2 3 OOOOOOOOOOOOOOOOOOOOOOOOOOOO
+@120
+╷     main
+●     ZERO
+├─╮   develop
+│ ●   A
+● │   ONE
+│ ●   B
+│ ├─╮ release
+│ │ ● R
+◉─┤ │ MERGE
+│ │ ◎ [cherry-pick:ONE]
+╵ ╵ ◎ [cherry-pick:MERGE|parent:B]
+@120 roles
+1     !!!!
+1     LLLL
+222   @@@@@@@
+1 2   L
+1 2   LLL
+1 2   L
+1 333 #######
+1 2 3 L
+122 3 LLLLL
+1 2 3 OOOOOOOOOOOOOOOOO
+1 2 3 OOOOOOOOOOOOOOOOOOOOOOOOOOOO

@@ -1,0 +1,12 @@
+stateDiagram-v2
+    direction LR
+    state fork_state <<fork>>
+      [*] --> fork_state
+      fork_state --> S2
+      fork_state --> S3
+
+      state join_state <<join>>
+      S2 --> join_state
+      S3 --> join_state
+      join_state --> S4
+      S4 --> [*]

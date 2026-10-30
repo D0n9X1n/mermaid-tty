@@ -1,0 +1,22 @@
+@60
+[         Order          ]
+[ +addItem(String name,  ]
+[  int count, bool flag, ]
+[  String note) : void   ]
+@60 roles
+nnnnnnnnnnNNNNNnnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLlln
+nllLLLLLLLLLLLLLLLLLLLLLln
+nllLLLLLLLLLLLLLLLLLLLllln
+@80
+[                              Order                              ]
+[ +addItem(String name, int count, bool flag, String note) : void ]
+@80 roles
+nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnNNNNNnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+@120
+[                              Order                              ]
+[ +addItem(String name, int count, bool flag, String note) : void ]
+@120 roles
+nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnNNNNNnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLln

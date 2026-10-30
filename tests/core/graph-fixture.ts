@@ -25,7 +25,7 @@ export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}
 const ch = (c: Cell | null) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
 export const text = (d: Drawing): string[] => d.cells.map(row => row.map(ch).join('').replace(/ +$/, ''))
 
-// Independently read shared arms as joined edge networks, then enumerate the source/head pairs they imply.
+// Independently read shared arms as joined edge networks, then enumerate the bare-end/mark pairs they imply that no edge draws.
 export function falsePairs(d: Drawing): string[] {
   const edges = new Map(d.expect.edges.map(e => [e.id, e])), groups = new Map(d.expect.edges.map(e => [e.id, new Set([e.id])]))
   for (const row of d.cells) for (const c of row) {
@@ -36,15 +36,20 @@ export function falsePairs(d: Drawing): string[] {
       for (const id of all) groups.set(id, all)
     }
   }
-  const pairs = new Set(d.expect.edges.flatMap(e => [`${e.from}>${e.to}`,
-    ...((e.ends ?? []).some(end => end.node === e.from) ? [`${e.to}>${e.from}`] : [])]))
+  // Per edge, its bare ends (an endpoint no mark names; a self-loop's node twice) and its marks, each `-${kind}${node}`: an
+  // arrow `->`, a circle `-o`, a cross `-x`, any other glyph itself. A pair t-kh reads from a bare end t to a mark kh.
+  const kind = (glyph: string) => ('▼▲►◄'.includes(glyph) ? '>' : glyph)
+  const marks = (e: Drawing['expect']['edges'][number]) => (e.ends ?? []).map(end => `-${kind(end.glyph)}${end.node}`)
+  const bare = (e: Drawing['expect']['edges'][number]) => [...new Set([e.from, e.to])].filter(n =>
+    Number(e.from === n) + Number(e.to === n) > (e.ends ?? []).filter(end => end.node === n).length)
+  const read = (a: Drawing['expect']['edges'][number], b: Drawing['expect']['edges'][number]) =>
+    bare(a).flatMap(t => marks(b).map(m => `${t}${m}`))
+  const pairs = new Set(d.expect.edges.flatMap(e => read(e, e)))
   const bad = new Set<string>()
   for (const ids of new Set(groups.values())) {
     if (ids.size < 2) continue
     const members = [...ids].map(id => edges.get(id)!)
-    const tails = new Set(members.flatMap(e => [e.from, ...((e.ends ?? []).some(end => end.node === e.from) ? [e.to] : [])]))
-    const heads = new Set(members.flatMap(e => [e.to, ...(e.ends ?? []).map(end => end.node)]))
-    for (const from of tails) for (const to of heads) if (!pairs.has(`${from}>${to}`)) bad.add(`${from}>${to}`)
+    for (const a of members) for (const b of members) for (const pair of read(a, b)) if (!pairs.has(pair)) bad.add(pair)
   }
   return [...bad].sort()
 }

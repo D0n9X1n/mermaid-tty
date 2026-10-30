@@ -1,0 +1,12 @@
+stateDiagram-v2
+[*] --> First
+state "First level" as First {
+  [*] --> Second
+  state Second {
+    [*] --> Third
+    state Third {
+      [*] --> third
+      third --> [*]
+    }
+  }
+}

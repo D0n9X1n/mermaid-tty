@@ -1,0 +1,58 @@
+@60
+  [ A ]
+  ┌─┴────┐
+  │      │
+  │      │
+  a      b
+  │      │
+  │      │
+  │      │
+  ▼      ▼
+[ B ]  [ C ]
+a Abcdefghijklmnopqrstuvwxyzabcd
+b Zyxwvutsrqponmlkjihgfedcbazyxw
+@60 roles
+  nnNnn
+  eeeeeeee
+  e      e
+  e      e
+  l      l
+  e      e
+  e      e
+  e      e
+  a      a
+nnNnn  nnNnn
+l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+@80
+                              [ A ]
+               ┌────────────────┴─────────────────┐
+               │                                  │
+Abcdefghijklmnopqrstuvwxyzabcd     Zyxwvutsrqponmlkjihgfedcbazyxw
+               │                                  │
+               ▼                                  ▼
+            [ B ]                               [ C ]
+@80 roles
+                              nnNnn
+               eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+               e                                  e
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL     LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+               e                                  e
+               a                                  a
+            nnNnn                               nnNnn
+@120
+                              [ A ]
+               ┌────────────────┴─────────────────┐
+               │                                  │
+Abcdefghijklmnopqrstuvwxyzabcd     Zyxwvutsrqponmlkjihgfedcbazyxw
+               │                                  │
+               ▼                                  ▼
+            [ B ]                               [ C ]
+@120 roles
+                              nnNnn
+               eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+               e                                  e
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL     LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+               e                                  e
+               a                                  a
+            nnNnn                               nnNnn

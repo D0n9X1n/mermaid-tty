@@ -2,7 +2,7 @@
 // Messages API. Node built-ins only, so the main suite runs this with nothing installed.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sessionEnv, seedConfig, seedSettings } from '../../scripts/e2e/env.ts'
+import { mergeJson, sessionEnv, seedConfig, seedSettings } from '../../scripts/e2e/env.ts'
 
 const E = (o: object) => sessionEnv({ home: '/h', config: '/h/.cfg', mockUrl: 'http://127.0.0.1:9', platform: 'darwin', color: 'truecolor', driver: 'pty', path: '/bin', ...o })
 test('A9.harness: a clean session env from the recipe; no inherited secrets', () => {
@@ -98,4 +98,9 @@ test("A9.harness: seedSettings sets the theme under each of the three keys the p
   const each = (theme: string) => ({ options: { theme } })
   assert.deepEqual(JSON.parse(seedSettings('nord')), { pluginConfigs: { 'mermaid-tty': each('nord'), 'mermaid-tty@inline': each('nord'), 'mermaid-tty@mermaid-tty': each('nord') } })
   assert.deepEqual(JSON.parse(seedSettings('mono')).pluginConfigs['mermaid-tty@inline'], each('mono'))
+})
+
+test('A9.release: seeding an installed config adds keys and never drops one', () => {
+  const m = JSON.parse(mergeJson('{"theme":"dark","pluginConfigs":{"x":{"options":{}}}}', seedSettings('nord')))
+  assert.equal(m.theme, 'dark'); assert.ok(m.pluginConfigs.x && m.pluginConfigs['mermaid-tty'])
 })

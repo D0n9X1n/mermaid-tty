@@ -1,0 +1,54 @@
+@60
+[           Account           ]
+[ +String owner               ]
+[ -int balance                ]
+[ #bool frozen                ]
+[ ~int id                     ]
+[ +deposit(int amount) : bool ]
+[ +count() : int$             ]
+[ +validate()*                ]
+@60 roles
+nnnnnnnnnnnnNNNNNNNnnnnnnnnnnnn
+nlLLLLLLLLLLLLLllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLllllllllllllllllllllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+nlLLLLLLLLLLLLLLLllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+@80
+[           Account           ]
+[ +String owner               ]
+[ -int balance                ]
+[ #bool frozen                ]
+[ ~int id                     ]
+[ +deposit(int amount) : bool ]
+[ +count() : int$             ]
+[ +validate()*                ]
+@80 roles
+nnnnnnnnnnnnNNNNNNNnnnnnnnnnnnn
+nlLLLLLLLLLLLLLllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLllllllllllllllllllllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+nlLLLLLLLLLLLLLLLllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+@120
+[           Account           ]
+[ +String owner               ]
+[ -int balance                ]
+[ #bool frozen                ]
+[ ~int id                     ]
+[ +deposit(int amount) : bool ]
+[ +count() : int$             ]
+[ +validate()*                ]
+@120 roles
+nnnnnnnnnnnnNNNNNNNnnnnnnnnnnnn
+nlLLLLLLLLLLLLLllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln
+nlLLLLLLLllllllllllllllllllllln
+nlLLLLLLLLLLLLLLLLLLLLLLLLLLLln
+nlLLLLLLLLLLLLLLLllllllllllllln
+nlLLLLLLLLLLLLlllllllllllllllln

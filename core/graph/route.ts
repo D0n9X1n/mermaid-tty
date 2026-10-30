@@ -11,6 +11,10 @@ export type Route = { edge: string; cells: readonly { r: number; c: number; dirs
   ends: readonly { r: number; c: number; ch: string }[]; style: 'solid' | 'dotted' | 'thick' }
 type Point = { r: number; c: number }
 const arm = (a: Point, b: Point) => b.r < a.r ? 1 : b.c > a.c ? 2 : b.r > a.r ? 4 : 8
+// An end's glyph by the side of its node it sits on, 0 above, 1 right, 2 below, 3 left (a port's face): an arrow ▼◄▲► or a
+// triangle ▽◁△▷ points into the node, a tail into its source as a head into its target; ◆ ◇ o x look the same on any side.
+const MARKS: Readonly<Record<string, string>> = { circle: 'o', cross: 'x', diamond: '◆', odiamond: '◇' }
+const endGlyph = (end: string, side: number): string => MARKS[end] ?? (end === 'triangle' ? '▽◁△▷' : '▼◄▲►')[side]!
 
 const inside = (c: Point, b: Box) => c.r >= b.row && c.r < b.row + b.rows && c.c >= b.col && c.c < b.col + b.cols
 const keyOf = (c: Point) => `${c.r},${c.c}`
@@ -22,13 +26,13 @@ function routeObstacles(p: Placed, e: GEdge): Box[] {
 // Disjoint complete bipartite nets: joining any two lines in a net implies only declared edges.
 function mergeGroups(p: Placed): Map<string, string> {
   const edges = p.graph.edges.filter(e => e.style !== 'invisible').toSorted((a, b) => a.order - b.order)
-  const eligible = (e: GEdge) => e.tail === 'none' && e.head === 'arrow' && e.from !== e.to && !e.reversed
+  const eligible = (e: GEdge) => e.tail === 'none' && e.head !== 'none' && e.from !== e.to && !e.reversed
   const groups: GEdge[][] = [], result = new Map<string, string>()
   for (const e of edges) {
     let group = eligible(e) ? groups.find(g => {
-      if (!eligible(g[0]!) || g[0]!.style !== e.style || !g.some(n => n.from === e.from || n.to === e.to)) return false
+      if (!eligible(g[0]!) || g[0]!.style !== e.style || g[0]!.head !== e.head || !g.some(n => n.from === e.from || n.to === e.to)) return false
       const tails = new Set([...g.map(n => n.from), e.from]), heads = new Set([...g.map(n => n.to), e.to])
-      return [...tails].every(from => [...heads].every(to => edges.some(n => eligible(n) && n.style === e.style && n.from === from && n.to === to)))
+      return [...tails].every(from => [...heads].every(to => edges.some(n => eligible(n) && n.style === e.style && n.head === e.head && n.from === from && n.to === to)))
     }) : undefined
     if (!group) { group = []; groups.push(group) }
     group.push(e)
@@ -36,6 +40,10 @@ function mergeGroups(p: Placed): Map<string, string> {
   }
   return result
 }
+
+// An end's port net: its merge group, or for an end with a label its own edge's, so two cardinalities never share a stem.
+const portOf = (groups: ReadonlyMap<string, string>, e: GEdge, end: 'tail' | 'head'): string =>
+  (end === 'tail' ? e.tailLabel : e.headLabel) === undefined ? groups.get(e.id)! : `${groups.get(e.id)!}#${e.id}`
 
 type Segment = { nodes: readonly string[]; dirs: number }
 const unrelated = (a: Segment, b: Segment) => !a.nodes.some(id => b.nodes.includes(id))
@@ -52,10 +60,11 @@ function crossingsFit(p: Placed, e: GEdge, cells: Route['cells'], routes: readon
   }
   return cells.every(c => straightCrossing([...(occupied.get(keyOf(c)) ?? []), { nodes: [e.from, e.to], dirs: c.dirs }]))
 }
-// Match draw.ts's centered label text, leaving its padding available to the line.
+// Match draw.ts's centered label text, leaving its padding available to the line; a keyed label's ink is its key box.
 function labelInk(p: Placed, e: GEdge): Box[] {
   const b = p.boxes.get(`${e.id}:label`)
   if (!b || e.label === null) return []
+  if (e.labelKey !== undefined) return [{ row: b.row, col: b.col, rows: 1, cols: width(e.labelKey) }]  // a key box is all ink
   const pieces = labelLines(e.label).flatMap(t => wrap(t, b.cols - 2) ?? [{ text: t, join: '' }])
   return pieces.map((piece, i) => ({ row: b.row + i, col: b.col + ((b.cols - width(piece.text)) >> 1),
     rows: 1, cols: width(piece.text) }))
@@ -63,6 +72,22 @@ function labelInk(p: Placed, e: GEdge): Box[] {
 const border = (c: Point, b: Box) => inside(c, b) ?
   ((c.r === b.row || c.r === b.row + b.rows - 1 ? 5 : 0) |
     (c.c === b.col || c.c === b.col + b.cols - 1 ? 10 : 0)) : 0
+
+// The frames drawn as a border: every frame box but a frameless region's, which draws none, so an edge may run through it.
+const walls = (p: Placed): Box[] => {
+  const frameless = new Set(p.graph.clusters.filter(c => c.frameless).map(c => c.id))
+  return [...p.frames].filter(([id]) => !frameless.has(id)).map(([, b]) => b)
+}
+
+// Whether c lies strictly inside frame box f, off its border; and the drawn frames that hold both of e's ends that way. An
+// edge between nodes of one frame stays inside it (V6): a cell outside one of these, or on its border, is never used.
+const within = (c: Point, f: Box) => c.r > f.row && c.r < f.row + f.rows - 1 && c.c > f.col && c.c < f.col + f.cols - 1
+function fences(p: Placed, e: GEdge): Box[] {
+  const held = (id: string, f: Box) => { const b = p.boxes.get(id) ?? p.frames.get(id)
+    return !!b && within({ r: b.row, c: b.col }, f) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, f) }
+  return walls(p).filter(f => held(e.from, f) && held(e.to, f))
+}
+const fenced = (fs: readonly Box[], c: Point) => fs.every(f => within(c, f))
 
 function detour(path: Point[], blocked: (c: Point) => boolean, p: Placed, pinned: Set<string>): Point[] | null {
   while (path.some(blocked)) {
@@ -140,12 +165,16 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
   const cross = (b: Box, side: number) => across ? (side > 0 ? b.row + b.rows : b.row - 1) : (side > 0 ? b.col + b.cols : b.col - 1)
   const at = (m: number, x: number): Point => across ? { r: x, c: m } : { r: m, c: x }
   const occupied = new Map(routes.flatMap(r => [...r.cells.map(c => [keyOf(c), c.dirs] as const), ...r.ends.map(c => [keyOf(c), 0] as const)]))
-  const frames = [...p.frames.values()]
+  const frames = walls(p), fs = fences(p, e)
   const label = p.boxes.get(`${e.id}:label`), ink = labelInk(p, e)
   const boxes = routeObstacles(p, e)
-  const high = Math.max(...[...p.boxes.values(), ...frames].map(b => across ? b.row + b.rows : b.col + b.cols),
-    ...routes.flatMap(r => [...r.cells, ...r.ends].map(c => (across ? c.r : c.c) + 1))) + 2
-  const low = Math.min(...boxes.map(b => across ? b.row : b.col), ...frames.map(b => across ? b.row : b.col)) - 3
+  // V7: the lanes beside what lies inside the innermost frame holding both ends, where its layout left room for them.
+  const room = fs.toSorted((u, v) => u.rows * u.cols - v.rows * v.cols)[0]
+  const held = (b: Box) => !room || within({ r: b.row, c: b.col }, room) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, room)
+  const near = (c: Point) => !room || within(c, room)
+  const high = Math.max(...[...p.boxes.values(), ...frames].filter(held).map(b => across ? b.row + b.rows : b.col + b.cols),
+    ...routes.flatMap(r => [...r.cells, ...r.ends].filter(near).map(c => (across ? c.r : c.c) + 1))) + 2
+  const low = Math.min(...boxes.filter(held).map(b => across ? b.row : b.col), ...frames.filter(held).map(b => across ? b.row : b.col)) - 3
   const sides = [1, -1].sort((u, v) => Math.abs(cross(a, u) - (u > 0 ? high : low)) + Math.abs(cross(b, u) - (u > 0 ? high : low)) -
     Math.abs(cross(a, v) - (v > 0 ? high : low)) - Math.abs(cross(b, v) - (v > 0 ? high : low)))
   for (const side of sides) for (const [sourceSide, targetSide] of [[side, side], [side, -side], [-side, side]]) {
@@ -161,7 +190,7 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
     const tailCell = at(am, ax), headCell = at(bm, bx)
     const start = e.tail === 'none' ? tailCell : move(tailCell, face), end = e.head === 'none' ? headCell : move(headCell, targetFace)
     const forbidden = new Set(routes.flatMap(r => r.ends.flatMap(h => r.cells.filter(c => Math.abs(c.r - h.r) + Math.abs(c.c - h.c) === 1).map(keyOf))))
-    const blocked = (c: Point) => boxes.some(b => inside(c, b)) || occupied.get(keyOf(c)) === 0 ||
+    const blocked = (c: Point) => !fenced(fs, c) || boxes.some(b => inside(c, b)) || occupied.get(keyOf(c)) === 0 ||
       (e.tail !== 'none' && keyOf(c) === keyOf(tailCell)) || (e.head !== 'none' && keyOf(c) === keyOf(headCell))
     const allowed = (c: Point, dirs: number) => {
       const other = occupied.get(keyOf(c)), d = frames.reduce((d, b) => d | border(c, b), 0)
@@ -181,13 +210,12 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
       c => blocked(c) || used.has(keyOf(c)), allowed, rows, cols, budget)
     if (!last) continue
     path.push(...last, ...(e.head === 'none' ? [] : [headCell]))
-    if (path.some(c => c.r < 0 || c.c < 0 || boxes.some(b => inside(c, b)))) continue
+    if (path.some(c => c.r < 0 || c.c < 0 || boxes.some(b => inside(c, b)) || !fenced(fs, c))) continue
     const before = at(am, ax - sourceSide!), after = at(bm, bx - targetSide!)
     const all = path.map((c, i) => ({ ...c, dirs: arm(c, path[i - 1] ?? before) | arm(c, path[i + 1] ?? after) }))
     const tail = all[0]!, head = all.at(-1)!, cells = all.slice(e.tail === 'none' ? 0 : 1, e.head === 'none' ? undefined : -1)
       .filter(c => !ink.some(b => inside(c, b)))
-    const glyph = (end: string, side: number) => end === 'circle' ? 'o' : end === 'cross' ? 'x' : across ? (side > 0 ? '▲' : '▼') : (side > 0 ? '◄' : '►')
-    const ends = [...(e.tail === 'none' ? [] : [{ ...tail, ch: glyph(e.tail, sourceSide!) }]), ...(e.head === 'none' ? [] : [{ ...head, ch: glyph(e.head, targetSide!) }])]
+    const ends = [...(e.tail === 'none' ? [] : [{ ...tail, ch: endGlyph(e.tail, face) }]), ...(e.head === 'none' ? [] : [{ ...head, ch: endGlyph(e.head, targetFace) }])]
     if (ends.some(c => occupied.has(keyOf(c)) || frames.some(b => border(c, b)))) continue
     if (cells.some(c => !allowed(c, c.dirs)) || !crossingsFit(p, e, cells, routes)) continue
     if (new Set(path.map(keyOf)).size !== path.length) continue
@@ -276,7 +304,7 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
     margins.set(key, [...(margins.get(key) ?? []), id])
     if (inside({ r, c }, b)) boxCells.set(key, [...(boxCells.get(key) ?? []), id])
   }
-  for (const b of p.frames.values()) for (let r = b.row; r < b.row + b.rows; r++) for (let c = b.col; c < b.col + b.cols; c++) {
+  for (const b of walls(p)) for (let r = b.row; r < b.row + b.rows; r++) for (let c = b.col; c < b.col + b.cols; c++) {
     const d = border({ r, c }, b); if (d) borders.set(`${r},${c}`, (borders.get(`${r},${c}`) ?? 0) | d)
   }
   const titleCells = new Set<string>()
@@ -313,7 +341,8 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
     const vertical = p.graph.dir === 'TB' || p.graph.dir === 'BT'
     const label = p.boxes.get(`${e.id}:label`)
     const ink = labelInk(p, e)
-    const blocked = (c: Point) => title(c) || (margins.get(keyOf(c)) ?? []).some(id =>
+    const fs = fences(p, e)
+    const blocked = (c: Point) => title(c) || !fenced(fs, c) || (margins.get(keyOf(c)) ?? []).some(id =>
       id !== e.from && id !== e.to && id !== `${e.id}:label` && !id.startsWith(`${e.id}#`)) ||
       (boxCells.get(keyOf(c)) ?? []).some(id => !id.startsWith(`${e.id}#`) && (id !== `${e.id}:label` ||
         ink.some(b => inside(c, b)) && (vertical ? c.c !== label!.col + (label!.cols >> 1) : c.r !== label!.row + (label!.rows >> 1))))
@@ -342,8 +371,8 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
       }
       return (mask & (1 << dirs)) !== 0
     }
-    const glyph = (mark: string, face: number) => mark === 'circle' ? 'o' : mark === 'cross' ? 'x' : ['▼', '◄', '▲', '►'][face]!
-    const markOK = (port: Port, mark: string) => !blocked(port.at) && [...p.frames.values()].every(b => !border(port.at, b)) &&
+    const glyph = endGlyph
+    const markOK = (port: Port, mark: string) => !blocked(port.at) && walls(p).every(b => !border(port.at, b)) &&
       (occupied.get(keyOf(port.at)) ?? []).every(u => mark !== 'none' && u.ch === glyph(mark, port.face) && related(u))
     if (e.tail !== 'none' && !markOK(source, e.tail) || e.head !== 'none' && !markOK(target, e.head)) return null
     const start = e.tail === 'none' ? source.at : move(source.at, source.face)
@@ -422,10 +451,10 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
   }
   const preferred = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
   for (const e of edges) {
-    const sources = candidates(e.from, e.style, e.tail, preferred, groups.get(e.id)!)
+    const sources = candidates(e.from, e.style, e.tail, preferred, portOf(groups, e, 'tail'))
     const fanInOut = e.from !== e.to && e.tail === 'none' && edges.filter(n => n.from === e.from).length > 1 &&
       new Set(edges.filter(n => n.to === e.to).map(n => n.from)).size > 1
-    const targets = candidates(e.to, e.style, e.head, back(preferred), groups.get(e.id)!, true).filter(port =>
+    const targets = candidates(e.to, e.style, e.head, back(preferred), portOf(groups, e, 'head'), true).filter(port =>
       !fanInOut || preferred % 2 !== 0 || port.face === back(preferred))
     let result: { route: Route; source: Port; target: Port } | null = null
     for (const source of sources) {
@@ -466,7 +495,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
   const port = (id: string, source: boolean, style: string, end: string, group: string): number => {
     const b = (p.boxes.get(id) ?? p.frames.get(id))!
     const peers = edges.filter(e => (source ? e.from : e.to) === id)
-    const keys = [...new Set(peers.map(e => `${groups.get(e.id)}:${e.style}:${source ? e.tail : e.head}`))]
+    const keys = [...new Set(peers.map(e => `${portOf(groups, e, source ? 'tail' : 'head')}:${e.style}:${source ? e.tail : e.head}`))]
     const index = keys.indexOf(`${group}:${style}:${end}`)
     const size = across ? b.rows : b.cols, low = across ? b.row : b.col
     if (keys.length > size) return NaN
@@ -484,18 +513,18 @@ function channelsRoute(p: Placed): Route[] | Fail {
       .filter(e => { const a = p.boxes.get(e.from) ?? p.frames.get(e.from)!;
         const target = p.boxes.get(peers[0]!.from) ?? p.frames.get(peers[0]!.from)!;
         return across ? a.col === target.col : a.row === target.row })
-      .map(e => port(e.from, true, e.style, e.tail, groups.get(e.id)!)))
+      .map(e => port(e.from, true, e.style, e.tail, portOf(groups, e, 'tail'))))
     const candidates = Array.from({ length: size }, (_, i) => low + i)
       .sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) || a - b)
     const face = sign === 1 ? (across ? b.col : b.row) : -(across ? b.col + b.cols - 1 : b.row + b.rows - 1)
     const clear = (x: number) => [1, 2, 3].every(d => ![...p.boxes.values()].some(b => inside(point(face - d, x), b)))
     if (peers.length === 1 && keys.length === 1) {
       const e = peers[0]!, label = p.boxes.get(`${e.id}:label`)
-      const x = label ? (across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)) : port(e.from, true, e.style, e.tail, groups.get(e.id)!)
+      const x = label ? (across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)) : port(e.from, true, e.style, e.tail, portOf(groups, e, 'tail'))
       if (x >= low && x < low + size && !blocked.has(x) && clear(x)) return x
     }
     if (manySources) {
-      const sourcePorts = peers.map(e => port(e.from, true, e.style, e.tail, groups.get(e.id)!)).sort((a, b) => a - b)
+      const sourcePorts = peers.map(e => port(e.from, true, e.style, e.tail, portOf(groups, e, 'tail'))).sort((a, b) => a - b)
       const mean = (sourcePorts[0]! + sourcePorts.at(-1)!) / 2
       candidates.sort((a, b) => Math.abs(a - low - offset) - Math.abs(b - low - offset) ||
         (low + offset < mean ? a - b : b - a))
@@ -518,8 +547,8 @@ function channelsRoute(p: Placed): Route[] | Fail {
     }))
     const start = sign === 1 ? (across ? a.col + a.cols : a.row + a.rows) : -(across ? a.col : a.row) + 1
     const finish = sign === 1 ? (across ? b.col : b.row) - 1 : -(across ? b.col + b.cols : b.row + b.rows)
-    const sx = port(e.from, true, e.style, e.tail, groups.get(e.id)!)
-    const tx = port(e.to, false, e.style, e.head, groups.get(e.id)!)
+    const sx = port(e.from, true, e.style, e.tail, portOf(groups, e, 'tail'))
+    const tx = port(e.to, false, e.style, e.head, portOf(groups, e, 'head'))
     if (!Number.isFinite(sx) || !Number.isFinite(tx)) return fail('route-conflict')
     const waypoints = [...p.boxes].filter(([id]) => id.startsWith(`${e.id}#`))
       .map(([, b]) => ({ m: sign * (across ? b.col : b.row), x: across ? b.row : b.col }))
@@ -533,7 +562,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       waypoints.sort((a, b) => a.m - b.m)
     }
     const stops = [...waypoints, { m: finish, x: tx }]
-    const path: Point[] = [], net = `${groups.get(e.id)}:${e.from}:${e.style}:${e.tail}`
+    const path: Point[] = [], net = `${portOf(groups, e, 'tail')}:${e.from}:${e.style}:${e.tail}`
     let m = start, x = sx
     for (const [i, stop] of stops.entries()) {
       const gap = channels.find(g => g.axis === (across ? 'col' : 'row') && g.from >= m && g.to < stop.m)
@@ -542,12 +571,12 @@ function channelsRoute(p: Placed): Route[] | Fail {
       const nets = tracks.get(key) ?? new Map<string, number>()
       tracks.set(key, nets)
       const fan = across && edges.filter(n => n.from === e.from && n.style === e.style && n.tail === e.tail).length > 1
-      const firstTrack = Math.max(gap?.from ?? m, m + (i === 0 && (e.tail !== 'none' || fan) ? 2 : i === 0 && across && a.rows > 1 ? 1 : 0))
+      const firstTrack = Math.max(gap?.from ?? m, m + (i === 0 && (e.tail !== 'none' || e.tailLabel !== undefined || fan) ? 2 : i === 0 && across && a.rows > 1 ? 1 : 0))
       if (x !== stop.x && !nets.has(net)) {
         let track = Math.max(firstTrack, ...[...nets.values()].map(n => n + 1))
         const obstacles = routeObstacles(p, e)
         while (track < stop.m && Array.from({ length: Math.abs(x - stop.x) + 1 }, (_, k) => point(track, Math.min(x, stop.x) + k))
-          .some(c => obstacles.some(b => inside(c, b)) || [...p.frames.values()].some(b => {
+          .some(c => obstacles.some(b => inside(c, b)) || walls(p).some(b => {
             const d = border(c, b)
             return d !== 0 && (d !== (across ? 5 : 10) || (across ? c.r : c.c) === x || (across ? c.r : c.c) === stop.x)
           }))) track++
@@ -556,7 +585,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       let track = x === stop.x ? m : nets.get(net)!
       if (i === stops.length - 1 && edges.filter(n => n.from === e.from).length === 1) {
         const incoming = routes.filter(r => { const n = edges.find(n => n.id === r.edge)!;
-          return groups.get(n.id) === groups.get(e.id) && n.to === e.to && n.style === e.style && n.head === e.head })
+          return portOf(groups, n, 'head') === portOf(groups, e, 'head') && n.to === e.to && n.style === e.style && n.head === e.head })
         const previous = incoming.flatMap(r => r.cells).filter(c => (across ? c.dirs === 5 : c.dirs === 10))
           .map(c => sign * (across ? c.c : c.r)).filter(n => n >= firstTrack && n < stop.m - 1)
         if (previous.length) track = Math.min(...previous)
@@ -570,7 +599,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
     let tail = point(start, sx), side = 0
     path.push(head)
     const obstacles = routeObstacles(p, e)
-    if (e.tail !== 'none' && [...p.frames.values()].some(b => border(tail, b) & 5)) {
+    if (e.tail !== 'none' && walls(p).some(b => border(tail, b) & 5)) {
       const low = across ? a.row : a.col, high = low + (across ? a.rows : a.cols)
       const main = sign * (across ? a.col + (a.cols >> 1) : a.row + (a.rows >> 1))
       const choices = [-1, 1].sort((u, v) => Math.abs((u < 0 ? low - 3 : high + 2) - stops[0]!.x)
@@ -579,7 +608,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
         const cross = direction < 0 ? low - 1 : high, outer = cross + 2 * direction
         const sameColumn = path.findIndex(c => (across ? c.r : c.c) === outer && sign * (across ? c.c : c.r) >= start + 2)
         const join = sameColumn >= 0 ? sameColumn : path.findIndex(c => sign * (across ? c.c : c.r) >= start + 1 &&
-          [...p.frames.values()].every(b => !border(c, b)))
+          walls(p).every(b => !border(c, b)))
         if (join < 0) continue
         const prefix = [point(main, cross), point(main, cross + direction), point(main, outer)]
         const end = sign * (across ? path[join]!.c : path[join]!.r), target = across ? path[join]!.r : path[join]!.c
@@ -614,14 +643,14 @@ function channelsRoute(p: Placed): Route[] | Fail {
     const cells = path.map((c, i) => ({ ...c,
       dirs: arm(c, path[i - 1] ?? before) | arm(c, path[i + 1] ?? after),
     })).filter(c => !ink.some(b => inside(c, b)))
-    const glyph = (end: string, forward: boolean) => end === 'circle' ? 'o' : end === 'cross' ? 'x'
-      : across ? ((sign === 1) === forward ? '►' : '◄') : ((sign === 1) === forward ? '▼' : '▲')
+    // The side of its node each end sits on: a head before its target, a tail past its source, or a tail moved to a side face.
+    const nodeSide = (forward: boolean) => across ? ((sign === 1) === forward ? 3 : 1) : ((sign === 1) === forward ? 0 : 2)
     const ends = []
-    if (e.tail !== 'none') ends.push({ ...tail, ch: e.tail === 'arrow' && side
-      ? (across ? (side < 0 ? '▼' : '▲') : (side < 0 ? '►' : '◄')) : glyph(e.tail, false) })
-    if (e.head !== 'none') ends.push({ ...head, ch: glyph(e.head, true) })
-    if (ends.some(c => [...p.frames.values()].some(b => border(c, b))) ||
-      cells.some(c => [...p.frames.values()].some(b => { const d = border(c, b); return d !== 0 && d !== c.dirs }))) {
+    if (e.tail !== 'none') ends.push({ ...tail, ch: endGlyph(e.tail, side ? (across ? (side < 0 ? 0 : 2) : (side < 0 ? 3 : 1)) : nodeSide(false)) })
+    if (e.head !== 'none') ends.push({ ...head, ch: endGlyph(e.head, nodeSide(true)) })
+    const fs = fences(p, e)
+    if (ends.some(c => walls(p).some(b => border(c, b))) || [...cells, ...ends].some(c => !fenced(fs, c)) ||
+      cells.some(c => walls(p).some(b => { const d = border(c, b); return d !== 0 && d !== c.dirs }))) {
       return fail('route-conflict')
     }
     if (!crossingsFit(p, e, cells, routes)) return fail('route-conflict')

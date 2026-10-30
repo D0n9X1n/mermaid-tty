@@ -3,6 +3,7 @@ import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; 
 import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'
 import { sequence } from '../../core/diagrams/sequence/layout.ts'; import { parseSequence } from '../../core/diagrams/sequence/parse.ts'
 import { readSource, type Source } from '../../core/source.ts'; import { text } from './graph-fixture.ts'
+import { explain } from '../../core/render.ts'
 
 // A flowchart `dir\nbody` and a sequence body, each drawn at its natural step in 80 columns.
 const F = (t: string): Drawing => flowchart.layout(parseFlowchart(readSource(`flowchart ${t}`) as Source) as any, 'natural', 80) as Drawing
@@ -70,4 +71,37 @@ test('A5.mutation-tests: a frame needs its four corners: one overwritten, by tex
   const heavy = box(7); heavy.cells[0]![0] = { ...heavy.cells[0]![0]!, ch: '┏' }; assert.equal(validate(heavy), null)
   assert.equal(validate(box(7, c => c.text(0, 6, 'x', 'label', 'L'), 'x'))?.reason, 'frame-broken')
   const run = box(7); run.cells[2]![6] = { ...run.cells[2]![5]! }; assert.equal(validate(run)?.reason, 'frame-broken')
+})
+
+// V5: a border cell draws its border's glyph, ─ or ━ across and │ or ┃ down a side, or a tee whose stem a divider of the
+// frame's own, `${id}.${k}`, continues inside: ┬ over it, ┴ under it, ├ or ┤ beside it. A stray tee leads nowhere.
+const tee = (d: Drawing, r: number, c: number, ch: string, dirs: number) => { d.cells[r]![c] = { ...d.cells[r]![c]!, ch, dirs }; return d }
+const divider = (owner: string) => (c: Canvas) => c.line(1, 3, 5, 'light', 'frame', owner)
+test('A5.mutation-tests: V5 a border tee with no divider of its own frame inside it fails frame-broken', () => {
+  assert.equal(validate(tee(box(7), 0, 3, '┬', 14))?.reason, 'frame-broken')                    // stray ┬, nothing below
+  assert.equal(validate(tee(box(7), 2, 3, '┴', 11))?.reason, 'frame-broken')                    // stray ┴, nothing above
+  assert.equal(validate(tee(box(7), 1, 0, '├', 7))?.reason, 'frame-broken')                     // stray ├, nothing beside
+  assert.equal(validate(tee(box(7, divider('G.2')), 0, 3, '┬', 14))?.reason, 'frame-broken')    // another frame's divider
+  const side = box(7); side.cells[0]![3] = { ...side.cells[1]![0]! }
+  assert.equal(validate(side)?.reason, 'frame-broken')                                          // a │ on the top border
+})
+test('A5.mutation-tests: V5 a divider\'s tees pass, and so does the quadrant\'s cross', () => {
+  assert.equal(validate(tee(tee(box(7, divider('F.2')), 0, 3, '┬', 14), 2, 3, '┴', 11)), null)
+  const q = explain('quadrantChart\nx-axis Low --> High\ny-axis Cold --> Hot\nquadrant-1 Expand\nA: [0.3, 0.6]', { columns: 80 }) as { drawing: Drawing }
+  assert.ok(text(q.drawing).some(row => row.includes('┬')) && text(q.drawing).some(row => row.includes('┴')), show(q.drawing))
+  assert.equal(validate(q.drawing), null, show(q.drawing))
+})
+
+// V6: frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws it.
+function inner(ink: (c: Canvas) => void, g: string): Drawing {
+  const c = createCanvas(6, 9, 9); c.frame(0, 0, 4, 8, 'frame', 'F', 'T'); c.text(2, 2, 'a', 'node', 'A'); c.text(2, 5, 'b', 'node', 'B'); ink(c)
+  return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],
+    edges: [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'B', glyph: g }] }], edgeLabels: [], frames: ['F'] })
+}
+test('V6: an edge between two nodes of one frame that leaves it through its border and comes back fails edge-outside-frame', () => {
+  // Under a, along row 3, down through the bottom border at (4,4), back up at (4,5), ▲ into b: each crossing a straight │.
+  const out = inner(c => { line(c, [[3, 2, 3], [3, 3, 10], [3, 4, 12], [4, 4, 5], [5, 4, 3], [5, 5, 9], [4, 5, 5]]); c.arrow(3, 5, '▲', 'e') }, '▲')
+  assert.equal(validate(out)?.reason, 'edge-outside-frame', show(out))
+  const kept = inner(c => { line(c, [[2, 3, 10]]); c.arrow(2, 4, '►', 'e') }, '►')   // a─►b, inside F
+  assert.equal(validate(kept), null, show(kept))
 })

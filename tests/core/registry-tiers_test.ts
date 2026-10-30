@@ -1,8 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { ENABLED, TIER1, TIER2, TIER2_PASSED, KEYWORDS, lookup, supportTable } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'; import { TIER1_MODULES } from '../../core/diagrams/all.ts'
-import { register } from '../../core/registry.ts'; import { stub } from '../../core/diagrams/stub.ts'
-import { readSource, type Source } from '../../core/source.ts'
+import { register, type DiagramModule, type DiagramType } from '../../core/registry.ts'; import { fail } from '../../core/fail.ts'
 const kws = (t: string) => Object.keys(KEYWORDS).filter(k => KEYWORDS[k] === t)
 test('A5.errors: ENABLED is A, Tier 1 and the passed Tier 2 types; every other Tier 2 keyword is disabled', () => {
   assert.deepEqual([...ENABLED], ['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED])
@@ -22,17 +21,15 @@ test('B1: supportTable lists each ENABLED type with its header keywords', () => 
   assert.equal(t.length, 2 + ENABLED.size)
 })
 
-// Beyond the plan's three tests: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; stub(type)
-// fails as unimplemented:<type> for each type it is given; and a Tier 1 type whose module is a stub falls back through
-// explain. The last test files a stub in each module's place, then files the module back.
+// Beyond the plan's three tests: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; and a Tier 1
+// type whose module fails falls back through explain. The last test files a failing module, the shape T40's stub had
+// (T85 deleted core/diagrams/stub.ts), in each module's place, then files the module back.
+const stub = (type: DiagramType): DiagramModule => {
+  const unimplemented = () => fail(`unimplemented:${type}`)
+  return { type, parse: unimplemented, steps: () => [], layout: unimplemented }
+}
 test('A5.errors: TIER1_MODULES holds exactly one module for each Tier 1 type', () => {
   assert.deepEqual(TIER1_MODULES.map(m => m.type).sort(), [...TIER1].sort())
-})
-test('A5.errors: stub(type) fails parse and layout with unimplemented:<type>, and its ladder has no step', () => {
-  for (const t of TIER1) {
-    const s = stub(t), src = readSource(`${kws(t)[0]}\nA`) as Source, no = { reason: `unimplemented:${t}` }
-    assert.deepEqual([s.type, s.parse(src), s.steps(src), s.layout(src, 'natural', 80)], [t, no, [], no], t)
-  }
 })
 test('A5.errors: a Tier 1 type whose module is a stub falls back: explain returns unimplemented:<type> for each keyword', () => {
   for (const m of TIER1_MODULES) {

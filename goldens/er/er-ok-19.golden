@@ -1,0 +1,130 @@
+@60
+        1
+  [ A ]───────┐
+    │         │
+    │1        │
+  ┌─┘         │
+  a           │
+  │           │
+  │           │
+  │1          │
+  │           │
+[ B ]         c
+  │           │
+  │1          │
+  └─┐         │
+    │         │
+    b         │
+    │         │
+    │         │
+    │1        │
+    │   1     │
+  [ C ]───────┘
+a x
+b y
+c closesloopxxclosesloopxxclosesloopxxclosesloo
+@60 roles
+        A
+  nnNnneeeeeeee
+    e         e
+    eA        e
+  eee         e
+  l           e
+  e           e
+  e           e
+  eA          e
+  e           e
+nnNnn         l
+  e           e
+  eA          e
+  eee         e
+    e         e
+    l         e
+    e         e
+    e         e
+    eA        e
+    e   A     e
+  nnNnneeeeeeee
+l L
+l L
+l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+@80
+             1
+       [ A ]───────────────────────────┐
+         │                             │
+         │1                            │
+  ┌──────┘                             │
+  x                                    │
+  │                                    │
+  │1                                   │
+  │                                    │
+[ B ]            closesloopxxclosesloopxxclosesloopxxclosesloo
+  │                                    │
+  │1                                   │
+  └───────┐                            │
+          │                            │
+          y                            │
+          │                            │
+          │1                           │
+          │   1                        │
+        [ C ]──────────────────────────┘
+@80 roles
+             A
+       nnNnneeeeeeeeeeeeeeeeeeeeeeeeeeee
+         e                             e
+         eA                            e
+  eeeeeeee                             e
+  L                                    e
+  e                                    e
+  eA                                   e
+  e                                    e
+nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  e                                    e
+  eA                                   e
+  eeeeeeeee                            e
+          e                            e
+          L                            e
+          e                            e
+          eA                           e
+          e   A                        e
+        nnNnneeeeeeeeeeeeeeeeeeeeeeeeeee
+@120
+             1
+       [ A ]───────────────────────────┐
+         │                             │
+         │1                            │
+  ┌──────┘                             │
+  x                                    │
+  │                                    │
+  │1                                   │
+  │                                    │
+[ B ]            closesloopxxclosesloopxxclosesloopxxclosesloo
+  │                                    │
+  │1                                   │
+  └───────┐                            │
+          │                            │
+          y                            │
+          │                            │
+          │1                           │
+          │   1                        │
+        [ C ]──────────────────────────┘
+@120 roles
+             A
+       nnNnneeeeeeeeeeeeeeeeeeeeeeeeeeee
+         e                             e
+         eA                            e
+  eeeeeeee                             e
+  L                                    e
+  e                                    e
+  eA                                   e
+  e                                    e
+nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  e                                    e
+  eA                                   e
+  eeeeeeeee                            e
+          e                            e
+          L                            e
+          e                            e
+          eA                           e
+          e   A                        e
+        nnNnneeeeeeeeeeeeeeeeeeeeeeeeeee

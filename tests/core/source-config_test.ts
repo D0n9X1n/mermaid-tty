@@ -57,3 +57,10 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
   // Other plain top-level keys, indicators after their first character included, are still ignored.
   assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: 1 })
 })
+test('X4: an htmlLabels key anywhere in config, set to anything but true, falls back (Mermaid then draws SVG text)', () => {
+  const off = ['htmlLabels: false', 'htmlLabels: "true"', 'htmlLabels: 0', 'htmlLabels: ~', 'htmlLabels: yes',
+    'flowchart:\n    htmlLabels: false', 'class:\n    htmlLabels: false', 'state:\n    htmlLabels: "false"']
+  for (const v of off) assert.deepEqual(src(`config:\n  ${v}`), { reason: 'config:htmlLabels' }, v)
+  assert.deepEqual(cfg('config:\n  htmlLabels: true\n  flowchart:\n    htmlLabels: true'), { htmlLabels: true, 'flowchart.htmlLabels': true })
+  assert.deepEqual(cfg('config:\n  htmlLabelsX: false'), { htmlLabelsX: false })
+})

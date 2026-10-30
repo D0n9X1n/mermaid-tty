@@ -45,6 +45,7 @@ const texts = (d: any) => [...new Set(d.cells.flat().flatMap((c: any) => (c?.kin
 const labelled = (d: any) => d.expect.labels.map((l: any) => l.owner).sort()
 const undef = (x: unknown): boolean => typeof x === 'object' && x !== null && Object.values(x).some(v => v === undefined || undef(v))
 const bars = (axis: string, es: [string, number][]) => es.map(([owner, eighths]) => ({ owner, eighths, axis, lanes: 1 }))
+const unplaced = (bs: any[]) => bs.map(({ at: _, ...b }) => b)   // a bar's at is checked by validate-places
 test('A4: vertical sub-columns in source order, the leftover blank; tag and name in the gutter; the y-axis title above, the x-axis title below', () => {
   const r = X('xychart-beta\nx-axis Month [march, april]\ny-axis Units 0 --> 10\nline Plan [10, 4]\nbar [6, 0]\nbar Other [3, 10]\nline [1, 5]', 80), d = r.drawing
   assert.equal(r.step, 'natural')
@@ -54,7 +55,7 @@ test('A4: vertical sub-columns in source order, the leftover blank; tag and name
   assert.deepEqual(inks(d), { 'text label': ['c0', 'c1', 'x0', 'x1', 'x2', 'x3', 'xTitle', 'yTitle'], 'cap frame': ['axis'], 'cap s1': ['x0:mark'],
     'cap s2': ['x1.b0'], 'cap s3': ['x2.b0', 'x2.b1'], 'cap s4': ['x3:mark'],
     'text value': ['axis.t0', 'axis.t1', 'axis.t2', 'x0.v0', 'x0.v1', 'x1.v0', 'x1.v1', 'x2.v0', 'x2.v1', 'x3.v0', 'x3.v1'] })
-  assert.deepEqual(d.expect.bars, bars('v', [['x1.b0', 38], ['x1.b1', 0], ['x2.b0', 19], ['x2.b1', 64]]))
+  assert.deepEqual(unplaced(d.expect.bars), bars('v', [['x1.b0', 38], ['x1.b1', 0], ['x2.b0', 19], ['x2.b1', 64]]))
   assert.deepEqual(labelled(d), texts(d)); assert.equal(undef(d), false)
 })
 test('A4: horizontal: the x-axis title above, the y-axis title under the ticks, then a legend of the named series', () => {
@@ -67,7 +68,7 @@ test('A4: horizontal: the x-axis title above, the y-axis title under the ticks, 
   assert.deepEqual(inks(d), { 'text title': ['title'], 'text label': ['c0', 'c1', 'x0', 'x2', 'xTitle', 'yTitle'], 'cap label': ['x0:mark', 'x1:mark', 'x2:mark'],
     'cap s1': ['x0.b0', 'x0.b1'], 'cap s2': ['x1.b0', 'x1.b1'], 'cap s3': ['x2:mark'], 'cap frame': ['axis'],
     'text value': ['axis.t0', 'axis.t1', 'x0.v0', 'x0.v1', 'x1.v0', 'x1.v1', 'x2.v0', 'x2.v1'] })
-  assert.deepEqual(d.expect.bars, bars('h', [['x0.b0', 48], ['x0.b1', 180], ['x1.b0', 120], ['x1.b1', 24]]))
+  assert.deepEqual(unplaced(d.expect.bars), bars('h', [['x0.b0', 48], ['x0.b1', 180], ['x1.b0', 120], ['x1.b1', 24]]))
   assert.deepEqual(labelled(d), texts(d)); assert.equal(undef(d), false)
 })
 test('A4.fit-ladder: wrap: a category\'s later pieces take the rows below, past its series rows; a legend row wraps indented under its text', () => {
@@ -90,4 +91,10 @@ test('A4: an explicit bound prints as written; a computed bound and the midpoint
   const ticks = (src: string) => { const t = text(X(src, 80).drawing); return [t[0], t[4], t[8]].map(l => l!.trim().split(' ')[0]) }
   assert.deepEqual(ticks('xychart-beta\ny-axis 0.50 --> +2.0\nline [1, 1.5]'), ['+2.0', '1.25', '0.50'])
   assert.deepEqual(ticks('xychart-beta\nline [0, 2.50]'), ['2.5', '1.25', '0'])
+})
+// T72 QA: a horizontal point is placed from y0, not from 0: with y-axis 10 --> 20, the values 10, 15 and 20 sit at field
+// cells 0, 9 and 18 (W = 19), after the tag column.
+test('A4: horizontal points sit at cellOf(v − y0, M, W) when y0 is not 0', () => {
+  const t = text(X('xychart-beta horizontal\ny-axis 10 --> 20\nline [10, 15, 20]', 25).drawing)
+  assert.deepEqual(t.slice(0, 3).map(l => l.lastIndexOf('●') - 3), [0, 9, 18])
 })

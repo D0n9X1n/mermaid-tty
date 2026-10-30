@@ -1,8 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
-import { isFail } from '../core/fail.ts'
-import { createRenderer, type Rows } from '../core/render.ts'
-import { splitFences } from './fences.ts'
-import { modeReply, parseModeArgs, passThrough, type Mode } from './mode.ts'
+import type { Rows } from '../core/render.ts'
+import { modeReply, parseModeArgs, type Mode } from './mode.ts'
+import { safePlan } from './plan.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that
 // fails to draw (joined to the prose around it), goes through next() unchanged, as does a
@@ -10,7 +9,6 @@ import { modeReply, parseModeArgs, passThrough, type Mode } from './mode.ts'
 // block, which draws the reply's bullet (D5). /mermaid-tty source|diagram sets the mode,
 // kept in $.state; in source mode every reply goes through next() untouched.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
-const renderer = createRenderer(64)
 
 // The loader follows $ only into top-level functions, so mode lives here. A read while a
 // ui.render hook draws subscribes that drawing, so a later set draws it again.
@@ -34,17 +32,12 @@ export const register: Register = (on, options) => {
     return { text: modeReply(a.set, a.set !== cur) }
   })
 
+  // Fail closed: any error in the plugin's own work (mode, splitting, rendering, the debug log, resolving the UI)
+  // sends the reply through next(e) unchanged, so Claude Code draws it as it would without the plugin.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
-    const columns = e.viewport?.columns
-    if (columns === undefined || passThrough(e.surface, e.props, await mode($))) return next(e)
-    const parts: ({ prose: string } | { rows: Rows })[] = []
-    for (const s of splitFences(e.props.text)) {
-      const r = s.kind === 'mermaid' ? renderer.render(s.body, { columns, theme }, f => $.ui.log(`mermaid-tty fallback: ${f.reason}`, { to: 'debug' })) : null
-      if (r && !isFail(r)) parts.push({ rows: r })
-      else { const last = parts[parts.length - 1]; if (last && 'prose' in last) last.prose += s.text; else parts.push({ prose: s.text }) }
-    }
-    if (!parts.some(p => 'rows' in p)) return next(e)
-    const { Box, Text } = $.ui.resolve(e), kids: RenderElement[] = []
+    const plan = await safePlan($, e, theme, () => mode($))
+    if (!plan) return next(e)
+    const { parts, Box, Text } = plan, kids: RenderElement[] = []
     let first = e.props.isFirstOfReply, n = 0
     for (const p of parts) {
       if ('rows' in p && first) kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))  // D5: keep the bullet

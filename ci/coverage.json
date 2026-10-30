@@ -1,0 +1,99 @@
+{
+  "A1": "check",
+  "A2": "check",
+  "A3": "check",
+  "A4": "check",
+  "A4.width-table": "check",
+  "A4.fit-ladder": "check",
+  "A5": "check",
+  "A5.mutation-tests": "check",
+  "A5.errors": "check",
+  "A6": [
+    "check",
+    "e2e"
+  ],
+  "A6.hook-tests": "check",
+  "A6.command": "check",
+  "A6.in-claude-code": "e2e",
+  "A7": "check",
+  "A8": "check",
+  "A8.portability": "check",
+  "A8.benchmark": "check",
+  "A8.cache": "check",
+  "A8.no-build": "check",
+  "A8.validation": "check",
+  "A8.platforms": "check",
+  "A9": [
+    "e2e-drivers",
+    "e2e",
+    "release-e2e"
+  ],
+  "A9.harness": [
+    "e2e-drivers",
+    "e2e"
+  ],
+  "A9.stored": "e2e",
+  "A9.release": "release-e2e",
+  "A10": "check",
+  "VR.gallery": [
+    "gallery",
+    "gallery-upload"
+  ],
+  "VR.in-ci": [
+    "gallery",
+    "gallery-upload",
+    "check"
+  ],
+  "VR.reviewers": [
+    "review-hashes",
+    "check"
+  ],
+  "VR.tangled": "check",
+  "VR.passes": [
+    "review-hashes",
+    "check"
+  ],
+  "B1": [
+    "check",
+    "review-hashes"
+  ],
+  "B1.docs-check": "check",
+  "B1.beauty-review": "review-hashes",
+  "B2": [
+    "check",
+    "review-hashes"
+  ],
+  "B2.per-paragraph": "check",
+  "B2.translation-review": "review-hashes",
+  "B3": [
+    "check",
+    "release-wiki-run",
+    "release-wiki"
+  ],
+  "B3.publish-test": "check",
+  "B3.workflow-check": "check",
+  "B3.release": [
+    "release-wiki-run",
+    "release-wiki"
+  ],
+  "B4": "check",
+  "B5": [
+    "check",
+    "release-tag",
+    "release-notes",
+    "release-notes-published",
+    "release-install",
+    "release-e2e"
+  ],
+  "B5.every-pr": "check",
+  "B5.release": [
+    "release-tag",
+    "release-notes",
+    "release-notes-published",
+    "release-install",
+    "release-e2e"
+  ],
+  "B6": "check",
+  "B7": "check",
+  "B7.check-ids": "check"
+}

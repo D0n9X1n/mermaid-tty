@@ -1,0 +1,108 @@
+@60
+Different Colors in xyChart
+valuesY
+50 ┤
+   │                                  ●
+   │                                   ▅▅▅▅    ◆
+   │             ▆▆▆▆      ●           ████▆▆▆▆
+25 ┤  ▂▂▂▂      ●████████   ████▂▂▂▂◆  ████████
+   │  ████▃▃▃▃   ████████◆  ████████   ████████
+   │ ●████████   ████████   ████████   ████████
+   │  ████████◆  ████████   ████████   ████████
+ 0 └─┬──────────┬──────────┬──────────┬─────────
+     Category 1 Category 2 Category 3 Category 4
+categoriesX
+●            10         20         30         40
+a            20         30         25         35
+b            15         25         20         30
+◆             5         15         25         35
+@60 roles
+TTTTTTTTTTTTTTTTTTTTTTTTTTT
+LLLLLLL
+VV f
+   f                                  1
+   f                                   2222    4
+   f             2222      1           22223333
+VV f  2222      122223333   222233334  22223333
+   f  22223333   222233334  22223333   22223333
+   f 122223333   22223333   22223333   22223333
+   f  222233334  22223333   22223333   22223333
+ V fffffffffffffffffffffffffffffffffffffffffffff
+     LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL
+LLLLLLLLLLL
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L             V         VV         VV         VV
+@80
+Different Colors in xyChart
+valuesY
+50 ┤
+   │                                  ●
+   │                                   ▅▅▅▅    ◆
+   │             ▆▆▆▆      ●           ████▆▆▆▆
+25 ┤  ▂▂▂▂      ●████████   ████▂▂▂▂◆  ████████
+   │  ████▃▃▃▃   ████████◆  ████████   ████████
+   │ ●████████   ████████   ████████   ████████
+   │  ████████◆  ████████   ████████   ████████
+ 0 └─┬──────────┬──────────┬──────────┬─────────
+     Category 1 Category 2 Category 3 Category 4
+categoriesX
+●            10         20         30         40
+a            20         30         25         35
+b            15         25         20         30
+◆             5         15         25         35
+@80 roles
+TTTTTTTTTTTTTTTTTTTTTTTTTTT
+LLLLLLL
+VV f
+   f                                  1
+   f                                   2222    4
+   f             2222      1           22223333
+VV f  2222      122223333   222233334  22223333
+   f  22223333   222233334  22223333   22223333
+   f 122223333   22223333   22223333   22223333
+   f  222233334  22223333   22223333   22223333
+ V fffffffffffffffffffffffffffffffffffffffffffff
+     LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL
+LLLLLLLLLLL
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L             V         VV         VV         VV
+@120
+Different Colors in xyChart
+valuesY
+50 ┤
+   │                                  ●
+   │                                   ▅▅▅▅    ◆
+   │             ▆▆▆▆      ●           ████▆▆▆▆
+25 ┤  ▂▂▂▂      ●████████   ████▂▂▂▂◆  ████████
+   │  ████▃▃▃▃   ████████◆  ████████   ████████
+   │ ●████████   ████████   ████████   ████████
+   │  ████████◆  ████████   ████████   ████████
+ 0 └─┬──────────┬──────────┬──────────┬─────────
+     Category 1 Category 2 Category 3 Category 4
+categoriesX
+●            10         20         30         40
+a            20         30         25         35
+b            15         25         20         30
+◆             5         15         25         35
+@120 roles
+TTTTTTTTTTTTTTTTTTTTTTTTTTT
+LLLLLLL
+VV f
+   f                                  1
+   f                                   2222    4
+   f             2222      1           22223333
+VV f  2222      122223333   222233334  22223333
+   f  22223333   222233334  22223333   22223333
+   f 122223333   22223333   22223333   22223333
+   f  222233334  22223333   22223333   22223333
+ V fffffffffffffffffffffffffffffffffffffffffffff
+     LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL LLLLLLLLLL
+LLLLLLLLLLL
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L            VV         VV         VV         VV
+L             V         VV         VV         VV
