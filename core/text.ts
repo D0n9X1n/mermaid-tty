@@ -1,4 +1,4 @@
-import { emOf, emphasize } from './emphasis.ts'
+import { emOf, emphasize, oneParagraph } from './emphasis.ts'
 import { fail, isFail, type Fail } from './fail.ts'
 import { isWide, unsupported, width } from './width.ts'
 
@@ -79,14 +79,17 @@ export function decoded(text: string, mode: Mode, br: Br): string | Fail {
 // codes decoded (as decoded says), when marked shows it as written; else the marked string core/emphasis.ts makes of
 // its bold and italic. Every other Fail drawable gives stands, and so does 'markdown' where the port cannot match
 // Mermaid, or where the text also has a #…; code or, in a field no <br> splits, a <. An unsupported character fails as
-// 'unsupported-char U+XXXX', checked before any marker is written, so no marker comes from the source.
-export function styled(text: string, br: Br, decode = false): string | Fail {
+// 'unsupported-char U+XXXX', checked before any marker is written, so no marker comes from the source. breaks: an edge,
+// transition or relation label, where Mermaid makes each <br> a newline before marked: text that is not one paragraph
+// then (oneParagraph; a blank line is left to the caller) fails 'markdown', emphasis or not.
+export function styled(text: string, br: Br, { decode = false, breaks = false }: { decode?: boolean; breaks?: boolean } = {}): string | Fail {
   const d = decode ? decoded(text, 'markdown', br) : (drawable(text, 'markdown', br) ?? text)
   if (isFail(d) && d.reason !== 'markdown') return d
   const bad = unsupported(isFail(d) ? text : d)
   if (bad) return fail(`unsupported-char ${bad}`)
+  if (breaks && !oneParagraph(text, true)) return fail('markdown')
   if (!isFail(d) || /#\w+;/.test(text) || (br !== 'any' && text.includes('<'))) return d
-  return emphasize(text) ?? d
+  return emphasize(text, breaks) ?? d
 }
 
 // X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token

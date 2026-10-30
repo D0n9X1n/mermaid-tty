@@ -163,3 +163,10 @@ test('X3.emphasis: bold and italic in a class label, a relation label or a note 
   const m = P('class B["**lbl** x"]\nB --> C : **r** _s_\nnote for B "**n**<br>_o_"')
   assert.deepEqual([m.classes[0].label, m.relations[0].label, m.notes[0].text], [emphasize('**lbl** x'), emphasize('**r** _s_'), emphasize('**n**<br>_o_')])
 })
+
+test('X3.emphasis: a class relation label reads each <br> as a newline: a block start after one falls back; a note draws it', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  assert.deepEqual(P('A --> B : a<br>- **b**'), { reason: 'markdown' })
+  assert.equal(P('A --> B : **a<br>b**').relations[0].label, emphasize('**a<br>b**', true))
+  assert.equal(P('class A\nnote for A "a<br>- **b**"').notes[0].text, emphasize('a<br>- **b**'))
+})

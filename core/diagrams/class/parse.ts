@@ -248,6 +248,8 @@ function generics(t: string, n: number): string {
 // parser builds from fields already checked, such as Box<T>.
 type Field = readonly [Mode, Br]
 const LINES: Field = ['markdown', 'any'], NAME: Field = ['markdown', 'none'], LINE: Field = ['html', 'none']
+// A relation label: LINES, but Mermaid makes each <br> a newline before marked (styled's breaks).
+const EDGE_LINES: Field = ['markdown', 'any']
 const MEMBER_TEXT: Field = ['member', 'none'], BUILT: Field = ['plain', 'literal']
 
 // Fails as drawable says ('entity' or 'html') when Mermaid would show s, in field, as other text.
@@ -259,8 +261,8 @@ function check(s: string, field: Field): void { const f = drawable(s, ...field);
 function text(s: string, n: number, field: Field): string {
   const t = s.trim()
   if (t === '') stop(`syntax:${n}`)
-  if (field === LINES) {
-    const d = styled(t, 'any')
+  if (field === LINES || field === EDGE_LINES) {
+    const d = styled(t, 'any', { breaks: field === EDGE_LINES })
     if (isFail(d)) throw d
     return labelLines(d).some(l => !l.trim()) ? stop('label-blank-line') : d
   }
@@ -280,7 +282,7 @@ function relation(m: RegExpExecArray, n: number, st: State): void {
   const end = (s: string | undefined): ClassEnd => (s === undefined ? 'none' : END[s]!)
   const rels = st.model.relations
   rels.push({ id: `rel${rels.length}`, from: tail, to: head, tail: end(left), head: end(right), line: line === '..' ? 'dotted' : 'solid',
-    label: opt(labelRaw, LINES), tailLabel: card(tailRaw), headLabel: card(headRaw), order: rels.length + st.model.notes.length })
+    label: opt(labelRaw, EDGE_LINES), tailLabel: card(tailRaw), headLabel: card(headRaw), order: rels.length + st.model.notes.length })
 }
 
 // note "t" or note for X "t", with id note<k>: its text as written, which only a <br> breaks (a literal \n Mermaid shows as

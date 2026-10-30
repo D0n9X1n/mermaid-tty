@@ -150,3 +150,10 @@ test('X3.emphasis: bold and italic in a state text or a state id shown as its la
     [[emphasize('**D** x'), emphasize('__y__')], emphasize('__b__ _i_'), emphasize('**n** _o_')])
   assert.deepEqual(P('state "**Comp** x" as C {\n  c\n}'), { reason: 'markdown' })
 })
+
+test('X3.emphasis: a state transition label reads each <br> as a newline: a block start after one falls back; a note draws it', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  assert.deepEqual(P('A --> B : a<br>- **b**'), { reason: 'markdown' })
+  assert.equal(P('A --> B : **a<br>b**').graph.edges[0].label, emphasize('**a<br>b**', true))
+  assert.equal(P('A\nnote left of A : a<br>- **b**').graph.nodes[0].note.text, emphasize('a<br>- **b**'))
+})

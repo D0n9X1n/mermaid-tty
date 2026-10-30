@@ -424,17 +424,18 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 // stay: a node splits them into lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
 // token: the text after the string is Mermaid's text token (a node, |…| or subgraph label), which stops at ( ) [ ] { } |
 // and cannot start with ~~~; a text form's edge text (token false) takes any of them.
-function label(raw: string, br: Br = 'any', token = true): string | Fail {
+function label(raw: string, br: Br = 'any', token = true, edge = false): string | Fail {
   const md = raw.startsWith('"`')
   const m = (md ? /^"`([^`"]+)`"([^"]*)$/ : /^(?:"([^"]+)")?([^"]*)$/).exec(raw)
   if (!m || !raw || (token && (/[[\](){}|]/.test(m[2]!) || /^\s*~~~/.test(m[2]!)))) return fail('syntax')
-  return checked(((m[1] ?? '') + m[2]).trim(), br, md ? 'markdown' : 'html')
+  return checked(((m[1] ?? '') + m[2]).trim(), br, md ? 'markdown' : 'html', edge)
 }
 
-// An edge label as label reads it, but null if it is blank: a blank label would draw no cells. A blank line in it fails,
+// An edge label as label reads it (edge: Mermaid makes each <br> a newline before marked, styled's breaks), but null if it
+// is blank: a blank label would draw no cells. A blank line in it fails,
 // as splitLabel says, so one of only <br/> fails too.
 function edgeLabel(raw: string, token: boolean): string | null | Fail {
-  const t = label(raw, 'any', token)
+  const t = label(raw, 'any', token, true)
   if (isFail(t)) return t
   const ls = splitLabel(t)
   return isFail(ls) ? ls : t.trim() ? t : null
@@ -451,9 +452,9 @@ function splitLabel(t: string): string[] | Fail {
 // Label text as Mermaid shows it, if it can be drawn: its #…; codes decoded, as decoded says; text Mermaid's HTML label shows
 // otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where the drawing
 // splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label }, which
-// Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says.
-function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html'): string | Fail {
-  if (mode === 'markdown') return styled(text, br, true)
+// Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says. edge: an edge label, styled's breaks.
+function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html', edge = false): string | Fail {
+  if (mode === 'markdown') return styled(text, br, { decode: true, breaks: edge })
   const t = decoded(text, mode, br)
   if (isFail(t)) return t
   const bad = unsupported(t)

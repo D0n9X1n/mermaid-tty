@@ -322,3 +322,11 @@ test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as
   const [b, c] = emphasize('a **b<br>c** d')!.split('<br>')
   assert.deepEqual(P('flowchart TD\nA["`a **b<br>c** d`"]').nodes[0].rows.map((r: any) => r.text), [b, c])
 })
+
+// X3. Mermaid 12.2.0 (JSDOM): an edge label's <br> becomes a newline before marked; a node label's stays a <br>.
+test('X3.emphasis: a flowchart edge label reads each <br> as a newline: a block start after one falls back; a node label draws it', () => {
+  assert.deepEqual(P('flowchart TD\nA -->|"`a<br>- **b**`"| B'), { reason: 'markdown' })
+  assert.deepEqual(P('flowchart TD\nA -->|"`a<br>- b`"| B'), { reason: 'markdown' })
+  assert.equal(P('flowchart TD\nA -->|"`**a<br>b**`"| B').edges[0].label, emphasize('**a<br>b**', true))
+  assert.deepEqual(P('flowchart TD\nA["`a<br>- **b**`"]').nodes[0].rows.map((r: any) => r.text), emphasize('a<br>- **b**')!.split('<br>'))
+})

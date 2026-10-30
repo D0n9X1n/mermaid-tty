@@ -93,3 +93,10 @@ test('X3.emphasis: bold and italic in an ER alias, relation label, subgraph titl
   assert.deepEqual([m.entities[0].label, m.relations.map((r: any) => r.label), m.subgraphs[0].title, m.entities.find((e: any) => e.id === 'B').attrs[0].comment],
     [emphasize('**Person** _x_'), [emphasize('a<br>**places** *x*'), emphasize('*owns*')], emphasize('**T**'), emphasize('**c** _d_')])
 })
+
+test('X3.emphasis: an ER relation label reads each <br> as a newline: a block start after one falls back, emphasis or not', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  assert.deepEqual(P('A ||--o{ B : "a<br>- **b**"'), { reason: 'markdown:2' })
+  assert.deepEqual(P('A ||--o{ B : "a<br>==="'), { reason: 'markdown' })
+  assert.equal(P('A ||--o{ B : "**a<br>b**"').relations[0].label, emphasize('**a<br>b**', true))
+})

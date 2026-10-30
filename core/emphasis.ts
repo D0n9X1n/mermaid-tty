@@ -45,6 +45,26 @@ const OUTSIDE = /[\x00-\x1f\x7f\\`[\]~@]|:\/\/|www\./i
 const ENTITYISH = /&[#A-Za-z]/
 const BLOCK = /^(?:#{1,6}(?:\s|$)|>|<|(?:[*+-]|\d{1,9}[.)])(?:\s|$)|(?:-\s*){3,}$|(?:_\s*){3,}$|(?:\*\s*){3,}$)/
 
+// common.ts lineBreakRegex: each spelling Mermaid 12.2.0 turns into a newline in an edge, transition or relation label
+// before marked runs (JSDOM: A -->|"`a<br>- **b**`"| B shows <p>a</p>- **b**; a node label keeps its <br>).
+const LINE_BREAK = /<\/?br\s*\/?>/gi
+// A line that, after such a newline, starts a block: a heading, quote, HTML, fence, list item or rule; or one that
+// underlines a heading or delimits a table, made only of =, -, :, | and spaces.
+const BLOCK_LINE = /^\s*(?:#{1,6}(?:\s|$)|>|<|```|~~~|(?:[*+-]|\d{1,9}[.)])(?:\s|$)|(?:-\s*){3,}$|(?:_\s*){3,}$|(?:\*\s*){3,}$)/
+const UNDERLINE = /^[\s|:=-]*[=-][\s|:=-]*$/
+
+// Whether text, each <br> spelling a newline, is one paragraph to marked, whose lines markdownToHTML shows as <br/>: no
+// line starts a block or underlines one (BLOCK_LINE, UNDERLINE), and none before another ends in a hard break (two
+// spaces or a \). blank: a blank line passes (a caller that fails blank lines on its own); else it fails.
+export function oneParagraph(text: string, blank = false): boolean {
+  const lines = text.split(LINE_BREAK)
+  return lines.length < 2 || lines.every((l, i) => {
+    if (l.trim() === '') return blank
+    const next = lines[i + 1]
+    return !BLOCK_LINE.test(l) && !UNDERLINE.test(l) && !(next !== undefined && next.trim() !== '' && /(?: {2,}|\\)$/.test(l))
+  })
+}
+
 type Run = { type: 'strong' | 'em'; raw: string; tokens: Tok[] }
 type Tok = { type: 'text'; text: string } | { type: 'html'; text: string } | Run
 
@@ -102,15 +122,21 @@ function inline(src: string): Tok[] | null {
 }
 
 // The marked string text shows, or null where this port cannot say: text outside the alphabet, or a style nested in
-// itself (<strong> in <strong>, <em> in <em>), which a terminal cannot draw apart from one.
-export function emphasize(text: string): string | null {
+// itself (<strong> in <strong>, <em> in <em>), which a terminal cannot draw apart from one. breaks: an edge label, where
+// each <br> is a newline to marked (LINE_BREAK); the text must then be one paragraph, and each newline, with the spaces
+// after it (markdownToHTML's /\n */), shows as one <br>.
+export function emphasize(text: string, breaks = false): string | null {
   if (OUTSIDE.test(text) || ENTITYISH.test(text) || text !== text.trim() || BLOCK.test(text)) return null
+  if (breaks) {
+    if (!oneParagraph(text)) return null
+    text = text.replace(LINE_BREAK, '\n')
+  }
   if (/[<>]/.test(text.replace(/<br *\/?>/gi, ''))) return null
   let out = ''
   const put = (toks: readonly Tok[], em: number): boolean => toks.every(t => {
     if (t.type === 'html') { out += t.text; return true }
     if (t.type === 'text') {
-      for (const ch of t.text) out += (em && !/\s/.test(ch) && width(ch) > 0 ? marker(em) : '') + ch
+      for (const ch of t.text.replace(/\n */g, '\n')) out += ch === '\n' ? '<br>' : (em && !/\s/.test(ch) && width(ch) > 0 ? marker(em) : '') + ch
       return true
     }
     const bit = t.type === 'strong' ? BOLD : ITALIC

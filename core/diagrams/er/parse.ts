@@ -6,6 +6,7 @@ import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Attr } from '../../graph/members.ts'
 import type { Dir } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
+import { oneParagraph } from '../../emphasis.ts'
 import { drawable, labelLines, styled, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
@@ -279,8 +280,10 @@ function drawn(s: string, br: Br = 'none', emphasis = false): string {
   // erBox draws a label through parseGenericTypes, which turns a ~…~ pair into <…>.
   if ((s.match(/~/g) ?? []).length > 1) stop('generic')
   let d = s
+  // A relation label (br 'any') is an edge label: Mermaid makes each <br> a newline before marked.
+  if (br === 'any' && !oneParagraph(s, true)) stop('markdown')
   if (emphasis) {
-    const r = styled(s, br)
+    const r = styled(s, br, { breaks: br === 'any' })
     if (isFail(r)) throw r
     d = r
   } else {

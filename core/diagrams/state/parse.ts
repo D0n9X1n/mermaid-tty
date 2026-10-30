@@ -118,7 +118,7 @@ function read(src: Source): { stmts: Stmt[]; composites: Map<string, string> } |
     const s = statement(t, n)
     if (!s) return fail(`syntax:${n}`)
     if ('text' in s && s.text !== null) {
-      const d = drawText(s.text)
+      const d = drawText(s.text, s.kind === 'edge')
       if (isFail(d)) return d
       // A blank "" description: Mermaid's lexer reads no text in it, and fails.
       if (d === '') return fail(`syntax:${n}`)
@@ -181,13 +181,14 @@ function closes(rest: string): boolean | null {
 // 'html', 'markdown', 'icon' or 'math' where
 // Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
 // Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
-// 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end).
-function drawText(raw: string): string | Fail {
+// 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end). edge: a transition label,
+// where Mermaid makes each <br> a newline before marked (styled's breaks).
+function drawText(raw: string, edge = false): string | Fail {
   const t = raw.trim()
   const f = drawable(t, 'markdown', 'any')
   if (f && f.reason !== 'markdown') return f
   if (t.includes(';')) return fail('semicolon')
-  const d = styled(t, 'any')
+  const d = styled(t, 'any', { breaks: edge })
   if (isFail(d)) return d
   const ls = labelLines(d)
   return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : d
