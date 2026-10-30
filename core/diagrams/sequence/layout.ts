@@ -16,7 +16,7 @@ import type { Ink } from '../../themes.ts'
 import type { Expect } from '../../validate.ts'
 import { validate } from '../../validate.ts'
 import { width } from '../../width.ts'
-import { boxFrames } from './boxed.ts'
+import { frameExtents } from './frames.ts'
 import type { Frame, Item, Msg, Note, Participant, Seq } from './parse.ts'
 import { parseSequence } from './parse.ts'
 
@@ -105,9 +105,9 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
     return o
   }
   run(seq.items)
-  // With a box, each frame draws only where Mermaid's own geometry puts it (boxed.ts).
-  const boxed = seq.boxes.length ? boxFrames(seq, outer) : null
-  if (boxed) return boxed
+  // Each frame draws only where Mermaid's own geometry puts it (frames.ts).
+  const extent = frameExtents(seq, outer)
+  if (extent) return extent
   // A box's borders stand 2 columns beyond its pills, and a blank column beyond the frame borders stacked at its ends, 2
   // columns each; a one-member box's right one beyond its title too, as draw puts it.
   const rb = pills.map(() => 0), lb = pills.map(() => 0)
@@ -292,7 +292,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     labels.push({ owner: id, text: plain(c.text.get(n)!) })
   }
   const frames: string[] = []                                     // each drawn frame's and box's owner id
-  // stray: with a box, a frame drawn over a lifeline beyond its run, which Mermaid's frame leaves out.
+  // stray: a frame drawn over a lifeline beyond its run, which Mermaid's frame leaves out.
   let stray = false
   // A frame: its top border carrying its title, its sections' rows with a ┄ divider row carrying [cond] before each one
   // after the first, then its bottom border; two columns beyond its contents, wider if its title needs it.
@@ -304,7 +304,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     const left = lo - 2, right = Math.max(hi + 2, left + Math.max(...ts.map(t => width(t))) + 3), bottom = row++
     lo = Math.min(olo, left); hi = Math.max(ohi, right)
     const o = c.outer.get(f)
-    if (seq.boxes.length && o && ((o.lo > 0 && left <= xs[o.lo - 1]!) || (o.hi < xs.length - 1 && right >= xs[o.hi + 1]!))) stray = true
+    if (o && ((o.lo > 0 && left <= xs[o.lo - 1]!) || (o.hi < xs.length - 1 && right >= xs[o.hi + 1]!))) stray = true
     const role: Ink = f.type === 'rect' ? 'note' : 'frame'
     back.push((cv, dx) => cv.frame(top, left + dx, bottom, right + dx, role, id, ts[0] || undefined))
     frames.push(id)
@@ -328,7 +328,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     else shift(it.id, it.kind === 'activate' ? row - 1 : row, it.kind === 'activate' ? 1 : -1)
   })
   walk(seq.items)
-  if (stray) return fail('box-frame')
+  if (stray) return fail(seq.boxes.length ? 'box-frame' : 'frame-extent')
   const last = row - 1                                            // the last body row
   seq.participants.forEach((p, i) => { labels.push({ owner: p.id, text: p.label }); if (!born.has(p.id)) pillAt(i, head) })
   // A box: a titled frame around its members' pills and the frames stacked at its ends, from above the header to below
