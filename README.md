@@ -21,6 +21,17 @@
 
 A Claude Code plugin (mod) that redraws closed `mermaid` fences in Claude's replies as colored, flat, box-drawing diagrams sized to your terminal, with exact CJK widths. The transcript keeps the Mermaid source. If a diagram can't be drawn faithfully, you get the source—not an approximation.
 
+## Highlights
+
+- **Faithful or nothing.** A diagram is drawn whole and checked before it's shown. If it can't be drawn as Mermaid means it, you get the source, never a guess.
+- **13 diagram types**, from flowcharts and sequence diagrams to gantt, gitGraph, xychart and quadrant charts.
+- **Fits your terminal.** No row is wider than your window: gaps tighten, labels wrap, and wide graphs turn vertical.
+- **Exact CJK widths.** Wide characters take two columns, so Chinese, Japanese and Korean labels line up.
+- **Themes.** Follows your Claude Code theme, or pick nord, dracula, gruvbox, solarized or mono.
+- **Real images where they work.** In kitty and Ghostty, Mermaid's own picture replaces the text drawing.
+- **Nothing to install but the plugin.** Pure TypeScript, no build step, no runtime dependencies.
+- **The transcript keeps the source.** `/copy` copies the exact Mermaid text, and one command switches back to source.
+
 ## Install
 
 ```sh
@@ -29,6 +40,23 @@ claude plugin install mermaid-tty@mermaid-tty --config theme=default
 ```
 
 Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows. Start a new Claude Code session after installing. No build step or runtime dependencies.
+
+To update or remove it later:
+
+```sh
+claude plugin update mermaid-tty@mermaid-tty
+claude plugin uninstall mermaid-tty@mermaid-tty
+```
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/mermaid-tty` | Reports the current mode |
+| `/mermaid-tty diagram` | Draws diagrams, as pictures where the terminal can show them (the default) |
+| `/mermaid-tty text` | Draws diagrams as text, even where pictures work |
+| `/mermaid-tty source` | Shows the Mermaid source, including replies already on screen |
+| `/copy` | Copies a reply with its exact Mermaid source, in any mode |
 
 ## Before and after
 
@@ -85,6 +113,21 @@ Diagrams follow your Claude Code theme by default. Pick a curated palette, or `m
 | ![dracula](assets/readme/theme-dracula.svg) | ![gruvbox](assets/readme/theme-gruvbox.svg) |
 | **solarized** | **mono** |
 | ![solarized](assets/readme/theme-solarized.svg) | ![mono](assets/readme/theme-mono.svg) |
+
+## How it works
+
+```mermaid
+flowchart TD
+  R[Claude's reply] --> S{Closed mermaid fence?}
+  S -->|no| P[Shown as written]
+  S -->|yes| C[Parse, lay out to the terminal width]
+  C --> V{Drawing checked}
+  V -->|passes| D[Text diagram]
+  V -->|fails| F[Original source]
+  D -.->|kitty or Ghostty, mmdc on PATH| I[Mermaid's own picture]
+```
+
+mermaid-tty only changes how a reply is shown. The reply, the transcript and `/copy` keep the Mermaid source. The [wiki](https://github.com/D0n9X1n/mermaid-tty/wiki) walks through each stage in its Architecture page.
 
 ## Configuration
 
