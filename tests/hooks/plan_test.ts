@@ -14,8 +14,10 @@ test('A5.errors: a throwing mode read, UI resolve or renderer callback gives nul
   assert.equal(await safePlan({ ui: { ...ui, resolve: boom } }, ev(`a\n${FC}b`), 'default', diagram), null)
 })
 test('A5.errors: a throwing or rejecting debug log still draws the diagram; the failed fence joins the prose', async () => {
-  for (const log of [boom, async () => boom()]) {
-    const p = await safePlan({ ui: { ...ui, log } }, ev(`a\n${BAD}m\n${FC}b`), 'default', diagram)
-    assert.deepEqual(p?.parts.map(x => 'prose' in x ? x.prose : 'rows'), [`a\n${BAD}m\n`, 'rows', 'b'])
+  // Each run uses its own failing fence, so no cache hit skips the logger.
+  for (const [k, thrower] of [[0, boom], [1, async () => boom()]] as const) {
+    const bad = BAD.replace('A[', `A${k}[`); let calls = 0
+    const p = await safePlan({ ui: { ...ui, log: () => { calls++; return thrower() } } }, ev(`a\n${bad}m\n${FC}b`), 'default', diagram)
+    assert.deepEqual(p?.parts.map(x => 'prose' in x ? x.prose : 'rows'), [`a\n${bad}m\n`, 'rows', 'b']); assert.equal(calls, 1)
   }
 })
