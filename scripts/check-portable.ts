@@ -1,5 +1,5 @@
 // node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
-// which has no Node and no DOM. In each .ts and .tsx file it flags process, Buffer, document, window,
+// which has no Node and no DOM. In each .ts and .tsx file it flags process (but not $.process), Buffer, document, window,
 // globalThis, Reflect, require, eval, Function (a type too), constructor, import( and a \u escape outside
 // literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
 // path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
@@ -14,8 +14,9 @@ import { isMain } from './lib/is-main.ts'
 // position too: code here uses specific function types, and after a : it can be a value. No name in our
 // code needs a \u escape, which can spell any of them. constructor reaches Function without naming it, as in
 // (() => {}).constructor('return process')(), which typecheck allows too, so it is flagged as a bare word.
+// process straight after a bare $. is the engine's own noun ($.process.run), not Node's global.
 const TOKENS: [string, RegExp][] = [
-  ['process', /\bprocess\b/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g], ['window', /\bwindow\b/g],
+  ['process', /(?<!(?<![\w$])\$\.)\bprocess\b/g], ['Buffer', /\bBuffer\b/g], ['document', /\bdocument\b/g], ['window', /\bwindow\b/g],
   ['globalThis', /\bglobalThis\b/g], ['Reflect', /\bReflect\b/g], ['require', /\brequire\b/g], ['eval', /\beval\b/g],
   ['Function', /\bFunction\b/g], ['constructor', /\bconstructor\b/g], ['import(', /\bimport\s*\(/g], ['\\u', /\\u/g],
 ]

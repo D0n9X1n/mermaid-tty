@@ -91,14 +91,32 @@ Git 提交图使用竖直分支泳道：`LR` 和 `TB` 的时间向下，`BT` 的
 | 命令 | 效果 |
 |---|---|
 | `/mermaid-tty source` | 将所有图表显示为 Mermaid 源码，屏幕上已有的回复也会重绘。 |
-| `/mermaid-tty diagram` | 恢复图表显示。 |
-| `/mermaid-tty` | 报告当前模式：`mermaid-tty mode: diagram` 或 `mermaid-tty mode: source`。 |
+| `/mermaid-tty diagram` | 恢复图表显示；终端能显示图片时绘制为图片（见下文“图片”）。 |
+| `/mermaid-tty text` | 以文本绘制图表，即使终端能显示图片。 |
+| `/mermaid-tty` | 报告当前模式：`mermaid-tty mode: diagram`、`mermaid-tty mode: source` 或 `mermaid-tty mode: text`。 |
 
-参数只能是一个单词，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram]`。源码模式下，所有回复原样交给 Claude Code 显示。
+参数只能是一个单词，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text]`。模式在会话之间保留。源码模式下，所有回复原样交给 Claude Code 显示。
 
 无论处于哪种模式，`/copy` 都复制 Mermaid 源码。mermaid-tty 只改变显示方式，存储的回复保留完整源码。
 
 ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid-tty source`。
+
+## 图片
+
+在能显示像素的终端里，mermaid-tty 可以把图表绘制成 Mermaid 自身渲染的图片。需要同时满足：
+
+- **kitty 或 Ghostty**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。从 kitty 或 Ghostty 内部启动的其他终端不算。
+- PATH 上有 **mermaid-cli**：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
+
+新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。文本渲染器会回退的图表类型和语法，图片也能显示。
+
+以下情况保留文本绘制（文本渲染器无法绘制时显示源码）：
+
+- 终端不是上述之一，或在 Windows 上；
+- 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
+- `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
+
+`claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。
 
 ## 回退
 

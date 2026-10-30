@@ -91,14 +91,32 @@ The `/mermaid-tty` command switches how replies show their diagrams:
 | Command | Effect |
 |---|---|
 | `/mermaid-tty source` | Shows every diagram as its Mermaid source. Replies already on screen are drawn again. |
-| `/mermaid-tty diagram` | Draws the diagrams again. |
-| `/mermaid-tty` | Reports the mode: `mermaid-tty mode: diagram` or `mermaid-tty mode: source`. |
+| `/mermaid-tty diagram` | Draws the diagrams again, as pictures where the terminal shows them; see Pictures below. |
+| `/mermaid-tty text` | Draws the diagrams as text, even where the terminal shows pictures. |
+| `/mermaid-tty` | Reports the mode: `mermaid-tty mode: diagram`, `mermaid-tty mode: source` or `mermaid-tty mode: text`. |
 
-The argument is one word, in any case. Anything else replies `usage: /mermaid-tty [source|diagram]`. In source mode, every reply goes to Claude Code's own drawing untouched.
+The argument is one word, in any case. Anything else replies `usage: /mermaid-tty [source|diagram|text]`. The mode is kept between sessions. In source mode, every reply goes to Claude Code's own drawing untouched.
 
 `/copy` copies the Mermaid source in either mode. mermaid-tty changes only how a reply is drawn, and the stored reply keeps the exact source.
 
 ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid-tty source`.
+
+## Pictures
+
+In a terminal that shows pixels, mermaid-tty can draw a diagram as a picture of Mermaid's own rendering. It needs both:
+
+- **kitty or Ghostty**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, and not inside tmux, screen or Zellij, which pass no pixels through. Another terminal started from inside kitty or Ghostty doesn't count.
+- **mermaid-cli** on PATH: `npm i -g @mermaid-js/mermaid-cli` installs `mmdc`. mermaid-tty doesn't bundle it, so the plugin keeps no dependencies.
+
+A new diagram is drawn as text first. `mmdc` renders it in the background, one diagram at a time, and the reply is drawn again with the picture. The picture uses Mermaid's dark or light theme to match your Claude Code theme, a transparent background and `securityLevel: strict`, and is sized to the available columns. It can show diagram types and syntax the text renderer falls back on.
+
+You keep the text drawing, or the source when the text renderer can't draw it, when:
+
+- the terminal isn't one of the above, or is Windows;
+- the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
+- `mmdc` is missing, fails, takes over 30 seconds, or makes a picture over 2 MiB, over 255 rows tall, or too wide to read at the available width.
+
+`claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings everywhere; `/mermaid-tty diagram` turns pictures back on. `/copy` still copies the source.
 
 ## Fallback
 

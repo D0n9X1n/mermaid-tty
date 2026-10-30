@@ -1,0 +1,42 @@
+import { test, expect, mock } from 'claude-code/testing'
+
+// Beneath the plugins: kitty outside tmux, a dark Claude Code theme, and an mmdc that writes a
+// 320 x 640 PNG (20 columns, 20 rows): a whole one, 1-bit grey, since the engine checks what an Image
+// gets. Each test uses its own fence, so no cached picture leaks in.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAUAAAAKAAQAAAADF65wuAAAAMElEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4NGaAAAE2fUvuAAAAAElFTkSuQmCC'
+const world = (on: any, vars: Record<string, string>) => {
+  const runs: string[][] = []
+  mock.env(on, vars)
+  on('config.list', async () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' }, isLocked: false }] }))
+  on('process.run', async (_$: any, e: any) => { runs.push(e.argv)
+    return { value: { exitCode: 0, stdout: e.argv[0] === 'mktemp' ? '/tmp/mermaid-tty.Kt1\n' : '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } })
+  on('fs.write', async () => ({ value: undefined }))
+  on('fs.stat', async () => ({ value: { kind: 'file', size: 100, mtimeMs: 0, isLink: false } }))
+  on('fs.read', async () => ({ value: { base64: PNG } }))
+  on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
+  return runs
+}
+const mount = ($: any, body: string) => $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage',
+  props: { text: '```mermaid\n' + body + '\n```\n', isFirstOfReply: true }, viewport: { columns: 80, rows: 40 } })
+
+test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s PNG', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty' }), ui = await mount($, 'flowchart TD\nK1 --> K2')
+  const img = await ui.find({ key: 'mermaid-0' })
+  expect(img?.type).toBe('Image'); expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
+  expect(runs.map(r => r[0])).toEqual(['mktemp', 'mmdc', 'rm'])
+})
+
+test('A6.hook-tests: under tmux, and in text mode, a fence stays text and mmdc never runs', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' }), ui = await mount($, 'flowchart TD\nT1 --> T2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box'); expect(runs).toEqual([])
+})
+
+test('A6.command: /mermaid-tty text draws diagrams as text in kitty; diagram brings the Image back', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty' })
+  expect((await $.command.run({ command: 'mermaid-tty', args: 'text' })).text).toBe('mermaid-tty: drawing diagrams as text')
+  const ui = await mount($, 'flowchart TD\nX1 --> X2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box'); expect(runs).toEqual([])
+  expect((await $.command.run({ command: 'mermaid-tty', args: '' })).text).toBe('mermaid-tty mode: text')
+  await $.command.run({ command: 'mermaid-tty', args: 'diagram' })
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+})

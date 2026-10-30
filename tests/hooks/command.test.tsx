@@ -11,7 +11,7 @@ test('A6.command: source passes replies through; diagram draws again; bare repor
 })
 
 // A hook beneath the plugin answers next() with the text it gets; reply() is the command's output line.
-const USAGE = 'usage: /mermaid-tty [source|diagram]'
+const USAGE = 'usage: /mermaid-tty [source|diagram|text]'
 const echo = (on: any) => on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
 const mount = ($: any, text = FC) => $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage', props: { text, isFirstOfReply: true }, viewport: { columns: 80, rows: 24 } })
 const reply = async ($: any, args: string) => (await RUN($, args)).text
