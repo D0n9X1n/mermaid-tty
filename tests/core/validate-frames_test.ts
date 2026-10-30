@@ -142,3 +142,28 @@ test('#19: #13 case 2 at 80 columns, its dotted edge crossing Data tier, falls b
   const r = explain(src, { columns: 80 })
   assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
 })
+// GPT-6's review of #19: an edge whose end is the frame itself was exempt from every crossing. Only its mark, which meets
+// the border from outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S.
+// Here S-->S ran down through S, across its top and bottom borders, and drew at 60, 80 and 120.
+test('#19 review: a self-loop on a frame never runs over the frame\'s border', () => {
+  const src = 'flowchart BT\nsubgraph S\nX\nY\nend\nB --> F\nS --> F\nF --> S\nS --> B\nS --> S'
+  for (const columns of [60, 80, 120]) {
+    const r = explain(src, { columns, theme: 'mono' })
+    if (!('drawing' in r)) continue   // falling back is fine
+    const d = r.drawing, b = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'frame' && x.owners[0] === 'S' ? [[y, c]] : [])))
+    const [top, bottom] = [Math.min(...b.map(q => q[0]!)), Math.max(...b.map(q => q[0]!))]
+    const [left, right] = [Math.min(...b.map(q => q[1]!)), Math.max(...b.map(q => q[1]!))]
+    const onBorder = (y: number, c: number) => y >= top && y <= bottom && c >= left && c <= right && (y === top || y === bottom || c === left || c === right)
+    const loop = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'line' && x.owners.includes('L_S_S_0') ? [[y, c] as const] : [])))
+    assert.ok(loop.length > 0 && !loop.some(([y, c]) => onBorder(y, c)), `${columns}\n${show(d)}`)
+  }
+})
+// The validator half alone, on F of between() with no a: e from F to b leaves F's top from above, at (0,3), then runs down
+// column 4 through F's interior, crossing its top and bottom borders. F is e's end, but not that way.
+test('#19 review: an edge from a frame that runs through the frame fails edge-crosses-frame', () => {
+  const c = createCanvas(8, 9, 9); c.frame(1, 1, 5, 7, 'frame', 'F', 'T'); c.text(7, 4, 'b', 'node', 'B')
+  line(c, [[0, 3, 6], [0, 4, 12], [1, 4, 5], [2, 4, 5], [3, 4, 5], [4, 4, 5], [5, 4, 5]]); c.arrow(6, 4, '▼', 'e')
+  const d = c.toDrawing({ labels: [{ owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],
+    edges: [{ id: 'e', from: 'F', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: ['F'] })
+  assert.equal(validate(d)?.reason, 'edge-crosses-frame', show(d))
+})

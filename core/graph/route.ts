@@ -89,13 +89,14 @@ function fences(p: Placed, e: GEdge): Box[] {
 }
 const fenced = (fs: readonly Box[], c: Point) => fs.every(f => within(c, f))
 // #19: whether e's cells cross each drawn frame's border only as its hold on e's ends needs: once when it holds one end,
-// never when it holds neither or both. A frame that is itself an end is not counted: e's mark meets its border. The
-// validator rejects any other count (edge-crosses-frame), so a route that breaks it is refused here.
+// never when it holds neither or both. A frame never holds itself, so an edge ending at a frame never crosses it: its mark
+// meets the border from outside. The validator rejects any other count (edge-crosses-frame), so a route that breaks it is
+// refused here.
 function crossesTrue(p: Placed, e: GEdge, cells: readonly Point[]): boolean {
   const frameless = new Set(p.graph.clusters.filter(c => c.frameless).map(c => c.id))
   const held = (id: string, f: Box) => { const b = p.boxes.get(id) ?? p.frames.get(id)
     return !!b && within({ r: b.row, c: b.col }, f) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, f) }
-  return [...p.frames].every(([id, f]) => frameless.has(id) || id === e.from || id === e.to ||
+  return [...p.frames].every(([id, f]) => frameless.has(id) ||
     cells.filter(c => border(c, f) !== 0).length === (held(e.from, f) !== held(e.to, f) ? 1 : 0))
 }
 

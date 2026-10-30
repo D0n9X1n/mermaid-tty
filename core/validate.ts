@@ -381,8 +381,9 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
 // #19: an edge crosses a frame's border only as often as the frame's hold on its ends needs: once when the frame holds one
 // end, as inFrames reads holding, and never when it holds neither (or both, which inFrames checks). A crossing is a line cell
 // of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame holding neither
-// end, or leaves and re-enters it, reads as reaching into it. An edge ending at the frame itself is not checked: its mark
-// meets the border. Run after frames, so every listed frame spans a box.
+// end, or leaves and re-enters it, reads as reaching into it. A frame never holds itself, so an edge ending at the frame
+// crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays outside (#19 review: a
+// self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
 function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const drawn = new Map<string, Spot[]>()
   for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
@@ -393,7 +394,6 @@ function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
     const onBorder = (p: Spot) => !within(p) && p.r >= b.top && p.r <= b.bottom && p.c >= b.left && p.c <= b.right
     const holds = (n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(within)
     for (const e of d.expect.edges) {
-      if (e.from === id || e.to === id) continue
       const got = all.filter(p => p.cell.kind === 'line' && owns(p.cell, e.id) && onBorder(p)).length
       if (got !== (holds(e.from) !== holds(e.to) ? 1 : 0)) return fail('edge-crosses-frame')
     }
