@@ -40,6 +40,11 @@ test('A5.errors: the review\'s five canned SVGs are unsafe', () => {
   ] as const) assert.equal(svgUnsafe(svg), reason, svg)
 })
 
+test('A5.errors: an element inside <style> is unsafe, so its text is checked whole (review: @im<g/>port)', () => {
+  assert.equal(svgUnsafe('<svg xmlns="http://www.w3.org/2000/svg"><style>@im<g/>port "other.css";</style></svg>'), 'element g in style')
+  assert.equal(svgUnsafe('<svg xmlns="http://www.w3.org/2000/svg"><style>a{fill:u<tspan></tspan>rl(x)}</style></svg>'), 'element tspan in style')
+  assert.equal(svgUnsafe('<svg xmlns="http://www.w3.org/2000/svg"><style>a{fill:url(#m)}</style></svg>'), null)
+})
 test('A5.errors: an element not on the list, a prefixed one, or one in the wrong context is unsafe', () => {
   for (const el of ['use', 'image', 'script', 'set', 'animate', 'feImage', 'a', 'iframe', 'svg:set', 'x:image', 'Rect', 'div'])
     assert.equal(svgUnsafe(doc(`<${el}/>`)), `element ${el}`, el)

@@ -6,8 +6,8 @@
 //   markup       anything but elements and text: a comment, CDATA, a DOCTYPE or DTD, a processing instruction (an XML
 //                declaration is allowed only first)
 //   element n    a name not on the list for its context, exactly (no prefix, any case): SVG_ELEMENTS outside a
-//                foreignObject, HTML_ELEMENTS inside one; svg only as the root
-//   namespace n  a namespace declaration other than xmlns (SVG) and xmlns:xlink (XLink) on the root, or xmlns (XHTML) on a
+//                foreignObject, HTML_ELEMENTS inside one; svg only as the root; nothing inside a <style>
+//   namespace n a namespace declaration other than xmlns (SVG) and xmlns:xlink (XLink) on the root, or xmlns (XHTML) on a
 //                foreignObject's child
 //   attribute n  a name not on the list for its context: SVG_ATTRIBUTES, or HTML_ATTRIBUTES inside a foreignObject
 //   entity       an entity but &lt; &gt; &amp; &quot; &apos; or a numeric reference to a Unicode scalar value XML allows
@@ -88,7 +88,9 @@ export function svgUnsafe(svg: string): string | null {
 // An element's name in its context, then each attribute's name and value.
 function element(name: string, attrs: Map<string, string>, stack: string[]): string | null {
   const html = stack.includes('foreignObject'), parent = stack[stack.length - 1]
-  const known = stack.length === 0 ? name === 'svg' : html ? HTML_ELEMENTS.has(name) : name !== 'svg' && SVG_ELEMENTS.has(name)
+  // A <style> holds text only: an element in it would split the stylesheet into pieces each checked alone.
+  if (parent === 'style') return `element ${name} in style`
+  const known =stack.length === 0 ? name === 'svg' : html ? HTML_ELEMENTS.has(name) : name !== 'svg' && SVG_ELEMENTS.has(name)
   if (!known) return `element ${name}`
   for (const [a, v] of attrs) {
     if (a === 'xmlns' || a.startsWith('xmlns:')) {
