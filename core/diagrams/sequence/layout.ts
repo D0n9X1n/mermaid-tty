@@ -67,31 +67,23 @@ function drawPill(cv: Canvas, row: number, c: number, p: Participant): void {
 
 // Numbers each message, note and frame among its kind in source order, a frame before its contents, wraps each
 // message's and note's label, a message's after its autonumber, and finds each box's borders. A Fail for a box with no
-// participants, an autonumber, start or step that is not a safe integer, or a word wider than wrapAt.
+// participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe integer.
 function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (seq.boxes.some(b => b.ids.length === 0)) return fail('empty-box')
   const no = new Map<Item, number>(), text = new Map<Item, string>(), pcs = new Map<Item, Piece[]>()
-  const count = { msg: 0, note: 0, frame: 0 }, num = seq.autonumber
-  if (num && !(Number.isSafeInteger(num.start) && Number.isSafeInteger(num.step))) return fail('autonumber')
-  // False if a number is not a safe integer; wide, if a label has a word wider than wrapAt. Every number is checked
-  // whatever the wrap, so each step falls back for the same reason.
+  const count = { msg: 0, note: 0, frame: 0 }
+  // wide, if a label has a word wider than wrapAt.
   let wide = false
-  const walk = (items: readonly Item[]): boolean => {
+  const walk = (items: readonly Item[]): void => {
     for (const it of items) {
-      if (it.kind === 'frame') {
-        no.set(it, count.frame++)
-        if (!it.sections.every(s => walk(s.items))) return false
-        continue
-      }
+      if (it.kind === 'frame') { no.set(it, count.frame++); it.sections.forEach(s => walk(s.items)); continue }
       if (it.kind !== 'msg' && it.kind !== 'note') continue
-      const i = count[it.kind]++, n = it.kind === 'msg' && num ? num.start + i * num.step : null
-      if (n !== null && !Number.isSafeInteger(n)) return false
+      const i = count[it.kind]++, n = it.kind === 'msg' ? it.num : null
       const t = n === null ? it.text : `${n}. ${it.text}`, ps = pieces(t, wrapAt)
       no.set(it, i); text.set(it, t); if (ps) pcs.set(it, ps); else wide = true
     }
-    return true
   }
-  if (!walk(seq.items)) return fail('autonumber')
+  walk(seq.items)
   if (wide) return fail('too-wide')
   const pills = seq.participants.map(pill), at = new Map(seq.participants.map((p, i) => [p.id, i]))
   // A box's borders stand 2 columns beyond its pills; a one-member box's right one beyond its title too, as draw puts it.

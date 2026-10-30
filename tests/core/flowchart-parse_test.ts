@@ -1,4 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
+import { isFail } from '../../core/fail.ts'
 import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'; import { readSource, type Source } from '../../core/source.ts'
 import { ALIASES } from '../../core/caps.ts'
 const P = (t: string) => parseFlowchart(readSource(t) as Source) as any
@@ -9,7 +10,7 @@ test('A1: headers and directions', () => {
 test('A1: every bracket shape, @{shape}, quoted and <br/> labels', () => {
   const S: [string, string][] = [['A[x]', 'rect'], ['A(x)', 'round'], ['A([x])', 'stadium'], ['A[[x]]', 'subroutine'], ['A[(x)]', 'cylinder'],
     ['A((x))', 'circle'], ['A{x}', 'diamond'], ['A{{x}}', 'hexagon'], ['A[/x/]', 'leanR'], ['A[\\x\\]', 'leanL'], ['A[/x\\]', 'trap'],
-    ['A[\\x/]', 'trapInv'], ['A>x]', 'asym'], ['A(((x)))', 'dcircle'], ['A@{ shape: cyl, label: "x" }', 'cylinder'], ['A@{ shape: zzz }', 'rect']]
+    ['A[\\x/]', 'trapInv'], ['A>x]', 'asym'], ['A(((x)))', 'dcircle'], ['A@{ shape: cyl, label: "x" }', 'cylinder'], ['A@{ shape: rect }', 'rect']]
   for (const [src, shape] of S) assert.equal(P(`flowchart TD\n${src}`).nodes[0].shape, shape, src)
   assert.equal(P('flowchart TD\nA["a, b: (c)!"]').nodes[0].rows[0].text, 'a, b: (c)!')
   assert.deepEqual(P('flowchart TD\nA[one<br/>two<br>three]').nodes[0].rows.map((r: any) => r.text), ['one', 'two', 'three'])
@@ -48,7 +49,7 @@ test('A1: matrix rows flowchart-ok-01…22 and -49 parse to their graphs', () =>
     ['flowchart-ok-17', 'flowchart TD\nA>Flag]', G('TB', N('A', 'asym', 'node', 0, 'Flag'))],
     ['flowchart-ok-18', 'flowchart TD\nA(((Stop)))', G('TB', N('A', 'dcircle', 'node', 0, 'Stop'))],
     ['flowchart-ok-19', 'flowchart TD\nA@{ shape: hex }', G('TB', N('A', 'hexagon', 'node', 0, 'A'))],
-    ['flowchart-ok-20', 'flowchart TD\nA@{ shape: zzz }', G('TB', N('A', 'rect', 'node', 0, 'A'))],
+    ['flowchart-ok-20', 'flowchart TD\nA@{ shape: rect }', G('TB', N('A', 'rect', 'node', 0, 'A'))],
     ['flowchart-ok-21', 'flowchart TD\nA["Total: $5, (net) [ok]!"]', G('TB', N('A', 'rect', 'node', 0, 'Total: $5, (net) [ok]!'))],
     ['flowchart-ok-22', 'flowchart TD\nA["one<br/>two<br/>three"]', G('TB', N('A', 'rect', 'node', 0, 'one', 'two', 'three'))],
     ['flowchart-ok-49', 'flowchart\nA[Start]', G('TB', N('A', 'rect', 'node', 0, 'Start'))],
@@ -98,7 +99,7 @@ test('A1: a label is trimmed, as Mermaid trims node text', () => {
 
 test('A1: @{…} reads shape through ALIASES and label, ignores other keys, and splits pairs outside "…"', () => {
   assert.deepEqual(P('flowchart TD\nA@{ shape: db, label: "Store" }').nodes, [N('A', 'cylinder', 'node', 0, 'Store')])
-  assert.deepEqual(P('flowchart TD\nA@{ icon: "x, label: no", label: "a, b: {c}", shape: question }').nodes, [N('A', 'diamond', 'decision', 0, 'a, b: {c}')])
+  assert.deepEqual(P('flowchart TD\nA@{ note: "x, label: no", label: "a, b: {c}", shape: question }').nodes, [N('A', 'diamond', 'decision', 0, 'a, b: {c}')])
   for (const [name, shape] of ALIASES) assert.equal(P(`flowchart TD\nA@{ shape: ${name} }`).nodes[0].shape, shape, name)
 })
 
@@ -119,27 +120,67 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
   assert.deepEqual(P('flowchart TD\nA@{ shape: cyl, label: "a\u{200D}b" }'), { reason: 'unsupported-char U+200D' })
 })
 
-test('A5.errors: a "`…`" markdown string falls back as markdown-string; a backquote elsewhere is text', () => {
-  const md = ['A["`**bold**`"]', 'A("`a b`")', 'A@{ label: "`b`" }', "A@{ label: '`b`' }"]
-  assert.deepEqual(md.map(s => [s, P(`flowchart TD\n${s}`)]), md.map(s => [s, { reason: 'markdown-string' }]))
+// Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and backquotes,
+// joined to any text after it, through marked. Emphasis or an escape falls back as any Markdown field's does.
+test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
+  const g = P('flowchart TD\nA["`plain text`"] -->|"`edge words`"| B["`a_b x*y`" more]\nC("`a b`") -- "`t`" --> D\nsubgraph s ["`title t`"]\nD\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges.map((e: any) => e.label), g.clusters[0].title],
+    [['plain text', 'a_b x*y more', 'a b', 'D'], ['edge words', 't'], 'title t'])
+  assert.deepEqual(P('flowchart TD\nA["`a<br>b`"]').nodes, [N('A', 'rect', 'node', 0, 'a', 'b')])
+})
+test('A5.errors: a Markdown string with emphasis or an escape falls back as markdown; a malformed one as syntax; a backquote elsewhere is text', () => {
+  const md = ['A["`**bold**`"]', 'A -->|"`**b**`"| B', 'subgraph s ["`*b*`"]\nend', 'A["`a \\* b`"]', 'A -- "`_i_`" --> B']
+  assert.deepEqual(md.map(s => [s, P(`flowchart TD\n${s}`)]), md.map(s => [s, { reason: 'markdown' }]))
+  const bad = ['A["`a`b`"]', 'A["``"]', 'A["`a` "b"]']
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+  const yaml = ['A@{ label: "`b`" }', "A@{ label: '`b`' }"]
+  assert.deepEqual(yaml.map(s => [s, P(`flowchart TD\n${s}`)]), yaml.map(s => [s, { reason: 'markdown-string' }]))
   assert.deepEqual(P('flowchart TD\nA[`x`]\nB["x `y`"]').nodes, [N('A', 'rect', 'node', 0, '`x`'), N('B', 'rect', 'node', 1, 'x `y`')])
 })
 
-test('A5.errors: a #…; entity falls back as entity; # and ; apart are text', () => {
-  const ent = ['A["#quot;"]', 'A["a #35; b"]', 'A@{ label: "#9829;" }']
-  assert.deepEqual(ent.map(s => [s, P(`flowchart TD\n${s}`)]), ent.map(s => [s, { reason: 'entity' }]))
+// Mermaid 12.2.0 (encodeEntities, then the browser) shows a #…; code as its character: a decimal code, or a name it knows.
+test('A1: a #…; code draws as the character Mermaid shows: a decimal code or a known name; # and ; apart are text', () => {
+  const g = P('flowchart TD\nA["#quot;"] -->|#35; x| B[a #9829; #169; #59; b]\nC@{ label: "x #amp; y" }\nsubgraph s [t #lt; u]\nB\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges[0].label, g.clusters[0].title], [['"', 'a ♥ © ; b', 'x & y'], '# x', 't < u'])
   assert.deepEqual(P('flowchart TD\nA["C# 1; # x;"]').nodes, [N('A', 'rect', 'node', 0, 'C# 1; # x;')])
+})
+test('A5.errors: a #…; code Mermaid would not show as one drawable character falls back', () => {
+  const bad = [['A["#Hearts;"]', 'entity'], ['A[#nosuch;]', 'entity'], ['A[#0;]', 'entity'], ['A[#160;]', 'entity'], ['A[#1114112;]', 'entity'],
+    ['A["#35;35;"]', 'entity'], ['A-->B\nstyle A fill:#f9f;stroke:#333;', 'syntax:3'], ['A[#60;b#62;]', 'html'], ['A[fa#58;fa-user]', 'icon'], ['A-->B\nlinkStyle 0 stroke:#f00;', 'syntax:3']] as const
+  assert.deepEqual(bad.map(([s]) => [s, P(`flowchart TD\n${s}`)]), bad.map(([s, r]) => [s, { reason: r }]))
+  assert.equal(P('flowchart TD\nA-->B\nclick A href "https://x.y/#a;"').edges.length, 1)
+})
+
+// Mermaid 12.2.0 reads an @{ … } body with a line break as a YAML block mapping: key: value lines at one indent, then }.
+test('A1: an @{ … } split over lines, one key: value per line at one indent, draws as its one-line form', () => {
+  const pairs = [['A@{\n  shape: rounded\n  label: "x y"\n}', 'A@{ shape: rounded, label: "x y" }'],
+    ['A@{\n    shape: diamond\n    label: \'q\'\n}\nX --> A', 'A@{ shape: diamond, label: \'q\' }\nX --> A'],
+    ['A@{\nshape: cyl\nlabel: Store\n} --> B', 'A@{ shape: cyl, label: Store } --> B']]
+  assert.deepEqual(pairs.map(([m]) => P(`flowchart TD\n${m}`)), pairs.map(([, o]) => P(`flowchart TD\n${o}`)))
+})
+test('A5.errors: an @{ … } over lines falls back where its YAML may read otherwise: an uneven indent, a comma, a tab, a quote over lines', () => {
+  const bad = ['A@{\n  shape: rounded\n   label: x\n}', 'A@{\n  label: a, b\n}', 'A@{\n\tshape: cyl\n}', 'A@{\n  label: "x\n  y"\n}',
+    'A@{\n  shape: cyl', 'A@{\n  shape: cyl\n} x']
+  assert.deepEqual(bad.map(s => isFail(P(`flowchart TD\n${s}`))), bad.map(() => true))
+})
+
+// Mermaid 12.2.0 gives an @{ label } labelType markdown (flowDb sanitizeNodeLabelType): A@{ label: "a*b*c" } shows a<em>b</em>c.
+test('A5.errors: an @{ label } is a Markdown label: emphasis falls back as markdown, as in other Markdown fields', () => {
+  const bad = ['A@{ label: "a*b*c" }', 'A@{ label: "_a_" }', "A@{ label: 'a \\* b' }"]
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'markdown' }]))
+  assert.deepEqual(P('flowchart TD\nA@{ label: "snake_case a*b" }').nodes, [N('A', 'rect', 'node', 0, 'snake_case a*b')])
 })
 
 test('A1: Graph.title is the frontmatter title', () => {
   assert.deepEqual(P('---\ntitle: Order flow\n---\nflowchart LR\nA'), { dir: 'LR', title: 'Order flow', nodes: [N('A', 'rect', 'node', 0, 'A')], edges: [], clusters: [] })
 })
 
-// QA findings on @{…}: a quoted value's ; and }, an ignored key's value, and text left in the body.
-test('A1: a quoted @{…} value is one value: its ; , and } are text, in single quotes as in double', () => {
-  assert.deepEqual(P("flowchart TD\nA@{ label: 'x};B@{label:y' }").nodes, [N('A', 'rect', 'node', 0, 'x};B@{label:y')])
-  assert.deepEqual(P(`flowchart TD\nA@{ label: 'a;b}', shape: cyl, }; B@{ label: "c;d" }`).nodes,
+// QA findings on @{…}: a quoted value's ; and , are text. Mermaid's shape-data lexer protects only "…", so a } in '…'
+// ends the body there, and the statement fails.
+test('A1: a quoted @{…} value is one value: its ; and , are text; a } is text only in double quotes', () => {
+  assert.deepEqual(P(`flowchart TD\nA@{ label: "a;b}", shape: cyl, }; B@{ label: 'c;d' }`).nodes,
     [N('A', 'cylinder', 'node', 0, 'a;b}'), N('B', 'rect', 'node', 1, 'c;d')])
+  assert.ok(isFail(P("flowchart TD\nA@{ label: 'x};B@{label:y' }")))
 })
 
 test('A1: an ignored @{…} key is read like any other, so pairs inside its quoted value are text', () => {
@@ -150,9 +191,9 @@ test('A1: outside @{…} only "…" quotes, so an apostrophe is text and ; still
   assert.deepEqual(P("flowchart TD\nA[it's]; B[x]").nodes, [N('A', 'rect', 'node', 0, "it's"), N('B', 'rect', 'node', 1, 'x')])
 })
 
-test('A5.errors: an @{…} body that does not read whole as key: value pairs, each key once, fails syntax:<n>; so does one split over lines', () => {
+test('A5.errors: an @{…} body that does not read whole as key: value pairs, each key once, fails syntax:<n>; so does one split mid-line', () => {
   const bad = ['A@{ label: "x" label: "y" }', 'A@{ label: "x", label: "y" }', 'A@{ shape }', 'A@{ , shape: cyl }',
-    'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }', 'A@{\n  shape: cyl\n}']
+    'A@{ shape: cyl,, label: x }', "A@{ label: 'x }", 'A@{ label: {x} }', 'A@{ shape: cyl,\n  label: "x" }']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
 })
 
@@ -172,4 +213,80 @@ test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls
     ['A -->|"$$x$$"| B', 'math'], ['subgraph S ["fa:fa-a"]\nA\nend', 'icon'], ['A["a\\nb"]', 'newline'], ['A -->|"a\\nb"| B', 'newline']])
     assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s)
   assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
+})
+
+// Cross-family review of 37a8ff2: each repro verified against Mermaid 12.2.0 under JSDOM. Where we would draw other than
+// Mermaid shows, we fall back.
+const F = (s: string) => P(`flowchart TD\n${s}`)
+test('A1: a "`…`" subgraph title takes its text as id, as Mermaid does, so A --> C joins the cluster', () => {
+  const g = F('subgraph "`A`"\nB\nend\nA --> C')
+  assert.deepEqual([g.clusters.map((c: any) => c.id), g.nodes.map((n: any) => n.id), g.edges.map((e: any) => e.from + e.to)], [['A'], ['B', 'C'], ['AC']])
+})
+test('A5.errors: a #…; code named like an Object property falls back as entity', () => {
+  const bad = ['A[#__proto__;]', 'A[#constructor;]', 'A[#toString;]', 'A[#hasOwnProperty;]']
+  assert.deepEqual(bad.map(s => [s, F(s)]), bad.map(s => [s, { reason: 'entity' }]))
+})
+test('A1: an @{ labelType } of text or string makes the label HTML, as Mermaid does; any other leaves it Markdown', () => {
+  assert.deepEqual(F("A@{ labelType: text, label: 'a\\nb' }"), { reason: 'newline' })
+  assert.deepEqual(F('A@{ labelType: text, label: "a*b*c" }').nodes, [N('A', 'rect', 'node', 0, 'a*b*c')])
+  assert.deepEqual(F('A@{ labelType: markdown, label: "a*b*c" }'), { reason: 'markdown' })
+})
+test('A5.errors: an @{ … } value YAML types, or one the lexer of Mermaid cuts or rejects, falls back', () => {
+  const bad = ['A@{\n  label: false\n}', 'A@{\n  label: null\n}', 'A@{\n  label: 0\n}', 'A@{\n  label: ""\n}', 'A@{\n  label: 1.5\n}',
+    'A@{ label: false }', 'A@{ label: True }', 'A@{ label: ~ }', 'A@{ label: 1.5 }', 'A@{ label: "" }', 'A@{ label: [x] }', 'A@{ label: a #b }',
+    'A@{ label: &x }', 'A@{ label: "a\\nb" }', "A@{\n  label: 'a}b'\n}", "A@{\n  label: 'a^b'\n}", "A@{ label: 'a}b' }", 'A@{ label: a^b }',
+    'A@{ label: x, foo: *y }', 'A@{ icon: "fa:user", label: x }', 'A@{ img: "x.png" }', 'e1@{ animate: *x }\nA e1@--> B']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+})
+test('A5.errors: an @{ that opens inside a quoted label is no metadata, so the label line fails', () => {
+  assert.deepEqual(F('A["a@{\n  label: b\n}"]'), { reason: 'syntax:2' })
+})
+test('A5.errors: unquoted label text with ( ) [ ] { } | or a leading ~~~ fails syntax, as the text token of Mermaid stops there', () => {
+  const bad = ['A["a" (b)]', 'A -->|"a" (b)| B', 'A[a (b)]', 'A(a [b])', 'A{{a (b)}}', 'A["a" {b}]', 'A["a" b|c]', 'A -->|a (b)| B',
+    'A[~~~ b]', 'A["a" ~~~ b]', 'A -->|~~~ b| B', 'subgraph s [a (b)]\nB\nend']
+  assert.deepEqual(bad.map(s => [s, F(s)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+  assert.deepEqual([F('A["a" b>c]').nodes[0].rows[0].text, F('A[a ~~~ b]').nodes[0].rows[0].text, F('A -- a (b) --> B').edges[0].label],
+    ['a b>c', 'a ~~~ b', 'a (b)'])
+})
+test('A5.errors: an @{ shape } Mermaid does not know fails syntax, one line or several', () => {
+  const bad = ['A@{\n  shape: nope\n}', 'A@{ shape: nope }', 'A@{ shape: Rect }', 'A@{ shape: lean_r }']
+  assert.deepEqual(bad.map(s => [s, F(s)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+})
+
+// Re-review of cf4faef, each verified against Mermaid 12.2.0 under JSDOM.
+test('A5.errors: a subgraph title with a ` that is not one "`…`" pair around it all falls back', () => {
+  const bad = ['subgraph "A`"\nB\nend\nA --> C', 'subgraph s ["a`b"]\nB\nend', 'subgraph s [a`b]\nB\nend', 'subgraph "`A` x"\nB\nend']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('subgraph "`A`"\nB\nend').clusters.map((c: any) => c.id), ['A'])
+})
+test('A5.errors: an @{ … } pair with no space after its colon falls back: Mermaid reads label:x as one key', () => {
+  const bad = ['A@{ label:x }', 'A@{ shape:hex }', 'A@{ labelType:text, label: "a*b" }', 'A@{\n  label:x\n}', 'A@{ label :x }',
+    'A e1@--> B\ne1@{ animate:true }']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ label : x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
+test('A5.errors: an @{ … } body with a control character, or a space YAML does not read as one, falls back', () => {
+  const bad = ['A@{ label: x }', 'A@{ label : x }', 'A@{ ignored: "a\u0001b", label: x }', 'A@{ label: "a\u007Fb" }',
+    'A@{ label: x }', 'A@{　label: x }', 'A@{ label: "a\u0085b" }', 'A@{ label: ﻿x }', 'A@{\n  label: x\n}']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{\tlabel: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
+test('A5.errors: a "}" value does not end the @{ … } character check early', () => {
+  const nb = String.fromCharCode(0xa0), c1 = String.fromCharCode(1), ls = String.fromCharCode(0x2028), bom = String.fromCharCode(0xfeff)
+  const bad = [`A@{ ignored: "}", label:${nb}x }`, `A@{ ignored: "}${c1}", label: x }`, `A@{\n  ignored: "}"\n  note: "${c1}"\n  label: x\n}`,
+    `A e1@--> B\ne1@{ ignored: "}", animate:${ls}true }`, `A@{ ignored: "}", label: ${bom}x }`,
+    `A@{${nb}\n  label: x\n}`, `A@{\n  label: x\n${nb}}`, `A@{\n  label: x\n${bom}}`, `${nb}A@{\n  label: x\n}`]
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ note: "}", label: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
+test('A5.errors: an @{ … } key YAML reads as no string, or that repeats as YAML compares keys, falls back', () => {
+  const bad = ['A@{ true: x, True: y }', 'A@{ 01: x, 1: y }', 'A e1@--> B\ne1@{ true: x, True: y }', 'A@{ null: x }', 'A@{ ~: x }', 'A@{ 1: x }',
+    'A@{ FALSE: x, label: y }']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ yes: x, label: y }').nodes, [N('A', 'rect', 'node', 0, 'y')])
+})
+test('A5.errors: an @{ that ends a line joins the next lines only on a line that is just <id>@{', () => {
+  const bad = ['A -- B@{\n  label: x\n  shape: rect\n} --> C', 'A; accTitle: B@{\n  label: x\n}\nC', 'X --> A@{\n  label: x\n}', 'A; B@{\n  label: x\n}']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('  A@{\n    label: x\n  } --> B').nodes.map((n: any) => n.rows[0].text), ['x', 'B'])
 })

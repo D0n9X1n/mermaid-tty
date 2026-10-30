@@ -74,7 +74,7 @@ QA probes since (Mermaid 12.2.0, Chrome):
 
 | Field | Mode | br | Notes |
 |---|---|---|---|
-| flowchart node label, edge label | html | any | Keeps its `markdown-string` reason. |
+| flowchart node label, edge label | html | any | X5: `#…;` codes decoded; a `` "`…`" `` string, or an `@{ label }`, is mode markdown. |
 | flowchart subgraph title | html | **none** | Stricter: see below. |
 | sequence message, note | plain | any | Sequence also fails `hash` on any `#` and `semicolon` on any `;`. |
 | sequence participant alias, frame label (`alt`…, `else`…) | plain | **none** | Stricter: see below. |
@@ -117,7 +117,7 @@ Fix cycle 1 (frontmatter and sequence titles sanitized, `<br>` separators ASCII 
 Verified by reading Mermaid 12.2.0's source (`npm install mermaid@12.2.0`, its source maps): `rendering-util/createText.ts`, `rendering-util/handle-markdown-text.ts`, `diagrams/common/common.ts`, and each diagram's db; `marked` 16.4.2 was run on probe strings through a copy of `markdownToHTML`.
 
 - **Every HTML label** goes through `createText`, which runs `replaceIconSubstring` (`/(fa[bklrs]?):fa-([\w-]+)/g`: an icon replaces the token) and, when `hasKatex` (`/\$\$(.*?)\$\$/`) matches, renders the whole label as KaTeX. Fails `icon` (also `fad:`, to be safe) and `math`.
-- **Markdown** runs only where `createText` gets `markdown: true`: a label with `labelType: 'markdown'`, and every call that leaves the default. That is every class name, label, annotation, member, note and relation label; every state node, note, transition and composite title (a state shown by its id too); every ER entity, attribute column, relation label and subgraph title (`sanitizeNodeLabelType` defaults to `markdown`); every mindmap node. Not a flowchart node, edge label or subgraph title (`labelType: 'text'`; a `` "`…`" `` string fails `markdown-string` as before), a class cardinality or a namespace title (`createLabel`, `markdown: false`).
+- **Markdown** runs only where `createText` gets `markdown: true`: a label with `labelType: 'markdown'`, and every call that leaves the default. That is every class name, label, annotation, member, note and relation label; every state node, note, transition and composite title (a state shown by its id too); every ER entity, attribute column, relation label and subgraph title (`sanitizeNodeLabelType` defaults to `markdown`); every mindmap node. Not a flowchart node, edge label or subgraph title (`labelType: 'text'`; X5: a `` "`…`" `` string and an `@{ label }` are `markdown`), a class cardinality or a namespace title (`createLabel`, `markdown: false`).
 - `markdownToHTML` changes text only through `strong`, `em`, `escape` and newlines; code spans, links, headings, lists, rules and `~~` are emitted as their raw source. So mode `markdown` (and `member`) fails `markdown` on a `\` before ASCII punctuation, two or more `*`, or two or more `_` in runs touching a non-letter, non-digit or an end. Verified as written, and drawn: `a*b`, `+swim()*`, `snake_case`, `a_b_c`, `_private`, `x__`, `C:\Users`, `a\nb`, `` `code` ``, `# h`, `- item`, `[x](y)`. Shown as written but falling back conservatively: `a * b * c` (two `*`). Verified rendered: `**bold**`, `*a*`, `_a_`, `__init__`, `+__init__()`, `x._y_`, `(_a_)`, `a*b*c`, `a\*b`, `a\\b`.
 - **A plain HTML label** (`nonMarkdownToHTML`) turns a literal `\n` into `<br />`: mode `html` fails `newline` on one.
 - **Class notes** reach the label as written: Mermaid converts neither a literal `\n` (shown as written) nor `<br` + U+00A0 + `/>` (no break). The parser no longer rewrites them; `drawable` sees the raw text and `labelLines` splits only the `<br>` HTML would.
@@ -165,3 +165,38 @@ gitGraph's own check (X3, `syntax:<n>`) stays, tested past `readSource`.
 Tests: `tests/core/source-config_test.ts` (X4 htmlLabels), `tests/core/source_test.ts` (X4 directive, X4 whitespace: pie, mindmap and quadrantChart fail; flowchart's header and blank line, a mindmap indent and a quoted pie label read as their ASCII twins), `tests/core/gitGraph-parse_test.ts` (X4, both repros; X3 updated).
 
 Blast radius: none. All 1257 results (419 blocks of `fixtures/**`, corpus included, at 60, 80 and 120 columns) are unchanged against 86d5df4.
+
+## X5: flowchart constructs from issue #4
+
+Verified against `mermaid@12.2.0` from npm, in a fresh temp dir: `flow.jison` and `flowDb.ts` read from the package's source map, `getDiagramFromText` for the parsed edges and nodes, and `mermaid.render` under JSDOM for the shown label HTML and edge markers.
+
+- **Links** (`core/diagrams/flowchart/links.ts`) port the lexer's link rules and `destructLink`. A text form's opener mark pairs with its closer's head: `<-- t -->`, `<-. t .->`, `<== t ==>`, `x-- t --x`, `o-- t --o` draw both heads. A mark that does not pair, or strokes that differ (`<-- t ---`, `<-- t --o`, `x-- t -->`), is `INVALID` and falls back `syntax`. Text-form text is lexed as Mermaid lexes it: `-- a<--> B` is label `a` with two heads, and `-. a.b .->` and `== a=b ==>` are lexer errors.
+- **Mixed end marks**: `destructEndLink` keeps only the head; an unpaired tail mark stays in the line, so `<--o` has length 2 and `<==o` draws a normal (solid) line. These draw so.
+- **Partly quoted labels**: one non-empty `"…"` (or `` "`…`" ``) first, then text with no `"`; Mermaid shows the two joined and trimmed (`["a" b]` → `a b`, `["a"b]` → `ab`). A space or text before the string, a second string, an empty string or an empty label is a parse error; `A[ "a" ]` and `A -->|""| B`, drawn before, now fall back `syntax`.
+- **`@{ … }` over lines**: the lexer keeps the body's line breaks, and `flowDb.addVertex` then loads it as a YAML block mapping (no `{}` added). Only bodies whose block and flow readings agree are joined (`core/diagrams/flowchart/data.ts`): one `key: value` per line at one indent of spaces, a `"…"`/`'…'` value with no escape or a bare word, then a line starting with `}`. An uneven indent (`bad indentation`), a comma (block YAML keeps it in the value), a tab or a quote across lines falls back.
+- **Markdown strings**: `` "`…`" `` gives `labelType: 'markdown'` in node, edge and subgraph labels; `flowDb` gives an `@{ label }` `markdown` too. Mermaid shows the text without quotes and backquotes, through marked, so mode `markdown` applies: plain text draws; emphasis and escapes fail `markdown`. A backquoted `@{ label }` value keeps `markdown-string`.
+- **`#…;` codes** (`decoded`, `core/text.ts`, flowchart only): `encodeEntities` marks `#name;` and `#123;` before parsing, so their `;` never ends a statement; the browser then shows the character. A decimal code draws as its character unless a control, a surrogate, whitespace or past U+10FFFF. Names drawn: those seen shown (`quot amp lt gt apos copy reg trade hearts deg hellip mdash ndash larr rarr times divide plusmn middot bull euro`); `#Hearts;`, `#QUOT;` and unknown names show as `&name;`, so fall back `entity`. The text with codes masked, and each `<br>` piece decoded, must pass `drawable`, so a decoded `<b>`, `fa:` or `*` falls back. A directive holding a code outside quotes (`style A fill:#f9f;stroke:#333;`) is a parse error. A quoted subgraph title keeps its raw text as its id.
+- Other diagrams keep failing `entity` on codes: their parsers are outside this change. Bold and italic label text (`` "`**b**`" ``) still falls back: drawing it needs styled cells in `core/canvas.ts`.
+
+Tests: `tests/core/flowchart-edges_test.ts`, `flowchart-parse_test.ts`, `flowchart-subgraph_test.ts`, `text-ground-truth_test.ts` (case 9 now drawn as `♥` in flowchart fields). Fixtures `flowchart-ok-53`…`58`.
+
+### X5 review: where we now fall back
+
+A cross-family review of 37a8ff2 found eight inputs drawn other than Mermaid 12.2.0 shows them. Each was reproduced under JSDOM, then narrowed:
+
+- `subgraph "`A`"` takes `A` as its id (the string's text, trimmed), so `A --> C` joins the cluster.
+- A `#…;` name is looked up as an own property only: `#__proto__;`, `#constructor;` fall back `entity`.
+- `@{ labelType }` decides the label's mode: `text` or `string` HTML (a literal `\n` falls back `newline`), any other Markdown.
+- Every `@{ … }` value must be one `yamlValue` reads (`core/diagrams/flowchart/data.ts`): a `"…"` with no `\`, a `'…'` with no `}`, `^` or lone `"` (Mermaid's shape-data lexer protects only `"…"`), or a bare string that starts with a letter or `_` and holds no YAML or lexer indicator. A bool, null, number or empty `label` falls back, as do `icon` and `img` (another shape), and any `@{ shape }` name Mermaid does not know (`No such shape`).
+- An `@{` joins following lines only right after an id, outside `"…"`, brackets and acc statements.
+- Unquoted text in a node, `|…|` or subgraph label is Mermaid's text token: `( ) [ ] { } |` anywhere, or `~~~` at its start, fail `syntax`. A text form's edge text (`-- a (b) -->`) still takes them.
+
+### X5 re-review: more fallbacks
+
+A second review of cf4faef found six more inputs, each reproduced against Mermaid 12.2.0 under JSDOM, then narrowed:
+
+- A subgraph id or title with a backquote falls back unless one `` "`…`" `` encloses it all: Mermaid keeps the id of `subgraph "A`"` as ``A` ``.
+- An `@{ … }` pair needs whitespace after its colon: Mermaid reads `label:x` as one key and draws the id. One line or several.
+- An `@{ … }` key must start with a letter or `_`, not be `true`, `false` or `null` in any case, and appear once: YAML reads `true`/`True` and `01`/`1` as duplicate keys and Mermaid throws. Edge metadata too.
+- A multi-line `@{` is joined only when its opening line is just `<id>@{`. After a link, in edge text, or in an acc statement it falls back.
+- An empty `accTitle:` or `accDescr:` (only whitespace after the colon) falls back: Mermaid's lexer reads the next line as its text. Verified per type: flowchart, class, ER, gantt, journey, quadrant, state, timeline and xychart swallow the line; pie and gitGraph keep it; mindmap has no acc statement; sequence is fixed separately. Test: `tests/core/acc-empty_test.ts`.

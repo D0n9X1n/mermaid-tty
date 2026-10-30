@@ -1753,7 +1753,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | shape asymmetric `> ]` | flowchart-ok-17 |
 | flowchart | shape double circle `((( )))` | flowchart-ok-18 |
 | flowchart | `@{ shape: … }` known name | flowchart-ok-19 |
-| flowchart | `@{ shape: … }` unknown name draws a rectangle | flowchart-ok-20 |
+| flowchart | `@{ shape: rect }` draws a rectangle | flowchart-ok-20 |
 | flowchart | quoted label | flowchart-ok-21 |
 | flowchart | `<br/>` label, one row per line | flowchart-ok-22 |
 | flowchart | edge solid `-->` | flowchart-ok-23 |
@@ -1787,6 +1787,12 @@ The title follows common rule 3. No config key is honored.
 | flowchart | thick bend: heavy corners | flowchart-ok-50 |
 | flowchart | light/heavy mixed junction | flowchart-ok-51 |
 | flowchart | dotted bend: light corner | flowchart-ok-52 |
+| flowchart | text-form two-headed links `<-- t -->`, `<-. t .->`, `<== t ==>` | flowchart-ok-53 |
+| flowchart | mixed end marks `<--o`, `x-->`: only the head, as Mermaid draws | flowchart-ok-54 |
+| flowchart | partly quoted labels `["a" b]` drawn as `a b` | flowchart-ok-55 |
+| flowchart | `#…;` codes `#35;`, `#quot;`, `#9829;` drawn as their characters | flowchart-ok-56 |
+| flowchart | `@{ … }` split over lines | flowchart-ok-57 |
+| flowchart | Markdown strings with no emphasis | flowchart-ok-58 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |
@@ -1831,6 +1837,13 @@ The title follows common rule 3. No config key is honored.
 | sequence | message `<<-->>` | sequence-ok-37 |
 | sequence | base design: actor vs participant caps, lifelines, self-message, activation, note | sequence-ok-38 |
 | sequence | `title` statement; a second title falls back | sequence-ok-39, sequence-reject-08 |
+| sequence | `;` ends a statement, as in Mermaid 12.2.0 | sequence-ok-40 |
+| sequence | `#` ends message, note and condition text; the rest of the line is a comment | sequence-ok-41 |
+| sequence | `autonumber` restart, `off` and on again | sequence-ok-42 |
+| sequence | keyword and number participant ids where Mermaid reads ids | sequence-ok-43 |
+| sequence | `#` in a box line is a comment; box color is the label's first word-character run | sequence-ok-44 |
+| sequence | `activate`/`deactivate`/`destroy` do not order participants | sequence-ok-45 |
+| sequence | bare `rect` | sequence-ok-46 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |

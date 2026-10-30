@@ -1,0 +1,72 @@
+@60
+ [ A ]    [ B ]
+   │  item  │
+   │───────►│
+┆ see ┆     │
+ ┌─alt [case]─┐
+ │ │   x    │ │
+ │ │───────►│ │
+ ├┄┄┄┄┄┄┄┄┄┄┄┄┤
+ │ │   y    │ │
+ │ │◄───────│ │
+ └────────────┘
+@60 roles
+ nnNnn    nnNnn
+   o  LLLL  o
+   oeeeeeeeao
+ooOOOoo     o
+ ffFFFFFFFFFFff
+ f o   L    o f
+ f oeeeeeeeao f
+ ffffffffffffff
+ f o   L    o f
+ f oaeeeeeeeo f
+ ffffffffffffff
+@80
+ [ A ]    [ B ]
+   │  item  │
+   │───────►│
+┆ see ┆     │
+ ┌─alt [case]─┐
+ │ │   x    │ │
+ │ │───────►│ │
+ ├┄┄┄┄┄┄┄┄┄┄┄┄┤
+ │ │   y    │ │
+ │ │◄───────│ │
+ └────────────┘
+@80 roles
+ nnNnn    nnNnn
+   o  LLLL  o
+   oeeeeeeeao
+ooOOOoo     o
+ ffFFFFFFFFFFff
+ f o   L    o f
+ f oeeeeeeeao f
+ ffffffffffffff
+ f o   L    o f
+ f oaeeeeeeeo f
+ ffffffffffffff
+@120
+ [ A ]    [ B ]
+   │  item  │
+   │───────►│
+┆ see ┆     │
+ ┌─alt [case]─┐
+ │ │   x    │ │
+ │ │───────►│ │
+ ├┄┄┄┄┄┄┄┄┄┄┄┄┤
+ │ │   y    │ │
+ │ │◄───────│ │
+ └────────────┘
+@120 roles
+ nnNnn    nnNnn
+   o  LLLL  o
+   oeeeeeeeao
+ooOOOoo     o
+ ffFFFFFFFFFFff
+ f o   L    o f
+ f oeeeeeeeao f
+ ffffffffffffff
+ f o   L    o f
+ f oaeeeeeeeo f
+ ffffffffffffff

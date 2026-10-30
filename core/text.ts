@@ -40,6 +40,40 @@ export function drawable(text: string, mode: Mode, br: Br): Fail | null {
   return mode === 'html' || mode === 'markdown' || mode === 'member' ? rendered(text, mode) : null
 }
 
+// X5. The names Mermaid 12.2.0 was seen to show as their character (rendered under JSDOM); any other name falls back.
+const NAMED: Readonly<Record<string, string>> = { quot: '"', amp: '&', lt: '<', gt: '>', apos: "'", copy: '©', reg: '®', trade: '™',
+  hearts: '♥', deg: '°', hellip: '…', mdash: '—', ndash: '–', larr: '←', rarr: '→', times: '×', divide: '÷', plusmn: '±',
+  middot: '·', bull: '•', euro: '€' }
+const CODE = /#(\w+);/g
+
+// The character a #…; code shows, or null: a decimal code for a scalar value that is not a control, whitespace or a
+// surrogate (the browser shows U+FFFD or a space there); or a name NAMED knows.
+function codeChar(name: string): string | null {
+  if (!/^\d+$/.test(name)) return Object.hasOwn(NAMED, name) ? NAMED[name]! : null
+  const n = Number(name)
+  if (n < 0x20 || (n >= 0x7f && n <= 0x9f) || (n >= 0xd800 && n <= 0xdfff) || n > 0x10ffff) return null
+  const ch = String.fromCodePoint(n)
+  return /\s/.test(ch) ? null : ch
+}
+
+// X5. The text a field of mode and br shows once Mermaid decodes its #…; codes (encodeEntities, then the browser), or why
+// it cannot be drawn. Text with no code is drawable's. Otherwise every code must show one character, as codeChar says; the
+// text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a decoded &, <,
+// *, fa: or \n counts as the text it shows, and can never make a <br>.
+export function decoded(text: string, mode: Mode, br: Br): string | Fail {
+  if (!/#\w+;/.test(text)) return drawable(text, mode, br) ?? text
+  let bad = false
+  const out = text.replace(CODE, (_, name: string) => codeChar(name) ?? ((bad = true), ''))
+  if (bad) return fail('entity')
+  const f = drawable(text.replace(CODE, '\u{E000}'), mode, br)
+  if (f) return f
+  for (const piece of br === 'any' ? text.split(BR_ANY) : [text]) {
+    const g = drawable(piece.replace(CODE, (_, name: string) => codeChar(name)!), mode, 'literal')
+    if (g) return g
+  }
+  return out
+}
+
 // X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token
 // (/(fa[bklrs]?):fa-([\w-]+)/; fad too, to be safe) for an icon, and a $$…$$ makes the whole label KaTeX. A markdown label
 // goes through marked, which drops a \ before ASCII punctuation and renders * and _ emphasis; a plain one shows a literal

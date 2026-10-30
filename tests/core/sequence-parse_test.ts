@@ -9,7 +9,7 @@ test('A2: ten arrows; activations, notes, frames, autonumber, create, destroy', 
   assert.deepEqual(A.map(a => { const m = P(`A${a}B: t`).items[0]; return `${m.line} ${m.tail} ${m.head}` }), ['solid none arrow', 'dotted none arrow',
     'solid none open', 'dotted none open', 'solid none cross', 'dotted none cross', 'solid none async', 'dotted none async', 'solid arrow arrow', 'dotted arrow arrow'])
   const s = P('autonumber 10 5\nA->>+B: x\nB-->>-A: y\nNote over A,B: n\nalt ok\nA->>B: a\nelse no\nA->>B: b\nend\ncreate participant C\nA->>C: c\ndestroy C\nA-xC: bye')
-  assert.deepEqual([s.autonumber, s.items.map((i: any) => i.kind)], [{ start: 10, step: 5 }, ['msg', 'msg', 'note', 'frame', 'create', 'msg', 'destroy', 'msg']])
+  assert.deepEqual([nums(s.items), s.items.map((i: any) => i.kind)], [[10, 15, 20, 25, 30, 35], ['msg', 'msg', 'note', 'frame', 'create', 'msg', 'destroy', 'msg']])
   assert.deepEqual([s.items[0].activate, s.items[1].deactivate, s.items[3].sections.map((x: any) => x.cond)], [true, true, ['ok', 'no']]); assert.equal(P('title Checkout\nA->>B: x').title, 'Checkout')
 })
 test('A5.errors: malformed, order, box and ZWJ rejections', () => {
@@ -25,12 +25,14 @@ test('A5.errors: malformed, order, box and ZWJ rejections', () => {
 // Model builders; they do not assert. A message takes ->>'s line and ends unless o overrides them.
 const part = (id: string, kind = 'participant', label = id) => ({ id, kind, label })
 const msg = (from: string, to: string, text: string, o: object = {}) =>
-  ({ kind: 'msg', from, to, line: 'solid', tail: 'none', head: 'arrow', text, activate: false, deactivate: false, ...o })
+  ({ kind: 'msg', from, to, line: 'solid', tail: 'none', head: 'arrow', text, activate: false, deactivate: false, num: null, ...o })
 const note = (side: string, ids: string[], text: string) => ({ kind: 'note', side, ids, text })
 const frame = (type: string, ...sections: [string | null, object[]][]) => ({ kind: 'frame', type, sections: sections.map(([cond, items]) => ({ cond, items })) })
 const mark = (kind: string, id: string) => ({ kind, id })
-const seq = (participants: object[], items: object[], o: object = {}) => ({ title: null, participants, boxes: [], autonumber: null, items, ...o })
+const seq = (participants: object[], items: object[], o: object = {}) => ({ title: null, participants, boxes: [], items, ...o })
 const AB = [part('A'), part('B')]
+// Each message's number, frames included, in source order.
+const nums = (items: any[]): (number | null)[] => items.flatMap(i => i.kind === 'msg' ? [i.num] : i.kind === 'frame' ? i.sections.flatMap((s: any) => nums(s.items)) : [])
 
 // [matrix row, fence body after the header, the exact model].
 const OK: [string, string, object][] = [
@@ -60,11 +62,11 @@ const OK: [string, string, object][] = [
   ['sequence-ok-23', 'break stop\nA->>B: a\nend', seq(AB, [frame('break', ['stop', [msg('A', 'B', 'a')]])])],
   ['sequence-ok-24', 'alt ok\nloop retry\nA->>B: a\nend\nelse no\nA->>B: b\nend',
     seq(AB, [frame('alt', ['ok', [frame('loop', ['retry', [msg('A', 'B', 'a')]])]], ['no', [msg('A', 'B', 'b')]])])],
-  ['sequence-ok-25', 'autonumber\nA->>B: a\nB-->>A: b', seq(AB, [msg('A', 'B', 'a'), msg('B', 'A', 'b', { line: 'dotted' })], { autonumber: { start: 1, step: 1 } })],
+  ['sequence-ok-25', 'autonumber\nA->>B: a\nB-->>A: b', seq(AB, [msg('A', 'B', 'a', { num: 1 }), msg('B', 'A', 'b', { line: 'dotted', num: 2 })])],
   ['sequence-ok-30', 'participant A as Same\nparticipant B as Same\nA->>B: hi', seq([part('A', 'participant', 'Same'), part('B', 'participant', 'Same')], [msg('A', 'B', 'hi')])],
   ['sequence-ok-31', 'A->>B: a\nactivate B\nactivate B\nB-->>A: b\ndeactivate B\ndeactivate B',
     seq(AB, [msg('A', 'B', 'a'), mark('activate', 'B'), mark('activate', 'B'), msg('B', 'A', 'b', { line: 'dotted' }), mark('deactivate', 'B'), mark('deactivate', 'B')])],
-  ['sequence-ok-32', 'autonumber 10 5\nA->>B: a\nB->>A: b\nA->>B: c', seq(AB, [msg('A', 'B', 'a'), msg('B', 'A', 'b'), msg('A', 'B', 'c')], { autonumber: { start: 10, step: 5 } })],
+  ['sequence-ok-32', 'autonumber 10 5\nA->>B: a\nB->>A: b\nA->>B: c', seq(AB, [msg('A', 'B', 'a', { num: 10 }), msg('B', 'A', 'b', { num: 15 }), msg('A', 'B', 'c', { num: 20 })])],
   ['sequence-ok-33', 'rect rgb(191, 223, 255)\nA->>B: a\nrect rgb(200, 150, 255)\nNote over A: n\nend\nB-->>A: b\nend',
     seq(AB, [frame('rect', [null, [msg('A', 'B', 'a'), frame('rect', [null, [note('over', ['A'], 'n')]]), msg('B', 'A', 'b', { line: 'dotted' })]])])],
   ['sequence-ok-34', 'box Purple Alice & John\nparticipant A\nparticipant J\nend\nbox Another Group\nparticipant B\nparticipant C\nend\n' +
@@ -79,6 +81,20 @@ const OK: [string, string, object][] = [
   ['sequence-ok-36', 'A<<->>B: hi', seq(AB, [msg('A', 'B', 'hi', { tail: 'arrow' })])],
   ['sequence-ok-37', 'A<<-->>B: hi', seq(AB, [msg('A', 'B', 'hi', { line: 'dotted', tail: 'arrow' })])],
   ['sequence-ok-39', 'title Checkout\nA->>B: x', seq(AB, [msg('A', 'B', 'x')], { title: 'Checkout' })],
+  ['sequence-ok-40', 'participant A; participant B\nA->>B: hi; B->>A: yo\nalt ok; A->>B: a; else no; B->>A: b; end',
+    seq(AB, [msg('A', 'B', 'hi'), msg('B', 'A', 'yo'), frame('alt', ['ok', [msg('A', 'B', 'a')]], ['no', [msg('B', 'A', 'b')]])])],
+  ['sequence-ok-41', 'A->>B: item #3\nNote over A: see #2 now\nalt case #1\nA->>B: x\nelse #2\nB->>A: y\nend',
+    seq(AB, [msg('A', 'B', 'item'), note('over', ['A'], 'see'), frame('alt', ['case', [msg('A', 'B', 'x')]], [null, [msg('B', 'A', 'y')]])])],
+  ['sequence-ok-42', 'autonumber 10 5\nA->>B: a\nautonumber off\nB->>A: b\nautonumber\nA->>B: c\nautonumber 3\nB->>A: d',
+    seq(AB, [msg('A', 'B', 'a', { num: 10 }), msg('B', 'A', 'b'), msg('A', 'B', 'c', { num: 20 }), msg('B', 'A', 'd', { num: 3 })])],
+  ['sequence-ok-43', 'participant end\nparticipant 42 as Answer\nlink->>42: ask\n42-->>link: done',
+    seq([part('end'), part('42', 'participant', 'Answer'), part('link')], [msg('link', '42', 'ask'), msg('42', 'link', 'done', { line: 'dotted' })])],
+  ['sequence-ok-44', 'box #abc G\nparticipant A\nend\nbox Aqua Team #1\nparticipant B\nend\nA->>B: hi',
+    seq(AB, [msg('A', 'B', 'hi')], { boxes: [{ label: null, ids: ['A'] }, { label: 'Team', ids: ['B'] }] })],
+  ['sequence-ok-45', 'activate B\nNote over C: wait\nA->>B: go\ndeactivate B\ndestroy D\nB-xD: stop',
+    seq([part('C'), part('A'), part('B'), part('D')], [mark('activate', 'B'), note('over', ['C'], 'wait'), msg('A', 'B', 'go'), mark('deactivate', 'B'),
+      mark('destroy', 'D'), msg('B', 'D', 'stop', { head: 'cross' })])],
+  ['sequence-ok-46', 'rect\nA->>B: hi\nend', seq(AB, [frame('rect', [null, [msg('A', 'B', 'hi')]])])],
 ]
 // [matrix row, whole fence body, the exact reason].
 const REJECT: [string, string, string][] = [
@@ -91,8 +107,8 @@ const REJECT: [string, string, string][] = [
   ['sequence-reject-08', '---\ntitle: Checkout\n---\nsequenceDiagram\ntitle Payment\nA->>B: hi', 'title'],
 ]
 
-test('A2: every covered sequence-ok row, 01-25, 30-37 and 39, parses to its exact model', () => {
-  assert.deepEqual(OK.map(([id]) => id), '01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 30 31 32 33 34 35 36 37 39'.split(' ').map(n => `sequence-ok-${n}`))
+test('A2: every covered sequence-ok row, 01-25, 30-37 and 39-46, parses to its exact model', () => {
+  assert.deepEqual(OK.map(([id]) => id), '01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 30 31 32 33 34 35 36 37 39 40 41 42 43 44 45 46'.split(' ').map(n => `sequence-ok-${n}`))
   for (const [id, body, want] of OK) assert.deepEqual([id, P(body)], [id, want])
 })
 test('A5.errors: every covered sequence-reject row, 01-03 and 05-08, fails with its exact reason', () => {
@@ -117,15 +133,24 @@ const boxLabelOf = (rest: string) => P(`box ${rest}\nparticipant A\nend\nA->>A: 
 test('A2: a box label drops a leading CSS color: any of the 148 named colors in any case, transparent, #hex, rgb(), rgba(), hsl() or hsla()', () => {
   assert.deepEqual([CSS_NAMED.length, new Set(CSS_NAMED).size], [148, 148])
   assert.deepEqual(CSS_NAMED.flatMap(c => [boxLabelOf(`${c} Team`), boxLabelOf(`${c.toUpperCase()} Team`)]), CSS_NAMED.flatMap(() => ['Team', 'Team']))
-  assert.deepEqual(['Purple Alice & John', 'Aqua Group Description', 'transparent Team', 'Transparent Team', '#abc Team', '#ABCD Team', '#a1b2c3 Team', '#A1B2C3D4 Team',
+  assert.deepEqual(['Purple Alice & John', 'Aqua Group Description', 'transparent Team', 'Transparent Team',
     'rgb(1,2,3) Team', 'rgba(33,66,99,0.5) Team', 'hsl(10, 40%, 90%) Team', 'hsla(10, 40%, 90%, 0.5)   Team'].map(boxLabelOf),
-  ['Alice & John', 'Group Description', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team'])
+  ['Alice & John', 'Group Description', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team'])
   // A color alone leaves no label, as does a bare box.
   assert.deepEqual(['Aqua', 'TRANSPARENT', '#abc', 'rgb(33,66,99)', 'hsla(10, 40%, 90%, 0.5)', ''].map(boxLabelOf), [null, null, null, null, null, null])
 })
-test('A2: a box label keeps a leading word that is not a whole CSS color: a named color ends at a space or the line end, and rgb() and hsl() are lowercase', () => {
-  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'Red-team', 'currentColor Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team']
+// Mermaid 12.2.0's parseBoxData takes the color from the label's first run of word characters (\w*), wherever it ends, and
+// keeps the whole label as the title unless the browser reads that run as a color.
+test('A2: a box label keeps a leading word that is not a CSS color, and drops one that is wherever the word ends', () => {
+  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team', 'Team Blue', 'Aqua2 x', 'red_team x']
   assert.deepEqual(kept.map(boxLabelOf), kept)
+  assert.deepEqual(['Red-team', 'red,team', 'Aqua: x'].map(boxLabelOf), ['-team', ',team', ': x'])
+})
+// Beyond the named colors, a browser reads currentColor, the CSS-wide keywords and the system colors (Canvas, Highlight,
+// Menu, …) as colors, each to its own support. Not in the plan: a box label led by one falls back.
+test('A5.errors: a box label led by currentColor, a CSS-wide keyword or a system color fails box-color', () => {
+  const bad = ['currentColor Team', 'inherit Team', 'initial X', 'unset X', 'revert X', 'Canvas Team', 'Highlight x', 'Menu x', 'buttontext x', 'Background x']
+  assert.deepEqual(bad.map(t => [t, P(`box ${t}\nparticipant A\nend\nA->>A: hi`)]), bad.map(t => [t, { reason: 'box-color' }]))
 })
 // Mermaid takes a box's color from a lowercase rgb(, rgba(, hsl( or hsla( to the label's last ), and drops it only if the
 // browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is dropped; any other falls back.
@@ -165,8 +190,8 @@ test('A2: rect takes any color text, which is not drawn, holds any statement but
     [frame('rect', [null, [msg('A', 'B', 'a'), frame('rect', [null, [frame('alt', ['x', [msg('A', 'B', 'b')]])]])]])])
   assert.deepEqual(P('alt x\nbox G\nparticipant A\nend\nA->>B: y\nend'), seq(AB, [frame('alt', ['x', [msg('A', 'B', 'y')]])], { boxes: [{ label: 'G', ids: ['A'] }] }))
 })
-test('A5.errors: rect needs a color; a box holds only participant and actor lines, sits in no rect, and must end', () => {
-  const bad: [string, string][] = [['rect\nA->>B: x\nend', 'syntax:2'], ['rect red\nbox G\nparticipant A\nend\nend', 'syntax:3'],
+test('A5.errors: a box holds only participant and actor lines, sits in no rect, and must end', () => {
+  const bad: [string, string][] = [['rect red\nbox G\nparticipant A\nend\nend', 'syntax:3'],
     ['rect red\nalt x\nbox G\nparticipant A\nend\nend\nend', 'syntax:4'], ['box G\nparticipant A\nA->>B: x\nend', 'syntax:4'],
     ['box G\ncreate participant A\nend', 'syntax:3'], ['box G\nbox H\nend\nend', 'syntax:3'], ['box G\nNote over A: n\nend', 'syntax:3'],
     ['box G\ndestroy A\nend', 'syntax:3'], ['box G\nparticipant A', 'unclosed-frame']]
@@ -192,19 +217,26 @@ test('A5.errors: destroy fails unless the next message has X at one end; create,
     ['destroy B\nA-xB: bye\ncreate participant B\nA->>B: hi', 'destroyed'], ['destroy B\nA-xB: bye\nactivate B', 'destroyed']]
   assert.deepEqual(bad.map(([t]) => [t, P(t)]), bad.map(([t, r]) => [t, { reason: r }]))
 })
-test('A2: autonumber takes no number (1 1), a start (step 1), or a start and a step, after any statement but a message', () => {
-  assert.deepEqual(['autonumber', 'autonumber 7', 'autonumber  10   5'].map(a => P(`${a}\nA->>B: x`).autonumber), [{ start: 1, step: 1 }, { start: 7, step: 1 }, { start: 10, step: 5 }])
-  assert.deepEqual(P('participant A\nactivate A\nNote over A: n\nautonumber 3\nA->>B: x').autonumber, { start: 3, step: 1 })
+test('A2: autonumber takes no number (1 1), a start (step 1), or a start and a step, after any statement', () => {
+  assert.deepEqual(['autonumber', 'autonumber 7', 'autonumber  10   5', 'autonumber;'].map(a => nums(P(`${a}\nA->>B: x\nA->>B: y`).items)), [[1, 2], [7, 8], [10, 15], [1, 2]])
+  assert.deepEqual(nums(P('participant A\nactivate A\nNote over A: n\nautonumber 3\nA->>B: x').items), [3])
 })
 test('A5.errors: a fraction, a sign, a third number or a word after autonumber falls back as syntax', () => {
   const bad = ['autonumber 1.5', 'autonumber -1', 'autonumber 1 2 3', 'autonumber 1 x', 'autonumber on'].map(a => `${a}\nA->>B: x`)
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'syntax:2' }]))
 })
-// Mermaid numbers the messages after an autonumber statement, counting those before it, and reads a 0 start or step
-// as unset. The model has one numbering for the whole diagram, so any other numbering falls back.
-test('A5.errors: a second autonumber, autonumber off, one after a message, or a 0 start or step fails autonumber', () => {
-  const bad = ['autonumber\nautonumber 5\nA->>B: x', 'autonumber\nA->>B: x\nautonumber', 'autonumber off\nA->>B: x', 'autonumber 3\nA->>B: x\nautonumber off',
-    'A->>B: x\nautonumber', 'alt c\nA->>B: x\nend\nautonumber', 'autonumber 0\nA->>B: x', 'autonumber 0 5\nA->>B: x', 'autonumber 5 0\nA->>B: x']
+// Mermaid 12.2.0's renderer walks every message in source order with an index (from 1) and a step (1): autonumber shows
+// the numbers, off hides them, a start or step sets them unless it is 0, and each message, shown or not, adds the step
+// (Math.round((index + step) * 100) / 100, so 9007199254740989 stays put).
+test('A2: autonumber restarts, steps, turns off and on again as Mermaid numbers messages', () => {
+  const cases: [string, (number | null)[]][] = [['autonumber 10 5\nA->>B: a\nautonumber off\nA->>B: b\nautonumber\nA->>B: c\nautonumber 3\nA->>B: d\nA->>B: e', [10, null, 20, 3, 4]],
+    ['A->>B: a\nautonumber\nA->>B: b\nalt x\nA->>B: c\nend\nautonumber 0 0\nA->>B: d', [null, 2, 3, 4]], ['autonumber 0\nA->>B: a\nA->>B: b', [1, 2]],
+    ['autonumber 5 0\nA->>B: a\nA->>B: b', [5, 6]], ['autonumber off\nA->>B: a', [null]], ['autonumber 9007199254740989\nA->>B: a\nA->>B: b\nA->>B: c', Array(3).fill(9007199254740989)]]
+  assert.deepEqual(cases.map(([t]) => [t, nums(P(t).items)]), cases)
+})
+// Not in the plan: a start, step or shown number that is not a safe integer falls back.
+test('A5.errors: an unsafe autonumber start, step or shown number fails autonumber', () => {
+  const bad = ['autonumber 9007199254740991\nA->>B: a\nA->>B: b', 'autonumber 1 9007199254740992\nA->>B: a', 'autonumber 9007199254740993\nA->>B: a']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'autonumber' }]))
 })
 
@@ -264,37 +296,100 @@ test('A5.errors: a participant in two boxes is a box-split', () => {
 
 // Beyond the plan: where Mermaid would fail, or draw other text, the diagram falls back.
 
-// Mermaid reads a # as the start of a comment, or of an entity such as #9829;, so it would draw other text.
-test('A5.errors: a # in drawn text fails hash', () => {
-  const bad = ['A->>B: item #3', 'Note over A: see #2', 'participant A as #1', 'alt case #1\nA->>B: x\nend', 'alt ok\nA->>B: x\nelse #2\nA->>B: y\nend',
-    'loop #\nA->>B: x\nend', 'title Q #1\nA->>B: x', 'box Team #1\nparticipant A\nend', 'box Aqua #team\nparticipant A\nend', 'box #abcTeam\nparticipant A\nend',
-    'box #ab Team\nparticipant A\nend', 'box #abcde Team\nparticipant A\nend', 'box #ggg Team\nparticipant A\nend']
+// Mermaid 12.2.0's TXT and LINE tokens stop at a #, and the rest of the line is a comment, ; and all: it draws
+// A->>B: item #3 as "item", alt case #1 as [case], and else #2 or loop#x with no condition.
+test('A2: a # ends a message, note or condition, and comments out the rest of its line', () => {
+  assert.deepEqual(P('A->>B: item #3\nNote over A: see #2 now\nalt case #1\nA->>B: x #; B->>A: y\nelse #2\nA->>B: z\nend #c\nloop#x\nA->>B: w\nend'),
+    seq(AB, [msg('A', 'B', 'item'), note('over', ['A'], 'see'), frame('alt', ['case', [msg('A', 'B', 'x')]], [null, [msg('A', 'B', 'z')]]),
+      frame('loop', [null, [msg('A', 'B', 'w')]])]))
+})
+// Elsewhere Mermaid keeps the # (an id A#b or participant A #c), draws an alias, title or box label cut at it, or decodes an
+// entity such as #9829; to ♥. Not in the plan: those fall back.
+test('A5.errors: a # in an id, alias, title, box label or entity fails hash', () => {
+  const bad = ['participant A as #1', 'participant A as Alice #1', 'participant A #c', 'activate A #c\nA->>B: x', 'A#b->>B: x', 'A->>B: I #9829; you',
+    'Note over A: #35; x', 'title Q #1\nA->>B: x']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'hash' }]))
   assert.deepEqual(parseSequence(readSource('---\ntitle: "Q #1"\n---\nsequenceDiagram\nA->>B: x') as Source), { reason: 'hash' })
 })
-test('A2: a # may start a box color, which is dropped, or sit in a rect color or accessibility text, which are not drawn', () => {
+// Mermaid 12.2.0's LINE state reads a # in a box or rect line as a comment to the line end: box #abc G is untitled.
+test('A2: a # in a box or rect line comments out the rest of it; accessibility text keeps it', () => {
   assert.deepEqual(P('box #abc G\nparticipant A\nend\nrect #abc\nA->>B: x\nend\naccTitle: a #b\naccDescr {\n#c\n}'),
-    seq(AB, [frame('rect', [null, [msg('A', 'B', 'x')]])], { boxes: [{ label: 'G', ids: ['A'] }] }))
+    seq(AB, [frame('rect', [null, [msg('A', 'B', 'x')]])], { boxes: [{ label: null, ids: ['A'] }] }))
+  const labels = ['Team #1', 'Aqua #team', '#abcTeam', '#ab Team', '#abcde Team', '#ggg Team', '#a b; participant B']
+  assert.deepEqual(labels.map(boxLabelOf), ['Team', null, null, null, null, null, null])
+  assert.deepEqual(P('rect\nA->>B: x\nend').items, [frame('rect', [null, [msg('A', 'B', 'x')]])])
 })
-// Mermaid ends a statement at a ;, so it would draw other text or fail. An entity such as #9829; holds one too.
-test('A5.errors: a ; anywhere in a statement fails semicolon', () => {
-  const bad = ['A->>B: a; b', 'A->>B: x;', 'participant A; participant B', 'participant A;', 'Note over A: n;', 'title T;\nA->>B: x', 'alt x;\nA->>B: y\nend',
-    'alt x\nA->>B: y\nend;', 'rect rgb(0, 0, 0);\nA->>B: y\nend', 'box G;\nparticipant A\nend', 'autonumber;\nA->>B: x', 'accTitle: a; b\nA->>B: x',
-    'accDescr {\na; b\n}\nA->>B: x', 'A->>B: I #9829; you']
-  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'semicolon' }]))
+// Mermaid 12.2.0 ends a statement at a ;, as at a line break, outside accessibility text.
+test('A2: a ; ends a statement, and the rest of its line holds more', () => {
+  assert.deepEqual(P('box G; participant B; end\nparticipant A;\nA->>B: hi; B->>A: yo;\nNote over A: n;\nalt x; A->>B: y; else z; A->>B: w; end;\n' +
+    'rect rgb(0, 0, 0); A->>B: v; end\ntitle T;\naccTitle: a; b\naccDescr {\na; b #c\n}'),
+  seq([part('B'), part('A')], [msg('A', 'B', 'hi'), msg('B', 'A', 'yo'), note('over', ['A'], 'n'),
+    frame('alt', ['x', [msg('A', 'B', 'y')]], ['z', [msg('A', 'B', 'w')]]), frame('rect', [null, [msg('A', 'B', 'v')]])],
+  { boxes: [{ label: 'G', ids: ['B'] }], title: 'T' }))
 })
-// Mermaid's lexer reads these words as keywords in any case, and before any character but a-z, 0-9 and _ (jison's \b),
-// so it fails on an id made of one: the test's own copy of the list.
+// Mermaid's NUM token needs a space or line break after it: it fails on autonumber 10; and autonumber 7#c.
+// Mermaid 12.2.0's accTitle/accDescr tokens end in \s*, so an empty one eats the line break and takes the next line as its
+// text: A->>B: hi; accTitle: then B->>C: yo draws only A->>B.
+test('A5.errors: an empty accTitle or accDescr falls back as syntax', () => {
+  const bad = ['A->>B: hi; accTitle:\nB->>C: yo', 'accTitle:\nB->>C: yo', 'accTitle: \nB->>C: yo', 'accDescr:\nB->>C: yo', 'accDescr : \nB->>C: yo', 'accTitle:']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'syntax:2' }]))
+  // A non-empty one takes the rest of its line, ; and all, as Mermaid does.
+  assert.deepEqual(P('accTitle: t\naccDescr: d; A->>B: x\nC->>D: y').items, [msg('C', 'D', 'y')])
+})
+// Mermaid's \s+ after autonumber, off or its number eats the line break the statement needs, so trailing whitespace at
+// the line end fails there ("Expecting 'NEWLINE', got 'ACTOR'"). Every other statement Mermaid reads keeps its line break.
+test('A5.errors: autonumber with trailing whitespace at the line end falls back as syntax', () => {
+  const bad = ['autonumber off \nB->>A: after', 'autonumber \nB->>A: x', 'autonumber 10 \nB->>A: x', 'autonumber 10 5 \nB->>A: x', 'autonumber\t\nB->>A: x',
+    'autonumber \n%% c\nB->>A: x', 'B->>A: x\nautonumber ']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: t.startsWith('B') ? 'syntax:3' : 'syntax:2' }]))
+  assert.deepEqual(['autonumber  #c', 'autonumber ; '].map(a => nums(P(`${a}\nB->>A: x`).items)), [[1], [1]])
+  assert.deepEqual(P('alt x \nA->>B: y \nelse \nA->>B: w\nend \nB->>A: z').items.length, 2)
+})
+test('A5.errors: an autonumber number before a ;, # or tab falls back as syntax', () => {
+  const bad = ['autonumber 10;\nA->>B: x', 'autonumber 10 5;\nA->>B: x', 'autonumber 7#c\nA->>B: x', 'autonumber 10\t5\nA->>B: x']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'syntax:2' }]))
+  assert.deepEqual(['autonumber 10 ;', 'autonumber 7 #c'].map(a => nums(P(`${a}\nA->>B: x`).items)), [[10], [7]])
+})
+// Where a message or note names a participant, Mermaid 12.2.0's lexer reads these words as keywords in any case, before
+// any character but a-z, 0-9 and _ (jison's \b), and fails: the test's own copy of the list. title, accTitle and
+// accDescr fail there only before the text their own rules take (title: x, title x, accTitle: x).
 const MERMAID_KEYWORDS = `participant actor note over end loop alt else opt par and rect critical break option activate deactivate autonumber
-  title box create destroy link links properties details accTitle accDescr par_over off sequenceDiagram`.split(/\s+/)
-test('A5.errors: an id Mermaid reads as a keyword fails keyword', () => {
-  const bad = [...MERMAID_KEYWORDS.flatMap(k => [`${k}->>B: x`, `A->>${k}: x`, `participant ${k}`, `${k.toUpperCase()}->>B: x`, `${k}.x->>B: x`]),
-    'actor end', 'Note over A,loop: n', 'activate box', 'deactivate opt', 'destroy title', 'create participant note', 'box G\nparticipant else\nend', 'A->>end中: x']
-  assert.deepEqual([MERMAID_KEYWORDS.length, bad.map(t => [t, P(t)])], [31, bad.map(t => [t, { reason: 'keyword' }])])
+  box create destroy par_over off sequenceDiagram`.split(/\s+/)
+test('A5.errors: a message or note naming a keyword fails keyword', () => {
+  const bad = [...MERMAID_KEYWORDS.flatMap(k => [`${k}->>B: x`, `A->>${k}: x`, `${k.toUpperCase()}->>B: x`, `${k}.x->>B: x`]),
+    'Note over A,loop: n', 'activate box', 'deactivate opt', 'destroy title', 'A->>end中: x', 'participant end\nA->>end: x',
+    'A->>title: x', 'A->>title :x', 'A->>accTitle: x', 'A->>accDescr: x', 'Note over title: n', 'Note over A,title: n']
+  assert.deepEqual([MERMAID_KEYWORDS.length, bad.map(t => [t, P(t)])], [24, bad.map(t => [t, { reason: 'keyword' }])])
+})
+// Mermaid reads any id, keyword or number, after participant, actor, create, activate, deactivate or destroy; and in a
+// message or note, link, links, properties, details, title, accTitle and accDescr before an arrow or a bare colon, and a
+// number not followed by a space.
+test('A2: keyword and number ids draw where Mermaid reads them as ids', () => {
+  assert.deepEqual(P('participant end\nactor loop as L\nbox G\nparticipant else\nend\nparticipant 42 as Answer\nparticipant 3\nactivate 3\nA->>3: x\ndeactivate 3').participants,
+    [part('end'), part('loop', 'actor', 'L'), part('else'), part('42', 'participant', 'Answer'), part('3'), part('A')])
+  const ok = ['link->>B: x', 'links->>B: x', 'A->>properties: x', 'A->>details : x', 'TITLE->>B: x', 'ACCDESCR->>B: x', 'title->>B: x', 'accTitle->>B: x',
+    'A->>title:x', 'link ->> B: x', '1->>B: x', 'A->>1: x', 'A->>1.5: x', 'A->>.5: x', 'A->>+1: x', 'A->>1\t: x', 'Note over link,details: n', 'Note over 1: n', 'Note over A,1: n']
+  assert.deepEqual(ok.map(t => [t, P(t).participants.map((q: any) => q.id)]), ok.map(t => [t, [['link', 'B'], ['links', 'B'], ['A', 'properties'], ['A', 'details'],
+    ['TITLE', 'B'], ['ACCDESCR', 'B'], ['title', 'B'], ['accTitle', 'B'], ['A', 'title'], ['link', 'B'], ['1', 'B'], ['A', '1'], ['A', '1.5'], ['A', '.5'], ['A', '1'], ['A', '1'],
+    ['link', 'details'], ['1'], ['A', '1']][ok.indexOf(t)]]))
 })
 test('A2: an id that only starts with a keyword is an ordinary id', () => {
-  const ok = ['endpoint', 'end_x', 'end2', 'Notes', 'box1', 'Parent', 'Optional', 'Titles', 'offer', 'actors', 'participants', 'Linked']
+  const ok = ['endpoint', 'end_x', 'end2', 'Notes', 'box1', 'Parent', 'Optional', 'Titles', 'offer', 'actors', 'participants', 'Linked', 'constructor', 'toString', '__proto__']
   assert.deepEqual(ok.map(id => P(`${id}->>B: x`).items[0]), ok.map(id => msg(id, 'B', 'x')))
+  assert.deepEqual(P('activate constructor\nA->>constructor: x\ndeactivate constructor').items.map((i: any) => i.kind), ['activate', 'msg', 'deactivate'])
+})
+// Mermaid 12.2.0 orders participants as declarations, messages (sender, then target) and notes first name them;
+// activate, deactivate and destroy name one without declaring it, and it fails on one nothing else declares.
+test('A2: activate, deactivate and destroy do not order participants; messages and notes do', () => {
+  const cases: [string, string[]][] = [['activate B\nA->>B: x\ndeactivate B', ['A', 'B']], ['activate B\nNote over C: n\nA->>B: x\ndeactivate B', ['C', 'A', 'B']],
+    ['destroy B\nA-xB: y', ['A', 'B']], ['activate B\ndeactivate B\nA->>B: x', ['A', 'B']], ['participant A\nactivate B\nB->>A: x\ndeactivate B', ['A', 'B']],
+    ['Note over B,A: n\nA->>C: x', ['B', 'A', 'C']]]
+  assert.deepEqual(cases.map(([t]) => [t, P(t).participants.map((q: any) => q.id)]), cases)
+})
+test('A5.errors: an id only activate, deactivate or destroy names fails undeclared; created after one, create', () => {
+  const bad: [string, string][] = [['activate C\nA->>B: x\ndeactivate C', 'undeclared'], ['activate B\ndeactivate B', 'undeclared'],
+    ['activate C\ncreate participant C\nA->>C: x\ndeactivate C', 'create']]
+  assert.deepEqual(bad.map(([t]) => [t, P(t)]), bad.map(([t, r]) => [t, { reason: r }]))
 })
 // Mermaid fails on deactivating a participant that is not active: - deactivates a message's sender.
 test('A5.errors: deactivating an inactive participant fails inactive', () => {
@@ -316,9 +411,10 @@ test('A2: a leading wrap: or nowrap: is dropped', () => {
     seq([part('A', 'participant', 'Alice'), part('B')], [frame('alt', ['ok', [msg('A', 'B', 'x')]], ['no', [msg('A', 'B', 'y')]]), frame('alt', [null, [msg('A', 'B', 'z')]])],
       { boxes: [{ label: 'Team', ids: ['B'] }], title: 'wrap: T' }))
 })
-// Mermaid's lexer reads an id such as 42 or 1.5 as a number when a space follows it, and fails.
-test('A5.errors: an id that is a number fails id', () => {
-  const bad = ['A ->> 1 : x', 'participant 42', '1->>B: x', 'A->>1.5: x', 'A->>.5: x', 'Note over A,7: n', 'activate 3']
+// Where a message or note names a participant, Mermaid's lexer reads an id such as 42 or 1.5 as a number when a space
+// follows it, and fails. Not in the plan: activate, deactivate or destroy of an undeclared number fails too.
+test('A5.errors: a message or note id that is a number before a space fails id', () => {
+  const bad = ['A ->> 1 : x', 'A->>1 : x', '1 ->> A: x', 'Note over 1 ,A: n', 'Note over A,1 : n', 'activate 3']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'id' }]))
   assert.deepEqual(['1a', 'A1', 'v1.2'].map(id => P(`${id}->>B: x`).items[0]), ['1a', 'A1', 'v1.2'].map(id => msg(id, 'B', 'x')))
 })

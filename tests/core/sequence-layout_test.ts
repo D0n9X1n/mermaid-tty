@@ -41,6 +41,13 @@ test('A2: autonumber numbers each message start + i × step, and a dotted reply 
   const t = text(d).join('\n')
   for (const s of ['10. a', '15. b', '20. c', '◄┄']) assert.ok(t.includes(s), s)
 })
+test('A2: autonumber off draws a message unnumbered, and a restart draws from its own start', () => {
+  const d = L('autonumber 10 5\nA->>B: a\nautonumber off\nA->>B: b\nautonumber\nA->>B: c\nautonumber 3\nA->>B: d')
+  assert.equal(validate(d), null)
+  const t = text(d).join('\n')
+  for (const s of ['10. a', '20. c', '3. d']) assert.ok(t.includes(s), s)
+  assert.ok(!/\d\. b/.test(t), 'b is unnumbered')
+})
 test('A2: a note left of and right of a participant sits one column off its lifeline', () => {
   const d = L('participant A\nparticipant B\nNote left of A: L\nNote right of B: R')
   assert.equal(validate(d), null)

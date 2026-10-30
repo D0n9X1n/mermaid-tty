@@ -11,7 +11,7 @@ if command -v cygpath >/dev/null 2>&1; then config="$(cygpath -w "$tmp")"; fi # 
 export CLAUDE_CONFIG_DIR="$config"
 version="$(node -p 'require("./.claude-plugin/plugin.json").version')"
 claude plugin marketplace add ./
-claude plugin install mermaid-tty@mermaid-tty
+claude plugin install mermaid-tty@mermaid-tty --config theme=default
 list="$(claude plugin list)"
 grep -Fq 'mermaid-tty@mermaid-tty' <<<"$list" || { printf '%s\n' "$list" >&2; printf 'local install: mermaid-tty is not installed\n' >&2; exit 1; }
 # The Version line of this plugin's own entry, which a blank line ends (CRs dropped first, in case of CRLF output).

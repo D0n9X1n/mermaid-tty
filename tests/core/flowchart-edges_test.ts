@@ -109,14 +109,31 @@ test('A5.errors: a link not read whole fails syntax:<n>: a text form with no clo
   assert.deepEqual(P('flowchart TD\nA --> B\n\nC -- D'), { reason: 'syntax:4' })
 })
 
-test('A5.errors: an edge label fails as a node label does: markdown-string, entity, unsupported-char', () => {
-  const bad = [['A -->|"`**b**`"| B', 'markdown-string'], ['A -- "`b`" --> B', 'markdown-string'], ['A -->|"#quot;"| B', 'entity'],
+test('A5.errors: an edge label fails as a node label does: markdown, entity, unsupported-char', () => {
+  const bad = [['A -->|"`**b**`"| B', 'markdown'], ['A -- "`*b*`" --> B', 'markdown'], ['A -->|"#nosuch;"| B', 'entity'],
     ['A -->|a\u{200D}b| B', 'unsupported-char U+200D'], ['A -. a\u{200D}b .-> B', 'unsupported-char U+200D']] as const
   assert.deepEqual(bad.map(([s]) => [s, P(`flowchart TD\n${s}`)]), bad.map(([s, r]) => [s, { reason: r }]))
 })
 
-test('A5.errors: a tail mark whose head is not its partner fails syntax:<n>, as Mermaid draws only the head: <--o, o-->, x--o, <---', () => {
-  const bad = ['A <--o B', 'A <--x B', 'A o--> B', 'A o--x B', 'A x--o B', 'A x--> B', 'A <--- B', 'A o--- B', 'A x==> B', 'A <-.-o B', 'A e1@o--x B']
+// Mermaid 12.2.0 (flowDb destructEndLink): a tail mark with no partner head draws only the head, and stays part of the line:
+// it adds 1 to the length, and a thick line no longer starts with =, so it draws solid.
+test('A1: a tail mark whose head is not its partner draws only the head, as Mermaid does: <--o, o-->, x--o, <---', () => {
+  const want = [['A <--o B', 'solid none circle 2'], ['A <==o B', 'solid none circle 2'], ['A <--- B', 'solid none none 2'],
+    ['A o--> B', 'solid none arrow 2'], ['A x-.-o B', 'dotted none circle 1'], ['A x==> B', 'solid none arrow 2'], ['A <=== B', 'solid none none 2'],
+    ['A o==o B', 'thick circle circle 1'], ['A e1@o--x B', 'solid none cross 2']] as const
+  assert.deepEqual(want.map(([s]) => [s, `${k(E(s)[0])}${E(s)[0].minlen}`]), want)
+})
+// Mermaid's destructLink: a text form's opener mark pairs with its closer's head: <-- t --> is two-headed; a mark that does
+// not pair, or a stroke that differs, is INVALID.
+test('A1: a text form with a tail mark draws both ends when its closer has the partner head: <-- t -->, x-- t --x, o-- t --o', () => {
+  const want = [['A <-- t --> B', 'solid arrow arrow t1'], ['A <-. t .-> B', 'dotted arrow arrow t1'], ['A <== t ==> B', 'thick arrow arrow t1'],
+    ['A x-- t --x B', 'solid cross cross t1'], ['A o-- t --o B', 'solid circle circle t1'], ['A <-- t ---> B', 'solid arrow arrow t2'],
+    ['A -- t <--> B', 'solid arrow arrow t1'], ['A -- a<--> B', 'solid arrow arrow a1'], ['A -- fo x--> B', 'solid none arrow fo2']] as const
+  assert.deepEqual(want.map(([s]) => [s, `${k(E(s)[0])}${E(s)[0].minlen}`]), want)
+})
+test('A5.errors: a text form Mermaid cannot read, or reads INVALID, fails syntax:<n>', () => {
+  const bad = ['A <-- t --- B', 'A <-- t --o B', 'A <-- t <--> B', 'A x-- t --> B', 'A <== t x==> B', 'A == t x==> B', 'A -. a.b .-> B',
+    'A == a=b ==> B', 'A -- a "b" --> B', 'A --  --> B', 'A -- "" --> B', 'A == "" ==> B']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
 })
 test('A1: a tail mark with its partner head draws both ends: <-->, o--o, x--x', () => {
@@ -130,17 +147,24 @@ test('A1: minlen is capped at 10, as Mermaid caps an edge length', () => {
 })
 
 test('A1: an edge label blank once its one enclosing "…" is stripped and it is trimmed is no label: label is null', () => {
-  const src = ['A -->|""| B', 'A -->|  | B', 'A -->|" "| B', 'A -->|| B', 'A -- "" --> B', 'A --  --> B', 'A -. " " .-> B', 'A == "" ==> B']
+  const src = ['A -->|  | B', 'A -->|" "| B', 'A -. " " .-> B', 'A == " " ==> B']
   assert.deepEqual(src.map(s => [s, E(s)[0].label]), src.map(s => [s, null]))
 })
 
-test('A5.errors: a node or edge label, or a subgraph title, with a " that is not one "…" enclosing it all fails syntax:<n>', () => {
-  const bad = ['A -->|"a" b| B', 'A -->|a "b"| B', 'A["a" b]', 'A -- "a" b --> B', 'A[a "b" c]', 'A["a" "b"]', 'A["a "b" c"]',
-    'A -->|"a"b"c"| B', 'A -. "a" b .-> B', 'subgraph s ["a" b]\nend']
+// Mermaid 12.2.0 lexes a label as one "…" string first, then text with no ": it shows the two joined and trimmed. Text
+// before the string, a space before it, a second string, or an empty string is a parse error.
+test('A1: a label that starts with one "…" and goes on unquoted draws as Mermaid joins them: ["a" b] is a b', () => {
+  const g = P('flowchart TD\nA["a" b] --> C("c"d) -->|"e" f | D{"g"  h  i}\nC -- "j" k --> D\nsubgraph s ["t" u]\nD\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges.map((e: any) => e.label), g.clusters[0].title],
+    [['a b', 'cd', 'g  h  i'], [null, 'e f', 'j k'], 't u'])
+})
+test('A5.errors: a label with a " where Mermaid reads none, a second string, a space before it, or an empty one fails syntax:<n>', () => {
+  const bad = ['A -->|a "b"| B', 'A[a "b" c]', 'A["a" "b"]', 'A["a "b" c"]', 'A -->|"a"b"c"| B', 'A[ "a" ]', 'A[ "a" b]', 'A(( "a" ))',
+    'A -->| "a" b| B', 'A -->|""| B', 'A -->|| B', 'A[""]', 'A[]', 'A -- a "b" --> B', 'subgraph s [ "a" b]\nend']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
 })
 test('A1: a label that one "…" encloses whole still loses those quotes and keeps what they hold', () => {
-  const g = P('flowchart TD\nA["a, b: (c)"] -->|"a|b"| B[ "x [y]" ]\nB -- "a -- b" --> C\nsubgraph s ["T: 1, 2"]\nC\nend')
+  const g = P('flowchart TD\nA["a, b: (c)"] -->|"a|b"| B["x [y]"]\nB -- "a -- b" --> C\nsubgraph s ["T: 1, 2"]\nC\nend')
   assert.deepEqual([g.nodes.map((n: any) => n.rows[0].text), g.edges.map((e: any) => e.label), g.clusters[0].title],
     [['a, b: (c)', 'x [y]', 'C'], ['a|b', 'a -- b'], 'T: 1, 2'])
 })

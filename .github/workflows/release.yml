@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir -p "$CLAUDE_CONFIG_DIR"
           claude plugin marketplace add D0n9X1n/mermaid-tty
-          claude plugin install mermaid-tty@mermaid-tty
+          claude plugin install mermaid-tty@mermaid-tty --config theme=default
           claude plugin list | tee /dev/stderr | grep -F "Version: ${GITHUB_REF_NAME#v}"
       - run: sudo apt-get update && sudo apt-get install -y tmux
       - id: release-e2e-tooling

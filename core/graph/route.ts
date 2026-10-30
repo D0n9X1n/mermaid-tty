@@ -122,34 +122,48 @@ function detour(path: Point[], blocked: (c: Point) => boolean, p: Placed, pinned
   return path
 }
 
-// May extend rows/cols for exterior routing lanes; node, label and frame boxes never move.
+// May extend rows/cols for exterior routing lanes; node, label and frame boxes never move. A back edge with no dummy and no
+// label routes first with the forward edges, in the nearest free column, so a 2-cycle draws as two parallel edges (#8);
+// else, as each back edge with a dummy or label, in an outside lane.
 export function routeGraph(p: Placed): Route[] | Fail {
-  const reversed = p.graph.edges.filter(e => e.reversed && e.style !== 'invisible')
-  if (reversed.length) {
-    const forward = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter(e => !e.reversed) } }
-    const rs = routeGraph(forward)
+  const backs = p.graph.edges.filter(e => e.reversed && e.style !== 'invisible')
+  const laned = (e: GEdge) => p.boxes.has(`${e.id}:label`) || [...p.boxes.keys()].some(id => id.startsWith(`${e.id}#`))
+  if (backs.some(e => !laned(e))) {
+    const trial = { ...p }, rs = routeWith(trial, backs.filter(laned))
+    if (Array.isArray(rs)) { p.rows = trial.rows; p.cols = trial.cols; return rs }
+  }
+  return routeWith(p, backs)
+}
+
+// The edges in outside routed in outside lanes, the rest by channels, else by search.
+function routeWith(p: Placed, outside: readonly GEdge[]): Route[] | Fail {
+  const ids = new Set(outside.map(e => e.id)), byOrder = (a: Route, b: Route) =>
+    p.graph.edges.find(e => e.id === a.edge)!.order - p.graph.edges.find(e => e.id === b.edge)!.order
+  if (outside.length) {
+    const forward = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter(e => !ids.has(e.id)) } }
+    const rs = routeWith(forward, [])
     p.rows = Math.max(p.rows, forward.rows); p.cols = Math.max(p.cols, forward.cols)
     if (!Array.isArray(rs)) return rs
     let needsReservation = false
-    for (const e of reversed) {
+    for (const e of outside) {
       const route = outsideRoute(p, e, rs)
       if (!route) { needsReservation = true; break }
       rs.push(route)
     }
     if (needsReservation) {
-      const outside: Route[] = []
-      for (const e of reversed) {
-        const route = outsideRoute(p, e, outside)
+      const lanes: Route[] = []
+      for (const e of outside) {
+        const route = outsideRoute(p, e, lanes)
         if (!route) return fail('route-conflict')
-        outside.push(route)
+        lanes.push(route)
       }
-      const reserved = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter(e => !e.reversed) } }
-      const remaining = searchRoutes(reserved, false, outside)
+      const reserved = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter(e => !ids.has(e.id)) } }
+      const remaining = searchRoutes(reserved, false, lanes)
       p.rows = Math.max(p.rows, reserved.rows); p.cols = Math.max(p.cols, reserved.cols)
       if (!Array.isArray(remaining)) return remaining
-      return remaining.sort((a, b) => p.graph.edges.find(e => e.id === a.edge)!.order - p.graph.edges.find(e => e.id === b.edge)!.order)
+      return remaining.sort(byOrder)
     }
-    return rs.sort((a, b) => p.graph.edges.find(e => e.id === a.edge)!.order - p.graph.edges.find(e => e.id === b.edge)!.order)
+    return rs.sort(byOrder)
   }
   const fast = channelsRoute(p)
   if (Array.isArray(fast)) return fast
@@ -307,20 +321,31 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
   for (const b of walls(p)) for (let r = b.row; r < b.row + b.rows; r++) for (let c = b.col; c < b.col + b.cols; c++) {
     const d = border({ r, c }, b); if (d) borders.set(`${r},${c}`, (borders.get(`${r},${c}`) ?? 0) | d)
   }
+  // Each node face's slots holding an end mark, by `${node}:${face}`.
+  const marked = new Map<string, number[]>()
+  const slotOf = (id: string, port: Port) => { const b = (p.boxes.get(id) ?? p.frames.get(id))!
+    return port.face % 2 ? port.at.r - b.row : port.at.c - b.col }
   const titleCells = new Set<string>()
   for (const n of p.graph.clusters) {
     const b = p.frames.get(n.id)
     if (b && n.title !== null) for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) titleCells.add(`${b.row},${c}`)
   }
   const title = (c: Point) => titleCells.has(keyOf(c))
-  const candidates = (id: string, style: string, mark: string, preferred: number, net: string, target = false): Port[] => {
+  const candidates = (id: string, style: string, mark: string, preferred: number, net: string, target = false, from?: string): Port[] => {
     const b = p.boxes.get(id) ?? p.frames.get(id)
     if (!b) return []
     const out: Port[] = []
-    for (const face of [preferred, (preferred + 1) % 4, (preferred + 3) % 4, back(preferred)]) {
+    // Of the two side faces, the one facing toward from comes first, so an end coming round a crowded face comes the short way.
+    const o = from === undefined ? undefined : p.boxes.get(from) ?? p.frames.get(from)
+    const toward = (f: number) => o ? steps[f]!.r * (2 * o.row + o.rows - 2 * b.row - b.rows) + steps[f]!.c * (2 * o.col + o.cols - 2 * b.col - b.cols) : 0
+    const sides = [(preferred + 1) % 4, (preferred + 3) % 4].sort((u, v) => toward(v) - toward(u))
+    for (const face of [preferred, ...sides, back(preferred)]) {
       const size = face % 2 ? b.rows : b.cols
       const group = `${net}:${id}:${face}:${style}:${mark}`, fixed = ports.get(group)
-      const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) => Math.abs(a - middle(size)) - Math.abs(b - middle(size)) || b - a)
+      // A mark beside another on this face reads as one wide mark (△△△): such slots come last, a cell apart first.
+      const near = marked.get(`${id}:${face}`) ?? [], crowded = (i: number) => mark !== 'none' && (near.includes(i - 1) || near.includes(i + 1))
+      const slots = Array.from({ length: size }, (_, i) => i).sort((a, b) => Number(crowded(a)) - Number(crowded(b)) ||
+        Math.abs(a - middle(size)) - Math.abs(b - middle(size)) || b - a)
       for (const i of slots) {
         const at = face === 0 ? { r: b.row - 1, c: b.col + i } : face === 1 ? { r: b.row + i, c: b.col + b.cols }
           : face === 2 ? { r: b.row + b.rows, c: b.col + i } : { r: b.row + i, c: b.col - 1 }
@@ -454,11 +479,13 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
     const sources = candidates(e.from, e.style, e.tail, preferred, portOf(groups, e, 'tail'))
     const fanInOut = e.from !== e.to && e.tail === 'none' && edges.filter(n => n.from === e.from).length > 1 &&
       new Set(edges.filter(n => n.to === e.to).map(n => n.from)).size > 1
-    const targets = candidates(e.to, e.style, e.head, back(preferred), portOf(groups, e, 'head'), true).filter(port =>
+    const targets = candidates(e.to, e.style, e.head, back(preferred), portOf(groups, e, 'head'), true, e.from).filter(port =>
       !fanInOut || preferred % 2 !== 0 || port.face === back(preferred))
     let result: { route: Route; source: Port; target: Port } | null = null
     for (const source of sources) {
-      for (const target of targets) {
+      // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight (#8).
+      const faces = [...new Set(targets.map(t => t.face))], off = (t: Port) => t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c)
+      for (const target of e.reversed ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v)) : targets) {
         if (budget.left <= 0) return fail('route-conflict')
         if (keyOf(source.at) === keyOf(target.at)) continue
         const route = tryRoute(e, source, target)
@@ -476,6 +503,8 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
         from: source.group, to: target.group, nodes: [e.from, e.to] })
       occupied.set(key, list)
     }
+    for (const [id, port, end] of [[e.from, source, e.tail], [e.to, target, e.head]] as const) if (end !== 'none') {
+      const key = `${id}:${port.face}`; marked.set(key, [...(marked.get(key) ?? []), slotOf(id, port)]) }
     if (e.tail !== 'none') protectedCells.add(keyOf(move(source.at, source.face)))
     if (e.head !== 'none') protectedCells.add(keyOf(move(target.at, target.face)))
   }

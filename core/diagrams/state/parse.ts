@@ -37,10 +37,10 @@ const DIR_ANY = /direction\s+(?:TB|BT|RL|LR)/i
 // its last part on its own line, or Mermaid's lexer reads the next line as it.
 const STYLING = re(String.raw`(?:classDef\s+\w+|class\s+\w+(?:,\s*\w+)*|style\s+[\w,]+)\s+\S.*`)
 // Lines that draw nothing at the root: hide empty description, scale N width, click id "url" "tip" or click id href "url",
-// and accessibility. Mermaid's lexer knows them only there, and in a body reads their words as states: there they reach
+// and accessibility with text (an empty one reads the next line as its text, so it reaches KEYWORD and fails). Mermaid's lexer knows them only there, and in a body reads their words as states: there they reach
 // KEYWORD, and fail.
 const ROOT_ONLY = re(String.raw`hide empty description|scale\s+\d+\s+width|click\s+${ID}\s+(?:"[^"]*"\s*"[^"]*"|href\s*"[^"]*")` +
-  String.raw`|acc(?:Title|Descr)\s*:.*`)
+  String.raw`|acc(?:Title|Descr)\s*:.*\S.*`)
 // An accDescr {…} block's opener; its text runs to its first }, which must end its line.
 const ACC_BLOCK = re(String.raw`accDescr\s*\{(.*)`)
 // A line that starts with a keyword, in any case, even one that starts a longer word, but reads as none of its statements.

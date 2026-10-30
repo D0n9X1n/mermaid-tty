@@ -1,6 +1,6 @@
 {
   "name": "mermaid-tty",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Draws the mermaid fences in Claude's replies as colored box-drawing diagrams in the terminal.",
   "author": {
     "name": "D0n9X1n"

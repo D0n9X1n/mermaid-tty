@@ -34,6 +34,7 @@ const KEYWORD = /(?:^|[^A-Za-z])(?:title|x-axis|y-axis|quadrant-[1-4]|classdef|q
 // Parsed and ignored (common rule 4): classDef; accTitle: and accDescr:, to the line's end; accDescr {, to its first }.
 const CLASS_DEF = /^classDef[ \t]+\S/
 const ACC = /^acc(?:Title|Descr)\s*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
 
 // Ends the walk: parseQuadrant returns this Fail.
@@ -56,6 +57,7 @@ function walk(src: Source): Quadrant {
   for (const { n, text: raw } of src.lines) {
     const t = raw.trim()
     if (descr) { if (closes(t, n)) descr = 0; continue }
+    if (ACC.test(t) && !t.replace(ACC, '').trim()) stop(`syntax:${n}`)
     if (ACC.test(t) || CLASS_DEF.test(t)) continue
     if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) descr = n; continue }
     statement(t, n, q, seen)

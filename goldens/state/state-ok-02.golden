@@ -3,13 +3,13 @@
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -17,20 +17,19 @@
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @60 roles
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -38,20 +37,19 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean
 @80
        ●
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -59,20 +57,19 @@ nnNNNNNnn    e
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @80 roles
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -80,20 +77,19 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean
 @120
        ●
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -101,20 +97,19 @@ nnNNNNNnn    e
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @120 roles
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -122,5 +117,4 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean

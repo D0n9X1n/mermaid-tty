@@ -21,6 +21,7 @@ const HEADER = /^timeline( (LR|TD))?$/
 const TITLE = /^title[ \t]+(.+)$/
 const SECTION = /^section[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // Mermaid's lexer reads its keywords in any case and at the start of a longer word, so a line that starts with one but is
 // no statement falls back (common rule 5).
@@ -73,7 +74,7 @@ function walk(src: Source): Timeline {
 // Reads the trimmed line t, source line n, into st. Accessibility text is not drawn, so a # or : in it is read as text.
 // Anywhere else, a # fails: Mermaid's lexer starts a comment there.
 function statement(st: State, t: string, n: number): void {
-  if (ACC.test(t)) return
+  if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`); return }
   if (t.includes('#')) stop(`syntax:${n}`)
   const title = TITLE.exec(t)?.[1]
   if (title !== undefined) {

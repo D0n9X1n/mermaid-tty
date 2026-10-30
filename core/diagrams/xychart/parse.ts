@@ -37,6 +37,7 @@ const Y_AXIS = re(String.raw`y-axis\s+(?:(${AXIS_TEXT})|(?:(${AXIS_TEXT})\s+)?($
 const SERIES = re(String.raw`(bar|line)\s+(?:(${TEXT})\s*)?${list(NUM)}`)
 // As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither draws.
 const ACC = /^acc(?:Title|Descr)\s*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
 // A list's items, in order.
 const TEXTS = new RegExp(TEXT, 'g'), NUMS = new RegExp(NUM, 'g')
@@ -66,7 +67,7 @@ function walk(src: Source): Xy {
   for (const { n, text: raw } of src.lines) {
     const t = raw.trim()
     if (descr) { if (closes(t, n)) descr = 0; continue }
-    if (ACC.test(t)) continue
+    if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`); continue }
     if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) descr = n; continue }
     statement(t, n, xy, seen)
   }

@@ -25,7 +25,8 @@ const BRS = [9, 10, 11, 12], TAG = 13
 // A drawn field: the text it draws for a case, one string per row, or its Fail. strict: the cases it falls back on though
 // Mermaid shows them as written or split, where the drawing cannot match (a <br> in one-line text) or the field's mode
 // cannot tell (sanitized: any <).
-type Field = { name: string; truth: readonly string[]; draw: (c: string) => string[] | Fail; strict?: readonly number[] }
+// shows: the cases it draws as the text Mermaid shows, as the truth gives it (a #…; code decoded).
+type Field = { name: string; truth: readonly string[]; draw: (c: string) => string[] | Fail; strict?: readonly number[]; shows?: readonly number[] }
 
 // The rows that owner's text cells draw of src at 120 columns, in the mono theme, or the Fail.
 function drawn(src: string, owner: string): string[] | Fail {
@@ -41,7 +42,7 @@ function drawn(src: string, owner: string): string[] | Fail {
 function check(f: Field): void {
   const strict = new Set(f.strict ?? [])
   assert.ok([...strict].every(i => f.truth[i] === '=' || f.truth[i] === '⏎'), `${f.name}: strict lists only = and ⏎ cases`)
-  const want = (c: string, i: number) => strict.has(i) || !['=', '⏎'].includes(f.truth[i]!) ? 'fallback'
+  const want = (c: string, i: number) => f.shows?.includes(i) ? [f.truth[i]!] : strict.has(i) || !['=', '⏎'].includes(f.truth[i]!) ? 'fallback'
     : f.truth[i] === '=' ? [c] : c.split(/<br\s*\/?>/i)
   const got = (c: string) => { const d = f.draw(c); return isFail(d) ? 'fallback' : d }
   assert.deepEqual(CASES.map(c => [c, got(c)]), CASES.map((c, i) => [c, want(c, i)]), f.name)
@@ -50,9 +51,9 @@ function check(f: Field): void {
 // A subgraph title draws on one line, on its frame's border, so a <br> there falls back.
 test('A5.errors: ground truth: a flowchart node label, edge label and subgraph title draw each case as Mermaid shows it, or fall back', () => {
   const fields: Field[] = [
-    { name: 'node', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA["${c}"]`, 'A') },
-    { name: 'edge', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA -->|"${c}"| B`, 'L_A_B_0:label') },
-    { name: 'subgraph', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nsubgraph S ["${c}"]\nA\nend`, 'S'), strict: BRS },
+    { name: 'node', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA["${c}"]`, 'A'), shows: [8] },
+    { name: 'edge', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nA -->|"${c}"| B`, 'L_A_B_0:label'), shows: [8] },
+    { name: 'subgraph', truth: TRUTH.html, draw: c => drawn(`flowchart TD\nsubgraph S ["${c}"]\nA\nend`, 'S'), strict: BRS, shows: [8] },
   ]
   fields.forEach(check)
 })
@@ -60,14 +61,21 @@ test('A5.errors: ground truth: a flowchart node label, edge label and subgraph t
 // An alias draws in a one-line pill, and a frame's label and a box's title on its border, so a <br> there falls back. A box
 // title is sanitized: any < falls back, <b>z</b> too.
 test('A5.errors: ground truth: a sequence message, note, alias, frame label and box title draw each case as Mermaid shows it, or fall back', () => {
+  // Each case drawn as X{case}Y, as the truth was rendered, then the X and Y dropped: Mermaid ends a sequence statement at
+  // a ;, so &lt; alone draws &lt as Mermaid shows it, while X&lt;Y fails in both.
   const S = (body: string, owner: string) => drawn(`sequenceDiagram\n${body}`, owner)
-  const frame = (c: string) => { const d = S(`alt ${c}\nA->>B: x\nend`, 'f0'); return isFail(d) ? d : d.map(t => t.replace(/^alt \[(.*)\]$/, '$1')) }
+  const xy = (d: string[] | Fail): string[] | Fail => {
+    if (isFail(d)) return d
+    if (!d[0]?.startsWith('X') || !d.at(-1)?.endsWith('Y')) return { reason: 'not X…Y' } as Fail
+    return d.map((t, i) => (i === 0 ? t.slice(1) : t)).map((t, i, a) => (i === a.length - 1 ? t.slice(0, -1) : t))
+  }
+  const frame = (c: string) => { const d = S(`alt X${c}Y\nA->>B: x\nend`, 'f0'); return isFail(d) ? d : xy(d.map(t => t.replace(/^alt \[(.*)\]$/, '$1'))) }
   const fields: Field[] = [
-    { name: 'message', truth: TRUTH.sequence, draw: c => S(`A->>B: ${c}`, 'm0:label') },
-    { name: 'note', truth: TRUTH.sequence, draw: c => S(`Note over A: ${c}`, 'n0') },
-    { name: 'alias', truth: TRUTH.sequence, draw: c => S(`participant A as ${c}`, 'A'), strict: BRS },
+    { name: 'message', truth: TRUTH.sequence, draw: c => xy(S(`A->>B: X${c}Y`, 'm0:label')) },
+    { name: 'note', truth: TRUTH.sequence, draw: c => xy(S(`Note over A: X${c}Y`, 'n0')) },
+    { name: 'alias', truth: TRUTH.sequence, draw: c => xy(S(`participant A as X${c}Y`, 'A')), strict: BRS },
     { name: 'frame', truth: TRUTH.sequence, draw: frame, strict: BRS },
-    { name: 'box', truth: TRUTH.box, draw: c => S(`box ${c}\nparticipant A\nend\nA->>A: x`, 'b0'), strict: [...BRS, TAG] },
+    { name: 'box', truth: TRUTH.box, draw: c => xy(S(`box X${c}Y\nparticipant A\nend\nA->>A: x`, 'b0')), strict: [...BRS, TAG] },
   ]
   fields.forEach(check)
 })

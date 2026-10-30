@@ -15,6 +15,7 @@ export type Journey = { title: string | null; groups: { name: string | null; tas
 const TITLE = /^title[ \t]+(.+)$/
 const SECTION = /^section[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // Outside accessibility text, Mermaid's lexer skips # to the line's end, has no rule for ;, and reads %% as a comment even
 // in quotes, since journey has no strings. It reads its keywords in any case and at the start of a longer word, so a line
@@ -66,7 +67,7 @@ export function parseJourney(src: Source): Journey | Fail {
 // Reads the statement t on line n into journey: null, or why it fails. Accessibility text is not drawn, so a # or ; in it
 // is no comment.
 function statement(journey: Journey, t: string, n: number): Fail | null {
-  if (ACC.test(t)) return null
+  if (ACC.test(t)) return t.replace(ACC, '').trim() ? null : fail(`syntax:${n}`)
   if (UNREAD.test(t)) return fail(`syntax:${n}`)
   const title = TITLE.exec(t)?.[1]
   if (title !== undefined) {

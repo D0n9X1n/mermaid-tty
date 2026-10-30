@@ -141,9 +141,9 @@ claude --debug
 | `unclosed-subgraph`、`unclosed-frame`、`cluster-edge` | 块未闭合，或图布局无法放置指向簇的连线。 |
 | `invisible-label` | 无法忠实显示不可见流程图连线上的标签。 |
 | `scope:<line>`、`mark-label:<line>` | 状态跨越不兼容的作用域，或给特殊状态标记添加了描述。 |
-| `semicolon`、`hash` | 状态图或时序图文本中的分号，或时序图文本中的井号，会被解析为其他含义。 |
-| `keyword`、`id`、`create`、`destroy`、`destroyed`、`inactive` | 不支持的时序图参与者 id、生命周期或激活用法。 |
-| `box-color`、`box-split`、`empty-box`、`autonumber` | 不支持的时序图分组框声明、分组或自动编号。 |
+| `semicolon`、`hash` | 状态图文本中的分号，或时序图 id、别名、标题、分组框标签中的井号，或 `#9829;` 这样的实体，会被解析为其他含义。时序图语句在 `;` 处拆分，消息、注释和条件文本在 `#` 处结束，与 Mermaid 一致。 |
+| `keyword`、`id`、`create`、`destroy`、`destroyed`、`inactive`、`undeclared` | 时序图消息或注释使用了关键字，或后跟空格的数字（Mermaid 会拒绝）；或不支持的生命周期或激活用法；或只出现在 `activate`、`deactivate`、`destroy` 中的 id（Mermaid 会失败）。`participant end`、`participant 42` 这样的声明可以绘制。 |
+| `box-color`、`box-split`、`empty-box`、`autonumber` | 不支持的时序图分组框声明或分组（包括以 `currentColor`、CSS 全局关键字或 `Canvas`、`Menu` 等系统颜色开头的标签，浏览器会将其读作颜色），或自动编号的起始值、步长或显示的编号不是安全整数。重新开始编号和 `autonumber off` 可以绘制。 |
 | `branch:<line>`、`checkout:<line>`、`merge:<line>`、`pick:<line>` | 无效的 gitGraph 分支操作、合并或 cherry-pick。 |
 | `link-ambiguous` | gitGraph 分支或合并会看起来连接了错误的提交。 |
 | `section-empty`、`section-repeat`、`empty-section`、`section:<line>` | 甘特图分区为空或重复，时间线分区为空，或时间线混用了有分区和无分区的时段。 |
@@ -172,8 +172,8 @@ claude --debug
 
 **不同字段有不同的文本规则。** 规则以 Mermaid 12.2.0 的实际显示结果为准，而不只是以能否解析为准（见 `docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md`，X1–X4）：
 
-- HTML 类字段拒绝 Mermaid 会解码、删除或改写的实体引用和标记。普通的 `Q&A`、`Q & A` 和 `a < b` 可以保持原样；HTML 标签中的 `a<b` 则不行。所有文本模式都拒绝 Mermaid 的 `#name;`、`#123;` 实体及内部实体标记。
-- 流程图标签拒绝 Markdown 字符串、`fa:fa-user` 之类的图标标记、`$$...$$` 数学公式以及字面的 `\n`。状态图、类图、ER 图和思维导图还会拒绝改变文字的 Markdown 强调和标点转义。普通的 `snake_case`、`_private`、`a*b` 和 `C:\Users` 可以保持原样。类图注释中的字面 `\n` 原样显示。
+- HTML 类字段拒绝 Mermaid 会解码、删除或改写的实体引用和标记。普通的 `Q&A`、`Q & A` 和 `a < b` 可以保持原样；HTML 标签中的 `a<b` 则不行。其他图表拒绝 Mermaid 的 `#name;`、`#123;` 实体及内部实体标记。流程图标签把十进制编码（如 `#35;`、`#9829;`）和 Mermaid 会显示的名称（如 `#quot;`）画成对应字符；未知名称、控制字符或空白编码，以及解码后成为标记的编码仍会回退。
+- 流程图把 `A <-- text --> B`（以及 `<-. .->`、`<== ==>`）画成双箭头；`<--o` 之类的混合端标记只画 Mermaid 所画的箭头端；以一段引号开头的标签如 `["a" b]` 画成 `a b`；跨多行的 `@{ … }`（首行只有 `id@{`，每行一个 `key: value`，缩进一致）；不含强调的 Markdown 字符串 `` "`…`" `` 画出其文字。含强调或转义的 Markdown 字符串仍会回退：终端绘图尚不支持粗体或斜体标签文字。流程图标签拒绝 `fa:fa-user` 之类的图标标记、`$$...$$` 数学公式以及字面的 `\n`。状态图、类图、ER 图和思维导图还会拒绝改变文字的 Markdown 强调和标点转义。普通的 `snake_case`、`_private`、`a*b` 和 `C:\Users` 可以保持原样。除饼图和 gitGraph 外，空的 `accTitle:` 或 `accDescr:` 会回退：Mermaid 会把下一行读作其文字。类图注释中的字面 `\n` 原样显示。
 - 支持多行的字段会在 `<br>`、`<BR>`、`<br/>` 和 `<br />` 处换行。别名、边框标题等单行字段即使在 Mermaid 中支持换行，也可能回退。时间线只按小写 `<br>` 换行；饼图切片及用户旅程的任务、分区保留换行标记原文；旅程中的参与者则拒绝这些标记。标题采用保守的净化检查，任何 `<` 都会回退。
 - 关闭 HTML 标签会改变 Mermaid 的文本渲染。frontmatter 中的 `htmlLabels` 或嵌套 `*.htmlLabels` 只接受布尔值 `true`；其他值都会回退，包括加引号的 `"true"`。
 - 不同语法中的空白并非都可互换：饼图和 gitGraph 拒绝双引号外的特殊空白；思维导图和象限图拒绝首行或空白行中的特殊空白。使用普通空格和制表符作为分隔符最稳妥。

@@ -4,13 +4,13 @@ Simple sample
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -18,21 +18,20 @@ Simple sample
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @60 roles
 TTTTTTTTTTTTT
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -40,21 +39,20 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean
 @80
 Simple sample
        ●
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -62,21 +60,20 @@ Simple sample
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @80 roles
 TTTTTTTTTTTTT
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -84,21 +81,20 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean
 @120
 Simple sample
        ●
       ┌┘
       │
       ▼
-  ( Still )◄───────┐
-     ┌┤            │
-     │└─────────┐  │
-     ▼          │  │
- ( Moving )┐    │ ┌┘
-     │     │    │ │
-    ┌┘     └────┼─┘
+  ( Still )
+    ▲┌┤
+    ││└─────────┐
+    │▼          │
+ ( Moving )     │
+     │          │
+    ┌┘          │
     │           │
     ▼        ┌──┘
 ( Crash )    │
@@ -106,21 +102,20 @@ Simple sample
     │   ┌┐   │
     │   │└───┘
     │   ▼
-    └──┐◉◄─┐
-       └───┘
+    └──►◉
 @120 roles
 TTTTTTTTTTTTT
        n
       ee
       e
       a
-  nnNNNNNnnaeeeeeeee
-     ee            e
-     eeeeeeeeeeee  e
-     a          e  e
- nnNNNNNNnne    e ee
-     e     e    e e
-    ee     eeeeeeee
+  nnNNNNNnn
+    aee
+    eeeeeeeeeeeee
+    ea          e
+ nnNNNNNNnn     e
+     e          e
+    ee          e
     e           e
     a        eeee
 nnNNNNNnn    e
@@ -128,5 +123,4 @@ nnNNNNNnn    e
     e   ee   e
     e   eeeeee
     e   a
-    eeeenaee
-       eeeee
+    eeean

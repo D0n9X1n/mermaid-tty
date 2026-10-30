@@ -33,7 +33,7 @@ test('A1: R3 fan-in cannot join a fan-out network that implies a missing edge', 
   assert.equal(validate(r.drawing), null)
   assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
   assert.equal(text(r.drawing).join('\n'), [
-    '[ A ]  [ D ]', '  │      └┐', ' ┌┤     ┌┐│', ' │└─────┘││', ' ▼       ▼▼', '[ C ]  [ B ]',
+    '[ A ]  [ D ]', '  │      └─┐', ' ┌┤     ┌┐ │', ' │└─────┘│ │', ' ▼       ▼ ▼', '[ C ]  [ B ]',
   ].join('\n'))
 })
 
@@ -43,7 +43,7 @@ test('A1: R3 two-headed links never merge into a one-headed incoming net', () =>
   assert.equal(validate(r.drawing), null)
   assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
   assert.equal(text(r.drawing).join('\n'), [
-    '[ A ]    [ B ]', '  │        ▲', '  └───┐┌┐  │', '      ││└──┘', '      ▼▼', '    [ C ]',
+    '[ A ]    [ B ]', '  │        ▲', '  └───┐ ┌┐ │', '      │ │└─┘', '      ▼ ▼', '    [ C ]',
   ].join('\n'))
 })
 

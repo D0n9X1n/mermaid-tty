@@ -17,7 +17,7 @@ export type Source = { header: string; title: string | null; config: Readonly<Re
 // would read another way, or one that is true or numeric), 'unsupported-char
 // U+XXXX' (a title character no terminal draws reliably, checked here for every
 // diagram type), 'config:<dotted key>' (a numeric-looking plain config scalar
-// that is not a safe integer) or 'empty' (no header, or nothing after it).
+// that is not a safe integer or a finite plain decimal) or 'empty' (no header, or nothing after it).
 // Mermaid's encodeEntities (utils.ts), before any diagram parses, drops the last ; of whatever matches style…:…#…; or
 // classDef…:…#…; on a line, wherever it sits, label text included. Each kept line is read as Mermaid's parser reads it.
 const encodeColours = (t: string): string =>
@@ -284,18 +284,21 @@ function scalar(v: string): Raw | null {
   return /:(?:[ \t]|$)/.test(plain) ? null : { quoted: false, text: plain }
 }
 
-// A plain scalar's value as js-yaml's JSON_SCHEMA resolves it: null, a bool, or
-// a decimal integer that is safe (`-0` gives 0, as in js-yaml); else its text.
+// A plain scalar's value as js-yaml's JSON_SCHEMA resolves it: null, a bool, a
+// decimal integer that is safe (`-0` gives 0, as in js-yaml), or a finite plain
+// decimal with an optional exponent (`0.5`, `-0.0` gives -0, `2.5e3`), which
+// js-yaml 4.3.0's float type reads as parseFloat does; else its text.
 // Undefined, so that the source falls back, for any other numeric-looking text:
 // a sign, a digit or `.`, then only word characters, `.`, `+` and `-`. That covers
-// every float and every hex, octal, binary, signed, leading-zero or unsafe integer
-// js-yaml reads, and fails closed on some it reads as strings, such as `-x`,
-// `1.2.3` and `1_000` (a string in js-yaml 4.3.0, 1000 in 4.1.0). `2024 Roadmap`
-// and `50%` stay strings.
+// every other float (`1e3`, `.5`, `1.`, `+1.5`, `.inf`, `.nan`, `1.5e400`) and every
+// hex, octal, binary, signed, leading-zero or unsafe integer js-yaml reads, and
+// fails closed on some it reads as strings, such as `-x`, `1.2.3` and `1_000`
+// (a string in js-yaml 4.3.0, 1000 in 4.1.0). `2024 Roadmap` and `50%` stay strings.
 function typed(text: string): Scalar | undefined {
   if (/^(?:~|null|Null|NULL)$/.test(text)) return null
   if (/^(?:true|True|TRUE|false|False|FALSE)$/.test(text)) return text.toLowerCase() === 'true'
   const n = Number(text)
   if (/^-?(?:0|[1-9]\d*)$/.test(text) && Number.isSafeInteger(n)) return n || 0
+  if (/^-?(?:0|[1-9]\d*)\.\d+(?:[eE][-+]?\d+)?$/.test(text) && Number.isFinite(n)) return n
   return /^[-+.\d][\w.+-]*$/.test(text) ? undefined : text
 }

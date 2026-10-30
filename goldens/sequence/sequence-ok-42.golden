@@ -1,0 +1,60 @@
+@60
+[ A ]    [ B ]
+  │ 10. a  │
+  │───────►│
+  │   b    │
+  │◄───────│
+  │ 20. c  │
+  │───────►│
+  │  3. d  │
+  │◄───────│
+@60 roles
+nnNnn    nnNnn
+  o LLLLL  o
+  oeeeeeeeao
+  o   L    o
+  oaeeeeeeeo
+  o LLLLL  o
+  oeeeeeeeao
+  o  LLLL  o
+  oaeeeeeeeo
+@80
+[ A ]    [ B ]
+  │ 10. a  │
+  │───────►│
+  │   b    │
+  │◄───────│
+  │ 20. c  │
+  │───────►│
+  │  3. d  │
+  │◄───────│
+@80 roles
+nnNnn    nnNnn
+  o LLLLL  o
+  oeeeeeeeao
+  o   L    o
+  oaeeeeeeeo
+  o LLLLL  o
+  oeeeeeeeao
+  o  LLLL  o
+  oaeeeeeeeo
+@120
+[ A ]    [ B ]
+  │ 10. a  │
+  │───────►│
+  │   b    │
+  │◄───────│
+  │ 20. c  │
+  │───────►│
+  │  3. d  │
+  │◄───────│
+@120 roles
+nnNnn    nnNnn
+  o LLLLL  o
+  oeeeeeeeao
+  o   L    o
+  oaeeeeeeeo
+  o LLLLL  o
+  oeeeeeeeao
+  o  LLLL  o
+  oaeeeeeeeo
