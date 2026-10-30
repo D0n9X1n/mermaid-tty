@@ -138,7 +138,7 @@ claude --debug
 | `icon`、`math`、`newline` | Mermaid 会替换图标、渲染数学公式，或在 mermaid-tty 不画换行的位置（如子图标题）将字面的 `\n` 转为换行。流程图节点或连线标签中的字面 `\n` 会像 Mermaid 一样画成换行。 |
 | `whitespace` | 图表词法分析器不接受的空白，例如饼图或 gitGraph 中引号外的不换行空格。 |
 | `unsupported-char U+XXXX` | 该字符在终端中的宽度不可靠，详见“宽度与 CJK”。 |
-| `generic` | ER 文本包含多个 `~`；Mermaid 会将 `~...~` 转为 `<...>`，而非原样显示。 |
+| `generic` | ER 实体标签或属性列中的 `~...~` 被 Mermaid 显示为 `<...>` 后会拼出 `<br>`。其他 `~...~` 在 Mermaid 显示为 `<...>` 的位置画成 `<...>`，其余位置原样显示。 |
 | `id-collision`、`id-clash` | id 与节点、边框或内部生成的所有者 id 冲突。 |
 | `unclosed-subgraph`、`unclosed-frame`、`cluster-edge` | 块未闭合，或图布局无法放置指向簇的连线。 |
 | `invisible-label` | 无法忠实显示不可见流程图连线上的标签。 |

@@ -1,0 +1,8 @@
+erDiagram
+ORDER["Order~T~"] {
+  List~Item~ items PK
+  Map~K,V~ index
+  string ref "see ~Ref~"
+}
+TAG["Tag~T~"]
+ORDER ||--o{ TAG : "has ~T~"

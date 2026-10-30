@@ -138,7 +138,7 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 | `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break where mermaid-tty draws none, such as a subgraph title. A literal `\n` in a flowchart node or edge label draws as a line break, as in Mermaid. |
 | `whitespace` | Whitespace the diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph. |
 | `unsupported-char U+XXXX` | A character whose terminal width is not reliable. See Width and CJK. |
-| `generic` | ER text contains multiple `~` characters; Mermaid turns a `~...~` pair into `<...>` rather than showing it literally. |
+| `generic` | An ER entity label or attribute column whose `~...~` pairs Mermaid shows as `<...>` would then spell a `<br>`. Other `~...~` pairs draw as `<...>` where Mermaid shows them so, and as written elsewhere. |
 | `id-collision`, `id-clash` | An id collides with a node, frame or internally generated owner id. |
 | `unclosed-subgraph`, `unclosed-frame`, `cluster-edge` | An unclosed block, or an edge to a cluster the graph layout cannot place. |
 | `invisible-label` | A label on an invisible flowchart edge cannot be shown faithfully. |

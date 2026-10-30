@@ -395,8 +395,9 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules. Mermaid's ER parser
 
 **Not supported (falls back):**
 - the undocumented `u` parent marker;
-- `~…~` and backtick attribute words;
+- backtick attribute words, and an attribute line whose `~` Mermaid's lexer reads across columns (a `~` in two columns, a lone `~` in the type or name, or a `~` in a comment's first word with another after it);
 - entity names containing `*`, a backtick, or `_` at either end of a word, because Mermaid renders them as Markdown; in aliases, relation labels, subgraph titles and attribute comments, Markdown other than bold and italic (a code span, a style nested in itself, an escape).
+- a `~…~` pair together with bold or italic in one text, as how Mermaid's parseGenericTypes and marked then combine is unverified (`generic`);
 
 These also fall back, because Mermaid keeps only the first:
 - a second alias for one entity;
@@ -434,6 +435,7 @@ An id used for both an entity and a subgraph also falls back.
 | `-19`…`22` | First fitting ladder step: tighter gaps, wrapped comments, LR→TB, keyed labels |
 | `-23` | Two entities with identical aliases both render |
 | `-24` | `style CUSTOMER fill:#f9f` parsed and ignored |
+| `-26` | `~T~` drawn as `<T>` in the label of an entity with attributes and in attribute columns, and as written in a relation label and an entity with none |
 
 **Rejection fixtures:**
 
@@ -447,7 +449,7 @@ An id used for both an entity and a subgraph also falls back.
 | `-06` | Repeated: `p[Person]`, then `p[Human]` |
 | `-07` | Duplicate: `CAR` listed in two subgraphs |
 | `-08` | Duplicate: `Sales` used as an entity, then as a subgraph id |
-| `-09` | Valid prefix, then the attribute `List~string~ tags` in an entity block |
+| `-09` | Valid prefix, then the attribute `List~string~ tags "a~b"`, which Mermaid's lexer reads as one word through the last `~` |
 | `-10` | Valid prefix, then an attribute name in backticks, `` string `id` `` |
 | `-11` | Valid prefix, then Markdown nesting bold in bold in an alias, `p["**a **b** c**"]` |
 | `-12` | Valid prefix, then a code span in a relation label, `` C \|\|--o{ D : "`owns`" `` |
@@ -1969,6 +1971,7 @@ The title follows common rule 3. No config key is honored.
 | er | identical aliases on distinct entities | er-ok-23 |
 | er | `style` ignored | er-ok-24 |
 | er | Markdown bold and italic in an alias, relation label and attribute comment | er-ok-25 |
+| er | `~T~` as `<T>` where erBox shows it | er-ok-26 |
 | requirement | header `requirementDiagram` | requirement-ok-01 |
 | requirement | frontmatter `title` | requirement-ok-01 |
 | requirement | type `requirement` | requirement-ok-01 |

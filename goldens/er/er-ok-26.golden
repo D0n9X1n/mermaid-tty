@@ -1,0 +1,78 @@
+@60
+[           Order<T>            ]
+[ List<Item> items PK           ]
+[ Map<K,V>   index              ]
+[ string     ref      see <Ref> ]
+                │
+                │1
+              ┌─┘
+           has ~T~
+              │
+              │0..*
+              │
+          [ Tag~T~ ]
+@60 roles
+nnnnnnnnnnnnNNNNNNNNnnnnnnnnnnnnn
+nlLLLLLLLLLLlLLLLLlLLllllllllllln
+nlLLLLLLLLlllLLLLLlllllllllllllln
+nlLLLLLLlllllLLLllllllOOOOOOOOOln
+                e
+                eA
+              eee
+           LLLLLLL
+              e
+              eAAAA
+              e
+          nnNNNNNNnn
+@80
+[           Order<T>            ]
+[ List<Item> items PK           ]
+[ Map<K,V>   index              ]
+[ string     ref      see <Ref> ]
+                │
+                │1
+              ┌─┘
+           has ~T~
+              │
+              │0..*
+              │
+          [ Tag~T~ ]
+@80 roles
+nnnnnnnnnnnnNNNNNNNNnnnnnnnnnnnnn
+nlLLLLLLLLLLlLLLLLlLLllllllllllln
+nlLLLLLLLLlllLLLLLlllllllllllllln
+nlLLLLLLlllllLLLllllllOOOOOOOOOln
+                e
+                eA
+              eee
+           LLLLLLL
+              e
+              eAAAA
+              e
+          nnNNNNNNnn
+@120
+[           Order<T>            ]
+[ List<Item> items PK           ]
+[ Map<K,V>   index              ]
+[ string     ref      see <Ref> ]
+                │
+                │1
+              ┌─┘
+           has ~T~
+              │
+              │0..*
+              │
+          [ Tag~T~ ]
+@120 roles
+nnnnnnnnnnnnNNNNNNNNnnnnnnnnnnnnn
+nlLLLLLLLLLLlLLLLLlLLllllllllllln
+nlLLLLLLLLlllLLLLLlllllllllllllln
+nlLLLLLLlllllLLLllllllOOOOOOOOOln
+                e
+                eA
+              eee
+           LLLLLLL
+              e
+              eAAAA
+              e
+          nnNNNNNNnn

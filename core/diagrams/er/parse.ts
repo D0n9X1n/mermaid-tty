@@ -62,8 +62,9 @@ const ACC_BLOCK = /^accDescr\s*\{/
 // A keyword where a line starts, in any case, alone or starting a longer word: it is only its own statement (common rule 5).
 const KEYWORD = /^(?:erDiagram|direction|subgraph|end|style|classDef|class|click|accTitle|accDescr)/i
 // An attribute: type, name, keys and comment. The type may end in ? and hold (…), [] and a comma, as decimal(10,2); the name
-// may start with *. Both are narrower than Mermaid's ATTRIBUTE_WORD, so a ~…~ or backtick word fails.
-const TYPE = String.raw`[\p{L}_][\p{L}\p{N}_\-\[\]().,]*\??`, A_NAME = String.raw`\*?[\p{L}_][\p{L}\p{N}_\-\[\]().]*`
+// may start with *. Either may hold ~, which inBlock checks as Mermaid's lexer reads it. Both are narrower than Mermaid's
+// ATTRIBUTE_WORD, so a backtick word fails.
+const TYPE = String.raw`[\p{L}_~][\p{L}\p{N}_\-\[\]().,~]*\??`, A_NAME = String.raw`\*?[\p{L}_][\p{L}\p{N}_\-\[\]().~]*`
 const KEY = '(?:PK|FK|UK)'
 const ATTR = re(String.raw`(?<type>${TYPE})\s+(?<name>${A_NAME})(?:\s+(?<keys>${KEY}(?:\s*,\s*${KEY})*))?(?:\s*(?<comment>"[^"]*"))?`)
 // In a block, Mermaid's lexer reads PK, FK or UK, in any case, before a word boundary, as a key wherever a word starts.
@@ -85,7 +86,7 @@ function stop(reason: string): never { throw fail(reason) }
 // The model src's statements build, or why it cannot be drawn: 'header' (not erDiagram), 'syntax:<n>' (a statement on source
 // line n outside the subset, or a block or subgraph opened there and never closed), 'markdown:<n>' (Markdown in a name,
 // alias, label or title there) or 'repeat:<n>' (a second alias, an entity in two subgraphs, or an id for both an entity and a
-// subgraph, there).
+// subgraph, there), or 'generic' (an entity label or attribute column whose ~…~ pairs Mermaid shows as a <br>).
 export function parseEr(src: Source): ErModel | Fail {
   try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
 }
@@ -114,6 +115,8 @@ function walk(src: Source): ErModel {
   // Source lines start at 1, so 0 is none.
   const unclosed = descr || st.block?.n || st.open.at(-1)?.n
   if (unclosed) stop(`syntax:${unclosed}`)
+  // erBox draws an entity with attributes through addText, which shows ~…~ as <…>; one with none is a plain label.
+  for (const e of st.m.entities) if (e.attrs.length > 0) e.label = generic(e.label)
   return st.m
 }
 
@@ -148,7 +151,7 @@ function statement(t: string, n: number, st: State): void {
 function inBlock(t: string, n: number, st: State): void {
   if (t === '}') { st.block = null; return }
   const m = ATTR.exec(t) ?? stop(`syntax:${n}`), g = m.groups!
-  if (KEY_WORD.test(g.type!) || KEY_WORD.test(g.name!)) stop(`syntax:${n}`)
+  if (KEY_WORD.test(g.type!) || KEY_WORD.test(g.name!) || misread(t, g)) stop(`syntax:${n}`)
   const e = st.block!.e, a = attribute(g)
   if (a.comment.trim()) st.m.keyable.push({ owner: `${e.id}.a${e.attrs.length}.comment`, text: a.comment })
   e.attrs.push(a)
@@ -275,10 +278,11 @@ function text(s: string, n: number, br: Br = 'none', shown = false): string {
 // 'markdown', 'icon' or 'math'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere, as an
 // entity's label, an attribute's row and a subgraph's title draw on one line. A blank line among two or more, from
 // <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart. With emphasis (shown text and an
-// attribute's comment) its bold and italic draw marked, as styled says.
+// attribute's comment) its bold and italic draw marked, as styled says. A ~…~ pair is drawn as written here; generic() then
+// shows it as erBox does where it applies.
 function drawn(s: string, br: Br = 'none', emphasis = false): string {
-  // erBox draws a label through parseGenericTypes, which turns a ~…~ pair into <…>.
-  if ((s.match(/~/g) ?? []).length > 1) stop('generic')
+  // erBox runs parseGenericTypes before marked; how a ~…~ pair and bold or italic then mix is unverified, so both fail.
+  if (emphasis && tildes(s) > 1 && MARKDOWN.test(s)) stop('generic')
   let d = s
   // A relation label (br 'any') is an edge label: Mermaid makes each <br> a newline before marked.
   if (br === 'any' && !oneParagraph(s, true)) stop('markdown')
@@ -297,8 +301,50 @@ function drawn(s: string, br: Br = 'none', emphasis = false): string {
   return d
 }
 
-// An attribute line's columns, each drawn as written.
+// An attribute line's columns, each as erBox's addText shows it: its ~…~ as <…>.
 function attribute(g: Groups): Attr {
-  return { type: drawn(g.type!), name: drawn(g.name!), keys: (g.keys ?? '').split(/\s*,\s*/).filter(Boolean).join(', '),
-    comment: drawn(unquote(g.comment ?? ''), 'none', true) }
+  return { type: generic(drawn(g.type!)), name: generic(drawn(g.name!)), keys: (g.keys ?? '').split(/\s*,\s*/).filter(Boolean).join(', '),
+    comment: generic(drawn(unquote(g.comment ?? ''), 'none', true)) }
+}
+
+const tildes = (s: string): number => (s.match(/~/g) ?? []).length
+
+// Whether Mermaid's lexer reads attribute line t, with columns g, otherwise than ATTR does. Where a word starts, its
+// ([^\s]*)[~].*[~]([^\s]*) rule comes before a plain word or a "…" comment: once a line holds two ~, a word whose run
+// holds a ~ is read through the last ~ on the line, and the run after it. So a ~ in the type or name must be every ~ on
+// the line, at least two, with no " after it in its run; and a comment's first run must hold no ~.
+function misread(t: string, g: Groups): boolean {
+  const all = tildes(t)
+  if (all < 2) return all === 1 && tildes(g.type! + g.name!) === 1
+  const word = [g.type!, g.name!].find(w => w.includes('~'))
+  if (word !== undefined) return tildes(word) !== all || /~\S*"/.test(t)
+  return /^"\S*~/.test(g.comment ?? '')
+}
+
+// Mermaid 12.2.0's parseGenericTypes, as addText runs it: s split at commas, a piece with one ~ joined to a next with
+// one; in each piece with two or more ~, the first and last ~ become < and > until no pair is left, a leading ~ held
+// out when the count is odd. A result that spells a <br> falls back 'generic', as no field here splits there.
+function generic(s: string): string {
+  const sets = s.split(/(,)/), out: string[] = []
+  for (let i = 0; i < sets.length; i++) {
+    let set = sets[i]!
+    if (set === ',' && i > 0 && i + 1 < sets.length && tildes(sets[i - 1]!) === 1 && tildes(sets[i + 1]!) === 1) {
+      set = `${sets[i - 1]},${sets[i + 1]}`; i++; out.pop()
+    }
+    out.push(pairs(set))
+  }
+  const shown = out.join('')
+  if (/<\/?br/i.test(shown)) stop('generic')
+  return shown
+}
+
+// One parseGenericTypes set with each ~ pair, from the outside in, as < and >.
+function pairs(set: string): string {
+  const n = tildes(set)
+  if (n <= 1) return set
+  const lead = n % 2 !== 0 && set.startsWith('~'), cs = [...(lead ? set.slice(1) : set)]
+  for (let a = cs.indexOf('~'), b = cs.lastIndexOf('~'); a !== -1 && a !== b; a = cs.indexOf('~'), b = cs.lastIndexOf('~')) {
+    cs[a] = '<'; cs[b] = '>'
+  }
+  return (lead ? '~' : '') + cs.join('')
 }
