@@ -29,7 +29,7 @@ const FRAME = re(String.raw`(alt|opt|loop|par|critical|break)(?:\s+(.*))?`)
 const SECTION = re(String.raw`(else|and|option)(?:\s+(.*))?`)
 // The frame each section keyword divides.
 const DIVIDES: Record<string, Frame['type']> = { else: 'alt', and: 'par', option: 'critical' }
-const RECT = re(String.raw`rect\s+.+`)
+const RECT = re(String.raw`rect(?:\s+.*)?`)
 const BOX = re(String.raw`box(?:\s+(.*))?`)
 const AUTONUMBER = re(String.raw`autonumber(?:\s+(off)|\s+(\d+)(?:\s+(\d+))?)?`)
 const TITLE = re(String.raw`title\s+(.*)`)
@@ -59,9 +59,12 @@ const NAMED = new Set(`aliceblue antiquewhite aqua aquamarine azure beige bisque
   navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
   powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey
   snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen`.split(/\s+/))
-// A box's leading color, then a space or the line end: a word (boxLabel checks it is named or transparent) or #hex.
-// Mermaid reads the # of a #hex as a comment, so it draws box #abc G untitled; the plan drops the color and titles the box G.
-const COLOR = /^(?:([a-zA-Z]+)|#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4}))(?:\s+|$)/
+// Words a browser also reads as a color, each to its own support: currentColor, the CSS-wide keywords, and the CSS Color 4
+// system colors, deprecated ones included. A box label led by one fails box-color.
+const OTHER_COLORS = new Set(`currentcolor inherit initial unset revert accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas
+  canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption
+  appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaption inactivecaptiontext infobackground infotext menu
+  menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext`.split(/\s+/))
 // Not in the plan: the strict subset of rgb(), rgba(), hsl() and hsla() box colors. rgb() and rgba() take three integers
 // 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or turn, then two
 // percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts are space-separated.
@@ -119,9 +122,8 @@ function closes(rest: string, n: number): boolean {
 // comment) or the line end ('').
 type Stmt = { n: number; raw: string; cut: string }
 // Not in the plan: as in Mermaid 12.2.0, a ; ends a statement and a # starts a comment that runs to the line end.
-// Accessibility text runs to the line end, an accDescr { block to its }, whatever it holds. A box or rect line keeps its
-// # color as the plan reads it, and fails hash if a ; follows the #, where Mermaid reads a comment. encodeEntities turns
-// an entity such as #9829; into other text before the lexer runs, so one fails hash.
+// Accessibility text runs to the line end, an accDescr { block to its }, whatever it holds. encodeEntities turns an entity
+// such as #9829; into other text before the lexer runs, so one fails hash.
 function* statements(lines: Source['lines']): Generator<Stmt> {
   let accFrom = 0
   for (const { n, text } of lines) {
@@ -135,9 +137,7 @@ function* statements(lines: Source['lines']): Generator<Stmt> {
         break
       }
       if (/#\w+;/.test(rest)) stop('hash')
-      const whole = /^(?:box|rect)\s/.test(rest)
-      if (whole && /#.*;/.test(rest)) stop('hash')
-      const i = rest.search(whole ? /;/ : /[;#]/), cut = i < 0 ? '' : rest[i]!
+      const i = rest.search(/[;#]/), cut = i < 0 ? '' : rest[i]!
       const raw = i < 0 ? rest : rest.slice(0, i)
       if (raw.trim()) yield { n, raw, cut }
       if (cut !== ';') break
@@ -155,7 +155,8 @@ function walk(src: Source): Seq {
   const seq: Seq = { title: src.title, participants: [], boxes: [], items: [] }
   // A frontmatter title is drawn, so it is checked like any label.
   if (src.title !== null) text(src.title, 'sanitized', 'none')
-  const frames: Frame[] = [], destroyed = new Set<string>()
+  // marked: the ids activate, deactivate or destroy names, which Mermaid does not declare.
+  const frames: Frame[] = [], destroyed = new Set<string>(), marked = new Set<string>()
   // Each participant's activation depth: Mermaid fails on deactivating one that is not active.
   const depth = new Map<string, number>()
   // Mermaid 12.2.0's renderer numbers messages in source order: an index from 1, a step of 1, shown once autonumber is on.
@@ -195,7 +196,7 @@ function walk(src: Source): Seq {
       const id = m[3]!, known = seq.participants.some(p => p.id === id)
       mention(id)
       // Not in the plan: as in Mermaid, only a new participant can be created.
-      if (m[1] && known) stop('create')
+      if (m[1] && (known || marked.has(id))) stop('create')
       // Not in the plan: as in Mermaid, declaring a known participant again changes it only with an as alias.
       const p = seq.participants.find(q => q.id === id)!
       if (!known || m[4] !== undefined) { p.kind = m[2] as Participant['kind']; p.label = m[4] === undefined ? id : text(unwrap(m[4]), 'plain', 'none') }
@@ -210,11 +211,12 @@ function walk(src: Source): Seq {
     } else if ((m = MARK.exec(t))) {
       if (hash) stop('hash')
       const kind = m[1] as Mark['kind'], id = m[2]!
-      // Not in the plan: Mermaid fails on activating a participant nothing else declares; one that a message could not
-      // name, a keyword or number, falls back here.
+      // As in Mermaid 12.2.0, a mark does not declare its id, so it does not set column order. Mermaid fails on one nothing
+      // else declares; one that a message could not name, a keyword or number, falls back here.
       if (!seq.participants.some(p => p.id === id) && (KEYWORD.test(id) || SOFT.has(id.toLowerCase()))) stop('keyword')
       if (!seq.participants.some(p => p.id === id) && NUMBER.test(id)) stop('id')
-      mention(id)
+      if (destroyed.has(id)) stop('destroyed')
+      marked.add(id)
       if (kind === 'activate') activation(id, 1)
       if (kind === 'deactivate') activation(id, -1)
       if (kind === 'destroy') destroying.push(id)
@@ -274,6 +276,7 @@ function walk(src: Source): Seq {
   // Not in the plan: a create or destroy with no message after it falls back.
   if (creating.length) stop('create')
   if (destroying.length) stop('destroy')
+  if ([...marked].some(id => !seq.participants.some(p => p.id === id))) stop('undeclared')
   return seq
 }
 
@@ -290,7 +293,7 @@ function message(t: string): [Msg, string] | null {
   return [{ kind: 'msg', from: from[1]!, to: to[2]!, line, tail, head, text: text(unwrap(to[4]!), 'plain', 'any'), activate: to[1] === '+', deactivate: to[1] === '-', num: null }, to[3]!]
 }
 
-// A box's label: its text after a leading CSS color, which is not drawn; null if none is left. As in Mermaid, a lowercase
+// A box's label, cut at any # by statements(): its text after a leading CSS color, which is not drawn; null if none is left. As in Mermaid, a lowercase
 // rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in the plan: Mermaid drops that color only if
 // the browser reads it as one, and else titles the box with the whole label, so one outside the strict subset fails box-color.
 function boxLabel(s: string): string | null {
@@ -299,8 +302,10 @@ function boxLabel(s: string): string | null {
     if (!COLOR_FN.test(color)) stop('box-color')
     return s.slice(color.length) || null
   }
-  const c = COLOR.exec(s), name = c?.[1]?.toLowerCase()
-  return (c && (name === undefined || name === 'transparent' || NAMED.has(name)) ? s.slice(c[0].length) : s) || null
+  // As in Mermaid 12.2.0's parseBoxData: the color is the label's first run of word characters, wherever it ends.
+  const word = /^\w*/.exec(s)![0], name = word.toLowerCase()
+  if (OTHER_COLORS.has(name)) stop('box-color')
+  return (name === 'transparent' || NAMED.has(name) ? s.slice(word.length) : s).trim() || null
 }
 
 // A box's participants must be adjacent in column order. Not in the plan: an empty box, with no columns, is kept.

@@ -89,6 +89,12 @@ const OK: [string, string, object][] = [
     seq(AB, [msg('A', 'B', 'a', { num: 10 }), msg('B', 'A', 'b'), msg('A', 'B', 'c', { num: 20 }), msg('B', 'A', 'd', { num: 3 })])],
   ['sequence-ok-43', 'participant end\nparticipant 42 as Answer\nlink->>42: ask\n42-->>link: done',
     seq([part('end'), part('42', 'participant', 'Answer'), part('link')], [msg('link', '42', 'ask'), msg('42', 'link', 'done', { line: 'dotted' })])],
+  ['sequence-ok-44', 'box #abc G\nparticipant A\nend\nbox Aqua Team #1\nparticipant B\nend\nA->>B: hi',
+    seq(AB, [msg('A', 'B', 'hi')], { boxes: [{ label: null, ids: ['A'] }, { label: 'Team', ids: ['B'] }] })],
+  ['sequence-ok-45', 'activate B\nNote over C: wait\nA->>B: go\ndeactivate B\ndestroy D\nB-xD: stop',
+    seq([part('C'), part('A'), part('B'), part('D')], [mark('activate', 'B'), note('over', ['C'], 'wait'), msg('A', 'B', 'go'), mark('deactivate', 'B'),
+      mark('destroy', 'D'), msg('B', 'D', 'stop', { head: 'cross' })])],
+  ['sequence-ok-46', 'rect\nA->>B: hi\nend', seq(AB, [frame('rect', [null, [msg('A', 'B', 'hi')]])])],
 ]
 // [matrix row, whole fence body, the exact reason].
 const REJECT: [string, string, string][] = [
@@ -101,8 +107,8 @@ const REJECT: [string, string, string][] = [
   ['sequence-reject-08', '---\ntitle: Checkout\n---\nsequenceDiagram\ntitle Payment\nA->>B: hi', 'title'],
 ]
 
-test('A2: every covered sequence-ok row, 01-25, 30-37 and 39-43, parses to its exact model', () => {
-  assert.deepEqual(OK.map(([id]) => id), '01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 30 31 32 33 34 35 36 37 39 40 41 42 43'.split(' ').map(n => `sequence-ok-${n}`))
+test('A2: every covered sequence-ok row, 01-25, 30-37 and 39-46, parses to its exact model', () => {
+  assert.deepEqual(OK.map(([id]) => id), '01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 30 31 32 33 34 35 36 37 39 40 41 42 43 44 45 46'.split(' ').map(n => `sequence-ok-${n}`))
   for (const [id, body, want] of OK) assert.deepEqual([id, P(body)], [id, want])
 })
 test('A5.errors: every covered sequence-reject row, 01-03 and 05-08, fails with its exact reason', () => {
@@ -127,15 +133,24 @@ const boxLabelOf = (rest: string) => P(`box ${rest}\nparticipant A\nend\nA->>A: 
 test('A2: a box label drops a leading CSS color: any of the 148 named colors in any case, transparent, #hex, rgb(), rgba(), hsl() or hsla()', () => {
   assert.deepEqual([CSS_NAMED.length, new Set(CSS_NAMED).size], [148, 148])
   assert.deepEqual(CSS_NAMED.flatMap(c => [boxLabelOf(`${c} Team`), boxLabelOf(`${c.toUpperCase()} Team`)]), CSS_NAMED.flatMap(() => ['Team', 'Team']))
-  assert.deepEqual(['Purple Alice & John', 'Aqua Group Description', 'transparent Team', 'Transparent Team', '#abc Team', '#ABCD Team', '#a1b2c3 Team', '#A1B2C3D4 Team',
+  assert.deepEqual(['Purple Alice & John', 'Aqua Group Description', 'transparent Team', 'Transparent Team',
     'rgb(1,2,3) Team', 'rgba(33,66,99,0.5) Team', 'hsl(10, 40%, 90%) Team', 'hsla(10, 40%, 90%, 0.5)   Team'].map(boxLabelOf),
-  ['Alice & John', 'Group Description', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team'])
+  ['Alice & John', 'Group Description', 'Team', 'Team', 'Team', 'Team', 'Team', 'Team'])
   // A color alone leaves no label, as does a bare box.
   assert.deepEqual(['Aqua', 'TRANSPARENT', '#abc', 'rgb(33,66,99)', 'hsla(10, 40%, 90%, 0.5)', ''].map(boxLabelOf), [null, null, null, null, null, null])
 })
-test('A2: a box label keeps a leading word that is not a whole CSS color: a named color ends at a space or the line end, and rgb() and hsl() are lowercase', () => {
-  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'Red-team', 'currentColor Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team']
+// Mermaid 12.2.0's parseBoxData takes the color from the label's first run of word characters (\w*), wherever it ends, and
+// keeps the whole label as the title unless the browser reads that run as a color.
+test('A2: a box label keeps a leading word that is not a CSS color, and drops one that is wherever the word ends', () => {
+  const kept = ['Another Group', 'Group without description', 'Redwood Team', 'RGB(1,2,3) Team', 'rgb (1,2,3) Team', 'Team Blue', 'Aqua2 x', 'red_team x']
   assert.deepEqual(kept.map(boxLabelOf), kept)
+  assert.deepEqual(['Red-team', 'red,team', 'Aqua: x'].map(boxLabelOf), ['-team', ',team', ': x'])
+})
+// Beyond the named colors, a browser reads currentColor, the CSS-wide keywords and the system colors (Canvas, Highlight,
+// Menu, …) as colors, each to its own support. Not in the plan: a box label led by one falls back.
+test('A5.errors: a box label led by currentColor, a CSS-wide keyword or a system color fails box-color', () => {
+  const bad = ['currentColor Team', 'inherit Team', 'initial X', 'unset X', 'revert X', 'Canvas Team', 'Highlight x', 'Menu x', 'buttontext x', 'Background x']
+  assert.deepEqual(bad.map(t => [t, P(`box ${t}\nparticipant A\nend\nA->>A: hi`)]), bad.map(t => [t, { reason: 'box-color' }]))
 })
 // Mermaid takes a box's color from a lowercase rgb(, rgba(, hsl( or hsla( to the label's last ), and drops it only if the
 // browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is dropped; any other falls back.
@@ -175,8 +190,8 @@ test('A2: rect takes any color text, which is not drawn, holds any statement but
     [frame('rect', [null, [msg('A', 'B', 'a'), frame('rect', [null, [frame('alt', ['x', [msg('A', 'B', 'b')]])]])]])])
   assert.deepEqual(P('alt x\nbox G\nparticipant A\nend\nA->>B: y\nend'), seq(AB, [frame('alt', ['x', [msg('A', 'B', 'y')]])], { boxes: [{ label: 'G', ids: ['A'] }] }))
 })
-test('A5.errors: rect needs a color; a box holds only participant and actor lines, sits in no rect, and must end', () => {
-  const bad: [string, string][] = [['rect\nA->>B: x\nend', 'syntax:2'], ['rect red\nbox G\nparticipant A\nend\nend', 'syntax:3'],
+test('A5.errors: a box holds only participant and actor lines, sits in no rect, and must end', () => {
+  const bad: [string, string][] = [['rect red\nbox G\nparticipant A\nend\nend', 'syntax:3'],
     ['rect red\nalt x\nbox G\nparticipant A\nend\nend\nend', 'syntax:4'], ['box G\nparticipant A\nA->>B: x\nend', 'syntax:4'],
     ['box G\ncreate participant A\nend', 'syntax:3'], ['box G\nbox H\nend\nend', 'syntax:3'], ['box G\nNote over A: n\nend', 'syntax:3'],
     ['box G\ndestroy A\nend', 'syntax:3'], ['box G\nparticipant A', 'unclosed-frame']]
@@ -292,14 +307,17 @@ test('A2: a # ends a message, note or condition, and comments out the rest of it
 // entity such as #9829; to ♥. Not in the plan: those fall back.
 test('A5.errors: a # in an id, alias, title, box label or entity fails hash', () => {
   const bad = ['participant A as #1', 'participant A as Alice #1', 'participant A #c', 'activate A #c\nA->>B: x', 'A#b->>B: x', 'A->>B: I #9829; you',
-    'Note over A: #35; x', 'title Q #1\nA->>B: x', 'box Team #1\nparticipant A\nend', 'box Aqua #team\nparticipant A\nend', 'box #abcTeam\nparticipant A\nend',
-    'box #ab Team\nparticipant A\nend', 'box #abcde Team\nparticipant A\nend', 'box #ggg Team\nparticipant A\nend']
+    'Note over A: #35; x', 'title Q #1\nA->>B: x']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'hash' }]))
   assert.deepEqual(parseSequence(readSource('---\ntitle: "Q #1"\n---\nsequenceDiagram\nA->>B: x') as Source), { reason: 'hash' })
 })
-test('A2: a # may start a box color, which is dropped, or sit in a rect color or accessibility text, which are not drawn', () => {
+// Mermaid 12.2.0's LINE state reads a # in a box or rect line as a comment to the line end: box #abc G is untitled.
+test('A2: a # in a box or rect line comments out the rest of it; accessibility text keeps it', () => {
   assert.deepEqual(P('box #abc G\nparticipant A\nend\nrect #abc\nA->>B: x\nend\naccTitle: a #b\naccDescr {\n#c\n}'),
-    seq(AB, [frame('rect', [null, [msg('A', 'B', 'x')]])], { boxes: [{ label: 'G', ids: ['A'] }] }))
+    seq(AB, [frame('rect', [null, [msg('A', 'B', 'x')]])], { boxes: [{ label: null, ids: ['A'] }] }))
+  const labels = ['Team #1', 'Aqua #team', '#abcTeam', '#ab Team', '#abcde Team', '#ggg Team', '#a b; participant B']
+  assert.deepEqual(labels.map(boxLabelOf), ['Team', null, null, null, null, null, null])
+  assert.deepEqual(P('rect\nA->>B: x\nend').items, [frame('rect', [null, [msg('A', 'B', 'x')]])])
 })
 // Mermaid 12.2.0 ends a statement at a ;, as at a line break, outside accessibility text.
 test('A2: a ; ends a statement, and the rest of its line holds more', () => {
@@ -342,6 +360,19 @@ test('A2: an id that only starts with a keyword is an ordinary id', () => {
   const ok = ['endpoint', 'end_x', 'end2', 'Notes', 'box1', 'Parent', 'Optional', 'Titles', 'offer', 'actors', 'participants', 'Linked', 'constructor', 'toString', '__proto__']
   assert.deepEqual(ok.map(id => P(`${id}->>B: x`).items[0]), ok.map(id => msg(id, 'B', 'x')))
   assert.deepEqual(P('activate constructor\nA->>constructor: x\ndeactivate constructor').items.map((i: any) => i.kind), ['activate', 'msg', 'deactivate'])
+})
+// Mermaid 12.2.0 orders participants as declarations, messages (sender, then target) and notes first name them;
+// activate, deactivate and destroy name one without declaring it, and it fails on one nothing else declares.
+test('A2: activate, deactivate and destroy do not order participants; messages and notes do', () => {
+  const cases: [string, string[]][] = [['activate B\nA->>B: x\ndeactivate B', ['A', 'B']], ['activate B\nNote over C: n\nA->>B: x\ndeactivate B', ['C', 'A', 'B']],
+    ['destroy B\nA-xB: y', ['A', 'B']], ['activate B\ndeactivate B\nA->>B: x', ['A', 'B']], ['participant A\nactivate B\nB->>A: x\ndeactivate B', ['A', 'B']],
+    ['Note over B,A: n\nA->>C: x', ['B', 'A', 'C']]]
+  assert.deepEqual(cases.map(([t]) => [t, P(t).participants.map((q: any) => q.id)]), cases)
+})
+test('A5.errors: an id only activate, deactivate or destroy names fails undeclared; created after one, create', () => {
+  const bad: [string, string][] = [['activate C\nA->>B: x\ndeactivate C', 'undeclared'], ['activate B\ndeactivate B', 'undeclared'],
+    ['activate C\ncreate participant C\nA->>C: x\ndeactivate C', 'create']]
+  assert.deepEqual(bad.map(([t]) => [t, P(t)]), bad.map(([t, r]) => [t, { reason: r }]))
 })
 // Mermaid fails on deactivating a participant that is not active: - deactivates a message's sender.
 test('A5.errors: deactivating an inactive participant fails inactive', () => {

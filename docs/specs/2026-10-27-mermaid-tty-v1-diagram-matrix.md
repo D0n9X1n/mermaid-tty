@@ -1841,6 +1841,9 @@ The title follows common rule 3. No config key is honored.
 | sequence | `#` ends message, note and condition text; the rest of the line is a comment | sequence-ok-41 |
 | sequence | `autonumber` restart, `off` and on again | sequence-ok-42 |
 | sequence | keyword and number participant ids where Mermaid reads ids | sequence-ok-43 |
+| sequence | `#` in a box line is a comment; box color is the label's first word-character run | sequence-ok-44 |
+| sequence | `activate`/`deactivate`/`destroy` do not order participants | sequence-ok-45 |
+| sequence | bare `rect` | sequence-ok-46 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |
