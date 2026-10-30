@@ -34,6 +34,7 @@ const CLAUDE = ['#!/bin/sh', 'unset CDPATH', 'here="$(dirname "$0")"', 'dir="${C
   '  "plugin install "*)',
   '    [ -e "$here/added" ] || { echo "fake claude: no marketplace added" >&2; exit 1; }',
   `    [ "$3" = "${OURS}" ] || { echo "fake claude: no plugin $3 in the added marketplace" >&2; exit 1; }`,
+  '    [ "$4 $5" = "--config theme=default" ] || { echo "fake claude: install without --config theme=default" >&2; exit 1; }',
   '    : > "$here/installed" ;;',
   `  "plugin list") if [ -e "$here/installed" ]; then printf '%s' "$MTTY_PLUGIN_LIST"; else echo 'No plugins installed.'; fi ;;`,
   '  *) echo "fake claude: unexpected call: $*" >&2; exit 2 ;;', 'esac', ''].join('\n');
@@ -45,7 +46,7 @@ const entry = (id: string, v: string) => [`  ❯ ${id}`, `    Version: ${v}`, ` 
 const list = (...entries: string[][]) => ['Installed plugins:', '', ...entries.flat()].join('\n') + '\n';
 // Every run's calls, in order: the add, the install and the list, each labelled one dir: the dir it was handed held the markers
 // of the calls before it, and no others, so all three wrote to one dir.
-const CALLS = [['one dir', 'plugin', 'marketplace', 'add', './'], ['one dir', 'plugin', 'install', OURS], ['one dir', 'plugin', 'list']];
+const CALLS = [['one dir', 'plugin', 'marketplace', 'add', './'], ['one dir', 'plugin', 'install', OURS, '--config', 'theme=default'], ['one dir', 'plugin', 'list']];
 // The sentinel, the caller's own config: one marker file, which no run may change.
 const SENTINEL: [string, string][] = [['marker', "the caller's own config\n"]];
 const lines = (f: string) => (existsSync(f) ? readFileSync(f, 'utf8').split('\n').filter(Boolean) : []);
@@ -165,5 +166,5 @@ test('local install: the trap removes the mktemp dir, not the form of it cygpath
 // Runs miss effects like a write outside the sentinel and TMPDIR, so the script is pinned: each edit shows in review as a new pin.
 test('local install: the script matches its pinned SHA-256', () => {
   const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').replaceAll('\r\n', '\n');
-  assert.equal(createHash('sha256').update(text).digest('hex'), 'de15b76735cc5fd35d73ba545a967c8350c6d06cfbf161e9ecbb2c87bef21959');
+  assert.equal(createHash('sha256').update(text).digest('hex'), 'b016f7fe14f8a3e783694708a20a43acda5217198d48f6c41341759ac48f3065');
 });

@@ -17,7 +17,7 @@ A Claude Code plugin (mod) that redraws closed `mermaid` fences in Claude's repl
 
 ```sh
 claude plugin marketplace add D0n9X1n/mermaid-tty
-claude plugin install mermaid-tty@mermaid-tty
+claude plugin install mermaid-tty@mermaid-tty --config theme=default
 ```
 
 Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows. Start a new Claude Code session after installing. No build step or runtime dependencies.

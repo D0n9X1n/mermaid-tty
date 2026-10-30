@@ -46,7 +46,7 @@ Each page stands on its own. If you use mermaid-tty, read the quick start below,
 
    ```sh
    claude plugin marketplace add D0n9X1n/mermaid-tty
-   claude plugin install mermaid-tty@mermaid-tty
+   claude plugin install mermaid-tty@mermaid-tty --config theme=default
    ```
 
 3. Start a new Claude Code session. The mod registers the `/mermaid-tty` command when the session starts.

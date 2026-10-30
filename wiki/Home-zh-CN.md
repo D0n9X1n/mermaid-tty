@@ -46,7 +46,7 @@ flowchart TD
 
    ```sh
    claude plugin marketplace add D0n9X1n/mermaid-tty
-   claude plugin install mermaid-tty@mermaid-tty
+   claude plugin install mermaid-tty@mermaid-tty --config theme=default
    ```
 
 3. 启动新的 Claude Code 会话。插件会在会话开始时注册 `/mermaid-tty` 命令。
