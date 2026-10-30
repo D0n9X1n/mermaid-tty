@@ -106,7 +106,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 - 首行指定了不支持绘制的类型；
 - 语句超出支持的子集，或无法解析；
-- frontmatter 之后任意位置出现 `%%{`，即使在注释或引号内，或双引号外出现行内 `%%`；
+- frontmatter 之后任意位置出现 `%%{`，即使在注释或引号内；但独占一行、设置项可写进 frontmatter config 的 `%%{init: …}%%`、`%%{initialize: …}%%` 或 `%%{wrap}%%` 指令除外；或双引号外出现行内 `%%`；
 - frontmatter、标题或配置不在扫描器支持的子集内；
 - 标签或标题包含不同终端可能显示为不同宽度的字符；
 - 所有适配步骤都无法满足终端宽度，或所有绘制结果都未通过校验。
@@ -127,7 +127,7 @@ claude --debug
 |---|---|
 | `unknown-type`、`fallback:<keyword>`、`disabled:<type>` | 未知首行关键字、明确只显示源码的关键字，或不支持的图表类型。 |
 | `header`、`syntax`、`syntax:<line>` | 首行形式无效，或语句超出支持的子集。 |
-| `directive` | frontmatter 之后出现 `%%{`，或双引号外出现行内 `%%`。 |
+| `directive` | frontmatter 之后出现的 `%%{` 不是独占一行、设置为严格 JSON 的 `init`、`initialize` 或 `wrap` 指令（不得含 `null`、数组、空对象或 `config` 键；`htmlLabels` 只能为 `true`），或双引号外出现行内 `%%`。 |
 | `frontmatter`、`title`、`repeat:<line>`、`repeat:header` | 不支持的 YAML 或标题形式，或标题、id、声明重复。 |
 | `config:htmlLabels` | `htmlLabels` 或嵌套的 `*.htmlLabels` 不是布尔值 `true`；Mermaid 的非 HTML 标签采用不同的文本规则。 |
 | `config:<key>` | 不支持的类似数值的配置标量，或无效的 gitGraph 主分支名称或顺序。 |

@@ -11,8 +11,8 @@ export type Scalar = string | number | boolean | null
 export type Source = { header: string; title: string | null; config: Readonly<Record<string, Scalar>>
   lines: readonly { n: number; text: string }[] }
 
-// Fails with 'directive' (a `%%{` line, or `%%` after text outside double
-// quotes), 'frontmatter' (a block frontmatter() rejects, frontmatter readConfig
+// Fails with 'directive' (a `%%{` line that is not a whole directive() reads, or
+// `%%` after text outside double quotes), 'frontmatter' (a block frontmatter() rejects, frontmatter readConfig
 // rejects, or a title scalar() rejects), 'title' (a second frontmatter title, one js-yaml
 // would read another way, or one that is true or numeric), 'unsupported-char
 // U+XXXX' (a title character no terminal draws reliably, checked here for every
@@ -49,23 +49,38 @@ export function readSource(text: string): Source | Fail {
     for (const [key, raw] of Object.entries(read)) {
       const value = raw.quoted ? raw.text : typed(raw.text)
       if (value === undefined) return fail(`config:${key}`)
-      // X4. Mermaid 12.2.0 reads htmlLabels and flowchart.htmlLabels (getEffectiveHtmlLabels); any value but true draws
-      // SVG text through markdownToLines, which drops tokens every drawn-text mode keeps. Any other *.htmlLabels falls
-      // back too, to be safe.
-      if (/(?:^|\.)htmlLabels$/.test(key) && value !== true) return fail('config:htmlLabels')
+      if (!htmlOk(key, value)) return fail('config:htmlLabels')
       put(config, key, value)
     }
     start = end + 1
   }
   const kept: { n: number; text: string }[] = []
+  // Each init directive's settings, in order, and whether a %%{wrap}%% was seen.
+  const inits: Record<string, Scalar>[] = []
+  let wrap = false
   for (let i = start; i < all.length; i++) {
     const line = all[i]!
     const t = line.trimStart()
-    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4).
-    if (line.includes('%%{')) return fail('directive')
+    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4). Only a
+    // line that is one whole directive is read; Mermaid removes it, leaving a blank line.
+    if (line.includes('%%{')) {
+      const d = directive(line)
+      if (!d) return fail('directive')
+      if (d === 'wrap') wrap = true
+      else inits.push(d)
+      all[i] = ''
+      continue
+    }
     if (t === '' || t.startsWith('%%')) continue
     if (t.replace(/"[^"]*"/g, '').includes('%%')) return fail('directive')
     kept.push({ n: i + 1, text: encodeColours(line) })
+  }
+  // processDirectives sets wrap after merging the inits, and cleanAndMerge lays the lot over the frontmatter config.
+  for (const d of [...inits, ...(wrap ? [{ wrap: true }] : [])]) {
+    for (const [key, value] of Object.entries(d)) {
+      if (Object.keys(config).some(k => k.startsWith(`${key}.`) || key.startsWith(`${k}.`))) return fail('directive')
+      put(config, key, value)
+    }
   }
   const [head, ...lines] = kept
   if (!head || lines.length === 0) return fail('empty')
@@ -74,6 +89,47 @@ export function readSource(text: string): Source | Fail {
   // terminal reads `pie title Fruit;` as "Fruit;", and a header that takes no ; then fails its own parser.
   const h = head.text.trim(), header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
   return { header, title, config, lines }
+}
+
+// X4. Mermaid 12.2.0 reads htmlLabels and flowchart.htmlLabels (getEffectiveHtmlLabels); any value but true draws SVG text
+// through markdownToLines, which drops tokens every drawn-text mode keeps. Any other *.htmlLabels falls back too, to be safe.
+const htmlOk = (key: string, value: Scalar): boolean => !/(?:^|\.)htmlLabels$/.test(key) || value === true
+
+// #16. A line that is one whole directive as Mermaid 12.2.0 reads it (detectDirective, detectInit, processDirectives):
+// `%%{wrap}%%` gives 'wrap'; `%%{init: {…}}%%` or `%%{initialize: {…}}%%`, in lowercase, its JSON object's settings
+// under dotted keys, as frontmatter config gives them. Mermaid makes every ' a " before JSON.parse, as here, and drops every
+// init when one fails to parse ({"a": "it's"} among them). Null, so that the source falls back, for any other line:
+// another directive type, text around the directive, a %% inside it, a body JSON.parse rejects or that is not an object,
+// a "config" key (which detectInit moves under the diagram type), or a setting flat() rejects or htmlOk refuses.
+function directive(line: string): Record<string, Scalar> | 'wrap' | null {
+  const t = line.trim()
+  if (/^%%\{\s*wrap\s*\}%%$/.test(t)) return 'wrap'
+  const m = /^%%\{\s*(?:init|initialize)\s*:\s*(\{.*\})\s*\}%%$/.exec(t)
+  if (!m || m[1]!.includes('%%')) return null
+  let body: unknown
+  try { body = JSON.parse(m[1]!.replaceAll("'", '"')) } catch { return null }
+  if (!plainObject(body) || Object.hasOwn(body, 'config')) return null
+  const out: Record<string, Scalar> = {}
+  return flat(body, '', out) ? out : null
+}
+
+const plainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+// Puts each leaf of o into out under its dotted key, prefix first. False for a key that is not a plain name (or is
+// __proto__), an empty object, an array, null (which sanitizeDirective deletes), a number that is not finite, or an
+// htmlLabels htmlOk refuses.
+function flat(o: Record<string, unknown>, prefix: string, out: Record<string, Scalar>): boolean {
+  const keys = Object.keys(o)
+  if (keys.length === 0 && prefix) return false
+  for (const k of keys) {
+    if (!/^[A-Za-z_][\w-]*$/.test(k) || k === '__proto__') return false
+    const key = prefix + k, v = o[k]
+    if (plainObject(v)) { if (!flat(v, `${key}.`, out)) return false; continue }
+    if (typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isFinite(v))) return false
+    if (!htmlOk(key, v)) return false
+    put(out, key, v)
+  }
+  return true
 }
 
 // X4. Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.

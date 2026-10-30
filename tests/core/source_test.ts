@@ -7,14 +7,37 @@ test('A1: CRLF normalized once; frontmatter title; %% comments skipped', () => {
   assert.deepEqual([s.header, s.title, s.lines.map(l => l.text)], ['flowchart TD', 'Flow', ['A-->B']])
 })
 
-test('A5.errors: init directive and trailing %% fall back', () => {
-  assert.deepEqual(readSource('%%{init: {}}%%\nflowchart TD\nA'), { reason: 'directive' })
+test('A5.errors: a trailing %% falls back; %% { is a comment', () => {
   assert.deepEqual(readSource('flowchart TD\nA-->B %% x'), { reason: 'directive' })
+  assert.deepEqual(readSource('flowchart TD\n%% {not a directive}\nA'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 3, text: 'A' }] })
 })
 
-test('A5.errors: every %%{ line is a directive, not only init; %% { is a comment', () => {
-  assert.deepEqual(readSource('%%{wrap}%%\nsequenceDiagram\nA->>B: hi'), { reason: 'directive' })
-  assert.deepEqual(readSource('flowchart TD\n%% {not a directive}\nA'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 3, text: 'A' }] })
+// #16. Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
+// merging them in order; a %%{wrap}%% sets wrap true after them; then cleanAndMerge lays the lot over the frontmatter
+// config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM.
+const D = (t: string) => readSource(t) as Source
+test('#16: a whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
+  assert.deepEqual(D("%%{init: {'theme':'dark'}}%%\nflowchart TD\nA"), { header: 'flowchart TD', title: null, config: { theme: 'dark' }, lines: [{ n: 3, text: 'A' }] })
+  assert.deepEqual(D('%%{ initialize : { "theme" : "forest", "htmlLabels": true } }%%\nflowchart TD\nA').config, { theme: 'forest', htmlLabels: true })
+  assert.deepEqual(D('flowchart TD\nA\n  %%{init: {"themeVariables": {"primaryColor": "#f00"}}}%%  \nB').lines, [{ n: 2, text: 'A' }, { n: 4, text: 'B' }])
+  assert.deepEqual(D('%%{init: {}}%%\nflowchart TD\nA').config, {})
+  assert.deepEqual(D('%%{wrap}%%\nsequenceDiagram\nA->>B: hi').config, { wrap: true })
+  assert.deepEqual(D('%%{wrap}%%\n%%{init: {"wrap": false}}%%\nsequenceDiagram\nA->>B: hi').config, { wrap: true })
+  assert.deepEqual(D('%%{init: {"gitGraph": {"mainBranchName": "a", "showBranches": false}}}%%\n%%{init: {"gitGraph": {"mainBranchName": "b"}}}%%\ngitGraph\ncommit').config,
+    { 'gitGraph.mainBranchName': 'b', 'gitGraph.showBranches': false })
+  assert.deepEqual(D('---\nconfig:\n  gitGraph:\n    mainBranchName: x\n    showBranches: true\n---\n%%{init: {"gitGraph": {"mainBranchName": "y", "mainBranchOrder": 1e1}}}%%\ngitGraph\ncommit').config,
+    { 'gitGraph.mainBranchName': 'y', 'gitGraph.showBranches': true, 'gitGraph.mainBranchOrder': 10 })
+})
+test('#16: a directive Mermaid reads otherwise, or one that sets what changes the drawing, falls back', () => {
+  const bad = ['%%{init: {"htmlLabels": false}}%%', '%%{init: {"flowchart": {"htmlLabels": 1}}}%%', '%%{init: {theme: dark}}%%', `%%{init: {"theme": "it's"}}%%`,
+    '%%{INIT: {"theme": "dark"}}%%', '%%{init: {"theme": "dark"}}%% A', '%%{init: {"theme": "dark"}', '%%{init: {"config": {"x": 1}}}%%',
+    '%%{init: {"mindmap": {"colorBy": null}}}%%', '%%{init: {"a": [1]}}%%', '%%{init: {"a": {}}}%%', '%%{init: {"a": 1e400}}%%', '%%{init: ["x"]}%%',
+    '%%{init: "x"}%%', '%%{init: {"__proto__": {"x": 1}}}%%', '%%{init: {"a.b": 1}}%%', '%%{init: {"a": "%%"}}%%', '%%{init: dark}%%', '%%{nowrap}%%',
+    '%%{wrap: true}%%', '%%{theme: {"a": 1}}%%', '%%{init: {"gitGraph": 1}}%%\n%%{init: {"gitGraph": {"x": 1}}}%%',
+    '%%{init: {"htmlLabels": false}}%%\n%%{init: {"htmlLabels": true}}%%']
+  assert.deepEqual(bad.map(d => [d, readSource(`${d}\nflowchart TD\nA`)]), bad.map(d => [d, { reason: 'directive' }]))
+  assert.deepEqual(readSource('---\nconfig:\n  htmlLabels: false\n---\n%%{init: {"htmlLabels": true}}%%\nflowchart TD\nA'), { reason: 'config:htmlLabels' })
+  assert.deepEqual(readSource('---\nconfig:\n  gitGraph: 1\n---\n%%{init: {"gitGraph": {"x": 1}}}%%\ngitGraph\ncommit'), { reason: 'directive' })
 })
 
 test('A1: lines keep 1-based source numbers past frontmatter and skipped lines; a lone CR ends a line', () => {
@@ -36,7 +59,6 @@ test('A1: a trailing ; is removed only from a flowchart, graph or sequenceDiagra
 
 test('A1: indented %% comments and whitespace-only lines are skipped; kept lines keep their indentation', () => {
   assert.deepEqual(readSource('flowchart TD\n    %% note\n \t \n    A --> B'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 4, text: '    A --> B' }] })
-  assert.deepEqual(readSource('flowchart TD\n  %%{init: {}}%%\nA'), { reason: 'directive' })
 })
 
 test('A1: frontmatter title is one quoted or plain scalar; other keys, nested ones included, are ignored', () => {

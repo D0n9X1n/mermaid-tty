@@ -12,7 +12,7 @@ These rules apply to every type. A type's section can add to them but never cont
 2. **Headers and comments.**
    - Headers are case-sensitive, as in Mermaid's detectors, and sit alone on their line unless a section says otherwise.
    - Blank lines and whole-line `%%` comments are skipped.
-   - A trailing `%%` and a `%%{…}%%` init directive fall back.
+   - A trailing `%%` falls back. A line that is one whole `%%{init: {…}}%%`, `%%{initialize: {…}}%%` or `%%{wrap}%%` directive sets config as frontmatter config does (common rule 3), laid over it as Mermaid merges them; any other `%%{` falls back.
 3. **Frontmatter.** `title` adds a bold title row. A second title, whether from frontmatter or a statement, falls back. The config keys a section names are honored; every other config key is ignored.
 4. **Styling and accessibility are ignored.** `style`, `classDef`, `class`, `:::name`, `linkStyle`, `click`, `accTitle` and `accDescr` (including their `{…}` forms) are parsed and ignored wherever the type's Mermaid grammar defines them as statements. They never cause a fallback, and nothing they set is drawn. In a type whose grammar does not define a keyword, a line starting with that word is ordinary text: a node, card or event, which is counted under rule 10.
 5. **Keywords.** A line that starts with one of its type's keywords is only that keyword's statement. A keyword in another case, or one that starts a longer word (`Section A`, `titled`), falls back. Mermaid's lexers ignore case, and some ignore word ends. The exception is a type whose section says its keywords match in any case; requirement fields are one, because Mermaid's requirement grammar sets `%options case-insensitive`.
@@ -1454,6 +1454,7 @@ Attributes go in any order. The title follows common rule 3. Honored config keys
 - `gitGraph-ok-11`: valid graph, then `accTitle: Log`; accTitle parsed and ignored.
 - `gitGraph-ok-12`, `-13`, `-14`: headers `gitGraph:`, `gitGraph LR:` and `gitGraph TB:`, each drawn as `gitGraph`.
 - `gitGraph-ok-15`: a cherry-pick with an explicit `tag:`, which replaces `cherry-pick:<id>`.
+- `gitGraph-ok-16`: an `%%{init: …}%%` directive setting `theme` (ignored) and `mainBranchName`.
 
 **Rejection fixtures:**
 - `gitGraph-reject-01`: `checkout` of an unknown branch.
@@ -2242,7 +2243,7 @@ The title follows common rule 3. No config key is honored.
 | gitGraph | branch, checkout, switch | gitGraph-ok-02, gitGraph-reject-01, gitGraph-reject-03 |
 | gitGraph | merge with id, tag and type | gitGraph-ok-02, gitGraph-ok-03, gitGraph-reject-02 |
 | gitGraph | cherry-pick with tags and `parent:` | gitGraph-ok-04, gitGraph-reject-05, gitGraph-ok-15 |
-| gitGraph | `order:`, `mainBranchOrder`, `mainBranchName` | gitGraph-ok-05 |
+| gitGraph | `order:`, `mainBranchOrder`, `mainBranchName` | gitGraph-ok-05, gitGraph-ok-16 |
 | gitGraph | quoted and `feature/x.y` branch names | gitGraph-ok-07 |
 | gitGraph | `title`, comments | gitGraph-ok-07 |
 | gitGraph | branch before the first commit | gitGraph-ok-08 |

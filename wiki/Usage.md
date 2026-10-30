@@ -106,7 +106,7 @@ When mermaid-tty can't draw a diagram exactly, it shows the original code block,
 
 - its header names a type mermaid-tty doesn't draw;
 - a statement is outside the supported subset, or doesn't parse;
-- it has `%%{` anywhere after the frontmatter, even inside a comment or quoted label, or an inline `%%` outside double quotes;
+- it has `%%{` anywhere after the frontmatter, even inside a comment or quoted label, other than a line that is one whole `%%{init: …}%%`, `%%{initialize: …}%%` or `%%{wrap}%%` directive whose settings the frontmatter config could hold; or an inline `%%` outside double quotes;
 - its frontmatter, title or config is outside the scanner's subset;
 - a label or title has a character that terminals draw at differing widths;
 - no step of the fit ladder fits the terminal's width, or the validator rejects every drawing.
@@ -127,7 +127,7 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 |---|---|
 | `unknown-type`, `fallback:<keyword>`, `disabled:<type>` | Unknown header, explicitly source-only keyword, or unsupported diagram type. |
 | `header`, `syntax`, `syntax:<line>` | Invalid header form, or a statement outside the supported subset. |
-| `directive` | `%%{` anywhere after frontmatter, or inline `%%` outside double quotes. |
+| `directive` | `%%{` after frontmatter that is not a whole-line `init`, `initialize` or `wrap` directive with strict JSON settings (no `null`, array, empty object or `config` key; `htmlLabels` only `true`), or inline `%%` outside double quotes. |
 | `frontmatter`, `title`, `repeat:<line>`, `repeat:header` | Unsupported YAML or title form, duplicate title, id or declaration. |
 | `config:htmlLabels` | An `htmlLabels` or nested `*.htmlLabels` setting is not boolean `true`; Mermaid's non-HTML labels follow different text rules. |
 | `config:<key>` | Unsupported numeric-looking config scalar, or invalid gitGraph main-branch name or order. |
