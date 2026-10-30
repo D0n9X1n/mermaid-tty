@@ -19,6 +19,7 @@ const TITLE = /^title\s+(.+)$/, SECTION = /^section\s+(.+)$/, DATE_FORMAT = /^da
 // Statements that draw nothing. As Mermaid's lexer reads them, accTitle: and accDescr: run to the line's end, and
 // accDescr { to its first }.
 const ACC = /^acc(?:Title|Descr)\s*:/, ACC_BLOCK = /^accDescr\s*\{/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 // A click as Mermaid's grammar reads one on its line: click, an id, then href "<url>", call <name>(<args>), or both in
 // either order. Mermaid reads a call with no ( on to the next ( in the chart, so one falls back.
 const HREF = String.raw`href\s+"[^"\n]+"`, CALL = String.raw`call\s+[^\s(][^(\n]*\([^)\n]*\)`
@@ -71,7 +72,8 @@ function walk(src: Source): Gantt {
     else if ((m = DATE_FORMAT.exec(t))) dateFormat = m[1]!
     else if ((m = AXIS_FORMAT.exec(t))) axisFormat = m[1]!
     else if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) descr = n }
-    else if (t === 'todayMarker off' || ACC.test(t) || CLICK.test(t)) continue
+    else if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`) }
+    else if (t === 'todayMarker off' || CLICK.test(t)) continue
     else if (KEYWORD.test(t)) stop(`syntax:${n}`)
     else rows.push(row(t, n, sections.length - 1))
   }

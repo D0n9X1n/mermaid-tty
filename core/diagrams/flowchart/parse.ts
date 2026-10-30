@@ -44,7 +44,7 @@ const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[
 // One key: value pair of an @{…} body, from lastIndex: a key, then a "…" or '…' value, whose
 // , ; { and } are text, or a bare one up to the next , { or }. A quote is one only where a
 // value starts, as in YAML: `it's ok` is a bare value.
-const PAIR = /\s*([\w-]+)\s*:\s*("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
+const PAIR = /\s*([\w-]+)\s*:\s+("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
 
 // A node as one mention writes it: shape and lines only if the mention gives them; data if it has an @{…}.
 type Mention = { id: string; end: number; shape?: Shape; lines?: string[]; data?: true }
@@ -119,7 +119,9 @@ function line(t: string, st: State, n: number): Fail | null {
     fresh = false
     // The run from p: an accTitle: or accDescr: statement ends the line; an accDescr { opens a block, read from p on.
     const q = skipSpace(t, p)
-    if (matchAt(ACC_LINE, t, q) >= 0) return null
+    // An empty one is a parse difference: Mermaid's lexer reads the next line as its text, so it fails.
+    const acc = matchAt(ACC_LINE, t, q)
+    if (acc >= 0) return t.slice(acc).trim() ? null : fail('syntax')
     const open = matchAt(ACC_BLOCK, t, q)
     if (open >= 0) {
       st.descr = n
@@ -163,7 +165,10 @@ function openSubgraph(s: string, st: State): Fail | null {
   const [, name, rest = '', quoted] = m
   const c = rest.startsWith('[') ? closer(rest, 1, [']']) : null
   if (rest && c?.at !== rest.length - 1) return fail('syntax')
-  const title = label(name === undefined ? quoted! : c ? rest.slice(1, c.at) : name, 'none')
+  const raw = name === undefined ? quoted! : c ? rest.slice(1, c.at) : name
+  // Mermaid keeps any other backquote in the id or title (subgraph "A`" is id A`), so only "`…`" around it all is read.
+  if (raw.includes('`') && !/^"`[^`"]+`"$/.test(raw)) return fail('syntax')
+  const title = label(raw, 'none')
   if (isFail(title)) return title
   // Mermaid's id for `subgraph "…"` is the string's text, trimmed: a "`…`" loses its backquotes too.
   const id = name ?? quoted!.replace(/^"`?|`?"$/g, '').trim(), d = st.nodes.get(id)
@@ -245,7 +250,8 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
     const m = PAIR.exec(text)
     if (!m) break
     const [, key = '', value = ''] = m
-    if (pairs.some(([k]) => k === key) || !yamlValue(value)) return null
+    // A key must be one YAML reads as a string (no bool, null or number), each once; and every value one yamlValue reads.
+    if (!/^[A-Za-z_][\w-]*$/.test(key) || /^(?:true|false|null)$/i.test(key) || pairs.some(([k]) => k === key) || !yamlValue(value)) return null
     pairs.push([key, value])
     i = PAIR.lastIndex
     if (text[i] !== ',') break

@@ -190,3 +190,13 @@ A cross-family review of 37a8ff2 found eight inputs drawn other than Mermaid 12.
 - Every `@{ … }` value must be one `yamlValue` reads (`core/diagrams/flowchart/data.ts`): a `"…"` with no `\`, a `'…'` with no `}`, `^` or lone `"` (Mermaid's shape-data lexer protects only `"…"`), or a bare string that starts with a letter or `_` and holds no YAML or lexer indicator. A bool, null, number or empty `label` falls back, as do `icon` and `img` (another shape), and any `@{ shape }` name Mermaid does not know (`No such shape`).
 - An `@{` joins following lines only right after an id, outside `"…"`, brackets and acc statements.
 - Unquoted text in a node, `|…|` or subgraph label is Mermaid's text token: `( ) [ ] { } |` anywhere, or `~~~` at its start, fail `syntax`. A text form's edge text (`-- a (b) -->`) still takes them.
+
+### X5 re-review: more fallbacks
+
+A second review of cf4faef found six more inputs, each reproduced against Mermaid 12.2.0 under JSDOM, then narrowed:
+
+- A subgraph id or title with a backquote falls back unless one `` "`…`" `` encloses it all: Mermaid keeps the id of `subgraph "A`"` as ``A` ``.
+- An `@{ … }` pair needs whitespace after its colon: Mermaid reads `label:x` as one key and draws the id. One line or several.
+- An `@{ … }` key must start with a letter or `_`, not be `true`, `false` or `null` in any case, and appear once: YAML reads `true`/`True` and `01`/`1` as duplicate keys and Mermaid throws. Edge metadata too.
+- A multi-line `@{` is joined only when its opening line is just `<id>@{`. After a link, in edge text, or in an acc statement it falls back.
+- An empty `accTitle:` or `accDescr:` (only whitespace after the colon) falls back: Mermaid's lexer reads the next line as its text. Verified per type: flowchart, class, ER, gantt, journey, quadrant, state, timeline and xychart swallow the line; pie and gitGraph keep it; mindmap has no acc statement; sequence is fixed separately. Test: `tests/core/acc-empty_test.ts`.

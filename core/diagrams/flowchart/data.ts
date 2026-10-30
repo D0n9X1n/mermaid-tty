@@ -4,10 +4,12 @@
 // every line at one indent of spaces; each value a "…" or '…' with no escape, or a bare word of letters, digits, _, spaces,
 // . and -, none of which YAML reads otherwise in either form; then a line that starts with }. Any other body stays split,
 // and its first line then fails to read, as before.
+import { NAME } from './links.ts'
+
 type Line = { readonly n: number; readonly text: string }
 
 // One key: value line, its indent captured.
-const PAIR_LINE = /^( *)([A-Za-z_][\w-]*): *("[^"\\]*"|'[^']*'|[\p{L}\p{N}_][\p{L}\p{N}_ .-]*) *$/u
+const PAIR_LINE = /^( *)([A-Za-z_][\w-]*): +("[^"\\]*"|'[^']*'|[\p{L}\p{N}_][\p{L}\p{N}_ .-]*) *$/u
 
 // lines, each block that a line ending in @{ opens joined into that line, as `@{ k: v, … }` and the closing line's rest. A
 // joined line keeps its first line's number. Lines between them must follow each other in the source: a blank or %% line
@@ -41,13 +43,11 @@ function blockEnd(lines: readonly Line[], i: number): number {
   return -1
 }
 
-// Whether a line ends in an @{ that Mermaid's lexer reads as metadata: right after an id, outside any "…", bracket or
-// acc statement. An @{ inside a quoted or bracketed label is text, so its line is left alone (and fails to read).
+// Whether a line opens a block joinData may join: it is only a node id and @{, with spaces around. Any other line ending in
+// @{ (after a link, in edge text, in an acc statement or a label) is left alone, and fails to read.
+const OPENS = new RegExp(String.raw`^\s*${NAME}@\{\s*$`, 'u')
 function opensData(text: string): boolean {
-  const t = text.trimEnd()
-  if (!/[\p{L}\p{N}_]@\{$/u.test(t) || /^\s*acc(?:Title|Descr)\b/.test(t)) return false
-  const bare = t.replace(/"[^"]*"/g, ''), n = (ch: string) => bare.split(ch).length - 1
-  return !bare.includes('"') && n('[') === n(']') && n('(') === n(')') && n('{') === n('}') + 1
+  return OPENS.test(text)
 }
 
 // What one @{ … } value is, as Mermaid 12.2.0 reads it (its shape-data lexer, then js-yaml's JSON_SCHEMA): a string and

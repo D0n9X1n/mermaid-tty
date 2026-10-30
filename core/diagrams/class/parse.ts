@@ -65,6 +65,7 @@ const CLICK = re(`(?:click\\s+${ID}\\s+(?:href\\s*${STR}${TIP}${TARGET}|call\\s+
   `|link\\s+${ID}\\s*${STR}${TIP}${TARGET}|callback\\s+${ID}\\s*${STR}${TIP})`)
 // As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither draws.
 const ACC = /^acc(?:Title|Descr)\s*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
 // A keyword, in any case, starting a line: such a line is only that keyword's statement (common rule 5), so one no
 // statement pattern matches, a keyword in another case, or one that starts a longer word, fails.
@@ -106,7 +107,7 @@ function walk(src: Source): ClassModel {
     // Mermaid's grammar holds a namespace's { } to at least one statement.
     else if (st.ns && t === '}') { if (!st.ns.filled) stop(`syntax:${n}`); st.ns = null }
     else if (!st.ns && DIRECTED.test(t)) st.model.dir = (DIRECTION.exec(t) ?? stop(`syntax:${n}`))[1] as Dir
-    else if (!st.ns && ACC.test(t)) continue
+    else if (!st.ns && ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`) }
     else if (!st.ns && ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) st.descr = n }
     else statement(t, n, st)
   }

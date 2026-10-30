@@ -154,7 +154,7 @@ test('A5.errors: a #…; code Mermaid would not show as one drawable character f
 // Mermaid 12.2.0 reads an @{ … } body with a line break as a YAML block mapping: key: value lines at one indent, then }.
 test('A1: an @{ … } split over lines, one key: value per line at one indent, draws as its one-line form', () => {
   const pairs = [['A@{\n  shape: rounded\n  label: "x y"\n}', 'A@{ shape: rounded, label: "x y" }'],
-    ['X --> A@{\n    shape: diamond\n    label: \'q\'\n}', 'X --> A@{ shape: diamond, label: \'q\' }'],
+    ['A@{\n    shape: diamond\n    label: \'q\'\n}\nX --> A', 'A@{ shape: diamond, label: \'q\' }\nX --> A'],
     ['A@{\nshape: cyl\nlabel: Store\n} --> B', 'A@{ shape: cyl, label: Store } --> B']]
   assert.deepEqual(pairs.map(([m]) => P(`flowchart TD\n${m}`)), pairs.map(([, o]) => P(`flowchart TD\n${o}`)))
 })
@@ -251,4 +251,28 @@ test('A5.errors: unquoted label text with ( ) [ ] { } | or a leading ~~~ fails s
 test('A5.errors: an @{ shape } Mermaid does not know fails syntax, one line or several', () => {
   const bad = ['A@{\n  shape: nope\n}', 'A@{ shape: nope }', 'A@{ shape: Rect }', 'A@{ shape: lean_r }']
   assert.deepEqual(bad.map(s => [s, F(s)]), bad.map(s => [s, { reason: 'syntax:2' }]))
+})
+
+// Re-review of cf4faef, each verified against Mermaid 12.2.0 under JSDOM.
+test('A5.errors: a subgraph title with a ` that is not one "`…`" pair around it all falls back', () => {
+  const bad = ['subgraph "A`"\nB\nend\nA --> C', 'subgraph s ["a`b"]\nB\nend', 'subgraph s [a`b]\nB\nend', 'subgraph "`A` x"\nB\nend']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('subgraph "`A`"\nB\nend').clusters.map((c: any) => c.id), ['A'])
+})
+test('A5.errors: an @{ … } pair with no space after its colon falls back: Mermaid reads label:x as one key', () => {
+  const bad = ['A@{ label:x }', 'A@{ shape:hex }', 'A@{ labelType:text, label: "a*b" }', 'A@{\n  label:x\n}', 'A@{ label :x }',
+    'A e1@--> B\ne1@{ animate:true }']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ label : x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
+test('A5.errors: an @{ … } key YAML reads as no string, or that repeats as YAML compares keys, falls back', () => {
+  const bad = ['A@{ true: x, True: y }', 'A@{ 01: x, 1: y }', 'A e1@--> B\ne1@{ true: x, True: y }', 'A@{ null: x }', 'A@{ ~: x }', 'A@{ 1: x }',
+    'A@{ FALSE: x, label: y }']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ yes: x, label: y }').nodes, [N('A', 'rect', 'node', 0, 'y')])
+})
+test('A5.errors: an @{ that ends a line joins the next lines only on a line that is just <id>@{', () => {
+  const bad = ['A -- B@{\n  label: x\n  shape: rect\n} --> C', 'A; accTitle: B@{\n  label: x\n}\nC', 'X --> A@{\n  label: x\n}', 'A; B@{\n  label: x\n}']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('  A@{\n    label: x\n  } --> B').nodes.map((n: any) => n.rows[0].text), ['x', 'B'])
 })

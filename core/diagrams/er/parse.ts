@@ -56,6 +56,7 @@ const DIRECTION_ANY = /direction\s+(?:TB|BT|RL|LR)/i
 // Styling, which draws nothing; accTitle: and accDescr:, whose text runs to the line's end; accDescr {, to its first }.
 const IGNORED = /^(?:style|classDef|class)\s/   // no click: Mermaid's ER grammar has none, so a click line is a syntax error there
 const ACC = /^acc(?:Title|Descr)\s*:/
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
 // A keyword where a line starts, in any case, alone or starting a longer word: it is only its own statement (common rule 5).
 const KEYWORD = /^(?:erDiagram|direction|subgraph|end|style|classDef|class|click|accTitle|accDescr)/i
@@ -127,7 +128,7 @@ function closes(rest: string, n: number): boolean {
 // direction found anywhere, which must be the whole line.
 function statement(t: string, n: number, st: State): void {
   let m: RegExpExecArray | null
-  if (ACC.test(t)) return
+  if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`); return }
   if ((m = DIRECTION.exec(t))) {
     const sub = st.open.at(-1)?.sub
     if (sub) sub.dir = m[1] as Dir
