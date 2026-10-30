@@ -67,3 +67,37 @@ test('#27: every drawn edge of every ok fixture records its line style', () => {
   }
   assert.deepEqual(missing, [])
 })
+
+// GPT-6's review of #27. In each, expect is the renderer's and the cells change.
+const drawn = (src: string): Drawing => structuredClone((explain(src, { columns: 60, theme: 'mono' }) as { drawing: Drawing }).drawing)
+const rows = (d: Drawing) => d.cells.map(row => row.map(x => (!x ? ' ' : x.kind === 'cont' ? '' : x.ch)).join('').replace(/ +$/, ''))
+const lineCell = (ch: string, segs: { owner: string; dirs: number }[], style: 'light' | 'dotted' = 'light') => {
+  const dirs = segs.reduce((m, s) => m | s.dirs, 0)
+  return { ch, role: 'edge' as const, kind: 'line' as const, owners: segs.map(s => s.owner), dirs, arms: [1, 2, 4, 8].map(b => (dirs & b ? '1' : '0')).join(''), style, segs }
+}
+// Hole 1: a dotted edge whose every cell is a crossing shows no dash. C---D, rerouted up through both of A-.-B's cells,
+// draws [ A ]┼┼[ B ]: A-.-B reads as solid.
+test('#27 review: a dotted edge drawn only as crossings fails line-glyph', () => {
+  const d = drawn('flowchart LR\nA -.- B\nC --- D\nE --- F'), [ab, cd] = d.expect.edges.map(e => e.id) as [string, string]
+  d.cells.unshift(Array(d.cells[0]!.length).fill(null))   // a row above A-.-B for C---D to turn in
+  d.cells[3]![5] = lineCell('┘', [{ owner: cd, dirs: 9 }]); d.cells[2]![5] = lineCell('│', [{ owner: cd, dirs: 5 }])
+  d.cells[1]![5] = lineCell('┼', [{ owner: ab, dirs: 10 }, { owner: cd, dirs: 5 }]); d.cells[0]![5] = lineCell('┌', [{ owner: cd, dirs: 6 }])
+  d.cells[0]![6] = lineCell('┐', [{ owner: cd, dirs: 12 }]); d.cells[1]![6] = lineCell('┼', [{ owner: ab, dirs: 10 }, { owner: cd, dirs: 5 }])
+  d.cells[2]![6] = lineCell('│', [{ owner: cd, dirs: 5 }]); d.cells[3]![6] = lineCell('└', [{ owner: cd, dirs: 3 }])
+  assert.equal(rows(d)[1], '[ A ]┼┼[ B ]')
+  assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
+})
+// Hole 2: an edge drawn as its head alone has no line to show its style. A-.->B with its two ┄ columns cut: [ A ]►[ B ].
+test('#27 review: an edge drawn with no line cell fails line-glyph', () => {
+  const d = drawn('flowchart LR\nA -.-> B')
+  for (const row of d.cells) row.splice(5, 2)
+  assert.equal(rows(d)[0], '[ A ]►[ B ]')
+  assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
+})
+// Hole 3: an invisible edge draws no cell of any kind, a head included. A ~~~ B with a ► owned by it between them.
+test('#27 review: a head drawn for an invisible edge fails line-glyph', () => {
+  const d = drawn('flowchart LR\nA ~~~ B'), [id] = d.expect.hidden ?? []
+  assert.equal(d.cells[0]![5], null)
+  d.cells[0]![5] = { ch: '►', role: 'arrow', kind: 'arrow', owners: [id!], dirs: 0 }
+  assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
+})

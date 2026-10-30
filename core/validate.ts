@@ -186,6 +186,10 @@ const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '�
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
   const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : []))), hidden = new Set(d.expect.hidden ?? [])
+  // #27 review: an invisible edge draws no cell of any kind: no line, head or label.
+  if (all.some(({ cell: x }) => x.owners.some(o => hidden.has(o) || hidden.has(o.replace(/:(label|tail|head)$/, ''))))) return fail('line-glyph')
+  // Each listed edge's line cells, and those of a dotted or thick edge that show its style: any cell but a straight crossing.
+  const lines = new Map<string, number>(), shown = new Set<string>()
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
@@ -196,11 +200,12 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
     // #27: an edge draws in its own style. Each arm it draws has its weight, heavy for thick and light otherwise, and a cell
     // drawn dotted is drawn only for dotted edges. A dotted edge's cell may draw solid only at a straight crossing, where the
-    // canvas draws the other line's style and ┼ shows no dash. An invisible edge draws no cell at all.
+    // canvas draws the other line's style and ┼ shows no dash.
     for (const o of x.owners) {
-      if (hidden.has(o)) return fail('line-glyph')
+      lines.set(o, (lines.get(o) ?? 0) + 1)
       const style = styles.get(o)
       if (!style) continue
+      if (!crossing) shown.add(o)
       const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
       if ([1, 2, 4, 8].some((b, i) => (dirs & b) !== 0 && arms[i] !== (style === 'thick' ? '2' : '1'))) return fail('line-glyph')
       if ((x.style === 'dotted') !== (style === 'dotted') && !(style === 'dotted' && crossing)) return fail('line-glyph')
@@ -217,6 +222,12 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
     if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
+  }
+  // #27 review: every edge draws at least one line cell, so a head alone (A►B) cannot hide its style; the router never
+  // draws one. A dotted or thick edge draws one cell that is not a straight crossing, where ┼ shows neither dash nor weight.
+  for (const e of d.expect.edges) {
+    if (!lines.get(e.id)) return fail('line-glyph')
+    if ((e.style === 'dotted' || e.style === 'thick') && !shown.has(e.id)) return fail('line-glyph')
   }
   return null
 }

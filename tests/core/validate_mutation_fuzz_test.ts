@@ -356,3 +356,46 @@ test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails'
   }, [...CASES, ...C_GRAPHS])
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
+
+// #27 review: an edge's line cut out, as compaction cuts slack: every column (row) whose drawn cells are only that edge's own
+// straight ─ (│) is removed, the grid closing up, so its head meets its node and no line shows its style (A►B for A┄┄►B).
+// Only a cut that leaves the edge no line cell is a mutant: one that just shortens a longer line draws the same edge.
+// As one patch: every cell that the removal changes.
+function cut(d: Drawing, cols: ReadonlySet<number>, rws: ReadonlySet<number>): Patch {
+  const kept = d.cells.filter((_, r) => !rws.has(r)).map(row => row.filter((_, c) => !cols.has(c)))
+  const out: Patch = []
+  d.cells.forEach((row, r) => row.forEach((x, c) => { const y = kept[r]?.[c] ?? null; if (!same(x, y)) out.push([r, c, y]) }))
+  return out
+}
+test('A5.mutation-tests: fuzz: an edge with its own line cut out, its head against its node, fails', t => {
+  const { mutants, survivors } = tally(t, 'unline', function* (d) {
+    const width = Math.max(...d.cells.map(row => row.length))
+    for (const e of d.expect.edges) {
+      const only = (x: Cell | null, dirs: number) => !x || (x.kind === 'line' && x.dirs === dirs && x.owners.length === 1 && x.owners[0] === e.id)
+      const mine = (x: Cell | null) => x?.kind === 'line' && x.owners.includes(e.id)
+      const cols = new Set(Array.from({ length: width }, (_, c) => c).filter(c => d.cells.every(row => only(row[c] ?? null, 10)) && d.cells.some(row => mine(row[c] ?? null))))
+      const rws = new Set(d.cells.flatMap((row, r) => (row.every(x => only(x, 5)) && row.some(mine) ? [r] : [])))
+      // Whether the cut leaves e no line cell: every one of its line cells is in a cut column (row).
+      const gone = (inCut: (r: number, c: number) => boolean) => d.cells.every((row, r) => row.every((x, c) => !mine(x) || inCut(r, c)))
+      if (cols.size > 0 && gone((_, c) => cols.has(c))) yield [`${e.id} columns cut`, cut(d, cols, new Set())]
+      if (rws.size > 0 && gone(r => rws.has(r))) yield [`${e.id} rows cut`, cut(d, new Set(), rws)]
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// #27 review: an invisible edge (~~~) given a head, ► in an empty cell beside each of its nodes, or a line cell there.
+const HIDDEN: Case[] = [['hidden', 'flowchart LR\nA ~~~ B\nB --> C'], ['hidden TB', 'flowchart TB\nA ~~~ B\nA --> C']].flatMap(([name, src]) => draw(name!, src!))
+test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
+  const { mutants, survivors } = tally(t, 'hidden', function* (d) {
+    for (const id of d.expect.hidden ?? []) for (const { r, c } of spots(d).filter(p => p.x.kind !== 'line')) {
+      for (const [dr, dc] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+        const y = r + dr, x = c + dc
+        if (y < 0 || x < 0 || y >= d.cells.length || x >= d.cells[y]!.length || d.cells[y]![x]) continue
+        yield [`${id} head at (${y},${x})`, [[y, x, { ch: '►', role: 'arrow', kind: 'arrow', owners: [id], dirs: 0 }]]]
+        yield [`${id} line at (${y},${x})`, [[y, x, { ch: '─', role: 'edge', kind: 'line', owners: [id], dirs: 10, arms: '0101', style: 'light', segs: [{ owner: id, dirs: 10 }] }]]]
+      }
+    }
+  }, [...CASES, ...HIDDEN])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
