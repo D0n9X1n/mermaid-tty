@@ -111,6 +111,8 @@ When mermaid-tty can't draw a diagram exactly, it shows the original code block,
 - a label or title has a character that terminals draw at differing widths;
 - no step of the fit ladder fits the terminal's width, or the validator rejects every drawing.
 
+Some features always fall back, by design, because a terminal can't show them as Mermaid does: `fa:` icons need an icon font, `$$…$$` math needs typesetting, and `htmlLabels: false` follows different text rules. Whitespace that a diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph, fails in Mermaid too.
+
 The reason never appears on screen. To see it, start Claude Code in debug mode:
 
 ```sh
