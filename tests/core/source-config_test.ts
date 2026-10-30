@@ -1,9 +1,10 @@
-import test from 'node:test'; import assert from 'node:assert/strict'; import { readSource, type Source } from '../../core/source.ts'
+import test from 'node:test'; import assert from 'node:assert/strict'; import { readSource, scanSource, type Source } from '../../core/source.ts'
 const src = (fm: string) => readSource(`---\n${fm}\n---\ngitGraph\ncommit`)
-const cfg = (fm: string) => (src(fm) as Source).config
+// The scanner's config, before readSource checks each setting (#25), so that any key tests the YAML subset.
+const cfg = (fm: string) => (scanSource(`---\n${fm}\n---\ngitGraph\ncommit`) as Source).config
 test('A5: frontmatter config scalars become dotted keys; other top-level keys are ignored', () => {
   assert.deepEqual(cfg('title: Log\nconfig:\n  theme: dark\n  gitGraph:\n    mainBranchName: "trunk"\n    mainBranchOrder: 2\ndisplayMode: compact'),
-    { theme: 'dark', 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': 2 })
+    { theme: 'dark', 'gitGraph.mainBranchName': 'trunk', 'gitGraph.mainBranchOrder': 2, 'gantt.displayMode': 'compact' })
   assert.deepEqual(cfg('config:\n  mindmap:\n    colorBy: depth # a comment\n\n  timeline:\n    disableMulticolor: true'),
     { 'mindmap.colorBy': 'depth', 'timeline.disableMulticolor': true })
   assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
@@ -36,7 +37,7 @@ test('A5: quoted and plain scalars, comment and blank lines, keys and nesting re
     { '_k-2.A9': 'x', '_k-2.b.c': 1, e: 3 })
   // Trailing spaces and tabs are dropped, on the config: line too.
   assert.deepEqual(cfg('config:  \n  gitGraph:\t\n    mainBranchName: trunk  \n    x: "q"\t '), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'q' })
-  assert.deepEqual(readSource('---\ntitle: Log\nconfig:\n  title: nested\n  a: 1\n---\ngitGraph\ncommit'),
+  assert.deepEqual(scanSource('---\ntitle: Log\nconfig:\n  title: nested\n  a: 1\n---\ngitGraph\ncommit'),
     { header: 'gitGraph', title: 'Log', config: { title: 'nested', a: 1 }, lines: [{ n: 8, text: 'commit' }] })
   assert.deepEqual(['configX:\n  a: 1', 'config_y:\n  a: 1', 'x:\n  config:\n    a: 1'].map(cfg), [{}, {}, {}])
 })
@@ -54,8 +55,9 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
     'config\t:\n  a: 1', '"config":\n  a: 1', "'config':\n  a: 1", '? config\n:\n  a: 1', '{ config: { a: 1 } }', '&c config:\n  a: 1',
     '!!str config:\n  a: 1', '- config:\n    a: 1', '  config:\n    a: 1', 'config:\n  a: 1\nconfig:\n  b: 2']
   for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
-  // Other plain top-level keys, indicators after their first character included, are still ignored.
-  assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: 1 })
+  // Other plain top-level keys, indicators after their first character included, are still ignored, but for displayMode,
+  // which processFrontmatter sets as gantt.displayMode.
+  assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: 1, 'gantt.displayMode': 'compact' })
 })
 test('X4: an htmlLabels key anywhere in config, set to anything but true, falls back (Mermaid then draws SVG text)', () => {
   const off = ['htmlLabels: false', 'htmlLabels: "true"', 'htmlLabels: 0', 'htmlLabels: ~', 'htmlLabels: yes',

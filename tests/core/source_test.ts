@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readSource, type Source } from '../../core/source.ts'
+import { readSource, scanSource, type Source } from '../../core/source.ts'
 
 test('A1: CRLF normalized once; frontmatter title; %% comments skipped', () => {
   const s = readSource('---\r\ntitle: "Flow"\r\n---\r\nflowchart TD\r\n%% note\r\n\r\nA-->B\r\n') as Source
@@ -14,8 +14,9 @@ test('A5.errors: a trailing %% falls back; %% { is a comment', () => {
 
 // #16. Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
 // merging them in order; a %%{wrap}%% sets wrap true after them; then cleanAndMerge lays the lot over the frontmatter
-// config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM.
-const D = (t: string) => readSource(t) as Source
+// config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM. D reads with the scanner;
+// which settings then draw is #25's (source-allow_test.ts).
+const D = (t: string) => scanSource(t) as Source
 test('#16: a whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
   assert.deepEqual(D("%%{init: {'theme':'dark'}}%%\nflowchart TD\nA"), { header: 'flowchart TD', title: null, config: { theme: 'dark' }, lines: [{ n: 3, text: 'A' }] })
   assert.deepEqual(D('%%{ initialize : { "theme" : "forest", "htmlLabels": true } }%%\nflowchart TD\nA').config, { theme: 'forest', htmlLabels: true })
@@ -29,14 +30,12 @@ test('#16: a whole-line init, initialize or wrap directive sets config as frontm
     { 'gitGraph.mainBranchName': 'y', 'gitGraph.showBranches': true, 'gitGraph.mainBranchOrder': 10 })
 })
 test('#16: a directive Mermaid reads otherwise, or one that sets what changes the drawing, falls back', () => {
-  const bad = ['%%{init: {"htmlLabels": false}}%%', '%%{init: {"flowchart": {"htmlLabels": 1}}}%%', '%%{init: {theme: dark}}%%', `%%{init: {"theme": "it's"}}%%`,
+  const bad = ['%%{init: {theme: dark}}%%', `%%{init: {"theme": "it's"}}%%`,
     '%%{INIT: {"theme": "dark"}}%%', '%%{init: {"theme": "dark"}}%% A', '%%{init: {"theme": "dark"}', '%%{init: {"config": {"x": 1}}}%%',
     '%%{init: {"mindmap": {"colorBy": null}}}%%', '%%{init: {"a": [1]}}%%', '%%{init: {"a": {}}}%%', '%%{init: {"a": 1e400}}%%', '%%{init: ["x"]}%%',
     '%%{init: "x"}%%', '%%{init: {"__proto__": {"x": 1}}}%%', '%%{init: {"a.b": 1}}%%', '%%{init: {"a": "%%"}}%%', '%%{init: dark}%%', '%%{nowrap}%%',
-    '%%{wrap: true}%%', '%%{theme: {"a": 1}}%%', '%%{init: {"gitGraph": 1}}%%\n%%{init: {"gitGraph": {"x": 1}}}%%',
-    '%%{init: {"htmlLabels": false}}%%\n%%{init: {"htmlLabels": true}}%%']
+    '%%{wrap: true}%%', '%%{theme: {"a": 1}}%%', '%%{init: {"gitGraph": 1}}%%\n%%{init: {"gitGraph": {"x": 1}}}%%']
   assert.deepEqual(bad.map(d => [d, readSource(`${d}\nflowchart TD\nA`)]), bad.map(d => [d, { reason: 'directive' }]))
-  assert.deepEqual(readSource('---\nconfig:\n  htmlLabels: false\n---\n%%{init: {"htmlLabels": true}}%%\nflowchart TD\nA'), { reason: 'config:htmlLabels' })
   assert.deepEqual(readSource('---\nconfig:\n  gitGraph: 1\n---\n%%{init: {"gitGraph": {"x": 1}}}%%\ngitGraph\ncommit'), { reason: 'directive' })
 })
 
@@ -62,7 +61,7 @@ test('A1: indented %% comments and whitespace-only lines are skipped; kept lines
 })
 
 test('A1: frontmatter title is one quoted or plain scalar; other keys, nested ones included, are ignored', () => {
-  const titleOf = (fm: string) => (readSource(`---\n${fm}\n---\nflowchart TD\nA`) as Source).title
+  const titleOf = (fm: string) => (scanSource(`---\n${fm}\n---\nflowchart TD\nA`) as Source).title
   assert.deepEqual(
     [`title: 'Flow'`, 'title:   Flow  ', 'title: ""', `title: It's "fine"`, 'title: 50%% off', 'config:\n  title: nested\ndisplayMode: compact\ntitleTopMargin: 5'].map(titleOf),
     ['Flow', 'Flow', null, `It's "fine"`, '50%% off', null])
@@ -101,7 +100,7 @@ test('A5.errors: a frontmatter title with an unsupported character fails unsuppo
 
 // T41b: config scalars are typed as Mermaid's frontmatter.ts reads them, with js-yaml's JSON_SCHEMA.
 // The value read for `config:` / `  a: <v>`, or the Fail.
-const one = (v: string) => { const s = readSource(`---\nconfig:\n  a: ${v}\n---\ngitGraph\ncommit`); return 'reason' in s ? s : s.config['a'] }
+const one = (v: string) => { const s = scanSource(`---\nconfig:\n  a: ${v}\n---\ngitGraph\ncommit`); return 'reason' in s ? s : s.config['a'] }
 
 test('A5: a plain config scalar is typed as js-yaml JSON_SCHEMA types it: null, bool, safe int, else string', () => {
   const rows: [string, unknown][] = [['~', null], ['null', null], ['Null', null], ['NULL', null],
@@ -171,7 +170,7 @@ test('A5.errors: a frontmatter title outside the strict YAML subset falls back a
 
 // T41b: a title that js-yaml would read as another title falls back. The Source or
 // Fail read from frontmatter written one YAML line per argument.
-const front = (...ls: string[]) => readSource(`---\n${ls.join('\n')}\n---\nflowchart TD\nA`)
+const front = (...ls: string[]) => scanSource(`---\n${ls.join('\n')}\n---\nflowchart TD\nA`)
 
 test('A5.errors: a top-level title key with spaces or a tab before its colon falls back as title', () => {
   const bad = [['title : X'], ['title\t: X'], ['title: A', 'title : B'], ['config:', '  a: 1', 'title : X']]
