@@ -330,3 +330,10 @@ test('X3.emphasis: a flowchart edge label reads each <br> as a newline: a block 
   assert.equal(P('flowchart TD\nA -->|"`**a<br>b**`"| B').edges[0].label, emphasize('**a<br>b**', true))
   assert.deepEqual(P('flowchart TD\nA["`a<br>- **b**`"]').nodes[0].rows.map((r: any) => r.text), emphasize('a<br>- **b**')!.split('<br>'))
 })
+
+// #26. Mermaid 12.2.0 (JSDOM): A["`a\#110;b`"] shows anb (marked drops the \), but the edge label "`c\#110;d`" shows c\nd.
+// A \ right before a #…; code in a Markdown field is read two ways, so it falls back.
+test('A5.errors: a backslash before a #…; code in a Markdown string or @{ label } falls back as markdown (#26)', () => {
+  const bad = ['A["`a\\#110;b`"]', 'A -->|"`c\\#110;d`"| B', 'subgraph s ["`e\\#35;f`"]\nend', "A@{ label: 'a\\#110;b' }"]
+  assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'markdown' }]))
+})
