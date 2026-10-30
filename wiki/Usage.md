@@ -106,14 +106,17 @@ ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid
 In a terminal that shows pixels, mermaid-tty can draw a diagram as a picture of Mermaid's own rendering. It needs both:
 
 - **kitty or Ghostty**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, and not inside tmux, screen or Zellij, which pass no pixels through. Another terminal started from inside kitty or Ghostty doesn't count.
-- **mermaid-cli** on PATH: `npm i -g @mermaid-js/mermaid-cli` installs `mmdc`. mermaid-tty doesn't bundle it, so the plugin keeps no dependencies.
+- **mermaid-cli** 11 or 12 on PATH: `npm i -g @mermaid-js/mermaid-cli` installs `mmdc`. mermaid-tty doesn't bundle it, so the plugin keeps no dependencies.
 
-A new diagram is drawn as text first. `mmdc` renders it in the background, one diagram at a time, and the reply is drawn again with the picture. The picture uses Mermaid's dark or light theme to match your Claude Code theme, a transparent background and `securityLevel: strict`, and is sized to the available columns. It can show diagram types and syntax the text renderer falls back on.
+A new diagram is drawn as text first. `mmdc` renders it in the background, one diagram at a time, and the reply is drawn again with the picture. The picture uses Mermaid's dark or light theme to match your Claude Code theme, a transparent background and `securityLevel: strict`, and is sized to the available columns.
+
+Only a diagram mermaid-tty can parse becomes a picture, so a picture never shows a type or statement the text renderer rejects, such as HTML labels, icons or image nodes. It can show a parsed diagram that is too wide to draw as text. The Chromium that `mmdc` runs gets no network, loopback included, so a diagram can't make it fetch anything. Each diagram is rendered at most once per session: if the picture cache drops it, it goes back to text.
 
 You keep the text drawing, or the source when the text renderer can't draw it, when:
 
 - the terminal isn't one of the above, or is Windows;
 - the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
+- mermaid-tty can't parse the diagram, or its source is over 50,000 characters, Mermaid's limit;
 - `mmdc` is missing, fails, takes over 30 seconds, or makes a picture over 2 MiB, over 255 rows tall, or too wide to read at the available width.
 
 `claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings everywhere; `/mermaid-tty diagram` turns pictures back on. `/copy` still copies the source.

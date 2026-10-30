@@ -106,14 +106,17 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 在能显示像素的终端里，mermaid-tty 可以把图表绘制成 Mermaid 自身渲染的图片。需要同时满足：
 
 - **kitty 或 Ghostty**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。从 kitty 或 Ghostty 内部启动的其他终端不算。
-- PATH 上有 **mermaid-cli**：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
+- PATH 上有 **mermaid-cli** 11 或 12：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
 
-新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。文本渲染器会回退的图表类型和语法，图片也能显示。
+新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。
+
+只有 mermaid-tty 能解析的图表才会变成图片，因此图片不会显示文本渲染器拒绝的类型或语句，例如 HTML 标签、图标或图片节点。已解析但过宽、无法以文本绘制的图表，可以显示为图片。`mmdc` 运行的 Chromium 没有任何网络访问（包括本机回环），因此图表无法让它获取任何内容。每个图表在一个会话中最多渲染一次：如果图片缓存将其丢弃，它会回到文本绘制。
 
 以下情况保留文本绘制（文本渲染器无法绘制时显示源码）：
 
 - 终端不是上述之一，或在 Windows 上；
 - 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
+- mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
 - `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。

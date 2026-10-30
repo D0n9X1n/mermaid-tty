@@ -9,7 +9,8 @@ const world = (on: any, vars: Record<string, string>) => {
   mock.env(on, vars)
   on('config.list', async () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' }, isLocked: false }] }))
   on('process.run', async (_$: any, e: any) => { runs.push(e.argv)
-    return { value: { exitCode: 0, stdout: e.argv[0] === 'mktemp' ? '/tmp/mermaid-tty.Kt1\n' : '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } })
+    const stdout = e.argv[1] === '--version' ? '11.17.1\n' : e.argv[0] === 'mktemp' ? '/tmp/mermaid-tty.Kt1\n' : ''
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } })
   on('fs.write', async () => ({ value: undefined }))
   on('fs.stat', async () => ({ value: { kind: 'file', size: 100, mtimeMs: 0, isLink: false } }))
   on('fs.read', async () => ({ value: { base64: PNG } }))
@@ -23,7 +24,7 @@ test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s
   const runs = world(on, { TERM: 'xterm-kitty' }), ui = await mount($, 'flowchart TD\nK1 --> K2')
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image'); expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
-  expect(runs.map(r => r[0])).toEqual(['mktemp', 'mmdc', 'rm'])
+  expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'rm -rf'])
 })
 
 test('A6.hook-tests: under tmux, and in text mode, a fence stays text and mmdc never runs', async ($, on) => {
