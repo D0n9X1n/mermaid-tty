@@ -1,7 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { isFail } from '../../core/fail.ts'
 import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'; import { readSource, type Source } from '../../core/source.ts'
-import { ALIASES } from '../../core/caps.ts'
+import { ALIASES } from '../../core/caps.ts'; import { emphasize } from '../../core/emphasis.ts'
 const P = (t: string) => parseFlowchart(readSource(t) as Source) as any
 test('A1: headers and directions', () => {
   for (const [d, w] of [['TD', 'TB'], ['TB', 'TB'], ['BT', 'BT'], ['LR', 'LR'], ['RL', 'RL']]) assert.equal(P(`flowchart ${d}\nA`).dir, w)
@@ -121,15 +121,16 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
 })
 
 // Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and backquotes,
-// joined to any text after it, through marked. Emphasis or an escape falls back as any Markdown field's does.
+// joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style nested in itself or
+// a block start falls back as any Markdown field's does.
 test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
   const g = P('flowchart TD\nA["`plain text`"] -->|"`edge words`"| B["`a_b x*y`" more]\nC("`a b`") -- "`t`" --> D\nsubgraph s ["`title t`"]\nD\nend')
   assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges.map((e: any) => e.label), g.clusters[0].title],
     [['plain text', 'a_b x*y more', 'a b', 'D'], ['edge words', 't'], 'title t'])
   assert.deepEqual(P('flowchart TD\nA["`a<br>b`"]').nodes, [N('A', 'rect', 'node', 0, 'a', 'b')])
 })
-test('A5.errors: a Markdown string with emphasis or an escape falls back as markdown; a malformed one as syntax; a backquote elsewhere is text', () => {
-  const md = ['A["`**bold**`"]', 'A -->|"`**b**`"| B', 'subgraph s ["`*b*`"]\nend', 'A["`a \\* b`"]', 'A -- "`_i_`" --> B']
+test('A5.errors: a Markdown string with emphasis the port cannot match, or an escape, falls back as markdown; a malformed one as syntax; a backquote elsewhere is text', () => {
+  const md = ['A["`**a **b** c**`"]', 'A -->|"`a \\* b`"| B', 'subgraph s ["`*a *b* c*`"]\nend', 'A["`a \\* b`"]', 'A -- "`# **h**`" --> B']
   assert.deepEqual(md.map(s => [s, P(`flowchart TD\n${s}`)]), md.map(s => [s, { reason: 'markdown' }]))
   const bad = ['A["`a`b`"]', 'A["``"]', 'A["`a` "b"]']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'syntax:2' }]))
@@ -165,8 +166,8 @@ test('A5.errors: an @{ … } over lines falls back where its YAML may read other
 })
 
 // Mermaid 12.2.0 gives an @{ label } labelType markdown (flowDb sanitizeNodeLabelType): A@{ label: "a*b*c" } shows a<em>b</em>c.
-test('A5.errors: an @{ label } is a Markdown label: emphasis falls back as markdown, as in other Markdown fields', () => {
-  const bad = ['A@{ label: "a*b*c" }', 'A@{ label: "_a_" }', "A@{ label: 'a \\* b' }"]
+test('A5.errors: an @{ label } is a Markdown label: what the emphasis port cannot match falls back as markdown, as in other Markdown fields', () => {
+  const bad = ['A@{ label: "**a **b** c**" }', 'A@{ label: "*a *b* c*" }', "A@{ label: 'a \\* b' }"]
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'markdown' }]))
   assert.deepEqual(P('flowchart TD\nA@{ label: "snake_case a*b" }').nodes, [N('A', 'rect', 'node', 0, 'snake_case a*b')])
 })
@@ -229,7 +230,7 @@ test('A5.errors: a #…; code named like an Object property falls back as entity
 test('A1: an @{ labelType } of text or string makes the label HTML, as Mermaid does; any other leaves it Markdown', () => {
   assert.deepEqual(F("A@{ labelType: text, label: 'a\\nb' }"), { reason: 'newline' })
   assert.deepEqual(F('A@{ labelType: text, label: "a*b*c" }').nodes, [N('A', 'rect', 'node', 0, 'a*b*c')])
-  assert.deepEqual(F('A@{ labelType: markdown, label: "a*b*c" }'), { reason: 'markdown' })
+  assert.deepEqual(F('A@{ labelType: markdown, label: "a*b*c" }').nodes[0].rows[0].text, emphasize('a*b*c'))
 })
 test('A5.errors: an @{ … } value YAML types, or one the lexer of Mermaid cuts or rejects, falls back', () => {
   const bad = ['A@{\n  label: false\n}', 'A@{\n  label: null\n}', 'A@{\n  label: 0\n}', 'A@{\n  label: ""\n}', 'A@{\n  label: 1.5\n}',
@@ -310,4 +311,14 @@ test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoi
     'subgraph end [t]\nB\nend', 'subgraph call[t]\nB\nend', 'A-->B\nstyle styleX fill:#f00', 'A-->B\nclassDef default fill:#f00',
     'A-->B\nclick A call cb()', 'ā --> B', '中文 --> B', 'A e1@--> B\ne1@{ animate: true }']
   assert.deepEqual(ok.map(s => [s, isFail(F(s))]), ok.map(s => [s, false]))
+})
+
+// X3. Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph title
+// and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
+test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as Mermaid shows them', () => {
+  const g = P('flowchart TD\nA["`**bold** and *it*`"] -->|"`__e__ _f_`"| B@{ label: "a*b*c" }\nsubgraph s ["`**t** x`"]\nB\nend')
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges.map((e: any) => e.label), g.clusters[0].title],
+    [[emphasize('**bold** and *it*'), emphasize('a*b*c')], [emphasize('__e__ _f_')], emphasize('**t** x')])
+  const [b, c] = emphasize('a **b<br>c** d')!.split('<br>')
+  assert.deepEqual(P('flowchart TD\nA["`a **b<br>c** d`"]').nodes[0].rows.map((r: any) => r.text), [b, c])
 })

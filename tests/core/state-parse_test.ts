@@ -133,10 +133,20 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
 })
 // X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each, a
 // state's id included where it has no description, and createText swaps icons and KaTeX.
-test('X3: Markdown, icons and math in a state text, or a state id shown as its label, fall back', () => {
-  for (const [body, why] of [['state "**bold**" as A', 'markdown'], ['A --> B : **x**', 'markdown'], ['A\nnote left of A : *x*', 'markdown'],
-    ['state "_c_" as C {\n  c\n}', 'markdown'], ['__init__ --> B', 'markdown'], ['state __c__ {\n  c\n}', 'markdown'],
+test('X3: Markdown the emphasis port cannot match, icons and math in a state text, or a state id shown as its label, fall back', () => {
+  for (const [body, why] of [['state "**a **b** c**" as A', 'markdown'], ['A --> B : a \\* b', 'markdown'], ['A\nnote left of A : *a *b* c*', 'markdown'],
+    ['state "_c_" as C {\n  c\n}', 'markdown'], ['state __c__ {\n  c\n}', 'markdown'],
     ['A : fa:fa-book', 'icon'], ['A --> B : $$x^2$$', 'math']]) assert.deepEqual(P(body), { reason: why }, body)
   const g = P('state "snake_case" as A\nA --> my_b : a*b\nD : C:\\x').graph
   assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label], [['snake_case', 'my_b', 'C:\\x'], 'a*b'])
+})
+
+// X3. Mermaid 12.2.0 (JSDOM): a state's description, note and transition label, and a state id shown as its label, show
+// <strong> and <em>; a composite's title shows **Comp** x as written, so emphasis there still falls back.
+test('X3.emphasis: bold and italic in a state text or a state id shown as its label draw as Mermaid shows them', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const g = P('state "**D** x" as A\nA --> __y__ : __b__ _i_\nnote left of A : **n** _o_').graph
+  assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label, g.nodes[0].note.text],
+    [[emphasize('**D** x'), emphasize('__y__')], emphasize('__b__ _i_'), emphasize('**n** _o_')])
+  assert.deepEqual(P('state "**Comp** x" as C {\n  c\n}'), { reason: 'markdown' })
 })

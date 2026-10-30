@@ -5,7 +5,7 @@ import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Member } from '../../graph/members.ts'
 import type { Dir } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { drawable, labelLines, type Br, type Mode } from '../../text.ts'
+import { drawable, labelLines, styled, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // A relation end: <| or |> triangle, * diamond, o odiamond, < or > arrow.
@@ -254,10 +254,16 @@ const MEMBER_TEXT: Field = ['member', 'none'], BUILT: Field = ['plain', 'literal
 function check(s: string, field: Field): void { const f = drawable(s, ...field); if (f) throw f }
 
 // Drawn text of field, trimmed. A blank one fails on line n; then text Mermaid shows otherwise (check); then a blank line
-// in it, from <br><br> or a <br> at an end.
+// in it, from <br><br> or a <br> at an end. A LINES field (a label, note or relation label) draws its bold and italic
+// marked, as styled says.
 function text(s: string, n: number, field: Field): string {
   const t = s.trim()
   if (t === '') stop(`syntax:${n}`)
+  if (field === LINES) {
+    const d = styled(t, 'any')
+    if (isFail(d)) throw d
+    return labelLines(d).some(l => !l.trim()) ? stop('label-blank-line') : d
+  }
   check(t, field)
   if (labelLines(t).some(l => !l.trim())) stop('label-blank-line')
   const bad = unsupported(t)

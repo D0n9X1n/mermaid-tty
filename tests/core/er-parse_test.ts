@@ -65,8 +65,8 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
     ['2FA', 'syntax:2'], ['A ||--|| B : 3', 'syntax:2'], ['o{', 'syntax:2'], ['u-boat ||--|| B : x', 'syntax:2'], ['A ||--|| B:::1x : y', 'syntax:2'],
     ['A ||--|| accDescr : x', 'syntax:2'], ['subgraph s [zero or more]\nA\nend', 'syntax:2'], ['subgraph " s "\nA\nend', 'syntax:2'], ['p[" Person"]', 'syntax:2'],
     ['CAR {\n  string pk\n}', 'syntax:3'], ['CAR {\n  List~string~ tags\n}', 'syntax:3'], ['CAR {\n  string `id`\n}', 'syntax:3'], ['CAR {\n  string id pk\n}', 'syntax:3'],
-    ['`CAR`', 'markdown:2'], ['*CAR*', 'markdown:2'], ['p[_Person_]', 'markdown:2'], ['p["**Person**"]', 'markdown:2'], ['A ||--o{ B : "_owns_"', 'markdown:2'],
-    ['A ||--o{ B : *owns*', 'markdown:2'], ['subgraph s [**T**]\nA\nend', 'markdown:2'], ['subgraph s\nA', 'syntax:2'], ['end', 'syntax:2']] as const)
+    ['`CAR`', 'markdown:2'], ['*CAR*', 'markdown:2'], ['p[`Person`]', 'markdown:2'], ['p["**a **b** c**"]', 'markdown:2'], ['A ||--o{ B : "a \\\\* b"', 'markdown:2'],
+    ['A ||--o{ B : "*a *b* c*"', 'markdown:2'], ['subgraph s [`T`]\nA\nend', 'markdown:2'], ['subgraph s\nA', 'syntax:2'], ['end', 'syntax:2']] as const)
     assert.deepEqual(P(body), { reason: why }, body)
   assert.deepEqual(P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id), ['12', 'B', 'TOTAL'])
 })
@@ -77,9 +77,19 @@ test('X2: a ~…~ pair in an alias or comment falls back, since erBox shows it a
 // X3. Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
 // default), and erBox draws each attribute column through createText with markdown on: marked renders all of them, and
 // createText swaps icons and KaTeX.
-test('X3: Markdown, icons and math in an attribute column or any ER text fall back', () => {
-  for (const [body, why] of [['A {\n  string id "**bold**"\n}', 'markdown'], ['A {\n  string id "a\\\\*b"\n}', 'markdown'],
+test('X3: Markdown the emphasis port cannot match, icons and math in an attribute column or any ER text fall back', () => {
+  for (const [body, why] of [['A {\n  string id "**a **b** c**"\n}', 'markdown'], ['A {\n  string __id__ "c"\n}', 'markdown'], ['A {\n  string id "a\\\\*b"\n}', 'markdown'],
     ['A ||--o{ B : "a\\\\#b"', 'markdown'], ['A {\n  string id "fa:fa-book"\n}', 'icon'], ['A["fa:fa-book"]', 'icon'],
     ['A ||--o{ B : "$$x^2$$"', 'math']] as const) assert.deepEqual(P(body), { reason: why }, body)
   assert.equal(P('A {\n  string id "snake_case a\\nb"\n}').entities[0].attrs[0].comment, 'snake_case a\\nb')
+})
+
+// X3. Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or one a <br>
+// splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's name is its
+// id, so emphasis there still falls back.
+test('X3.emphasis: bold and italic in an ER alias, relation label, subgraph title or attribute comment draw as Mermaid shows them', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const m = P('p["**Person** _x_"]\np ||--o{ ORDER : "a<br>**places** *x*"\nA ||--o{ B : *owns*\nsubgraph s [**T**]\nA\nend\nB {\n  string id "**c** _d_"\n}')
+  assert.deepEqual([m.entities[0].label, m.relations.map((r: any) => r.label), m.subgraphs[0].title, m.entities.find((e: any) => e.id === 'B').attrs[0].comment],
+    [emphasize('**Person** _x_'), [emphasize('a<br>**places** *x*'), emphasize('*owns*')], emphasize('**T**'), emphasize('**c** _d_')])
 })

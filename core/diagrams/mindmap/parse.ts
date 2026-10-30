@@ -3,7 +3,7 @@
 // fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
-import { drawable, labelLines } from '../../text.ts'
+import { drawable, labelLines, styled } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 export type Shape = 'plain' | 'rect' | 'round' | 'circle' | 'bang' | 'cloud' | 'hexagon'
@@ -89,16 +89,23 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
 // word, or a \ before ASCII punctuation (an escape marked drops).
 const MARKDOWN = /[*\x60]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])|\\[!-/:-@[-`{-~]/u
 
-// A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap). Fails on
-// line n for Markdown, a blank line, or text drawable (a markdown HTML label: 'icon' and 'math' for text createText
+// A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap), its bold and
+// italic marked (core/emphasis.ts). Fails on line n for other Markdown, a blank line, or text drawable (a markdown HTML label: 'icon' and 'math' for text createText
 // replaces) or unsupported() rejects.
 function label(raw: string, n: number): string[] {
   const s = raw.trim()
-  if (MARKDOWN.test(s)) stop(`markdown:${n}`)
-  const f = drawable(s, 'markdown', 'any')
-  if (f) stop(`${f.reason}:${n}`)
-  const bad = unsupported(s)
-  if (bad) stop(`unsupported-char ${bad}`)
-  const lines = labelLines(s).map(l => l.trim())
+  let d = s
+  if (MARKDOWN.test(s)) {
+    // Bold and italic draw marked, as styled says; Markdown that styles nothing, or that the port cannot match, fails.
+    const r = styled(s, 'any')
+    if (isFail(r) || r === s) stop(`markdown:${n}`)
+    d = r
+  } else {
+    const f = drawable(s, 'markdown', 'any')
+    if (f) stop(`${f.reason}:${n}`)
+    const bad = unsupported(s)
+    if (bad) stop(`unsupported-char ${bad}`)
+  }
+  const lines = labelLines(d).map(l => l.trim())
   return lines.some(l => l === '') ? stop(`blank:${n}`) : lines
 }

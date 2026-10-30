@@ -307,3 +307,25 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
   })
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
+
+// X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each other
+// kind given one, must fail. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
+// are among the ok fixtures, so styled cells lose their style here too.
+test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cell given emphasis, fails', t => {
+  const { mutants, survivors } = tally(t, 'emphasis', function* (d) {
+    const seen = new Map<string, number>()
+    for (const { r, c, x } of spots(d)) {
+      if (x.kind === 'text') {
+        for (const em of [undefined, 1, 2, 3]) if (em !== x.em) {
+          const { em: _old, ...rest } = x
+          yield [`(${r},${c}) ${x.ch} em ${x.em ?? 0} as ${em ?? 0}`, [[r, c, em === undefined ? rest : { ...rest, em }]]]
+        }
+        continue
+      }
+      const n = seen.get(x.kind) ?? 0
+      seen.set(x.kind, n + 1)
+      if (n < 3) yield [`(${r},${c}) ${x.kind} ${x.ch} given em 1`, [[r, c, { ...x, em: 1 }]]]
+    }
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})

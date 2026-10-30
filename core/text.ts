@@ -1,6 +1,6 @@
-import { emOf } from './emphasis.ts'
-import { fail, type Fail } from './fail.ts'
-import { isWide, width } from './width.ts'
+import { emOf, emphasize } from './emphasis.ts'
+import { fail, isFail, type Fail } from './fail.ts'
+import { isWide, unsupported, width } from './width.ts'
 
 // How a field's text reaches the screen in Mermaid 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md):
 // html, an HTML label; markdown, an HTML label marked renders (labelType 'markdown'); plain, text as written; sanitized,
@@ -73,6 +73,20 @@ export function decoded(text: string, mode: Mode, br: Br): string | Fail {
     if (g) return g
   }
   return out
+}
+
+// X3. A markdown field's text as Mermaid shows it, or why it cannot be drawn: the text itself, or with decode its #…;
+// codes decoded (as decoded says), when marked shows it as written; else the marked string core/emphasis.ts makes of
+// its bold and italic. Every other Fail drawable gives stands, and so does 'markdown' where the port cannot match
+// Mermaid, or where the text also has a #…; code or, in a field no <br> splits, a <. An unsupported character fails as
+// 'unsupported-char U+XXXX', checked before any marker is written, so no marker comes from the source.
+export function styled(text: string, br: Br, decode = false): string | Fail {
+  const d = decode ? decoded(text, 'markdown', br) : (drawable(text, 'markdown', br) ?? text)
+  if (isFail(d) && d.reason !== 'markdown') return d
+  const bad = unsupported(isFail(d) ? text : d)
+  if (bad) return fail(`unsupported-char ${bad}`)
+  if (!isFail(d) || /#\w+;/.test(text) || (br !== 'any' && text.includes('<'))) return d
+  return emphasize(text) ?? d
 }
 
 // X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token

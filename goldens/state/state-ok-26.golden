@@ -1,0 +1,108 @@
+@60
+                 ●
+      ┌──────────┘
+      │
+      ▼
+( Idle state )┄┄ waits for input
+      └──────┐
+             │
+         start job
+             │
+             ▼
+          ( Busy )
+@60 roles
+                 n
+      eeeeeeeeeeee
+      e
+      a
+nnNNNNNNNNNNnnoooOOOOOOOOOOOOOOO
+      eeeeeeee
+             e
+         LLLLLLLLL
+             e
+             a
+          nnNNNNnn
+@60 styles
+
+
+
+
+  bbbb           bbbbb     iiiii
+
+
+         iiiii
+
+
+            bbbb
+@80
+                 ●
+      ┌──────────┘
+      │
+      ▼
+( Idle state )┄┄ waits for input
+      └──────┐
+             │
+         start job
+             │
+             ▼
+          ( Busy )
+@80 roles
+                 n
+      eeeeeeeeeeee
+      e
+      a
+nnNNNNNNNNNNnnoooOOOOOOOOOOOOOOO
+      eeeeeeee
+             e
+         LLLLLLLLL
+             e
+             a
+          nnNNNNnn
+@80 styles
+
+
+
+
+  bbbb           bbbbb     iiiii
+
+
+         iiiii
+
+
+            bbbb
+@120
+                 ●
+      ┌──────────┘
+      │
+      ▼
+( Idle state )┄┄ waits for input
+      └──────┐
+             │
+         start job
+             │
+             ▼
+          ( Busy )
+@120 roles
+                 n
+      eeeeeeeeeeee
+      e
+      a
+nnNNNNNNNNNNnnoooOOOOOOOOOOOOOOO
+      eeeeeeee
+             e
+         LLLLLLLLL
+             e
+             a
+          nnNNNNnn
+@120 styles
+
+
+
+
+  bbbb           bbbbb     iiiii
+
+
+         iiiii
+
+
+            bbbb

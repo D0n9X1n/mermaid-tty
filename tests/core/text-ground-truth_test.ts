@@ -206,8 +206,8 @@ test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it
 // ordinary label in each field still draws.
 const reason = (src: string): string | null => { const r = explain(src, { columns: 120, theme: 'mono' }); return isFail(r) ? r.reason : null }
 // gitGraph is parsed but not yet drawn (explain: unimplemented), so its whitespace repros are in gitGraph-parse_test.ts.
-test('X3: QA repros: Markdown, icons and math in class, state and ER labels, ER comments and class notes fall back', () => {
-  const repros = ['classDiagram\nclass A["**bold**"]', 'stateDiagram-v2\nstate "**bold**" as A', 'erDiagram\nA {\n  string id "**bold**"\n}',
+test('X3: QA repros: Markdown other than bold and italic, icons and math in class, state and ER labels, ER comments and class notes fall back', () => {
+  const repros = ['classDiagram\nclass A["**a **b** c**"]', 'stateDiagram-v2\nstate "**a **b** c**" as A', 'erDiagram\nA {\n  string id "**a **b** c**"\n}',
     'classDiagram\nclass A["fa:fa-book"]', 'stateDiagram-v2\nA : fa:fa-book', 'erDiagram\nA["fa:fa-book"]',
     'classDiagram\nclass A["$$x^2$$"]', 'stateDiagram-v2\nA : $$x^2$$', 'erDiagram\nA {\n  string id "$$x^2$$"\n}',
     'classDiagram\nclass A\nnote "a<br\u00a0/>b"',
@@ -216,6 +216,8 @@ test('X3: QA repros: Markdown, icons and math in class, state and ER labels, ER 
   // A literal \n in a class note shows as written in Mermaid: one line here too.
   assert.deepEqual(drawn('classDiagram\nclass A\nnote for A "First\\nSecond"', 'note0'), ['First\\nSecond'])
   const ordinary = ['classDiagram\nclass A["snake_case"]\nA --> B : a*b\nnote "plain"', 'stateDiagram-v2\nstate "snake_case" as A\nA --> B : a*b',
-    'erDiagram\nA {\n  string id "plain_id"\n}\nA ||--o{ B : owns', 'flowchart TD\nA["**bold**"] -->|x| B', 'mindmap\nR\n  plain']
+    'erDiagram\nA {\n  string id "plain_id"\n}\nA ||--o{ B : owns', 'flowchart TD\nA["**bold**"] -->|x| B', 'mindmap\nR\n  plain',
+    // X3.emphasis: bold and italic Mermaid shows as <strong> and <em> draw.
+    'classDiagram\nclass A["**bold**"]', 'stateDiagram-v2\nstate "**bold**" as A', 'erDiagram\nA {\n  string id "**bold**"\n}']
   assert.deepEqual(ordinary.map(s => [s, reason(s)]), ordinary.map(s => [s, null]))
 })

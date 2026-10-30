@@ -3,8 +3,8 @@
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, Mark, NodeRow, Note } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { drawable, labelLines } from '../../text.ts'
-import { unsupported } from '../../width.ts'
+import { plain } from '../../emphasis.ts'
+import { drawable, labelLines, styled } from '../../text.ts'
 
 // The graph, the frontmatter title (the graph's own title stays null), and each note's id in source order, which keys follow.
 export type StateModel = { graph: Graph; title: string | null; notes: string[] }
@@ -177,19 +177,20 @@ function closes(rest: string): boolean | null {
   return i < 0 ? null : rest.slice(i + 1).trim() === ''
 }
 
-// Text a statement draws, trimmed, or why it cannot be drawn: 'entity', 'html', 'markdown', 'icon' or 'math' where
+// Text a statement draws, trimmed and with its bold and italic marked (styled), or why it cannot be drawn: 'entity',
+// 'html', 'markdown', 'icon' or 'math' where
 // Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
 // Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
 // 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end).
 function drawText(raw: string): string | Fail {
   const t = raw.trim()
   const f = drawable(t, 'markdown', 'any')
-  if (f) return f
+  if (f && f.reason !== 'markdown') return f
   if (t.includes(';')) return fail('semicolon')
-  const bad = unsupported(t)
-  if (bad) return fail(`unsupported-char ${bad}`)
-  const ls = labelLines(t)
-  return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : t
+  const d = styled(t, 'any')
+  if (isFail(d)) return d
+  const ls = labelLines(d)
+  return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : d
 }
 
 // A state as the statements so far declare it: its mark and its note; a bar's span, once every transition is read.
@@ -314,17 +315,21 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   const ins = new Map<string, number>(), outs = new Map<string, number>()
   for (const e of edges) if (e.style === 'solid') { ins.set(e.to, (ins.get(e.to) ?? 0) + 1); outs.set(e.from, (outs.get(e.from) ?? 0) + 1) }
   for (const d of nodes.values()) if (d.mark === 'bar') d.span = Math.max(3, 2 * Math.max(ins.get(d.id) ?? 0, outs.get(d.id) ?? 0) - 1)
-  // A composite's title draws on its frame, on one line: a markdown HTML label no <br> may split.
+  // A composite's title draws on its frame, on one line: a markdown HTML label no <br> may split. Mermaid 12.2.0 shows
+  // **Comp** there as written (JSDOM), so a title with emphasis falls back.
   for (const c of clusters) {
     if (c.frameless) continue
     c.title = descrs.get(c.id) ?? c.id
+    if (c.title !== plain(c.title)) return fail('markdown')
     const f = drawable(c.title, 'markdown', 'none')
     if (f) return f
   }
-  // A state with no description shows its id, a markdown HTML label too.
+  // A state with no description shows its id, a markdown HTML label too: its bold and italic draw as styled says.
   for (const d of nodes.values()) {
-    const f = d.mark || descrs.has(d.id) ? null : drawable(d.id, 'markdown', 'none')
-    if (f) return f
+    if (d.mark || descrs.has(d.id)) continue
+    const f = styled(d.id, 'none')
+    if (isFail(f)) return f
+    if (f !== d.id) descrs.set(d.id, f)
   }
   // A transition's id t<k> that a state or composite also has would give two drawn things one owner.
   const ids = new Set([...nodes.keys(), ...clusters.map(c => c.id)])

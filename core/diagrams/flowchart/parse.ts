@@ -5,7 +5,7 @@ import { ALIASES, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { decoded, labelLines, type Br } from '../../text.ts'
+import { decoded, labelLines, styled, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 import { joinData, yamlValue } from './data.ts'
 import { misread } from './ids.ts'
@@ -420,7 +420,7 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 // A bracket or edge label's text, or a subgraph title, as Mermaid 12.2.0 lexes it: one non-empty "…" or "`…`" first, if
 // any, then text with no ", the two joined and trimmed ("…" keeps punctuation): ["a" b] is a b. Any other " (a space or
 // text before the string, a second string, an empty one, a ` or " inside "`…`") and an empty label are a parse error, so
-// fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis falls back. Its <br>
+// fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis draws as styled says. Its <br>
 // stay: a node splits them into lines, and an edge label keeps them for layout to split with labelLines. br is checked's.
 // token: the text after the string is Mermaid's text token (a node, |…| or subgraph label), which stops at ( ) [ ] { } |
 // and cannot start with ~~~; a text form's edge text (token false) takes any of them.
@@ -451,8 +451,9 @@ function splitLabel(t: string): string[] | Fail {
 // Label text as Mermaid shows it, if it can be drawn: its #…; codes decoded, as decoded says; text Mermaid's HTML label shows
 // otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where the drawing
 // splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label }, which
-// Mermaid's flowDb gives labelType markdown.
+// Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says.
 function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html'): string | Fail {
+  if (mode === 'markdown') return styled(text, br, true)
   const t = decoded(text, mode, br)
   if (isFail(t)) return t
   const bad = unsupported(t)

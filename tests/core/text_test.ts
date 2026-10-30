@@ -159,3 +159,22 @@ test('X3.emphasis: wrap measures a marked line by what it shows and keeps each m
   assert.ok(ps.every(p => !/[\x01-\x03]$/.test(p.text)))
   assert.equal(ps[1]!.text, emphasize('**字** ab'))
 })
+
+// X3. styled: a markdown field's text as the marked string Mermaid shows (core/emphasis.ts), or why not. Text the port
+// cannot match keeps the Fail drawable gives; an unsupported character fails before any marker is written, so a marker
+// can never come from the source.
+test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every other Fail', async () => {
+  const { styled } = await import('../../core/text.ts'), { emphasize } = await import('../../core/emphasis.ts')
+  const R = (t: string, br: Br = 'any', decode = false) => { const r = styled(t, br, decode); return typeof r === 'string' ? r : r.reason }
+  assert.equal(R('**b** _i_'), emphasize('**b** _i_'))
+  assert.equal(R('a<br>**b**'), emphasize('a<br>**b**'))
+  assert.equal(R('plain text'), 'plain text')
+  assert.equal(R('a * b * c'), 'a * b * c')                       // two lone * Mermaid shows as written
+  assert.deepEqual(['a\\*b*', '`x` **b**', '**a **b** c**', '#35; **b**', '&amp; **b**'].map(t => R(t)), ['markdown', 'markdown', 'markdown', 'entity', 'entity'])
+  assert.equal(R('**b**<br>c', 'none'), 'html')
+  assert.equal(R('fa:fa-x **b**'), 'icon')
+  assert.equal(R('**b** \u{1}'), 'unsupported-char U+0001')
+  assert.equal(R('\u{1}b'), 'unsupported-char U+0001')
+  assert.equal(R('#35; x', 'any', true), '# x')                   // decode: a flowchart field's codes, as decoded says
+  assert.equal(R('#35; **x**', 'any', true), 'markdown')          // codes and emphasis together fall back
+})
