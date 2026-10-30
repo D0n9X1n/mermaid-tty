@@ -271,6 +271,13 @@ test('A5.errors: an @{ … } body with a control character, or a space YAML does
   assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
   assert.deepEqual(F('A@{\tlabel: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
 })
+test('A5.errors: a "}" value does not end the @{ … } character check early', () => {
+  const nb = String.fromCharCode(0xa0), c1 = String.fromCharCode(1), ls = String.fromCharCode(0x2028), bom = String.fromCharCode(0xfeff)
+  const bad = [`A@{ ignored: "}", label:${nb}x }`, `A@{ ignored: "}${c1}", label: x }`, `A@{\n  ignored: "}"\n  note: "${c1}"\n  label: x\n}`,
+    `A e1@--> B\ne1@{ ignored: "}", animate:${ls}true }`, `A@{ ignored: "}", label: ${bom}x }`]
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+  assert.deepEqual(F('A@{ note: "}", label: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
+})
 test('A5.errors: an @{ … } key YAML reads as no string, or that repeats as YAML compares keys, falls back', () => {
   const bad = ['A@{ true: x, True: y }', 'A@{ 01: x, 1: y }', 'A e1@--> B\ne1@{ true: x, True: y }', 'A@{ null: x }', 'A@{ ~: x }', 'A@{ 1: x }',
     'A@{ FALSE: x, label: y }']

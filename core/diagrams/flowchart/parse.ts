@@ -249,10 +249,7 @@ const DATA_ODD = /(?!\t)[\p{Cc}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u
 // }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
 // spaces, then }; each key once; each value one yamlValue reads; and no DATA_ODD character.
 function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
-  const close = text.indexOf('}', i)
-  const body = text.slice(i, close < 0 ? text.length : close)
-  if (DATA_ODD.test(body) || body.includes(String.fromCharCode(0xfeff))) return null
-  const pairs: [string, string][] = []
+  const start = i, pairs: [string, string][] = []
   for (;;) {
     PAIR.lastIndex = i
     const m = PAIR.exec(text)
@@ -266,7 +263,10 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
     i++
   }
   i += /^\s*/.exec(text.slice(i))![0].length
-  return text[i] === '}' ? { pairs, end: i + 1 } : null
+  if (text[i] !== '}') return null
+  // Checked up to the } the pairs end at, not the first }: a "}" value must not hide what follows it.
+  const body = text.slice(start, i)
+  return DATA_ODD.test(body) || body.includes(String.fromCharCode(0xfeff)) ? null : { pairs, end: i + 1 }
 }
 
 // Reads one statement into st and returns how far it read; the caller fails on any text
