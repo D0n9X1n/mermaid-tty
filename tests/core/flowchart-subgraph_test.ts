@@ -43,7 +43,7 @@ test('A5.errors: an end with nothing open, a subgraph header in no listed form, 
   assertFails([['end', 'syntax:2'], ['subgraph s\nend\nend', 'syntax:4'], ['subgraph', 'syntax:2'], ['subgraph a b\nend', 'syntax:2'], ['subgraph a [x] y\nend', 'syntax:2'],
     ['subgraph a [x\nend', 'syntax:2'], ['subgraph a "x"\nend', 'syntax:2'], ['subgraph a []\nend', 'syntax:2'], ['subgraph a [ ]\nend', 'syntax:2'],
     ['subgraph "x" y\nend', 'syntax:2'], ['subgraph a\nend\nsubgraph a\nend', 'syntax:4']])
-  assertFails([['subgraph s ["`**b**`"]\nend', 'markdown'], ['subgraph s ["a #nosuch; b"]\nend', 'entity']])
+  assertFails([['subgraph s ["`**a **b** c**`"]\nend', 'markdown'], ['subgraph s ["a #nosuch; b"]\nend', 'entity']])
 })
 test('A5.errors: a subgraph left open fails unclosed-subgraph, nested or not', () => {
   assertFails([['subgraph a\nsubgraph b\nend', 'unclosed-subgraph'], ['subgraph a\nend\nsubgraph b', 'unclosed-subgraph']])

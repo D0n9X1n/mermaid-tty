@@ -103,3 +103,10 @@ test('VR.gallery: render-svg.ts says so, exits 1 and writes nothing when core fa
   const { out, run } = cli(t, 'no diagram here\n'), r = run('@in', '80', 'nord', out)
   assert.equal(r.status, 1); assert.match(r.stderr, /fell back/); assert.equal(existsSync(out), false)
 })
+
+test('X3.emphasis: an italic span sets font-style on its own glyphs only', () => {
+  const a = attrs(rowsToSvg([[{ text: 'I', italic: true }, { text: 'X', bold: true, italic: true }, { text: 'p' }]], CELLS))
+  assert.match(a.I!, /font-style="italic"/); assert.doesNotMatch(a.I!, /font-weight/)
+  assert.match(a.X!, /font-weight="bold"/); assert.match(a.X!, /font-style="italic"/)
+  assert.doesNotMatch(a.p!, /font-style/)
+})

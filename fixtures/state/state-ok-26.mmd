@@ -1,0 +1,5 @@
+stateDiagram-v2
+state "**Idle** state" as Idle
+[*] --> Idle
+Idle --> __Busy__ : _start_ job
+note right of Idle : **waits** for _input_

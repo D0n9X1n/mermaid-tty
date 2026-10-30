@@ -1,5 +1,6 @@
-import { fail, type Fail } from './fail.ts'
-import { isWide, width } from './width.ts'
+import { emOf, emphasize, oneParagraph } from './emphasis.ts'
+import { fail, isFail, type Fail } from './fail.ts'
+import { isWide, unsupported, width } from './width.ts'
 
 // How a field's text reaches the screen in Mermaid 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md):
 // html, an HTML label; markdown, an HTML label marked renders (labelType 'markdown'); plain, text as written; sanitized,
@@ -62,6 +63,9 @@ function codeChar(name: string): string | null {
 // *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   if (!/#\w+;/.test(text)) return drawable(text, mode, br) ?? text
+  // #26. Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
+  // edge label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
+  if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) return fail('markdown')
   let bad = false
   const out = text.replace(CODE, (_, name: string) => codeChar(name) ?? ((bad = true), ''))
   if (bad) return fail('entity')
@@ -72,6 +76,23 @@ export function decoded(text: string, mode: Mode, br: Br): string | Fail {
     if (g) return g
   }
   return out
+}
+
+// X3. A markdown field's text as Mermaid shows it, or why it cannot be drawn: the text itself, or with decode its #…;
+// codes decoded (as decoded says), when marked shows it as written; else the marked string core/emphasis.ts makes of
+// its bold and italic. Every other Fail drawable gives stands, and so does 'markdown' where the port cannot match
+// Mermaid, or where the text also has a #…; code or, in a field no <br> splits, a <. An unsupported character fails as
+// 'unsupported-char U+XXXX', checked before any marker is written, so no marker comes from the source. breaks: an edge,
+// transition or relation label, where Mermaid makes each <br> a newline before marked: text that is not one paragraph
+// then (oneParagraph; a blank line is left to the caller) fails 'markdown', emphasis or not.
+export function styled(text: string, br: Br, { decode = false, breaks = false }: { decode?: boolean; breaks?: boolean } = {}): string | Fail {
+  const d = decode ? decoded(text, 'markdown', br) : (drawable(text, 'markdown', br) ?? text)
+  if (isFail(d) && d.reason !== 'markdown') return d
+  const bad = unsupported(isFail(d) ? text : d)
+  if (bad) return fail(`unsupported-char ${bad}`)
+  if (breaks && !oneParagraph(text, true)) return fail('markdown')
+  if (!isFail(d) || /#\w+;/.test(text) || (br !== 'any' && text.includes('<'))) return d
+  return emphasize(text, breaks) ?? d
 }
 
 // X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token
@@ -118,7 +139,9 @@ export function wrap(line: string, max: number): Piece[] | null {
   // Each token, and whether a space came before it.
   const toks: { t: string; sp: boolean }[] = []
   let cur = '', sp = false, prevWide = false
+  let mark = ''                                    // an emphasis marker, held until the character it styles
   for (const ch of line) {
+    if (emOf(ch)) { mark = ch; continue }
     if (ch === ' ') {
       if (cur) toks.push({ t: cur, sp })
       cur = ''; sp = true; prevWide = false
@@ -126,7 +149,7 @@ export function wrap(line: string, max: number): Piece[] | null {
     }
     const w = isWide(ch.codePointAt(0)!)
     if (w && prevWide && cur) { toks.push({ t: cur, sp }); cur = ''; sp = false }
-    cur += ch; prevWide = w
+    cur += mark + ch; prevWide = w; mark = ''
   }
   if (cur) toks.push({ t: cur, sp })
   const out: Piece[] = []

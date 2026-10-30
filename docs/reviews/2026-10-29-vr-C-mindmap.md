@@ -22,6 +22,8 @@ reviewers: [PM, cross-family:gpt-6-astra]
 | goldens/mindmap/mindmap-ok-12.golden | 4897a33e243dacdf3d6e35ae32e8311bcb3dc457f9f66856e978e0f818843e89 |
 | goldens/mindmap/mindmap-ok-13.golden | 4b39d30c42f0f8010480d8cd3fa4ae8a4799eddfbaf66f872375cb67d750a70c |
 | goldens/mindmap/mindmap-ok-14.golden | 0fdc6db58d4f48e4f1817a77257cc0b79c4f89cb7af94968aec3a762aecd02d5 |
+| goldens/mindmap/mindmap-ok-15.golden | 575fa09322dd091418271ee42888ef0d7f79c30cd3b18eb01902a3d9dfcd17e1 |
 ## Notes
 - PM inspected the rendered gallery (PNGs of the largest goldens at 80 columns, plus the CJK sheet): every label readable, not tangled, roles told apart, faithful to the source.
 - The cross-family reviewer (gpt-6-astra) read every mindmap golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
+- v1.1.1 (#15): the cross-family reviewer (gpt-6-astra) read the new Markdown bold and italic golden, its text, roles and styles, against its source at 60, 80 and 120 columns and against Mermaid 12.2.0, and passed it. No existing golden changed.

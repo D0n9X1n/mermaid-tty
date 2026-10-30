@@ -6,7 +6,8 @@ import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Attr } from '../../graph/members.ts'
 import type { Dir } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
-import { drawable, labelLines, type Br } from '../../text.ts'
+import { oneParagraph } from '../../emphasis.ts'
+import { drawable, labelLines, styled, type Br } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // An entity: its id, the alias or else the id it draws, its attributes from all its blocks in order, and its first mention's index.
@@ -159,7 +160,7 @@ function entity(g: Groups, n: number, st: State): void {
   classes(g.c1, n)
   if (g.alias !== undefined) {
     if (st.aliased.has(e.id)) stop(`repeat:${n}`)
-    st.aliased.add(e.id); e.label = name(g.alias, n)
+    st.aliased.add(e.id); e.label = name(g.alias, n, 'none', true, true)
   }
   if (g.block === '{') st.block = { e, n }
 }
@@ -168,7 +169,7 @@ function entity(g: Groups, n: number, st: State): void {
 function relation(g: Groups, n: number, st: State): void {
   const from = end(g.from!, n, st), to = end(g.to!, n, st), k = st.m.relations.length
   classes(g.c1, n); classes(g.c2, n)
-  const label = name(g.label!, n, 'any', false)
+  const label = name(g.label!, n, 'any', false, true)
   st.m.relations.push({ id: `r${k}`, from, to, left: CARD[g.left!]!, right: CARD[g.right!]!,
     line: g.line === '--' || g.line === 'to' ? 'solid' : 'dotted', label, order: k })
   if (label.trim()) st.m.keyable.push({ owner: `r${k}:label`, text: label })
@@ -234,14 +235,14 @@ function title(raw: string, n: number): string {
   TITLE_WORD.lastIndex = 0
   while ((w = TITLE_WORD.exec(raw))) { words.push(word(w[1]!, n, true)); at = TITLE_WORD.lastIndex }
   if (words.length === 0 || raw.slice(at).trim() !== '' || ZERO_OR_MORE.test(raw.replace(/"[^"]*"/g, '"'))) stop(`syntax:${n}`)
-  return text(words.join(' '), n)
+  return text(words.join(' '), n, 'none', true)
 }
 
 // A name without its quotes.
 const unquote = (raw: string): string => (raw.startsWith('"') ? raw.slice(1, -1) : raw)
 
 // A name, alias or label on line n, as it draws, its <br>s as br says; a label cannot be a number.
-const name = (raw: string, n: number, br: Br = 'none', digits = true): string => text(word(raw, n, digits), n, br)
+const name = (raw: string, n: number, br: Br = 'none', digits = true, shown = false): string => text(word(raw, n, digits), n, br, shown)
 
 // A word's text on line n. An unquoted one must lex as a name. A quoted one must not start or end with a space: Mermaid trims
 // a subgraph id but not an entity name, so " s " would name two things.
@@ -258,31 +259,46 @@ function plain(s: string, digits: boolean): boolean {
   return !/^[0-9]/.test(s) || (digits && /^[0-9]+$/.test(s) && s !== '1')
 }
 
-// A name, alias, label or title on line n, as it draws: Markdown fails, since Mermaid renders it, and then as drawn says.
-function text(s: string, n: number, br: Br = 'none'): string {
-  if (MARKDOWN.test(s)) stop(`markdown:${n}`)
-  return drawn(s, br)
+// A name, alias, label or title on line n, as it draws. Markdown in a name (an entity's id) fails, since Mermaid renders it.
+// In shown text (an alias, relation label or subgraph title) its bold and italic draw as styled says; Markdown that
+// changes no style there (a code span, say) still fails, as Mermaid shows it otherwise.
+function text(s: string, n: number, br: Br = 'none', shown = false): string {
+  if (!MARKDOWN.test(s)) return drawn(s, br)
+  if (!shown) stop(`markdown:${n}`)
+  let d: string
+  try { d = drawn(s, br, true) } catch (e) { throw isFail(e) && e.reason === 'markdown' ? fail(`markdown:${n}`) : e }
+  return d === s ? stop(`markdown:${n}`) : d
 }
 
 // A text that draws as written. Every ER text is a markdown HTML label (labelType 'markdown', and erBox's createText with
 // markdown on for each attribute column), so text Mermaid shows otherwise fails as drawable says ('entity', 'html',
 // 'markdown', 'icon' or 'math'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere, as an
 // entity's label, an attribute's row and a subgraph's title draw on one line. A blank line among two or more, from
-// <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart.
-function drawn(s: string, br: Br = 'none'): string {
-  const f = drawable(s, 'markdown', br)
-  if (f) throw f
+// <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart. With emphasis (shown text and an
+// attribute's comment) its bold and italic draw marked, as styled says.
+function drawn(s: string, br: Br = 'none', emphasis = false): string {
   // erBox draws a label through parseGenericTypes, which turns a ~…~ pair into <…>.
   if ((s.match(/~/g) ?? []).length > 1) stop('generic')
-  const bad = unsupported(s)
-  if (bad) stop(`unsupported-char ${bad}`)
-  const lines = labelLines(s)
+  let d = s
+  // A relation label (br 'any') is an edge label: Mermaid makes each <br> a newline before marked.
+  if (br === 'any' && !oneParagraph(s, true)) stop('markdown')
+  if (emphasis) {
+    const r = styled(s, br, { breaks: br === 'any' })
+    if (isFail(r)) throw r
+    d = r
+  } else {
+    const f = drawable(s, 'markdown', br)
+    if (f) throw f
+    const bad = unsupported(s)
+    if (bad) stop(`unsupported-char ${bad}`)
+  }
+  const lines = labelLines(d)
   if (lines.length > 1 && lines.some(l => !l.trim())) stop('label-blank-line')
-  return s
+  return d
 }
 
 // An attribute line's columns, each drawn as written.
 function attribute(g: Groups): Attr {
   return { type: drawn(g.type!), name: drawn(g.name!), keys: (g.keys ?? '').split(/\s*,\s*/).filter(Boolean).join(', '),
-    comment: drawn(unquote(g.comment ?? '')) }
+    comment: drawn(unquote(g.comment ?? ''), 'none', true) }
 }

@@ -21,9 +21,17 @@ export const roleCode = (c: Cell | null): string => (c === null ? ' ' : c.kind =
 // One row per canvas row, each cell mapped by f, right-trimmed of spaces only.
 const rows = (d: Drawing, f: (c: Cell | null) => string): string[] => d.cells.map(row => row.map(f).join('').replace(/ +$/, ''))
 
-// For each width: '@w' and its text rows, then '@w roles' and one role row per text row, cell for cell. One LF at the end.
+// A text cell's emphasis code (core/emphasis.ts): b bold, i italic, x both; ' ' for no emphasis or any other cell.
+const STYLE = [' ', 'b', 'i', 'x']
+const styleCode = (c: Cell | null): string => (c?.kind === 'text' && c.em ? STYLE[c.em] ?? '?' : ' ')
+
+// For each width: '@w' and its text rows, then '@w roles' and one role row per text row, cell for cell; then, only when
+// a cell has emphasis, '@w styles' and one style row per text row. One LF at the end.
 export function goldenOf(runs: readonly (readonly [number, Drawing])[]): string {
-  return runs.map(([w, d]) => [`@${w}`, ...rows(d, glyph), `@${w} roles`, ...rows(d, roleCode)].join('\n')).join('\n') + '\n'
+  return runs.map(([w, d]) => {
+    const styled = d.cells.some(row => row.some(c => c?.em !== undefined))
+    return [`@${w}`, ...rows(d, glyph), `@${w} roles`, ...rows(d, roleCode), ...(styled ? [`@${w} styles`, ...rows(d, styleCode)] : [])].join('\n')
+  }).join('\n') + '\n'
 }
 
 // The widest right-trimmed row, in terminal columns.

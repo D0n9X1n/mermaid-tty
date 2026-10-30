@@ -14,7 +14,7 @@ const hex = (c: string) => { const v = c.startsWith('#') ? c : DARK[c]; if (!v) 
 // Plan A's spans carry resolved colors (a CC ThemeKey or #rrggbb; none under mono; dimColor for mono notes); keys resolve through DARK (D2).
 export function spanStyle(sp: Span): Omit<Styled, 'text'> {
   const fg = sp.dimColor ? DARK.inactive! : sp.color ? hex(sp.color) : DARK.text!;
-  return { fg, ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}), ...(sp.bold ? { bold: true } : {}) };
+  return { fg, ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}), ...(sp.bold ? { bold: true } : {}), ...(sp.italic ? { italic: true } : {}) };
 }
 export function styledRows(source: string, columns: number, theme: string, raw = false): Styled[][] | null {
   if (raw) return source.trimEnd().split(/\r?\n/).map((text) => [{ text, fg: DARK.text! }]);

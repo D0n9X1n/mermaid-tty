@@ -65,3 +65,10 @@ for (const theme of ['default', 'nord', 'dracula', 'gruvbox', 'solarized'] as co
       has(/[►◄▲▼]/, 'color', r.arrow), has(/yes/, 'color', r.label), has(/Frame/, 'color', r.frame), has(/memo/, 'color', r.note)]).toEqual([true, true, true, true, true, true, true])
   })
 }
+// X3. Markdown bold and italic reach Ink as Text bold and italic props, under mono too, where no span has a color.
+test('X3.emphasis: a label\'s bold and italic draw as Text bold and italic', { options: { theme: 'mono' } }, async ($, on) => {
+  capture(on); const ui = await mount($, '```mermaid\nflowchart LR\nA["`**Bold** and *it*`"]\n```\n')
+  const texts = await ui.findAll({ type: 'Text' })
+  expect([texts.some((x: any) => x.text === 'Bold' && x.props.bold === true && !x.props.italic),
+    texts.some((x: any) => x.text === 'it' && x.props.italic === true && !x.props.bold)]).toEqual([true, true])
+})

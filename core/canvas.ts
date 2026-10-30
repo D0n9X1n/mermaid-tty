@@ -1,4 +1,5 @@
 // core/canvas.ts — a cell grid with owners, a write policy and a conflict log (plan A §6).
+import { emOf } from './emphasis.ts'
 import { boxGlyph, junction } from './glyphs.ts'
 import type { Piece } from './text.ts'
 import type { Ink } from './themes.ts'
@@ -8,7 +9,7 @@ import { width } from './width.ts'
 export type Kind = 'text' | 'cap' | 'key' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'  // cont = 2nd cell of a W/F char; key = C's keyed-item key
 // On a line cell, the dirs one owner drew there; a cell's segs are OR-merged per owner in write order, their union its dirs.
 export type Seg = { owner: string; dirs: number }
-export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted'; segs?: readonly Seg[]; legend?: true }  // arms: per-arm weights 'urdl'; legend: a key cell in a legend row
+export type Cell = { ch: string; role: Ink; kind: Kind; owners: readonly string[]; dirs: number; join?: Piece['join']; arms?: string; style?: 'light' | 'heavy' | 'dotted'; segs?: readonly Seg[]; legend?: true; em?: number }  // arms: per-arm weights 'urdl'; legend: a key cell in a legend row; em: a text cell's emphasis, BOLD | ITALIC (core/emphasis.ts)
 export type Conflict = { row: number; col: number; had: string; by: string }  // had: owners[0] of the cell hit, or 'out-of-bounds'; by: owners[0] of the write
 export type Drawing = { columns: number; cells: (Cell | null)[][]; conflicts: readonly Conflict[]; expect: Expect }
 export type Canvas = {
@@ -71,10 +72,13 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
     text(r, c, s, role, owner, join) {
       const owners = typeof owner === 'string' ? [owner] : owner
       let col = c, lead: Cell | null = null            // the lead cell this call made last; a zero-width character joins only it
+      let em = 0                                       // an emphasis marker's em, for the next character that takes a column
       for (const ch of s) {
+        if (emOf(ch)) { em = emOf(ch); continue }
         const w = width(ch)
         if (w === 0) { if (lead) lead.ch += ch; continue }   // with no lead cell it drops; the validator's text compare catches that
-        lead = { ch, role, kind: 'text', owners, dirs: 0, ...(col === c && join !== undefined ? { join } : {}) }
+        lead = { ch, role, kind: 'text', owners, dirs: 0, ...(col === c && join !== undefined ? { join } : {}), ...(em ? { em } : {}) }
+        em = 0
         put(r, col, lead)
         if (w === 2) put(r, col + 1, { ch: '', role, kind: 'cont', owners, dirs: 0 })
         col += w

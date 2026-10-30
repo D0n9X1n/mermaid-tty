@@ -1,12 +1,12 @@
 // Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so
 // alignment never depends on the viewer's font metrics (spec B, requirement 1, Images).
 export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = '#1e1f26';
-export type Styled = { text: string; fg: string; bg?: string; bold?: boolean };
+export type Styled = { text: string; fg: string; bg?: string; bold?: boolean; italic?: boolean };
 export type Glyph = { row: number; col: number; text: string; span: number };
 const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Segments each row's text whole, so a mark that begins a span joins the base before it. A grapheme belongs to the span
-// that holds its first code point, whose fg and bold it takes; col advances by its width.
+// that holds its first code point, whose fg, bold and italic it takes; col advances by its width.
 export function glyphCells(rows: { text: string }[][], width: (s: string) => number): Glyph[] {
   const out: Glyph[] = [];
   rows.forEach((row, r) => {
@@ -38,7 +38,7 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
   });
   for (const g of glyphCells(rows, width)) {
     const sp = rows[g.row]![g.span]!;
-    out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}>${esc(g.text)}</text>`);
+    out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}${sp.italic ? ' font-style="italic"' : ''}>${esc(g.text)}</text>`);
   }
   return [...out, '</g>', '</svg>', ''].join('\n');
 }

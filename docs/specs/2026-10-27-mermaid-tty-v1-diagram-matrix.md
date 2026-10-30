@@ -396,7 +396,7 @@ Comments, `%%{…}%%` and frontmatter: see the Common rules. Mermaid's ER parser
 **Not supported (falls back):**
 - the undocumented `u` parent marker;
 - `~…~` and backtick attribute words;
-- entity names, aliases or relation labels containing `*`, a backtick, or `_` at either end of a word, because Mermaid renders them as Markdown.
+- entity names containing `*`, a backtick, or `_` at either end of a word, because Mermaid renders them as Markdown; in aliases, relation labels, subgraph titles and attribute comments, Markdown other than bold and italic (a code span, a style nested in itself, an escape).
 
 These also fall back, because Mermaid keeps only the first:
 - a second alias for one entity;
@@ -449,8 +449,8 @@ An id used for both an entity and a subgraph also falls back.
 | `-08` | Duplicate: `Sales` used as an entity, then as a subgraph id |
 | `-09` | Valid prefix, then the attribute `List~string~ tags` in an entity block |
 | `-10` | Valid prefix, then an attribute name in backticks, `` string `id` `` |
-| `-11` | Valid prefix, then Markdown in an alias, `p["**Person**"]` |
-| `-12` | Valid prefix, then Markdown in a relation label, `A \|\|--o{ B : "_owns_"` |
+| `-11` | Valid prefix, then Markdown nesting bold in bold in an alias, `p["**a **b** c**"]` |
+| `-12` | Valid prefix, then a code span in a relation label, `` C \|\|--o{ D : "`owns`" `` |
 | `-13` | Valid prefix, then an entity name in backticks, `` `CAR` `` |
 
 ### requirement
@@ -1793,6 +1793,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | `#…;` codes `#35;`, `#quot;`, `#9829;` drawn as their characters | flowchart-ok-56 |
 | flowchart | `@{ … }` split over lines | flowchart-ok-57 |
 | flowchart | Markdown strings with no emphasis | flowchart-ok-58 |
+| flowchart | Markdown bold and italic in a node, edge label and `@{ label }`, drawn bold and italic | flowchart-ok-59 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |
@@ -1882,6 +1883,7 @@ The title follows common rule 3. No config key is honored.
 | state | identical descriptions on distinct ids | state-ok-23 |
 | state | `classDef` ignored | state-ok-24 |
 | state | `click` ignored | state-ok-25 |
+| state | Markdown bold and italic in a description, transition, note and an id shown as its label | state-ok-26 |
 | class | header `classDiagram` | class-ok-01 |
 | class | header `classDiagram-v2` | class-ok-02 |
 | class | frontmatter `title` | class-ok-01 |
@@ -1931,6 +1933,7 @@ The title follows common rule 3. No config key is honored.
 | class | `link`, `callback` ignored | class-ok-30 |
 | class | `style` ignored | class-ok-31 |
 | class | `classDef`, `cssClass`, `:::name` ignored | class-ok-31 |
+| class | Markdown bold and italic in a label, relation label and note | class-ok-32 |
 | er | header `erDiagram` | er-ok-01 |
 | er | frontmatter `title` | er-ok-01 |
 | er | entity with no relation | er-ok-02 |
@@ -1964,6 +1967,7 @@ The title follows common rule 3. No config key is honored.
 | er | ladder: labels keyed with legend | er-ok-22 |
 | er | identical aliases on distinct entities | er-ok-23 |
 | er | `style` ignored | er-ok-24 |
+| er | Markdown bold and italic in an alias, relation label and attribute comment | er-ok-25 |
 | requirement | header `requirementDiagram` | requirement-ok-01 |
 | requirement | frontmatter `title` | requirement-ok-01 |
 | requirement | type `requirement` | requirement-ok-01 |
@@ -2227,6 +2231,7 @@ The title follows common rule 3. No config key is honored.
 | mindmap | branch colors; `colorBy: depth` | mindmap-ok-01, mindmap-ok-13 |
 | mindmap | fit ladder steps 1-4 and fallback | mindmap-ok-09, mindmap-ok-10, mindmap-ok-11, mindmap-ok-12, mindmap-reject-06 |
 | mindmap | `:::class` parsed and ignored | mindmap-ok-14 |
+| mindmap | Markdown bold and italic in a label | mindmap-ok-15 |
 | gitGraph | headers `gitGraph`, `gitGraph:`, `LR:`, `TB:`, `BT:` | gitGraph-ok-01, gitGraph-ok-06, gitGraph-ok-12, gitGraph-ok-13, gitGraph-ok-14 |
 | gitGraph | commit id, `msg:` and bare message, tags | gitGraph-ok-01, gitGraph-ok-07 |
 | gitGraph | commit types NORMAL, REVERSE, HIGHLIGHT | gitGraph-ok-01, gitGraph-reject-06 |

@@ -65,3 +65,8 @@ test('A4.width-table: plain pictographic emoji are wide, not unsupported', () =>
 test('A4.width-table: U+200B, U+200C, U+2060 and U+FEFF are allowed', () => {
   for (const s of ['​', '‌', '⁠', '﻿', 'a​b', 'a‌b', 'a⁠b', 'a﻿b']) assert.equal(unsupported(s), null, cps(s))
 })
+
+test('X3.emphasis: an emphasis marker takes no column', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  assert.equal(width(emphasize('**中文** _ab_')!), 7)
+})

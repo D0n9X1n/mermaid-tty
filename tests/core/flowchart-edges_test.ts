@@ -110,7 +110,7 @@ test('A5.errors: a link not read whole fails syntax:<n>: a text form with no clo
 })
 
 test('A5.errors: an edge label fails as a node label does: markdown, entity, unsupported-char', () => {
-  const bad = [['A -->|"`**b**`"| B', 'markdown'], ['A -- "`*b*`" --> B', 'markdown'], ['A -->|"#nosuch;"| B', 'entity'],
+  const bad = [['A -->|"`**a **b** c**`"| B', 'markdown'], ['A -- "`a \\* b`" --> B', 'markdown'], ['A -->|"#nosuch;"| B', 'entity'],
     ['A -->|a\u{200D}b| B', 'unsupported-char U+200D'], ['A -. a\u{200D}b .-> B', 'unsupported-char U+200D']] as const
   assert.deepEqual(bad.map(([s]) => [s, P(`flowchart TD\n${s}`)]), bad.map(([s, r]) => [s, { reason: r }]))
 })

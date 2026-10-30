@@ -149,3 +149,43 @@ test('X3: drawable: markdown and member fail emphasis marked renders and a \\ es
 test('X3: drawable: a literal \\n fails newline in html, where Mermaid splits it, and draws in markdown', () => {
   assert.deepEqual(['a\\nb', 'x\\n'].map(t => [D(t, 'html'), D(t, 'markdown')]), [['newline', null], ['newline', null]])
 })
+
+// A marker stays with the character it styles: wrap splits before the marker, never between it and its character.
+test('X3.emphasis: wrap measures a marked line by what it shows and keeps each marker with its character', async () => {
+  const { emphasize, plain } = await import('../../core/emphasis.ts')
+  const m = emphasize('**中文字** ab')!
+  const ps = wrap(m, 5)!
+  assert.deepEqual(ps.map(p => plain(p.text)), ['中文', '字 ab'])
+  assert.ok(ps.every(p => !/[\x01-\x03]$/.test(p.text)))
+  assert.equal(ps[1]!.text, emphasize('**字** ab'))
+})
+
+// X3. styled: a markdown field's text as the marked string Mermaid shows (core/emphasis.ts), or why not. Text the port
+// cannot match keeps the Fail drawable gives; an unsupported character fails before any marker is written, so a marker
+// can never come from the source.
+test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every other Fail', async () => {
+  const { styled } = await import('../../core/text.ts'), { emphasize } = await import('../../core/emphasis.ts')
+  const R = (t: string, br: Br = 'any', decode = false) => { const r = styled(t, br, { decode }); return typeof r === 'string' ? r : r.reason }
+  assert.equal(R('**b** _i_'), emphasize('**b** _i_'))
+  assert.equal(R('a<br>**b**'), emphasize('a<br>**b**'))
+  assert.equal(R('plain text'), 'plain text')
+  assert.equal(R('a * b * c'), 'a * b * c')                       // two lone * Mermaid shows as written
+  assert.deepEqual(['a\\*b*', '`x` **b**', '**a **b** c**', '#35; **b**', '&amp; **b**'].map(t => R(t)), ['markdown', 'markdown', 'markdown', 'entity', 'entity'])
+  assert.equal(R('**b**<br>c', 'none'), 'html')
+  assert.equal(R('fa:fa-x **b**'), 'icon')
+  assert.equal(R('**b** \u{1}'), 'unsupported-char U+0001')
+  assert.equal(R('\u{1}b'), 'unsupported-char U+0001')
+  assert.equal(R('#35; x', 'any', true), '# x')                   // decode: a flowchart field's codes, as decoded says
+  assert.equal(R('#35; **x**', 'any', true), 'markdown')          // codes and emphasis together fall back
+})
+
+// X3. styled's breaks: an edge label, where Mermaid makes each <br> a newline before marked. A line that would start a
+// block, underline a heading, or end in a hard break falls back as markdown, emphasis or not.
+test('X3.emphasis: styled with breaks falls back on a block start after a <br>, and reads emphasis across one', async () => {
+  const { styled } = await import('../../core/text.ts'), { emphasize } = await import('../../core/emphasis.ts')
+  const R = (t: string, breaks: boolean) => { const r = styled(t, 'any', { breaks }); return typeof r === 'string' ? r : r.reason }
+  assert.deepEqual(['a<br>- b', 'a<br>===', 'a  <br>b', 'a<br>- **b**'].map(t => R(t, true)), ['markdown', 'markdown', 'markdown', 'markdown'])
+  assert.equal(R('a<br>- b', false), 'a<br>- b')
+  assert.equal(R('a<br>b', true), 'a<br>b')
+  assert.equal(R('**a<br>b**', true), emphasize('**a<br>b**', true))
+})

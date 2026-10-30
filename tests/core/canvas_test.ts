@@ -273,3 +273,11 @@ test('A5.mutation-tests: a line cell records the dirs each owner drew there', ()
   assert.deepEqual([a!.dirs, a!.owners, a!.segs], [15, ['e1', 'e2'], [{ owner: 'e1', dirs: 7 }, { owner: 'e2', dirs: 12 }]])
   assert.deepEqual([b!.dirs, b!.owners, b!.segs], [15, ['x', 'y'], [{ owner: 'x', dirs: 5 }, { owner: 'y', dirs: 10 }]])
 })
+
+test('X3.emphasis: text turns each marker into the em of the cell it styles; a wide character\'s cont cell has none', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const c = createCanvas(1, 8, 8)
+  assert.equal(c.text(0, 0, emphasize('**中**a _b_')!, 'label', 'n1'), 5)
+  const d = c.toDrawing(E)
+  assert.deepEqual(d.cells[0]!.map(x => x && [x.ch, x.em ?? 0]), [['中', 1], ['', 0], ['a', 0], [' ', 0], ['b', 2], null, null, null])
+})

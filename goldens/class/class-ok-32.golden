@@ -1,0 +1,90 @@
+@60
+   immutable
+   after commit
+        ┆
+[ Order record ]
+       │
+  holds many
+       │
+       ▼
+   [ Item ]
+@60 roles
+  oOOOOOOOOOoooo
+  oOOOOOOOOOOOOo
+        e
+nnNNNNNNNNNNNNnn
+       e
+  LLLLLLLLLL
+       e
+       a
+   nnNNNNnn
+@60 styles
+   bbbbbbbbb
+   iiiii
+
+  bbbbb
+
+  iiiii bbbb
+
+
+
+@80
+   immutable
+   after commit
+        ┆
+[ Order record ]
+       │
+  holds many
+       │
+       ▼
+   [ Item ]
+@80 roles
+  oOOOOOOOOOoooo
+  oOOOOOOOOOOOOo
+        e
+nnNNNNNNNNNNNNnn
+       e
+  LLLLLLLLLL
+       e
+       a
+   nnNNNNnn
+@80 styles
+   bbbbbbbbb
+   iiiii
+
+  bbbbb
+
+  iiiii bbbb
+
+
+
+@120
+   immutable
+   after commit
+        ┆
+[ Order record ]
+       │
+  holds many
+       │
+       ▼
+   [ Item ]
+@120 roles
+  oOOOOOOOOOoooo
+  oOOOOOOOOOOOOo
+        e
+nnNNNNNNNNNNNNnn
+       e
+  LLLLLLLLLL
+       e
+       a
+   nnNNNNnn
+@120 styles
+   bbbbbbbbb
+   iiiii
+
+  bbbbb
+
+  iiiii bbbb
+
+
+

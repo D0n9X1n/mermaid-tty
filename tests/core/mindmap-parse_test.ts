@@ -36,7 +36,7 @@ test('A5: labels are HTML labels: any <br> spelling splits, quoted text keeps br
 })
 test('A5.errors: entities, other HTML, markdown, a blank line and unsupported characters fall back on their line', () => {
   for (const [body, why] of [['Root #9829;', 'entity:2'], ['R\n  a[ﬂ°x¶ß]', 'entity:3'], ['R\n  &lt;', 'entity:3'], ['R\n  <b>bold</b>', 'html:3'],
-    ['R\n  a</br>b', 'html:3'], ['R\n  a *b*', 'markdown:3'], ['R\n  _x_', 'markdown:3'], ['R\n  \\#x', 'markdown:3'], ['R\n  a["`x`"]', 'markdown:3'],
+    ['R\n  a</br>b', 'html:3'], ['R\n  a **b *c** d*', 'markdown:3'], ['R\n  `x` _y_', 'markdown:3'], ['R\n  a *b', 'markdown:3'], ['R\n  \\#x', 'markdown:3'], ['R\n  a["`x`"]', 'markdown:3'],
     ['R\n  a<br><br>b', 'blank:3'], ['R\n  a[ ]', 'blank:3'], ['R\n  a‍b', 'unsupported-char U+200D']] as const)
     assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body)
 })
@@ -54,4 +54,12 @@ test('A5.errors: U+2028 or U+2029 on any line falls back, a :::class line too (M
 test('X3: an icon or a $$…$$ formula in a mindmap label falls back as icon or math', () => {
   for (const [body, why] of [['R\n  fa:fa-book', 'icon:3'], ['R\n  a[x fas:fa-car]', 'icon:3'], ['R\n  $$x$$', 'math:3'], ['R\n  a(($$x^2$$))', 'math:3']] as const)
     assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body)
+})
+
+// X3. Mermaid 12.2.0 (JSDOM): child __b__ _i_, c2[**bold** *it*] and c4((a **b** c)) show <strong> and <em>. A label whose
+// Markdown changes no style (a lone *, a code span) still falls back, as before.
+test('X3.emphasis: bold and italic in a mindmap label draw as Mermaid shows them', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const m = P('mindmap\nroot\n  child __b__ _i_\n  c2[**bold** *it*]\n  c4((a **b**<br>c))')
+  assert.deepEqual(m.root.children.map((c: any) => c.lines), [[emphasize('child __b__ _i_')], [emphasize('**bold** *it*')], emphasize('a **b**<br>c')!.split('<br>')])
 })

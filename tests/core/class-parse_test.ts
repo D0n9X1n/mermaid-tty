@@ -146,12 +146,27 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
 // X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels (marked);
 // a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one through
 // icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits breaks it.
-test('X3: Markdown, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
-  for (const [body, why] of [['class A["**bold**"]', 'markdown'], ['A --> B : **x**', 'markdown'], ['note "**x**"', 'markdown'],
+test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotation or member, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
+  for (const [body, why] of [['class A["**a **b** c**"]', 'markdown'], ['A --> B : a \\* b', 'markdown'], ['note "*a *b* c*"', 'markdown'],
     ['class A {\n<<__x__>>\n}', 'markdown'], ['class __init__', 'markdown'], ['class A {\n+__init__()\n}', 'markdown'],
     ['class A["fa:fa-book"]', 'icon'], ['note "$$x^2$$"', 'math'], ['A "a\\nb" --> B', 'newline'], ['namespace N["a\\nb"] {\n}', 'newline'],
     ['note "a<br\u00a0/>b"', 'html']]) assert.deepEqual(P(body), { reason: why }, body)
   assert.deepEqual(P('note "First\\nSecond"\nnote "a<br/>b<BR >c"').notes.map((n: any) => n.text), ['First\\nSecond', 'a<br/>b<BR >c'])
   const m = P('class A["snake_case"]\nA "**" --> B : a*b\nnamespace N["**x**"] {\nclass C\n}')
   assert.deepEqual([m.classes[0].label, m.relations[0].tailLabel, m.relations[0].label, m.namespaces[0].label], ['snake_case', '**', 'a*b', '**x**'])
+})
+
+// X3. Mermaid 12.2.0 (JSDOM): class B["**lbl** x"], a relation label **r** _s_ and a note "**n** _o_" show <strong> and
+// <em>. A member's text Mermaid parses first (+foo() **x** shows "+foo() : <strong>x</strong>"), so members keep falling back.
+test('X3.emphasis: bold and italic in a class label, a relation label or a note draw as Mermaid shows them', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const m = P('class B["**lbl** x"]\nB --> C : **r** _s_\nnote for B "**n**<br>_o_"')
+  assert.deepEqual([m.classes[0].label, m.relations[0].label, m.notes[0].text], [emphasize('**lbl** x'), emphasize('**r** _s_'), emphasize('**n**<br>_o_')])
+})
+
+test('X3.emphasis: a class relation label reads each <br> as a newline: a block start after one falls back; a note draws it', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  assert.deepEqual(P('A --> B : a<br>- **b**'), { reason: 'markdown' })
+  assert.equal(P('A --> B : **a<br>b**').relations[0].label, emphasize('**a<br>b**', true))
+  assert.equal(P('class A\nnote for A "a<br>- **b**"').notes[0].text, emphasize('a<br>- **b**'))
 })

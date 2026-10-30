@@ -110,3 +110,17 @@ test('drawnGlyphs names each drawn cell that is not one allow-listed glyph, by r
 test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph always takes its own column', () => {
   for (const g of GLYPHS) assert.ok(width(g) === 1 && !/\p{M}/u.test(g), `U+${g.codePointAt(0)!.toString(16)}`)
 })
+
+// X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b (bold),
+// i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its golden is as before.
+test('X3.emphasis: goldenOf adds an @w styles section only when a cell has emphasis, and goldenGlyphs skips it', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const c = createCanvas(2, 6, 80)
+  c.text(0, 0, emphasize('**中**a _b_')!, 'node', 'A')
+  c.text(1, 0, emphasize('***x***')!, 'label', 'B')
+  const plain = createCanvas(1, 2, 80); plain.text(0, 0, 'ab', 'node', 'A')
+  const g = goldenOf([[60, c.toDrawing(EXPECT)], [80, plain.toDrawing(EXPECT)]])
+  assert.equal(g, '@60\n中a b\nx\n@60 roles\nN~NNN\nL\n@60 styles\nb   i\nx\n@80\nab\n@80 roles\nNN\n')
+  const dir = mkdtempSync(join(tmpdir(), 'golden-lib-'))
+  try { writeFileSync(join(dir, 'x.golden'), g); assert.deepEqual(goldenGlyphs(dir), []) } finally { rmSync(dir, { recursive: true, force: true }) }
+})

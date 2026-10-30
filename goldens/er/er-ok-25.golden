@@ -1,0 +1,99 @@
+@60
+      [ Person x ]
+           │
+           │1
+           │
+        places
+           │
+           │0..*
+           │
+[        ORDER         ]
+[ string id key unique ]
+@60 roles
+      nnNNNNNNNNnn
+           e
+           eA
+           e
+        LLLLLL
+           e
+           eAAAA
+           e
+nnnnnnnnnNNNNNnnnnnnnnnn
+nlLLLLLLlLLlOOOOOOOOOOln
+@60 styles
+        bbbbbb i
+
+
+
+        bbbbbb
+
+
+
+
+            bbb iiiiii
+@80
+      [ Person x ]
+           │
+           │1
+           │
+        places
+           │
+           │0..*
+           │
+[        ORDER         ]
+[ string id key unique ]
+@80 roles
+      nnNNNNNNNNnn
+           e
+           eA
+           e
+        LLLLLL
+           e
+           eAAAA
+           e
+nnnnnnnnnNNNNNnnnnnnnnnn
+nlLLLLLLlLLlOOOOOOOOOOln
+@80 styles
+        bbbbbb i
+
+
+
+        bbbbbb
+
+
+
+
+            bbb iiiiii
+@120
+      [ Person x ]
+           │
+           │1
+           │
+        places
+           │
+           │0..*
+           │
+[        ORDER         ]
+[ string id key unique ]
+@120 roles
+      nnNNNNNNNNnn
+           e
+           eA
+           e
+        LLLLLL
+           e
+           eAAAA
+           e
+nnnnnnnnnNNNNNnnnnnnnnnn
+nlLLLLLLlLLlOOOOOOOOOOln
+@120 styles
+        bbbbbb i
+
+
+
+        bbbbbb
+
+
+
+
+            bbb iiiiii
