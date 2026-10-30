@@ -1,0 +1,78 @@
+@60
+[ A ]  [ B ]
+  │  hi  │
+  │─────►│
+  │  yo  │
+  │◄─────│
+┌─alt [ok]─┐
+│ │  a   │ │
+│ │─────►│ │
+├┄[no]┄┄┄┄┄┤
+│ │  b   │ │
+│ │◄─────│ │
+└──────────┘
+@60 roles
+nnNnn  nnNnn
+  o  LL  o
+  oeeeeeao
+  o  LL  o
+  oaeeeeeo
+ffFFFFFFFFff
+f o  L   o f
+f oeeeeeao f
+ffFFFFffffff
+f o  L   o f
+f oaeeeeeo f
+ffffffffffff
+@80
+[ A ]  [ B ]
+  │  hi  │
+  │─────►│
+  │  yo  │
+  │◄─────│
+┌─alt [ok]─┐
+│ │  a   │ │
+│ │─────►│ │
+├┄[no]┄┄┄┄┄┤
+│ │  b   │ │
+│ │◄─────│ │
+└──────────┘
+@80 roles
+nnNnn  nnNnn
+  o  LL  o
+  oeeeeeao
+  o  LL  o
+  oaeeeeeo
+ffFFFFFFFFff
+f o  L   o f
+f oeeeeeao f
+ffFFFFffffff
+f o  L   o f
+f oaeeeeeo f
+ffffffffffff
+@120
+[ A ]  [ B ]
+  │  hi  │
+  │─────►│
+  │  yo  │
+  │◄─────│
+┌─alt [ok]─┐
+│ │  a   │ │
+│ │─────►│ │
+├┄[no]┄┄┄┄┄┤
+│ │  b   │ │
+│ │◄─────│ │
+└──────────┘
+@120 roles
+nnNnn  nnNnn
+  o  LL  o
+  oeeeeeao
+  o  LL  o
+  oaeeeeeo
+ffFFFFFFFFff
+f o  L   o f
+f oeeeeeao f
+ffFFFFffffff
+f o  L   o f
+f oaeeeeeo f
+ffffffffffff

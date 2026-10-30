@@ -141,9 +141,9 @@ claude --debug
 | `unclosed-subgraph`、`unclosed-frame`、`cluster-edge` | 块未闭合，或图布局无法放置指向簇的连线。 |
 | `invisible-label` | 无法忠实显示不可见流程图连线上的标签。 |
 | `scope:<line>`、`mark-label:<line>` | 状态跨越不兼容的作用域，或给特殊状态标记添加了描述。 |
-| `semicolon`、`hash` | 状态图或时序图文本中的分号，或时序图文本中的井号，会被解析为其他含义。 |
-| `keyword`、`id`、`create`、`destroy`、`destroyed`、`inactive` | 不支持的时序图参与者 id、生命周期或激活用法。 |
-| `box-color`、`box-split`、`empty-box`、`autonumber` | 不支持的时序图分组框声明、分组或自动编号。 |
+| `semicolon`、`hash` | 状态图文本中的分号，或时序图 id、别名、标题、分组框标签中的井号，或 `#9829;` 这样的实体，会被解析为其他含义。时序图语句在 `;` 处拆分，消息、注释和条件文本在 `#` 处结束，与 Mermaid 一致。 |
+| `keyword`、`id`、`create`、`destroy`、`destroyed`、`inactive` | 时序图消息或注释使用了关键字，或后跟空格的数字（Mermaid 会拒绝）；或不支持的生命周期或激活用法。`participant end`、`participant 42` 这样的声明可以绘制。 |
+| `box-color`、`box-split`、`empty-box`、`autonumber` | 不支持的时序图分组框声明或分组，或自动编号的起始值、步长或显示的编号不是安全整数。重新开始编号和 `autonumber off` 可以绘制。 |
 | `branch:<line>`、`checkout:<line>`、`merge:<line>`、`pick:<line>` | 无效的 gitGraph 分支操作、合并或 cherry-pick。 |
 | `link-ambiguous` | gitGraph 分支或合并会看起来连接了错误的提交。 |
 | `section-empty`、`section-repeat`、`empty-section`、`section:<line>` | 甘特图分区为空或重复，时间线分区为空，或时间线混用了有分区和无分区的时段。 |

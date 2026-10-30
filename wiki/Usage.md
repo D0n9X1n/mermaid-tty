@@ -141,9 +141,9 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 | `unclosed-subgraph`, `unclosed-frame`, `cluster-edge` | An unclosed block, or an edge to a cluster the graph layout cannot place. |
 | `invisible-label` | A label on an invisible flowchart edge cannot be shown faithfully. |
 | `scope:<line>`, `mark-label:<line>` | A state crosses incompatible scopes, or a special state mark is given a description. |
-| `semicolon`, `hash` | A semicolon in state/sequence text or a hash in sequence text would be parsed differently. |
-| `keyword`, `id`, `create`, `destroy`, `destroyed`, `inactive` | Unsupported sequence participant id, lifecycle or activation use. |
-| `box-color`, `box-split`, `empty-box`, `autonumber` | Unsupported sequence box declaration/grouping or automatic numbering. |
+| `semicolon`, `hash` | A semicolon in state text, or a hash in a sequence id, alias, title or box label, or an entity such as `#9829;`, would be parsed differently. Sequence statements split at `;`, and a `#` ends message, note and condition text, as in Mermaid. |
+| `keyword`, `id`, `create`, `destroy`, `destroyed`, `inactive` | A sequence message or note naming a keyword, or a number followed by a space, which Mermaid rejects; or unsupported lifecycle or activation use. Declarations such as `participant end` or `participant 42` draw. |
+| `box-color`, `box-split`, `empty-box`, `autonumber` | Unsupported sequence box declaration/grouping, or an autonumber start, step or shown number that is not a safe integer. Restarts and `autonumber off` draw. |
 | `branch:<line>`, `checkout:<line>`, `merge:<line>`, `pick:<line>` | Invalid gitGraph branch operation, merge or cherry-pick. |
 | `link-ambiguous` | A gitGraph fork or merge would appear to connect the wrong commits. |
 | `section-empty`, `section-repeat`, `empty-section`, `section:<line>` | Empty or repeated gantt sections, an empty timeline section, or mixed sectioned/unsectioned timeline periods. |

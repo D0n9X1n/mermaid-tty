@@ -1837,6 +1837,10 @@ The title follows common rule 3. No config key is honored.
 | sequence | message `<<-->>` | sequence-ok-37 |
 | sequence | base design: actor vs participant caps, lifelines, self-message, activation, note | sequence-ok-38 |
 | sequence | `title` statement; a second title falls back | sequence-ok-39, sequence-reject-08 |
+| sequence | `;` ends a statement, as in Mermaid 12.2.0 | sequence-ok-40 |
+| sequence | `#` ends message, note and condition text; the rest of the line is a comment | sequence-ok-41 |
+| sequence | `autonumber` restart, `off` and on again | sequence-ok-42 |
+| sequence | keyword and number participant ids where Mermaid reads ids | sequence-ok-43 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |

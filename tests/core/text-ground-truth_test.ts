@@ -61,14 +61,21 @@ test('A5.errors: ground truth: a flowchart node label, edge label and subgraph t
 // An alias draws in a one-line pill, and a frame's label and a box's title on its border, so a <br> there falls back. A box
 // title is sanitized: any < falls back, <b>z</b> too.
 test('A5.errors: ground truth: a sequence message, note, alias, frame label and box title draw each case as Mermaid shows it, or fall back', () => {
+  // Each case drawn as X{case}Y, as the truth was rendered, then the X and Y dropped: Mermaid ends a sequence statement at
+  // a ;, so &lt; alone draws &lt as Mermaid shows it, while X&lt;Y fails in both.
   const S = (body: string, owner: string) => drawn(`sequenceDiagram\n${body}`, owner)
-  const frame = (c: string) => { const d = S(`alt ${c}\nA->>B: x\nend`, 'f0'); return isFail(d) ? d : d.map(t => t.replace(/^alt \[(.*)\]$/, '$1')) }
+  const xy = (d: string[] | Fail): string[] | Fail => {
+    if (isFail(d)) return d
+    if (!d[0]?.startsWith('X') || !d.at(-1)?.endsWith('Y')) return { reason: 'not X…Y' } as Fail
+    return d.map((t, i) => (i === 0 ? t.slice(1) : t)).map((t, i, a) => (i === a.length - 1 ? t.slice(0, -1) : t))
+  }
+  const frame = (c: string) => { const d = S(`alt X${c}Y\nA->>B: x\nend`, 'f0'); return isFail(d) ? d : xy(d.map(t => t.replace(/^alt \[(.*)\]$/, '$1'))) }
   const fields: Field[] = [
-    { name: 'message', truth: TRUTH.sequence, draw: c => S(`A->>B: ${c}`, 'm0:label') },
-    { name: 'note', truth: TRUTH.sequence, draw: c => S(`Note over A: ${c}`, 'n0') },
-    { name: 'alias', truth: TRUTH.sequence, draw: c => S(`participant A as ${c}`, 'A'), strict: BRS },
+    { name: 'message', truth: TRUTH.sequence, draw: c => xy(S(`A->>B: X${c}Y`, 'm0:label')) },
+    { name: 'note', truth: TRUTH.sequence, draw: c => xy(S(`Note over A: X${c}Y`, 'n0')) },
+    { name: 'alias', truth: TRUTH.sequence, draw: c => xy(S(`participant A as X${c}Y`, 'A')), strict: BRS },
     { name: 'frame', truth: TRUTH.sequence, draw: frame, strict: BRS },
-    { name: 'box', truth: TRUTH.box, draw: c => S(`box ${c}\nparticipant A\nend\nA->>A: x`, 'b0'), strict: [...BRS, TAG] },
+    { name: 'box', truth: TRUTH.box, draw: c => xy(S(`box X${c}Y\nparticipant A\nend\nA->>A: x`, 'b0')), strict: [...BRS, TAG] },
   ]
   fields.forEach(check)
 })
