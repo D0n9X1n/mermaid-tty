@@ -5,7 +5,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import type { Cell, Drawing } from '../../core/canvas.ts'; import { lineGlyph } from '../../core/canvas.ts'; import { BOX } from '../../core/box-table.ts'
-import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
+import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'; import { marker } from '../../core/emphasis.ts'
 
 const ROOT = new URL('../../fixtures/', import.meta.url)
 const files = (dir: string, keep: (f: string, i: number) => boolean) =>
@@ -309,22 +309,26 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
 })
 
 // X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each other
-// kind given one, must fail. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
+// kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch instead (which
+// would read the same to labels), and a marker or another control character added to the first cells of each kind. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
 // are among the ok fixtures, so styled cells lose their style here too.
 test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cell given emphasis, fails', t => {
   const { mutants, survivors } = tally(t, 'emphasis', function* (d) {
     const seen = new Map<string, number>()
     for (const { r, c, x } of spots(d)) {
       if (x.kind === 'text') {
+        const { em: _old, ...rest } = x
         for (const em of [undefined, 1, 2, 3]) if (em !== x.em) {
-          const { em: _old, ...rest } = x
           yield [`(${r},${c}) ${x.ch} em ${x.em ?? 0} as ${em ?? 0}`, [[r, c, em === undefined ? rest : { ...rest, em }]]]
         }
-        continue
+        for (const em of [1, 2, 3]) yield [`(${r},${c}) ${x.ch} em ${x.em ?? 0} as marker ${em} in ch`, [[r, c, { ...rest, ch: marker(em) + x.ch }]]]
       }
       const n = seen.get(x.kind) ?? 0
       seen.set(x.kind, n + 1)
-      if (n < 3) yield [`(${r},${c}) ${x.kind} ${x.ch} given em 1`, [[r, c, { ...x, em: 1 }]]]
+      if (n >= 3) continue
+      if (x.kind !== 'text') yield [`(${r},${c}) ${x.kind} ${x.ch} given em 1`, [[r, c, { ...x, em: 1 }]]]
+      for (const ctl of [marker(1), marker(2), marker(3), String.fromCharCode(0), String.fromCharCode(27)])
+        yield [`(${r},${c}) ${x.kind} ${JSON.stringify(x.ch)} with ${JSON.stringify(ctl)}`, [[r, c, { ...x, ch: ctl + x.ch }]]]
     }
   })
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])

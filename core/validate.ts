@@ -82,9 +82,12 @@ function instances(d: Drawing): Map<string, string[]> {
 }
 
 // X3. em is a text cell's emphasis (BOLD, ITALIC or both); no other cell has one. instances reads it back as its marker,
-// so labels compares emphasis as part of the text.
+// so labels compares emphasis as part of the text. No cell's ch holds a control character: a marker there would read as
+// em, and the row would show the character with no style. Source text never holds one (unsupported), nor does a glyph.
+const CONTROL = /\p{Cc}/u
 function emphasis(all: readonly Spot[]): Fail | null {
-  return all.some(({ cell: x }) => x.em !== undefined && (x.kind !== 'text' || ![1, 2, 3].includes(x.em))) ? fail('emphasis') : null
+  return all.some(({ cell: x }) => CONTROL.test(x.ch) || (x.em !== undefined && (x.kind !== 'text' || ![1, 2, 3].includes(x.em))))
+    ? fail('emphasis') : null
 }
 
 // Each listed label is drawn exactly once, as its text. One blank after norm is drawn nowhere, since text('') writes no

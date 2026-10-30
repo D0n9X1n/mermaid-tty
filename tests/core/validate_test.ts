@@ -684,3 +684,17 @@ test('X3.emphasis: em on any cell but a text cell, or outside BOLD | ITALIC, fai
   const odd = two(); odd.cells[0]![2] = { ...odd.cells[0]![2]!, em: 4 }
   assert.equal(validate(odd)?.reason, 'emphasis')
 })
+
+// X3. A marker or any other control character in a cell's ch would carry emphasis, or nothing, past labels: instances
+// reads ch as written, so a ch of marker + 'b' reads like em 1 on 'b'. No drawn glyph or source text holds one.
+test('X3.emphasis: a control character in any cell\'s ch, a marker included, fails emphasis', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  for (const ch of [String.fromCharCode(1), String.fromCharCode(2), String.fromCharCode(3), String.fromCharCode(0), String.fromCharCode(27), String.fromCharCode(0x85)]) {
+    const d = two('a', emphasize('**b**')!), x = d.cells[3]![2]!
+    const { em: _e, ...rest } = x
+    d.cells[3]![2] = { ...rest, ch: ch + x.ch }
+    assert.equal(validate(d)?.reason, 'emphasis', JSON.stringify(ch))
+    const line = two(); line.cells[1]![2] = { ...line.cells[1]![2]!, ch: line.cells[1]![2]!.ch + ch }
+    assert.equal(validate(line)?.reason, 'emphasis', JSON.stringify(ch))
+  }
+})
