@@ -165,10 +165,12 @@ function directiveMisread(s: string, tail: string): boolean {
 }
 
 // Whether s is only id@{…}, its body read whole, for an id an edge already has. Mermaid then sets that edge's animation or
-// curve, which this renderer does not draw, and adds no node.
+// curve, which this renderer does not draw, and adds no node. At a statement's start Mermaid lexes the id as a node's, so an
+// id it misreads there is left to the node path, which fails it, though `A 1style@--> B` declared the edge.
 function edgeData(s: string, st: State): boolean {
   const id = ID.exec(s)?.[0]
-  return id !== undefined && st.edges.some(e => e.id === id) && s.startsWith('@{', id.length) && data(s, id.length + 2)?.end === s.length
+  return id !== undefined && st.edges.some(e => e.id === id) && s.startsWith('@{', id.length) && data(s, id.length + 2)?.end === s.length &&
+    !misread(id, s.slice(id.length) + st.tail, 'node')
 }
 
 // Opens the subgraph header s declares: `subgraph id`, `subgraph id [title]` (title "…" or not), or `subgraph "title"`, whose

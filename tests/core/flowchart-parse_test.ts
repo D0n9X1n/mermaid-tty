@@ -299,7 +299,8 @@ test('A5.errors: an id the lexer of Mermaid reads as a keyword, or cannot lex, f
     'styleé --> B', 'interpolate --> B', 'linkStyle.x --> B', 'classDef-x --> B', 'A --> call', 'href --> B', 'A & call --> B', 'A --> call ;',
     '1style --> B', 'éend --> B', 'aéstyle --> B', 'A style.x@--> B', 'A default.x@--> B', 'A end@--> B', 'A --> styleX:::end', 'A:::style',
     'subgraph end\nB\nend', 'subgraph default\nB\nend', 'subgraph interpolate.x\nB\nend', 'subgraph call\nB\nend', 'subgraph 1interpolate\nB\nend',
-    'A-->B\nclass A,B end', 'A-->B\nstyle call fill:#f00', 'A-->B\nclassDef end fill:#f00', '𝐀 --> B', '² --> B', '٣ --> B']
+    'A-->B\nclass A,B end', 'A-->B\nstyle call fill:#f00', 'A-->B\nclassDef end fill:#f00', '𝐀 --> B', '² --> B', '٣ --> B',
+    'A 1style@--> B\n1style@{ animate: true }', 'A 𝐀@--> B\n𝐀@{ animate: true }']
   assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
 })
 test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoint, default.x, call;, call[x], subgraph style', () => {
@@ -307,6 +308,6 @@ test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoi
     'style_x --> B', 'a.style --> B', 'a-end --> B', '1styleX --> B', 'éstyleX --> B', 'default.x --> B', 'v.x --> B', 'accTitle --> B', 'TB --> B',
     'A --> call;', 'call[x] --> B', 'A call.x@--> B', 'A defaultX@--> B', 'A:::default', 'subgraph style\nB\nend', 'subgraph end.x\nB\nend',
     'subgraph end [t]\nB\nend', 'subgraph call[t]\nB\nend', 'A-->B\nstyle styleX fill:#f00', 'A-->B\nclassDef default fill:#f00',
-    'A-->B\nclick A call cb()', 'ā --> B', '中文 --> B']
+    'A-->B\nclick A call cb()', 'ā --> B', '中文 --> B', 'A e1@--> B\ne1@{ animate: true }']
   assert.deepEqual(ok.map(s => [s, isFail(F(s))]), ok.map(s => [s, false]))
 })
