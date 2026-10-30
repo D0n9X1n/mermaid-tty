@@ -193,3 +193,21 @@ test('A2: validate rejects a note ┆ cap removed, given to another owner, or re
     }
   }
 })
+// #17: a box and the frames inside or beside it. A box's border stands a blank column clear of every frame it holds and
+// every frame beside it, however deep they nest; a rect that would cross a box's border still falls back.
+test('A2: nested rects inside a box draw, the box border a blank column beyond the outer rect', () => {
+  for (const t of ['box Team\nparticipant A\nparticipant B\nend\nparticipant C\nrect\nA->>B: hi\nrect\nB->>A: back\nend\nend\nB->>C: yo',
+    'box Team\nparticipant A\nparticipant B\nend\nrect\nrect\nrect\nA->>B: deep\nend\nend\nend']) {
+    const r = X(t, 80)
+    assert.ok(!('reason' in r), `${t}: ${r.reason}`)
+    assert.equal(validate(r.drawing), null, t)
+  }
+})
+test('A2: nested rects beside a box draw, clear of its border', () => {
+  const r = X('box L\nparticipant A\nend\nparticipant B\nparticipant C\nrect\nrect\nB->>C: hi\nend\nend', 80)
+  assert.ok(!('reason' in r), r.reason)
+  assert.equal(validate(r.drawing), null)
+})
+test('A2: a rect from one box into another, which would cross both borders, falls back', () => {
+  assert.deepEqual(X('box L\nparticipant A\nend\nbox R\nparticipant B\nend\nrect\nA->>B: hi\nend', 80), { reason: 'frame-broken' })
+})

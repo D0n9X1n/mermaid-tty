@@ -1,0 +1,17 @@
+sequenceDiagram
+box Team
+participant A
+participant B
+end
+participant C
+rect
+Note over A,B: n
+rect
+alt ok
+A->>B: a
+else no
+B->>A: b
+end
+end
+end
+B->>C: c

@@ -1844,6 +1844,9 @@ The title follows common rule 3. No config key is honored.
 | sequence | `#` in a box line is a comment; box color is the label's first word-character run | sequence-ok-44 |
 | sequence | `activate`/`deactivate`/`destroy` do not order participants | sequence-ok-45 |
 | sequence | bare `rect` | sequence-ok-46 |
+| sequence | nested `rect` inside a `box`, its border a blank column beyond the outer rect | sequence-ok-47, sequence-ok-49 |
+| sequence | nested `rect` beside a `box`, clear of its border | sequence-ok-48 |
+| sequence | a `rect` from one `box` into another, which would cross both borders, falls back | sequence-reject-09 |
 | state | header `stateDiagram-v2` | state-ok-01 |
 | state | header `stateDiagram` | state-ok-02 |
 | state | frontmatter `title` | state-ok-01 |
