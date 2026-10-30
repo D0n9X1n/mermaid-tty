@@ -1794,6 +1794,7 @@ The title follows common rule 3. No config key is honored.
 | flowchart | `@{ … }` split over lines | flowchart-ok-57 |
 | flowchart | Markdown strings with no emphasis | flowchart-ok-58 |
 | flowchart | Markdown bold and italic in a node, edge label and `@{ label }`, drawn bold and italic | flowchart-ok-59 |
+| flowchart | a literal `\n` in a node or edge label drawn as a line break | flowchart-ok-60 |
 | sequence | header `sequenceDiagram` | sequence-ok-01 |
 | sequence | `participant` | sequence-ok-01 |
 | sequence | `actor` | sequence-ok-02 |

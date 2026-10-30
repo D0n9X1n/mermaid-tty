@@ -135,7 +135,7 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 | `entity` | Mermaid would decode an entity or its internal entity markers rather than show the text as written. |
 | `html` | Markup, sanitization, escaping or a line break cannot be reproduced in that field. |
 | `markdown-string`, `markdown` | Mermaid would show Markdown other than bold and italic: a backquoted `@{ label }`, an escape, a code span, a style nested in itself, or emphasis where it is not drawn (a class name, annotation or member, an ER entity name, a state composite title). |
-| `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break. |
+| `icon`, `math`, `newline` | Mermaid would substitute an icon, render math, or turn a literal `\n` into a line break where mermaid-tty draws none, such as a subgraph title. A literal `\n` in a flowchart node or edge label draws as a line break, as in Mermaid. |
 | `whitespace` | Whitespace the diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph. |
 | `unsupported-char U+XXXX` | A character whose terminal width is not reliable. See Width and CJK. |
 | `generic` | ER text contains multiple `~` characters; Mermaid turns a `~...~` pair into `<...>` rather than showing it literally. |

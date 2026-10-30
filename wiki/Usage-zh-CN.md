@@ -135,7 +135,7 @@ claude --debug
 | `entity` | Mermaid 会解码实体或内部实体标记，而不是原样显示。 |
 | `html` | 无法在该字段中重现标记、净化、转义或换行效果。 |
 | `markdown-string`、`markdown` | Mermaid 会显示粗体和斜体以外的 Markdown：反引号包裹的 `@{ label }`、转义、代码片段、同种样式的嵌套，或不绘制强调的位置（类名、注解或成员，ER 实体名，状态图复合状态标题）中的强调。 |
-| `icon`、`math`、`newline` | Mermaid 会替换图标、渲染数学公式，或将字面的 `\n` 转为换行。 |
+| `icon`、`math`、`newline` | Mermaid 会替换图标、渲染数学公式，或在 mermaid-tty 不画换行的位置（如子图标题）将字面的 `\n` 转为换行。流程图节点或连线标签中的字面 `\n` 会像 Mermaid 一样画成换行。 |
 | `whitespace` | 图表词法分析器不接受的空白，例如饼图或 gitGraph 中引号外的不换行空格。 |
 | `unsupported-char U+XXXX` | 该字符在终端中的宽度不可靠，详见“宽度与 CJK”。 |
 | `generic` | ER 文本包含多个 `~`；Mermaid 会将 `~...~` 转为 `<...>`，而非原样显示。 |
