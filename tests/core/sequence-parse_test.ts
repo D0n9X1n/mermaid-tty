@@ -328,6 +328,23 @@ test('A2: a ; ends a statement, and the rest of its line holds more', () => {
   { boxes: [{ label: 'G', ids: ['B'] }], title: 'T' }))
 })
 // Mermaid's NUM token needs a space or line break after it: it fails on autonumber 10; and autonumber 7#c.
+// Mermaid 12.2.0's accTitle/accDescr tokens end in \s*, so an empty one eats the line break and takes the next line as its
+// text: A->>B: hi; accTitle: then B->>C: yo draws only A->>B.
+test('A5.errors: an empty accTitle or accDescr falls back as syntax', () => {
+  const bad = ['A->>B: hi; accTitle:\nB->>C: yo', 'accTitle:\nB->>C: yo', 'accTitle: \nB->>C: yo', 'accDescr:\nB->>C: yo', 'accDescr : \nB->>C: yo', 'accTitle:']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'syntax:2' }]))
+  // A non-empty one takes the rest of its line, ; and all, as Mermaid does.
+  assert.deepEqual(P('accTitle: t\naccDescr: d; A->>B: x\nC->>D: y').items, [msg('C', 'D', 'y')])
+})
+// Mermaid's \s+ after autonumber, off or its number eats the line break the statement needs, so trailing whitespace at
+// the line end fails there ("Expecting 'NEWLINE', got 'ACTOR'"). Every other statement Mermaid reads keeps its line break.
+test('A5.errors: autonumber with trailing whitespace at the line end falls back as syntax', () => {
+  const bad = ['autonumber off \nB->>A: after', 'autonumber \nB->>A: x', 'autonumber 10 \nB->>A: x', 'autonumber 10 5 \nB->>A: x', 'autonumber\t\nB->>A: x',
+    'autonumber \n%% c\nB->>A: x', 'B->>A: x\nautonumber ']
+  assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: t.startsWith('B') ? 'syntax:3' : 'syntax:2' }]))
+  assert.deepEqual(['autonumber  #c', 'autonumber ; '].map(a => nums(P(`${a}\nB->>A: x`).items)), [[1], [1]])
+  assert.deepEqual(P('alt x \nA->>B: y \nelse \nA->>B: w\nend \nB->>A: z').items.length, 2)
+})
 test('A5.errors: an autonumber number before a ;, # or tab falls back as syntax', () => {
   const bad = ['autonumber 10;\nA->>B: x', 'autonumber 10 5;\nA->>B: x', 'autonumber 7#c\nA->>B: x', 'autonumber 10\t5\nA->>B: x']
   assert.deepEqual(bad.map(t => [t, P(t)]), bad.map(t => [t, { reason: 'syntax:2' }]))

@@ -244,6 +244,8 @@ function walk(src: Source): Seq {
     } else if ((m = AUTONUMBER.exec(t))) {
       // Mermaid's NUM token needs a space or line break after it, so autonumber 10; or 10\t5 fails.
       if (/\d(?![\d \n])/.test(raw + (cut || '\n'))) stop(`syntax:${n}`)
+      // Its \s+ also eats the line break after trailing whitespace, and the next statement then fails.
+      if (!cut && /\s$/.test(raw)) stop(`syntax:${n}`)
       // As in Mermaid: off hides the numbers, anything else shows them; a start sets the index and, with no step of its
       // own, a step of 1; a 0 start or step keeps the one before. Not in the plan: an unsafe start or step fails.
       num.shown = !m[1]
@@ -254,6 +256,8 @@ function walk(src: Source): Seq {
       if (seq.title !== null) stop('title')
       seq.title = text(m[1]!, 'sanitized', 'none')
     } else if (ACC.test(t) || ACC_BLOCK.test(t)) {
+      // Mermaid's accTitle: and accDescr: tokens end in \s*, so an empty one takes the next line as its text.
+      if (ACC.test(t) && !t.slice(t.indexOf(':') + 1).trim()) stop(`syntax:${n}`)
       // Accessibility text is not drawn; statements() skips an accDescr { block's lines.
     } else {
       const [msg, after] = message(t) ?? bad()
