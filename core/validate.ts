@@ -209,14 +209,15 @@ function joined(d: Drawing, all: readonly Spot[]): (id: string) => string {
 // drew it straight, 5 (│) or 10 (─), by the dirs the cell records for that edge, and each such pair crosses, one │ and one
 // ─: read as a crossing, an edge turning inside would vanish, and read as a junction, the crossing edges would join. A
 // cell where only related edges meet, a fan-out or fan-in, is fine; so is one whose edges all join, as a trunk's do, for
-// merges to judge.
+// merges to judge. Only pairs on different lines must cross (#18): unrelated edges of one line, a complete-bipartite trunk's,
+// run one axis through a ┼ another line crosses, and merges judges them as it does anywhere else on that line.
 function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Map(d.expect.edges.map(e => [e.id, e])), line = joined(d, all)
   for (const p of all) {
     if (p.cell.kind !== 'line') continue
     const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
     if (new Set(mine.map(e => line(e.id))).size === 1) continue
-    const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b)).map(b => [a, b] as const))
+    const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b) && line(a.id) !== line(b.id)).map(b => [a, b] as const))
     if (pairs.length === 0) continue
     const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
     if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) return fail('crossing-ambiguous')

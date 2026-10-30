@@ -544,3 +544,37 @@ test('label-unbound: a node label moved off its pill fails', () => {
     assert.equal(validate(d)?.reason, 'label-unbound', src)
   }
 })
+
+// #18: a complete-bipartite trunk, A→C, A→D, B→C and B→D merged into one line down column 2, crossed straight at (2,2) by an
+// unrelated P→Q. The trunk's own unrelated pairs there (A→C with B→D, A→D with B→C) run one axis, as a trunk's do; merges
+// judges them. Only pairs from different lines, the trunk's and P→Q's, must cross.
+//   a ─┬─ b
+//   p ─┼─►q
+//     ┌┴┐  (to c and d)
+function bipartite(): Drawing {
+  const ends: Record<string, [string, string]> = { e1: ['A', 'C'], e2: ['A', 'D'], e3: ['B', 'C'], e4: ['B', 'D'], f: ['P', 'Q'] }
+  const c = createCanvas(7, 6, 6, (a, b) => ends[a]!.some(x => ends[b]!.includes(x)))
+  const L = (r: number, col: number, dirs: number, ids: string[]) => ids.forEach(id => c.line(r, col, dirs, 'light', 'edge', id))
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 5], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  L(1, 0, 3, ['e1', 'e2']); L(1, 1, 10, ['e1', 'e2']); L(1, 2, 12, ['e1', 'e2']); L(1, 2, 6, ['e3', 'e4']); L(1, 3, 10, ['e3', 'e4']); L(1, 4, 9, ['e3', 'e4'])
+  L(2, 2, 5, ['e1', 'e2', 'e3', 'e4']); L(3, 2, 5, ['e1', 'e2', 'e3', 'e4'])
+  L(4, 2, 9, ['e1', 'e3']); L(4, 2, 3, ['e2', 'e4']); L(4, 1, 10, ['e1', 'e3']); L(4, 0, 6, ['e1', 'e3']); L(4, 3, 10, ['e2', 'e4']); L(4, 4, 12, ['e2', 'e4'])
+  for (const id of ['e1', 'e3']) c.arrow(5, 0, '▼', id)
+  for (const id of ['e2', 'e4']) c.arrow(5, 4, '▼', id)
+  L(2, 1, 10, ['f']); L(2, 2, 10, ['f']); L(2, 3, 10, ['f']); c.arrow(2, 4, '►', 'f')
+  const node = (n: string) => ({ node: n, glyph: n === 'Q' ? '►' : '▼' })
+  return c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
+    edges: Object.entries(ends).map(([id, [from, to]]) => ({ id, from, to, ends: [node(to)] })), edgeLabels: [], frames: [] })
+}
+test('#18: a complete-bipartite trunk crossed straight by an unrelated edge passes', () => {
+  const d = bipartite()
+  assert.deepEqual(d.conflicts, []); assert.equal(text(d)[2], 'p─┼─►q')
+  assert.equal(validate(d), null, text(d).join('\n'))
+})
+// A trunk edge that turns inside that ┼ instead, onto P→Q's arm, joins the two lines there: read as one line, P's bare tail
+// seems to lead to c and d, so it still fails, now for merges to judge.
+test('#18: at that crossing, a trunk edge turning onto the crossing edge still fails', () => {
+  const d = bipartite(), x = d.cells[2]![2]!
+  d.cells[2]![2] = { ...x, segs: x.segs!.map(s => (s.owner === 'e1' ? { ...s, dirs: 6 } : s)) }   // e1 turns right inside the ┼
+  assert.equal(validate(d)?.reason, 'merge-ambiguous')
+})
