@@ -90,6 +90,15 @@ test('A5: a plain config scalar is typed as js-yaml JSON_SCHEMA types it: null, 
   assert.deepEqual(rows.map(([v]) => [v, one(v)]), rows)
 })
 
+// js-yaml 4.3.0 (bundled by Mermaid 12.2.0) resolves int before float; its float type reads these as parseFloat does.
+test('A5: a plain finite decimal config scalar is a number, as js-yaml JSON_SCHEMA reads it', () => {
+  const rows: [string, unknown][] = [['0.5', 0.5], ['1.5', 1.5], ['-0.5', -0.5], ['0.0', 0], ['-0.0', -0], ['10.25', 10.25],
+    ['2.5e3', 2500], ['2.5E3', 2500], ['1.5e-2', 0.015], ['1.5e+2', 150], ['0.5 # half', 0.5]]
+  assert.deepEqual(rows.map(([v]) => [v, one(v)]), rows)
+  // Pie ignores pie.textPosition; Mermaid's pie docs example now draws instead of falling back.
+  assert.ok(!('reason' in readSource('---\nconfig:\n  pie:\n    textPosition: 0.5\n---\npie\n"a" : 1')))
+})
+
 test('A5: a quoted config scalar stays a string, whatever it spells', () => {
   const spellings = ['~', 'null', 'NULL', 'true', 'False', '0', '-1', '2024', '0x10', '1e3', '.inf', '9007199254740993', '']
   const rows = spellings.flatMap(v => [`"${v}"`, `'${v}'`].map(q => [q, v] as const))
@@ -97,11 +106,10 @@ test('A5: a quoted config scalar stays a string, whatever it spells', () => {
 })
 
 test('A5.errors: any other numeric-looking plain config scalar fails config:<dotted key>', () => {
-  const bad = ['0x10', '0o7', '0b1', '1e3', '1.5', '.5', '.inf', '-.inf', '.nan', '+1', '1_000', '01', '007', '-.5', '-x',
-    '9007199254740992', '9007199254740993', '-9007199254740992']
+  const bad = ['0x10', '0o7', '0b1', '1e3', '.5', '.inf', '-.inf', '.nan', '+1', '1_000', '01', '007', '-.5', '-x',
+    '9007199254740992', '9007199254740993', '-9007199254740992',
+    '1.', '+1.5', '01.5', '00.5', '1.5_0', '1_0.5', '1.2.3', '1.5e', '1.5e3.0', '1e+3', '1.5e400', '-1.5e400', '1.5f']
   assert.deepEqual(bad.map(v => [v, one(v)]), bad.map(v => [v, { reason: 'config:a' }]))
-  assert.deepEqual(readSource('---\nconfig:\n  gitGraph:\n    mainBranchName: trunk\n    mainBranchOrder: 1.5\n---\ngitGraph\ncommit'),
-    { reason: 'config:gitGraph.mainBranchOrder' })
   // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as frontmatter.
   for (const fm of ['config:\n  a: 1.5\n  a: 2', 'config:\n  a: 1.5\n  b: [1]', 'config:\n  a: 1.5\n  b:'])
     assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm)

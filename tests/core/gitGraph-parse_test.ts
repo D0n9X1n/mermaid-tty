@@ -55,6 +55,9 @@ test('A5.errors: config is typed: a non-string or empty mainBranchName and a non
   assert.deepEqual(['5', 'true', '""', '"a<b"', 'null'].map(v => C('mainBranchName', v)), Array(5).fill({ reason: 'config:gitGraph.mainBranchName' }))
   assert.deepEqual(['"2"', 'x', 'null'].map(v => C('mainBranchOrder', v)), Array(3).fill({ reason: 'config:gitGraph.mainBranchOrder' }))
   assert.deepEqual(C('mainBranchName', '"trunk"').branches, [{ name: 'trunk', order: 0 }])
+  // A decimal is a number (js-yaml JSON_SCHEMA): a name still falls back on it; an order takes it, as Mermaid's does.
+  assert.deepEqual(['1.5', '-0.5', '2.5e3'].map(v => C('mainBranchName', v)), Array(3).fill({ reason: 'config:gitGraph.mainBranchName' }))
+  assert.deepEqual(C('mainBranchOrder', '1.5').branches, [{ name: 'main', order: 1.5 }])
 })
 test('A5.errors: ids, tags, parents and branch names are escaped; a #…; entity anywhere fails with its line', () => {
   for (const [body, why] of [['commit id: "a<b"', 'html:2'], ['commit\ncommit tag: "x>y"', 'html:3'], ['branch "a<b"', 'html:2'],
