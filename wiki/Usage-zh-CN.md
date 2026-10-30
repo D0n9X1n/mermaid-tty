@@ -91,14 +91,37 @@ Git 提交图使用竖直分支泳道：`LR` 和 `TB` 的时间向下，`BT` 的
 | 命令 | 效果 |
 |---|---|
 | `/mermaid-tty source` | 将所有图表显示为 Mermaid 源码，屏幕上已有的回复也会重绘。 |
-| `/mermaid-tty diagram` | 恢复图表显示。 |
-| `/mermaid-tty` | 报告当前模式：`mermaid-tty mode: diagram` 或 `mermaid-tty mode: source`。 |
+| `/mermaid-tty diagram` | 恢复图表显示；终端能显示图片时绘制为图片（见下文“图片”）。 |
+| `/mermaid-tty text` | 以文本绘制图表，即使终端能显示图片。 |
+| `/mermaid-tty` | 报告当前模式：`mermaid-tty mode: diagram`、`mermaid-tty mode: source` 或 `mermaid-tty mode: text`。 |
 
-参数只能是一个单词，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram]`。源码模式下，所有回复原样交给 Claude Code 显示。
+参数只能是一个单词，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text]`。模式在会话之间保留。源码模式下，所有回复原样交给 Claude Code 显示。
 
 无论处于哪种模式，`/copy` 都复制 Mermaid 源码。mermaid-tty 只改变显示方式，存储的回复保留完整源码。
 
 ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid-tty source`。
+
+## 图片
+
+在能显示像素的终端里，mermaid-tty 可以把图表绘制成 Mermaid 自身渲染的图片。需要同时满足：
+
+- **kitty 或 Ghostty**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。从 kitty 或 Ghostty 内部启动的其他终端不算。
+- PATH 上有 **mermaid-cli** 11 或 12：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
+
+新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。
+
+只有 mermaid-tty 能解析的图表才会变成图片，因此图片不会显示文本渲染器拒绝的类型或语句，例如 HTML 标签、图标或图片节点。已解析但过宽、无法以文本绘制的图表，可以显示为图片。`mmdc` 运行的 Chromium 没有任何网络访问（包括本机回环），因此图表无法让它获取任何内容。每个图表在一个会话中最多渲染一次：如果图片缓存将其丢弃，它会回到文本绘制。
+
+以下情况保留文本绘制（文本渲染器无法绘制时显示源码）：
+
+- 终端不是上述之一，或在 Windows 上；
+- 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
+- mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
+- 源码含有纯文本 `title` 以外的 frontmatter、`%%{` 指令、`style`、`classDef`、`linkStyle`、`class`、`cssClass`、`click`、`link`、`call`、`callback`、`href`、`accTitle` 或 `accDescr` 语句、`#hex`、`rgb()` 或 `rgba()` 以外的时序图 `rect` 或 `box` 颜色、`#117;` 这样的实体、普通空格和制表符以外的空白、控制字符，或任何可能指向 URL 或文件的内容（如 `url(`、`http:`、`file:`、`//` 或反斜杠）；
+- Mermaid 为它绘制的 SVG 使用了 Mermaid 自身图表所用固定集合以外的元素或属性，或引用了自身以外的任何内容（mermaid-tty 先渲染 SVG 并检查，再生成图片）；
+- `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
+
+`claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。
 
 ## 回退
 

@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
-import { renderMermaid, explain, createRenderer, toRows, type Span } from '../../core/render.ts'; import { THEMES, palette } from '../../core/themes.ts'
+import { renderMermaid, explain, parseFail, createRenderer, toRows, type Span } from '../../core/render.ts'; import { THEMES, palette } from '../../core/themes.ts'
 import { createCanvas } from '../../core/canvas.ts'; import { KEYWORDS, TIER1, lookup } from '../../core/registry.ts'
 import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { fitLadder } from '../../core/fit.ts'
 import { readSource } from '../../core/source.ts'; import { validate } from '../../core/validate.ts'
@@ -24,6 +24,18 @@ test('A5.errors: explain returns the first Fail of source, lookup, parse and fit
   assert.deepEqual(explain(bad, O), flowchart.parse(readSource(bad) as Source))
   const model = flowchart.parse(readSource(FC) as Source)
   assert.deepEqual(explain(FC, { columns: 8 }), fitLadder(flowchart, model as never, 8))
+})
+// parseFail is explain without the fit ladder: the first Fail of source, title, lookup and parse, or null. The width plays
+// no part, so a diagram too wide for any terminal still parses; what core rejects (HTML, icons, image nodes) does not.
+test('A5.errors: parseFail returns explain\'s first Fail before the fit, or null when the source parses', () => {
+  for (const s of ['flowchart TD', 'radar-beta\naxis A', 'flowchart TD\nA[open --> B', 'flowchart TD\nA[👨‍👩]', '---\ntitle: <b>x</b>\n---\nflowchart TD\nA'])
+    assert.deepEqual(parseFail(s), explain(s, O), s)
+  assert.equal(parseFail(FC), null); assert.equal(parseFail('sequenceDiagram\nA->>B: hi'), null)
+  const fan = 'flowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]'
+  assert.deepEqual(explain(fan, { columns: 40 }), { reason: 'row-too-wide' }); assert.equal(parseFail(fan), null)
+  assert.deepEqual(parseFail(`flowchart TD\nA["<img src='http://127.0.0.1:1/x'>"] --> B`), { reason: 'html' })
+  assert.deepEqual(parseFail('flowchart TD\nA[fa:fa-car x]'), { reason: 'icon' })
+  assert.ok(parseFail('flowchart TD\nC@{ img: "http://127.0.0.1:1/y", label: "n" }'))
 })
 test('A2: explain draws a sequence diagram: its module registers on import, as flowchart\'s does', () => {
   assert.equal((explain('sequenceDiagram\nA->>B: hi', O) as { step: string }).step, 'natural')

@@ -127,6 +127,13 @@ const RULES: [string, [string, string[]][]][] = [
     ['<Ink.Text>a</Ink.Text><Ink.Text>{process.cwd()}</Ink.Text>', ['1 process']],
     ['<>a</><Text>{process.cwd()}</Text>', ['1 process']],
     ['if (a < b / c) process.cwd(); d = e / f', ['1 process']]]],
+  // $.process is the engine's own noun (run a command through the hooks), not Node's global.
+  ['$.process is the engine API; process anywhere else is still flagged', [
+    ["await $.process.run(['mmdc'])", []],
+    ['const p = $.process', []],
+    ['$.process.run(x); process.exit(1)', ['1 process']],
+    ['a$.process.run(x)', ['1 process']],
+    ['$ .process.run(x); x.process', ['1 process', '1 process']]]],
 ]
 for (const [rule, cases] of RULES)
   test(`A8.portability: ${rule}`, () => { for (const [s, want] of cases) assert.deepEqual(scanSource(s), want, s) })

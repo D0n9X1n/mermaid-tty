@@ -16,7 +16,7 @@ test('A6.command: arguments and replies', () => {
 
 // One word, trimmed and matched in any case; a second word is a usage error, not ignored.
 test('A6.command: arguments are trimmed and case-blind; a second word is an error', () => {
-  const usage = { error: 'usage: /mermaid-tty [source|diagram]' }
+  const usage = { error: 'usage: /mermaid-tty [source|diagram|text]' }
   assert.deepEqual(parseModeArgs('diagram'), { set: 'diagram' })
   assert.deepEqual(parseModeArgs('  '), { report: true })
   assert.deepEqual(parseModeArgs('SOURCE'), { set: 'source' })
@@ -35,7 +35,16 @@ test('A6.command: a reply for each mode, changed or not', () => {
 // $.command.run passes args through as given. Only a string is parsed, and left out (undefined)
 // it reports; anything else is a usage error, never coerced: String(['source']) is 'source'.
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
-  const usage = { error: 'usage: /mermaid-tty [source|diagram]' }
+  const usage = { error: 'usage: /mermaid-tty [source|diagram|text]' }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
   for (const a of [['source'], { toString: null }, 42, null]) assert.deepEqual(parseModeArgs(a), usage)
+})
+
+// text: diagrams drawn as text even where the terminal shows pictures; only source passes replies through.
+test('A6.command: text mode parses, replies, and still draws', () => {
+  assert.deepEqual(parseModeArgs(' Text '), { set: 'text' })
+  assert.equal(passThrough('terminal', {}, 'text'), false)
+  assert.equal(modeReply('text', true), 'mermaid-tty: drawing diagrams as text')
+  assert.equal(modeReply('text', false), 'mermaid-tty mode: text')
+  assert.deepEqual(parseModeArgs('svg'), { error: 'usage: /mermaid-tty [source|diagram|text]' })
 })

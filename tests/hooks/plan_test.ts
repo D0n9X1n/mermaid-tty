@@ -21,3 +21,49 @@ test('A5.errors: a throwing or rejecting debug log still draws the diagram; the 
     assert.deepEqual(p?.parts.map(x => 'prose' in x ? x.prose : 'rows'), [`a\n${bad}m\n`, 'rows', 'b']); assert.equal(calls, 1)
   }
 })
+
+// Pictures: a fake $ in kitty with a dark Claude Code theme, whose mmdc writes a 320 x 640 PNG.
+import { createPictures } from '../../hooks/image.ts'
+const PNG = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]), Buffer.from('IHDR'), Buffer.from([0, 0, 1, 64, 0, 0, 2, 128, 8, 6, 0, 0, 0])]).toString('base64')
+const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
+  const runs: string[] = []
+  const $ = { ui, env: { get: async (n: string) => vars[n] }, config: { list: async () => [{ key: 'theme', value: 'dark' }] },
+    process: { run: async (argv: string[]) => {
+      runs.push(argv[1] === '--version' ? 'probe' : argv[0]!)
+      return { exitCode: 0, stdout: argv[1] === '--version' ? '11.17.1\n' : argv[0] === 'mktemp' ? '/tmp/mermaid-tty.X1\n' : '', stderr: '' } } },
+    fs: { write: async () => {}, stat: async () => ({ size: 100 }), read: async (p: string) => p.endsWith('.svg') ? '<svg><path marker-end="url(#a)"/></svg>' : { base64: PNG } } }
+  return { $, runs }
+}
+const shape = (p: any) => p?.parts.map((x: any) => 'prose' in x ? 'prose' : 'rows' in x ? 'rows' : 'picture')
+
+// Only a fence core parses becomes a picture: BAD (a character core rejects) stays prose. FAN parses but is too wide for
+// text at 40 columns, so its picture stands in for its source.
+const FAN = '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
+const at = (text: string, columns: number) => ({ ...ev(text), viewport: { columns, rows: 40 } })
+test('A6.hook-tests: where pixels show, a fence draws as text first, then as its picture; one core does not parse never does', async () => {
+  const { $, runs } = pix(), s = createPictures(), reply = `a\n${FC}m\n${BAD}b`
+  assert.deepEqual(shape(await safePlan($, ev(reply), 'default', diagram, s)), ['prose', 'rows', 'prose'])
+  await s.idle(); assert.deepEqual(runs, ['probe', 'mktemp', 'mmdc', 'mmdc', 'rm'])
+  const p = await safePlan($, ev(reply), 'default', diagram, s)
+  assert.deepEqual(shape(p), ['prose', 'picture', 'prose'])
+  assert.deepEqual((p!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 }); assert.equal((p!.parts[2] as any).prose, `m\n${BAD}b`)
+})
+test('A6.hook-tests: a fence too wide for text, which core parses, gets a picture in place of its source', async () => {
+  const { $ } = pix(), s = createPictures(), reply = `a\n${FAN}b`
+  assert.equal(await safePlan($, at(reply, 40), 'default', diagram, s), null)
+  await s.idle(); assert.deepEqual(shape(await safePlan($, at(reply, 40), 'default', diagram, s)), ['prose', 'picture', 'prose'])
+})
+
+test('A6.command: text mode, mono, tmux and source never run mmdc', async () => {
+  for (const [vars, theme, mode] of [[undefined, 'default', 'text'], [undefined, 'mono', 'diagram'], [{ TERM: 'xterm-kitty', TMUX: '1' }, 'default', 'diagram']] as const) {
+    const { $, runs } = pix(vars as any), s = createPictures()
+    assert.deepEqual(shape(await safePlan($, ev(`a\n${FC}b`), theme, async () => mode, s)), ['prose', 'rows', 'prose']); await s.idle(); assert.deepEqual(runs, [])
+  }
+  const { $, runs } = pix(), s = createPictures()
+  assert.equal(await safePlan($, ev(`a\n${FC}b`), 'default', async () => 'source' as const, s), null); await s.idle(); assert.deepEqual(runs, [])
+})
+
+test('A5.errors: a throwing picture lookup still draws the text', async () => {
+  const { $ } = pix(); ($ as any).config.list = () => { throw new Error('x') }; ($ as any).env.get = () => { throw new Error('y') }
+  assert.deepEqual(shape(await safePlan($, ev(`a\n${FC}b`), 'default', diagram, createPictures())), ['prose', 'rows', 'prose'])
+})

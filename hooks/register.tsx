@@ -6,13 +6,16 @@ import { safePlan } from './plan.ts'
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that
 // fails to draw (joined to the prose around it), goes through next() unchanged, as does a
 // reply with nothing drawn. A reply that opens on a diagram first sends next() an empty
-// block, which draws the reply's bullet (D5). /mermaid-tty source|diagram sets the mode,
-// kept in $.state; in source mode every reply goes through next() untouched.
+// block, which draws the reply's bullet (D5). /mermaid-tty source|diagram|text sets the mode,
+// kept in $.state; in source mode every reply goes through next() untouched. Where the terminal
+// shows pixels, diagram mode draws a fence as an Image of mermaid-cli's PNG once it is rendered
+// (hooks/image.ts); text mode never does.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 
 // The loader follows $ only into top-level functions, so mode lives here. A read while a
 // ui.render hook draws subscribes that drawing, so a later set draws it again.
-async function mode($: StateDollar): Promise<Mode> { return (await $.state.get(SOURCE)).value === true ? 'source' : 'diagram' }
+// The value is true for source, 'text' for text, and anything else for diagram.
+async function mode($: StateDollar): Promise<Mode> { const v = (await $.state.get(SOURCE)).value; return v === true ? 'source' : v === 'text' ? 'text' : 'diagram' }
 
 export const register: Register = (on, options) => {
   const theme = String(options.theme ?? 'default')
@@ -28,7 +31,7 @@ export const register: Register = (on, options) => {
     const a = parseModeArgs(e.args), cur = await mode($)
     if ('error' in a) return { text: a.error }
     if ('report' in a) return { text: modeReply(cur, false) }
-    await $.state.set(SOURCE, a.set === 'source'); $.ui.invalidate('ui.render')
+    await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false); $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
   })
 
@@ -37,11 +40,12 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     const plan = await safePlan($, e, theme, () => mode($))
     if (!plan) return next(e)
-    const { parts, Box, Text } = plan, kids: RenderElement[] = []
+    const { parts, Box, Text, Image } = plan, kids: RenderElement[] = []
     let first = e.props.isFirstOfReply, n = 0
     for (const p of parts) {
-      if ('rows' in p && first) kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))  // D5: keep the bullet
-      if ('rows' in p) kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
+      if (!('prose' in p) && first) kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))  // D5: keep the bullet
+      if ('picture' in p) kids.push(<Image key={`mermaid-${n++}`} source={{ png: p.picture.png }} columns={p.picture.columns} rows={p.picture.rows} alt="mermaid diagram" />)
+      else if ('rows' in p) kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
         <Text wrap="truncate-end">{row.map(({ text, role: _r, ...style }) => <Text {...style}>{text}</Text>)}</Text>)}</Box>)
       else kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } }))
       first = false
