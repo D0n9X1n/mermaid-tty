@@ -23,7 +23,7 @@ export function joinData(lines: readonly Line[]): Line[] {
       continue
     }
     const pairs = lines.slice(i + 1, end).map(p => p.text.trim())
-    out.push({ n: l.n, text: `${l.text.trimEnd()} ${pairs.join(', ')} ${lines[end]!.text.trimStart()}` })
+    out.push({ n: l.n, text: `${l.text.replace(/[ \t]+$/, '')} ${pairs.join(', ')} ${lines[end]!.text.replace(/^[ \t]+/, '')}` })
     i = end
   }
   return out
@@ -35,7 +35,7 @@ function blockEnd(lines: readonly Line[], i: number): number {
   for (let j = i + 1; j < lines.length; j++) {
     const l = lines[j]!
     if (l.n !== lines[j - 1]!.n + 1) return -1
-    if (l.text.trimStart().startsWith('}')) return j > i + 1 ? j : -1
+    if (/^[ \t]*\}/.test(l.text)) return j > i + 1 ? j : -1
     const m = PAIR_LINE.exec(l.text)
     if (!m || (indent !== null && m[1] !== indent)) return -1
     indent = m[1]!
@@ -43,9 +43,10 @@ function blockEnd(lines: readonly Line[], i: number): number {
   return -1
 }
 
-// Whether a line opens a block joinData may join: it is only a node id and @{, with spaces around. Any other line ending in
+// Whether a line opens a block joinData may join: it is only a node id and @{, with spaces or tabs around. Only those are
+// trimmed when joining: YAML reads other whitespace, such as NBSP, as text. Any other line ending in
 // @{ (after a link, in edge text, in an acc statement or a label) is left alone, and fails to read.
-const OPENS = new RegExp(String.raw`^\s*${NAME}@\{\s*$`, 'u')
+const OPENS = new RegExp(String.raw`^[ \t]*${NAME}@\{[ \t]*$`, 'u')
 function opensData(text: string): boolean {
   return OPENS.test(text)
 }
