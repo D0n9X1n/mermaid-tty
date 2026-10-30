@@ -172,11 +172,25 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 // read as light, as canvas.line records a light line.
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
-  const marks = new Set((d.expect.rows ?? []).map(x => x.mark))
+  const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
     if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
+    // A cell joins its arms in one weight unless it is a straight crossing, ┼ of one │ and one ─ by the dirs it records for
+    // each owner: a corner or tee of two weights shows a thick branch on a thin line (#18 re-review).
+    const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
+    if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
+    // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so no
+    // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
+    for (const o of x.owners) {
+      const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
+      for (const [i, b] of [1, 2, 4, 8].entries()) {
+        if (!(dirs & b) || arms[i] === '0') continue
+        if ((weight.get(o) ?? arms[i]) !== arms[i]) return fail('line-glyph')
+        weight.set(o, arms[i]!)
+      }
+    }
     const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
     if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
@@ -229,7 +243,7 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 // Merged lines imply only real links. Edges on one drawn line, as joined reads them, read as one line, so each end that may
 // start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark), or if it
 // is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such start t and:
-// - each mark h of another edge must be an edge of the drawing from t to h drawing h's mark kind (real); for a bare t, a self-loop when t = h,
+// - each mark h of another edge must be an edge of the drawing from t to h drawing h's mark kind (real), a self-loop when t = h,
 //   while a head t and a head h at one node are one shared head;
 // - each endpoint of another edge with no marks, which shows no direction, must be t's own node or one some edge joins to
 //   t, either way (linked);
@@ -246,10 +260,10 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const starts = (e: Edge) => (bare(e).length > 0 || e.ends.length === 0 ? bare(e).map(n => ({ n, head: false })) : e.ends.map(x => ({ n: x.node, head: true })))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
-  // Between two nodes a real link also draws the mark seen at h, by kind (#18 review): A-->D and B--xD on one line read as
-  // A--xD and B-->D. A bare start at h's own node needs only a self-loop there, as before: the mark is h's own.
-  const real = (t: string, h: string, g: string) => d.expect.edges.some(e => t === h ? e.from === t && e.to === h
-    : ((e.from === t && e.to === h) || (e.from === h && e.to === t)) && e.ends.some(x => x.node === h && headKind(x.glyph) === headKind(g)))
+  // A real link also draws the mark seen at h, by kind (#18 review): A-->D and B--xD on one line read as A--xD and B-->D,
+  // and a bare start at h's own node reads as a self-loop with that head, so the loop there must draw it (A--xA is no A-->A).
+  const real = (t: string, h: string, g: string) => d.expect.edges.some(e => ((e.from === t && e.to === h) || (e.from === h && e.to === t)) &&
+    e.ends.some(x => x.node === h && headKind(x.glyph) === headKind(g)))
   const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
   // One line draws one style (#18 review): a cell whose edges are all of one line, two or more of them on it, takes the
   // style of every other such cell of that line, so no implied link reads solid where its own edge is dotted.

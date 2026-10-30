@@ -513,11 +513,14 @@ const twoHeads = (ids: string[]) => marked(8, 9, [['A', 0, 4], ['B', 7, 0], ['C'
   ['e1', 1, 4, '▲'], ['e1', 2, 4, 5], ['e1', 3, 4, 3], ...h('e1', 3, 5, 7), ['e1', 3, 8, 12], ...v('e1', 8, 4, 5), ['e1', 6, 8, '▼'],
   ['e2', 0, 3, 6], ...v('e2', 3, 1, 2), ['e2', 3, 3, 3], ['e2', 3, 4, 10], ['e2', 3, 5, 9], ...v('e2', 5, 1, 2), ['e2', 0, 5, 12],
 ] as Mark[]).filter(m => ids.includes(m[0])), ['e0 A B A▲ B▼', 'e1 A C A▲ C▼', 'e2 A A'].filter(s => ids.includes(s.slice(0, 2))))
-test('merge-ambiguous: heads of two-headed edges on one line imply a link between their nodes, with or without a bare end', () => {
+test('merge-ambiguous: heads of two-headed edges on one line imply a link between their nodes, with or without a bare end or loop', () => {
   assert.deepEqual(text(twoHeads(['e0', 'e1', 'e2'])), ['   ┌A┐', '   │▲│', '   │││', '┌──┴┴┴──┐', '│       │', '│       │', '▼       ▼', 'B       C'])
   assert.equal(validate(twoHeads(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous')  // QA: B seems linked to C
   assert.equal(validate(twoHeads(['e0', 'e1']))?.reason, 'merge-ambiguous')        // so without the loop
-  assert.equal(validate(twoHeads(['e0', 'e2'])), null)                             // A <--> B with a loop at A is true
+  // A <--> B with a bare loop at A on its line: the loop's bare ends read as A-->A and as A---B's own ends lead to B's head,
+  // A-->B; the source has neither (#18 re-review: a self-loop needs the head kind too).
+  assert.deepEqual(falsePairs(twoHeads(['e0', 'e2'])), ['A->A', 'A->B'])
+  assert.equal(validate(twoHeads(['e0', 'e2']))?.reason, 'merge-ambiguous')
 })
 // A lifeline is read as the participant whose pill heads it, so each lifeline cell lies in its own pill's columns: header
 // pills of one width swapped over their lifelines reverse every message.
@@ -626,4 +629,38 @@ test('#18 review: a trunk whose edges draw different line styles fails merge-amb
     edges: [e('AC', 'A', 'C', '▼'), e('AD', 'A', 'D', '►'), e('BC', 'B', 'C', '▼'), e('BD', 'B', 'D', '▼'), e('PQ', 'P', 'Q', '►')], edgeLabels: [], frames: [] })
   assert.deepEqual(d.conflicts, [])
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
+})
+
+// Re-review of #18, hole 1: a self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare
+// end leads to B-->A's ▶ at A (A->A) and B's to A-->B's at B (B->B). The loops at A and B are --x and --o, so neither
+// pair is in the source.
+test('#18 re-review: a merged line implying a self-loop whose head the loop lacks fails merge-ambiguous', () => {
+  const c = createCanvas(14, 8, 8, () => true)
+  c.text(3, 3, 'a', 'node', 'A'); c.text(11, 3, 'b', 'node', 'B')
+  drawPath(c, 'AB', [[3, 3], [11, 3]], '▼')
+  drawPath(c, 'BA', [[11, 3], [11, 4], [8, 4], [8, 3], [6, 3], [6, 6], [3, 6], [3, 3]], '◄')
+  drawPath(c, 'AA', [[3, 3], [0, 3], [0, 0], [3, 0], [3, 3]], 'x')
+  drawPath(c, 'BB', [[11, 3], [13, 3], [13, 0], [11, 0], [11, 3]], 'o')
+  const e = (id: string, from: string, to: string, glyph: string) => ({ id, from, to, ends: [{ node: to, glyph }] })
+  const d = c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }],
+    edges: [e('AB', 'A', 'B', '▼'), e('BA', 'B', 'A', '◄'), e('AA', 'A', 'A', 'x'), e('BB', 'B', 'B', 'o')], edgeLabels: [], frames: [] })
+  assert.deepEqual(d.conflicts, [])
+  assert.deepEqual(falsePairs(d), ['A->A', 'B->B'], text(d).join('\n'))
+  assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
+})
+// Hole 2: one edge draws one weight in every arm, not just one cell style. A-->C leaves A-->B's light stem at (0,2) with a
+// heavy arm down, ┰, then runs on light: style 'light' everywhere, but the junction shows a thick branch. Its glyph shows a
+// weight its edge does not draw, so it fails line-glyph.
+test('#18 re-review: a merged junction with a heavy arm on a light line fails line-glyph', () => {
+  const c = createCanvas(4, 6, 6, () => true)
+  c.text(0, 0, 'a', 'node', 'A'); c.text(0, 5, 'b', 'node', 'B'); c.text(3, 2, 'c', 'node', 'C')
+  for (const col of [1, 2, 3]) c.line(0, col, 10, 'light', 'edge', 'AB')
+  c.arrow(0, 4, '►', 'AB')
+  c.line(0, 1, 10, 'light', 'edge', 'AC'); c.line(0, 2, 8, 'light', 'edge', 'AC'); c.line(0, 2, 4, 'heavy', 'edge', 'AC')
+  c.line(1, 2, 5, 'light', 'edge', 'AC'); c.arrow(2, 2, '▼', 'AC')
+  const d = c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'C', text: 'c' }],
+    edges: [{ id: 'AB', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '►' }] }, { id: 'AC', from: 'A', to: 'C', ends: [{ node: 'C', glyph: '▼' }] }],
+    edgeLabels: [], frames: [] })
+  assert.deepEqual(d.conflicts, []); assert.equal(text(d)[0], 'a─┰─►b')
+  assert.equal(validate(d)?.reason, 'line-glyph', text(d).join('\n'))
 })
