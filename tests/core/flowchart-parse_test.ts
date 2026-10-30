@@ -290,3 +290,23 @@ test('A5.errors: an @{ that ends a line joins the next lines only on a line that
   assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
   assert.deepEqual(F('  A@{\n    label: x\n  } --> B').nodes.map((n: any) => n.rows[0].text), ['x', 'B'])
 })
+
+// Issue #4: Mermaid 12.2.0's lexer (flow.jison) tries its keyword rules at each token start before an id's own token: the
+// id's start, after a leading digit run (NUM), and after each non-ASCII character (UNICODE_TEXT, one table character).
+// Verified under JSDOM, at the start, after a link and after &.
+test('A5.errors: an id the lexer of Mermaid reads as a keyword, or cannot lex, falls back', () => {
+  const bad = ['style --> B', 'style.x --> B', 'A --> end-x', 'A & class.x --> B', 'graph --> B', 'A --> flowchart', 'A --> _self', 'swimlane-beta --> B',
+    'styleé --> B', 'interpolate --> B', 'linkStyle.x --> B', 'classDef-x --> B', 'A --> call', 'href --> B', 'A & call --> B', 'A --> call ;',
+    '1style --> B', 'éend --> B', 'aéstyle --> B', 'A style.x@--> B', 'A default.x@--> B', 'A end@--> B', 'A --> styleX:::end', 'A:::style',
+    'subgraph end\nB\nend', 'subgraph default\nB\nend', 'subgraph interpolate.x\nB\nend', 'subgraph call\nB\nend', 'subgraph 1interpolate\nB\nend',
+    'A-->B\nclass A,B end', 'A-->B\nstyle call fill:#f00', 'A-->B\nclassDef end fill:#f00', '𝐀 --> B', '² --> B', '٣ --> B']
+  assert.deepEqual(bad.map(s => [s, isFail(F(s))]), bad.map(s => [s, true]))
+})
+test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoint, default.x, call;, call[x], subgraph style', () => {
+  const ok = ['styleX --> B', 'classDefX --> B', 'clickX --> B', 'linkStyleX --> B', 'endX --> B', 'classX --> B', 'endpoint --> B', 'classic --> B',
+    'style_x --> B', 'a.style --> B', 'a-end --> B', '1styleX --> B', 'éstyleX --> B', 'default.x --> B', 'v.x --> B', 'accTitle --> B', 'TB --> B',
+    'A --> call;', 'call[x] --> B', 'A call.x@--> B', 'A defaultX@--> B', 'A:::default', 'subgraph style\nB\nend', 'subgraph end.x\nB\nend',
+    'subgraph end [t]\nB\nend', 'subgraph call[t]\nB\nend', 'A-->B\nstyle styleX fill:#f00', 'A-->B\nclassDef default fill:#f00',
+    'A-->B\nclick A call cb()', 'ā --> B', '中文 --> B']
+  assert.deepEqual(ok.map(s => [s, isFail(F(s))]), ok.map(s => [s, false]))
+})
