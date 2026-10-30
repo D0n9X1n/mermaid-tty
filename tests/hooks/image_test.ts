@@ -102,7 +102,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background 
   assert.deepEqual(m!.argv, ['mmdc', '-i', '-', '-o', `${D}/out.png`, '-e', 'png', '-b', 'transparent', '-t', 'dark',
     '-c', `${D}/config.json`, '-p', `${D}/puppeteer.json`, '-s', '2', '-q', '-w', '960'])
   assert.equal(m!.init.stdin, body); assert.ok(m!.init.timeoutMs > 0)
-  assert.deepEqual(f.writes.map(([p, t]) => [p, JSON.parse(t)]), [[`${D}/config.json`, { securityLevel: 'strict' }], [`${D}/puppeteer.json`, puppeteerConfig(80)]])
+  assert.deepEqual(f.writes.map(([p, t]) => [p, JSON.parse(t)]), [[`${D}/config.json`, { securityLevel: 'strict', theme: 'dark' }], [`${D}/puppeteer.json`, puppeteerConfig(80)]])
   assert.deepEqual(argvOf(f, 'rm')[0]!.argv, ['rm', '-rf', D])
   assert.equal(redraws(f), 1); assert.deepEqual(f.logs, [])
   assert.deepEqual(pictureFor(f.$, s, body, 'dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
@@ -131,14 +131,33 @@ test('A5.errors: mmdc missing, or a version that is not one, logs once and rende
 // over Mermaid's 50000-character limit would come back as its error picture, so it is not rendered either.
 test('A5.errors: a source core does not parse, or one over 50000 characters, never reaches mmdc', async () => {
   const f = fake(), s = createPictures()
-  for (const body of [`flowchart TD\nA["<img src='http://127.0.0.1:1/x'>"] --> B`, 'flowchart TD\nC@{ img: "http://127.0.0.1:1/y", label: "n" }',
-    'flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
+  for (const body of ['flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
     assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined, body)
   }
   await s.idle(); assert.deepEqual(f.runs, []); assert.deepEqual(f.logs, [])
   const big = `flowchart TD\nA["${'x'.repeat(50000)}"] --> B`
   pictureFor(f.$, s, big, 'dark', 80, f.log); pictureFor(f.$, s, big, 'dark', 80, f.log); await s.idle()
   assert.deepEqual(f.runs, []); assert.deepEqual(f.logs, ['image: source over 50000 characters'])
+})
+
+// The gate in hooks/safe.ts, apart from core's parser: the reviewer's repro (a frontmatter themeCSS that drew a local
+// file into the PNG, with every isolation flag on) and one source per rule, each one core parses, run nothing and log
+// why once. An mmdc that is run fails the test.
+const REPRO = "---\nconfig:\n  themeCSS: '.nodeLabel::before {content: url(file:///tmp/private.svg)}'\n---\nflowchart TD\nA --> B"
+test('A5.errors: an unsafe source never reaches mmdc: the themeCSS repro, and one per rule', async () => {
+  for (const [body, reason] of [
+    [REPRO, 'frontmatter'], ['---\ndisplayMode: compact\n---\nflowchart TD\nA --> B', 'frontmatter'],
+    ['flowchart TD\nA --> B\nstyle A fill:#f00', 'statement style'], ['flowchart TD\nA:::c --> B\nclassDef c fill:#f00', 'statement classdef'],
+    ['flowchart TD\nA --> B\nlinkStyle 0 stroke:#f00', 'statement linkstyle'], ['flowchart TD\nA --> B\nclass A c', 'statement class'],
+    ['flowchart TD\nA --> B\nclick A call f()', 'statement click'], ['flowchart TD\nA[see http:x] --> B', 'token http:'],
+    ['flowchart TD\nA[a//b] --> B', 'token //'], ['flowchart TD\nA[a\\b] --> B', 'token \\'], ['flowchart TD\nA[@import x] --> B', 'token @import'],
+    ['flowchart TD\nA[data:x] --> B', 'token data:'],
+  ] as const) {
+    const f = fake({ run: async () => { throw new Error('mmdc must not run') } }), s = createPictures()
+    f.$.process.run = async (argv: string[]) => { assert.fail(`ran ${argv.join(' ')} for ${JSON.stringify(body)}`) }
+    assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined); pictureFor(f.$, s, body, 'dark', 80, f.log); await s.idle()
+    assert.deepEqual(f.logs, [`image: unsafe source (${reason})`], body)
+  }
 })
 
 test('A6.hook-tests: requests for one diagram, theme and width share one render; another theme or width is its own', async () => {

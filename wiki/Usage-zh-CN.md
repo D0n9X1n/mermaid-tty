@@ -117,6 +117,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 - 终端不是上述之一，或在 Windows 上；
 - 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
 - mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
+- 源码含有纯文本 `title` 以外的 frontmatter、`%%{` 指令、`style`、`classDef`、`linkStyle`、`class`、`cssClass` 或 `click` 语句，或任何可能指向 URL 或文件的内容（如 `url(`、`http:`、`file:`、`//` 或反斜杠）；
 - `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。

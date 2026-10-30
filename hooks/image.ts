@@ -1,12 +1,14 @@
 // Pictures of Mermaid's own rendering, for a terminal that shows pixels: mermaid-cli (mmdc, if it is on PATH) draws a
 // fence to a PNG in the background, and the next draw of the reply uses it. A draw never waits on mmdc: a miss answers
 // undefined (the text drawing stands) and queues one render, at most one running at a time.
-// Safety: only a source core parses is rendered (core rejects HTML, icons and image nodes), and Chromium under mmdc runs
-// with no network, loopback included (puppeteerConfig). Termination: each source, look and width is rendered at most
+// Safety: a source goes to mmdc only when hooks/safe.ts finds no way in it to style, configure, fetch or load anything,
+// and core parses it (core rejects HTML, icons and image nodes); Chromium under mmdc runs with no network, loopback
+// included (puppeteerConfig); and mmdc's Mermaid config holds only securityLevel strict and the theme. Termination: each source, look and width is rendered at most
 // once per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
 // redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import { showsPixels } from './pixels.ts'
+import { unsafeReason } from './safe.ts'
 
 export type Picture = { png: string; columns: number; rows: number }
 export type Look = 'dark' | 'default'                // Mermaid's theme: dark, or its light default
@@ -62,8 +64,8 @@ export async function pictureLook($: any, s: Pictures, theme: string): Promise<L
 }
 
 // The cached picture of body in look at columns, or undefined. On a miss, a key not yet tried is queued for one render
-// unless the queue is full (then a later draw asks again): only a source core parses, within Mermaid's size limit, and
-// while mmdc answers its version. A failure logs `image: <why>`; a finished batch redraws ui.render once.
+// unless the queue is full (then a later draw asks again): only a source within Mermaid's size limit that the safety
+// gate passes (`image: unsafe source (<rule>)` is logged once when it does not) and core parses, while mmdc answers. A failure logs `image: <why>`; a finished batch redraws ui.render once.
 export function pictureFor($: any, s: Pictures, body: string, look: Look, columns: number, log: (reason: string) => void): Picture | undefined {
   const key = JSON.stringify([body, look, columns]), hit = s.cache.get(key)
   if (hit) { s.cache.delete(key); s.cache.set(key, hit); return hit }
@@ -71,6 +73,8 @@ export function pictureFor($: any, s: Pictures, body: string, look: Look, column
   if (s.noMmdc || s.tried.has(id) || s.inflight.has(key) || s.inflight.size >= QUEUE || s.tried.size >= s.limits.tried) return undefined
   s.tried.add(id)
   if (body.length > MAX_SOURCE) { say(log, `source over ${MAX_SOURCE} characters`); return undefined }
+  const unsafe = unsafeReason(body)
+  if (unsafe) { say(log, `unsafe source (${unsafe})`); return undefined }
   if (parseFail(body)) return undefined              // the text renderer logs why it falls back
   s.inflight.add(key)
   s.tail = s.tail.then(() => job($, s, key, body, look, columns, log)).catch(() => {})
@@ -117,7 +121,7 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
   if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) return 'no temp dir'
   try {
     const config = `${dir}/config.json`, puppeteer = `${dir}/puppeteer.json`, out = `${dir}/out.png`
-    await $.fs.write(config, JSON.stringify({ securityLevel: 'strict' }))
+    await $.fs.write(config, JSON.stringify({ securityLevel: 'strict', theme: look }))
     await $.fs.write(puppeteer, JSON.stringify(puppeteerConfig(columns)))
     const r = await $.process.run(['mmdc', '-i', '-', '-o', out, '-e', 'png', '-b', 'transparent', '-t', look, '-c', config,
       '-p', puppeteer, '-s', String(SCALE), '-q', ...(major < 12 ? ['-w', String(columns * PAGE)] : [])], { stdin: body, timeoutMs: MMDC_MS })

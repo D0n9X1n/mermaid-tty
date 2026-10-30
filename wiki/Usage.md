@@ -117,6 +117,7 @@ You keep the text drawing, or the source when the text renderer can't draw it, w
 - the terminal isn't one of the above, or is Windows;
 - the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
 - mermaid-tty can't parse the diagram, or its source is over 50,000 characters, Mermaid's limit;
+- the source has frontmatter beyond a plain `title`, a `%%{` directive, a `style`, `classDef`, `linkStyle`, `class`, `cssClass` or `click` statement, or anything that could name a URL or file (such as `url(`, `http:`, `file:`, `//` or a backslash);
 - `mmdc` is missing, fails, takes over 30 seconds, or makes a picture over 2 MiB, over 255 rows tall, or too wide to read at the available width.
 
 `claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings everywhere; `/mermaid-tty diagram` turns pictures back on. `/copy` still copies the source.

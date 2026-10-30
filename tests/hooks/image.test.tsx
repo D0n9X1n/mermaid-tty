@@ -27,6 +27,13 @@ test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s
   expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'rm -rf'])
 })
 
+// The reviewer's themeCSS repro in kitty: core draws it as text, and nothing runs on the host.
+test('A5.errors: in kitty, the themeCSS repro stays text and runs nothing', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty' })
+  const ui = await mount($, "---\nconfig:\n  themeCSS: '.nodeLabel::before {content: url(file:///tmp/private.svg)}'\n---\nflowchart TD\nR1 --> R2")
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box'); expect(runs).toEqual([])
+})
+
 test('A6.hook-tests: under tmux, and in text mode, a fence stays text and mmdc never runs', async ($, on) => {
   const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' }), ui = await mount($, 'flowchart TD\nT1 --> T2')
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box'); expect(runs).toEqual([])

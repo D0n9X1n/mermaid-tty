@@ -32,13 +32,13 @@ function world(o: { version?: string; mmdc?: boolean; capMs?: number } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'mtty-it-')), bin = join(root, 'bin'), tmp = join(root, 'tmp'), log = join(root, 'mmdc.log')
   mkdirSync(bin); mkdirSync(tmp)
   if (o.mmdc !== false) { writeFileSync(join(bin, 'mmdc'), FAKE); chmodSync(join(bin, 'mmdc'), 0o755) }
-  const timeouts: number[] = [], logs: string[] = [], redraws: string[] = []
+  const timeouts: number[] = [], logs: string[] = [], redraws: string[] = [], spawned: string[] = []
   const PATH = [bin, dirname(process.execPath), '/usr/bin', '/bin'].join(':')
   const $ = {
     env: { get: async (n: string) => ({ TERM: 'xterm-kitty', TMPDIR: tmp } as Record<string, string>)[n] },
     config: { list: async () => [{ key: 'theme', value: 'dark' }] },
     process: { run: (argv: string[], init: any = {}) => new Promise((resolve, reject) => {
-      if (argv[0] === 'mmdc') timeouts.push(init.timeoutMs)
+      spawned.push(argv.join(' ')); if (argv[0] === 'mmdc') timeouts.push(init.timeoutMs)
       const c = spawn(argv[0]!, argv.slice(1), { env: { PATH, FAKE_MMDC_VERSION: o.version ?? '11.17.1', FAKE_MMDC_LOG: log } })
       let stdout = '', stderr = '', killed = false
       const t = setTimeout(() => { killed = true; c.kill('SIGKILL') }, Math.min(init.timeoutMs ?? 30000, o.capMs ?? 10000))
@@ -55,7 +55,7 @@ function world(o: { version?: string; mmdc?: boolean; capMs?: number } = {}) {
     ui: { invalidate: (e: string) => { redraws.push(e) } },
   }
   const calls = (): { argv: string[]; stdin: string }[] => existsSync(log) ? readFileSync(log, 'utf8').trim().split('\n').map(l => JSON.parse(l)) : []
-  return { $, timeouts, logs, redraws, calls, left: () => readdirSync(tmp), log: (r: string) => { logs.push(r) }, done: () => rmSync(root, { recursive: true, force: true }) }
+  return { $, timeouts, logs, redraws, spawned, calls, left: () => readdirSync(tmp), log: (r: string) => { logs.push(r) }, done: () => rmSync(root, { recursive: true, force: true }) }
 }
 
 test('A6.hook-tests: a real mmdc 11 on PATH gets the source on stdin, -p and -w, and its PNG becomes the picture; the temp dir goes', { skip: SKIP }, async () => {
@@ -94,6 +94,18 @@ test('A5.errors: a real mmdc that hangs is killed at the timeout, logged, and it
   try {
     pictureFor(w.$, s, 'flowchart TD\nSLEEP --> B', 'dark', 80, w.log); await s.idle()
     assert.equal(w.logs.length, 1); assert.match(w.logs[0]!, /^image: .*timed out/); assert.deepEqual(w.redraws, []); assert.deepEqual(w.left(), [])
+  } finally { w.done() }
+})
+
+// The reviewer's exact repro: a frontmatter themeCSS that drew /tmp/private.svg into the PNG on mmdc 11.17 and 12.0 with
+// every isolation flag on. Core parses it; the gate in hooks/safe.ts keeps it from running anything at all.
+test('A5.errors: the reviewer\'s themeCSS repro runs nothing: no mmdc, no version probe, no mktemp', { skip: SKIP }, async () => {
+  const w = world(), s = createPictures()
+  const repro = "---\nconfig:\n  themeCSS: '.nodeLabel::before {content: url(file:///tmp/private.svg)}'\n---\nflowchart TD\nA --> B"
+  try {
+    assert.equal(pictureFor(w.$, s, repro, 'dark', 80, w.log), undefined); await s.idle()
+    assert.deepEqual(w.spawned, []); assert.deepEqual(w.calls(), []); assert.deepEqual(w.logs, ['image: unsafe source (frontmatter)'])
+    assert.equal(pictureFor(w.$, s, repro, 'dark', 80, w.log), undefined); assert.deepEqual(w.left(), [])
   } finally { w.done() }
 })
 
