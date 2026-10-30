@@ -59,12 +59,13 @@ const RECURSIVE = process.platform === 'darwin' || process.platform === 'win32';
 // How long a watch may take to report a change. macOS can also report writes made just before the watch began.
 const LAG = 200;
 // Calls run while watching dir. Returns run's result and the changes the watch reported up to LAG ms after run returned, but
-// none from its first LAG ms, before run.
+// none from before run: it waits until the watch has been quiet for LAG ms, at most 25 times, since macOS can deliver the
+// creation of dir's own files well after the watch starts.
 async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
   const changes: string[] = [], watcher = watch(dir, { recursive: RECURSIVE }, (event, name) => changes.push(`${event} ${name}`));
   watcher.on('error', (e) => changes.push(`error ${e.message}`));
   try {
-    await sleep(LAG);
+    for (let i = 0, seen = -1; i < 25 && seen !== changes.length; i++) { seen = changes.length; await sleep(LAG); }
     changes.length = 0;
     const result = run();
     await sleep(LAG);
