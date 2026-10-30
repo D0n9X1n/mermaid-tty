@@ -178,8 +178,9 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
   const all = g.events.flatMap((e, i) => (e.kind === 'start' ? [] : [i])), ids = (is: number[]) => (bt ? [...is].reverse() : is).map(i => `c${i}`)
   const edges = all.flatMap(i => {
     const p = L.parent.get(i)!, hd = L.merged.get(i)
-    const run = p !== null && (lane(p) !== lane(i) || Math.abs(rowOf(i) - rowOf(p)) > 1) ? [{ id: `r${i}`, from: `c${p}`, to: `c${i}`, ends: [] }] : []
-    return hd === undefined ? run : [...run, { id: `m${i}`, from: `c${hd}`, to: `c${i}`, ends: [] }]
+    // Every lane and merge line draws light (#27): each edge is solid.
+    const run = p !== null && (lane(p) !== lane(i) || Math.abs(rowOf(i) - rowOf(p)) > 1) ? [{ id: `r${i}`, from: `c${p}`, to: `c${i}`, ends: [], style: 'solid' as const }] : []
+    return hd === undefined ? run : [...run, { id: `m${i}`, from: `c${hd}`, to: `c${i}`, ends: [], style: 'solid' as const }]
   })
   const order = [...g.branches.map(b => ({ ids: ids(nodes.get(b.name)!), column: true })).filter(o => o.ids.length > 0), { ids: ids(all), column: false }]
   const d = cv.toDrawing({ labels, edges, edgeLabels: [], frames: [], order, glyphs, rows: marks })

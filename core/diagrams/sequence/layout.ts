@@ -267,7 +267,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (m.activate) shift(m.to, end, 1)
     if (m.deactivate) shift(m.from, end + 1, -1)
     labels.push({ owner: `${id}:label`, text: plain(c.text.get(m)!) })
-    edges.push({ id, from: m.from, to: m.to, ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
+    edges.push({ id, from: m.from, to: m.to, style: m.line === 'dotted' ? 'dotted' : 'solid', ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
     if (ps.some(p => p.text)) edgeLabels.push({ owner: `${id}:label`, edge: id })
   }
   // A note: one row per line, centered between ┆ caps in a box of note fill, cap and blank one column each beyond its

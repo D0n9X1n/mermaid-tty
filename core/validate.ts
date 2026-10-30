@@ -10,7 +10,9 @@ import { width } from './width.ts'
 export type Expect = {
   labels: readonly { owner: string; text: string; at?: { r: number; c: number } }[]    // every label instance, keyed by owner id; C: at, its first cell
   edges: readonly { id: string; from: string; to: string; ends: readonly End[]           // drawn edges; ~~~ is not listed
-    endLabels?: readonly { node: string; owner: string }[] }[]   // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
+    endLabels?: readonly { node: string; owner: string }[]       // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
+    style?: 'solid' | 'thick' | 'dotted' }[]                      // #27: the source's line style, which every line cell of it draws
+  hidden?: readonly string[]                                                              // #27: invisible edges (~~~), drawn nowhere
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]  // C: each bar; lanes: its width across the axis, default 1; at: its base cell
@@ -183,6 +185,7 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
+  const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : []))), hidden = new Set(d.expect.hidden ?? [])
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
@@ -191,6 +194,17 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     // each owner: a corner or tee of two weights shows a thick branch on a thin line (#18 re-review).
     const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
     if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
+    // #27: an edge draws in its own style. Each arm it draws has its weight, heavy for thick and light otherwise, and a cell
+    // drawn dotted is drawn only for dotted edges. A dotted edge's cell may draw solid only at a straight crossing, where the
+    // canvas draws the other line's style and ┼ shows no dash. An invisible edge draws no cell at all.
+    for (const o of x.owners) {
+      if (hidden.has(o)) return fail('line-glyph')
+      const style = styles.get(o)
+      if (!style) continue
+      const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
+      if ([1, 2, 4, 8].some((b, i) => (dirs & b) !== 0 && arms[i] !== (style === 'thick' ? '2' : '1'))) return fail('line-glyph')
+      if ((x.style === 'dotted') !== (style === 'dotted') && !(style === 'dotted' && crossing)) return fail('line-glyph')
+    }
     // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so no
     // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
     for (const o of x.owners) {

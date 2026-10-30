@@ -333,3 +333,26 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
   })
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
+
+// #27: a whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
+// arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A cell
+// it shares (a stem, a crossing) is left as drawn; an edge with no cell of its own is skipped.
+const RESTYLE = { solid: ['light', '1'], thick: ['heavy', '2'], dotted: ['dotted', '1'] } as const
+test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails', t => {
+  const { mutants, survivors } = tally(t, 'restyle', function* (d) {
+    for (const e of d.expect.edges) {
+      if (!e.style) continue
+      const own = spots(d).filter(p => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
+      if (own.length === 0) continue
+      for (const to of ['solid', 'thick', 'dotted'] as const) {
+        if (to === e.style) continue
+        const [style, w] = RESTYLE[to]
+        yield [`${e.id} ${e.style} as ${to}`, own.map(({ r, c, x }): Patch[number] => {
+          const arms = [1, 2, 4, 8].map(b => (x.dirs & b ? w : '0')).join('')
+          return [r, c, { ...x, arms, style, ch: lineGlyph(x.dirs, arms, style) }]
+        })]
+      }
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
