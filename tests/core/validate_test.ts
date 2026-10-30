@@ -13,9 +13,11 @@ test('A3: edge-owned one-arm spurs fail line-dangling even when the edge connect
   const d = two()
   d.cells[1]![0] = { ch: '╶', kind: 'line', role: 'edge', owners: ['A>B'], dirs: 2 }
   assert.equal(validate(d)?.reason, 'line-dangling')
+  // The │ cut to ╵ under A: it no longer points at its ▼, so the walk stops there, the head is not reached, and the edge
+  // fails edge-disconnected before its one arm is read as dangling (#27 re-review: a step into a head needs the line's arm).
   const connected = two()
   connected.cells[1]![2] = { ...connected.cells[1]![2]!, dirs: 1 }
-  assert.equal(validate(connected)?.reason, 'line-dangling')
+  assert.equal(validate(connected)?.reason, 'edge-disconnected')
 })
 
 test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', () => {

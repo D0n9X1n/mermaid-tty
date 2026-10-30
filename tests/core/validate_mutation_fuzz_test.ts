@@ -402,7 +402,8 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
 
 // #27 re-review: an edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
 // own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part no
-// arm leaves open. Each is a second, stray component of the edge.
+// arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side: no
+// arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the edge.
 const RING = [[0, 0, 6], [0, 1, 10], [0, 2, 12], [1, 0, 5], [1, 2, 5], [2, 0, 3], [2, 1, 10], [2, 2, 9]] as const
 test('A5.mutation-tests: fuzz: an edge\'s glyphs copied to a spot joined to nothing fail', t => {
   const { mutants, survivors } = tally(t, 'stray', function* (d) {
@@ -411,17 +412,25 @@ test('A5.mutation-tests: fuzz: an edge\'s glyphs copied to a spot joined to noth
     for (let r = 0; r + 4 < d.cells.length && !at; r++) for (let c = 0; c + 4 < d.cells[r]!.length && !at; c++) {
       if ([0, 1, 2, 3, 4].every(i => [0, 1, 2, 3, 4].every(j => free(r + i, c + j)))) at = [r + 1, c + 1]
     }
-    if (!at) return
-    const [r0, c0] = at
     for (const e of d.expect.edges) {
       const own = spots(d).find(p => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
       if (!own) continue
-      yield [`${e.id} ${own.x.ch} copied to (${r0 + 1},${c0 + 1})`, [[r0 + 1, c0 + 1, own.x]]]
       const style = own.x.style ?? 'light', w = style === 'heavy' ? '2' : '1'
-      yield [`${e.id} ring at (${r0},${c0})`, RING.map(([dr, dc, dirs]): Patch[number] => {
+      const ring = (r0: number, c0: number): Patch => RING.map(([dr, dc, dirs]): Patch[number] => {
         const arms = [1, 2, 4, 8].map(b => (dirs & b ? w : '0')).join('')
         return [r0 + dr, c0 + dc, { ch: lineGlyph(dirs, arms, style), role: own.x.role, kind: 'line', owners: [e.id], dirs, arms, style, segs: [{ owner: e.id, dirs }] }]
-      })]
+      })
+      if (at) {
+        yield [`${e.id} ${own.x.ch} copied to (${at[0] + 1},${at[1] + 1})`, [[at[0] + 1, at[1] + 1, own.x]]]
+        yield [`${e.id} ring at (${at[0]},${at[1]})`, ring(at[0], at[1])]
+      }
+      // The ring's top-left for a corner just under, over, right of and left of a label cell (r, c).
+      for (const { r, c } of spots(d).filter(p => (p.x.kind === 'text' || p.x.kind === 'key') && p.x.owners[0] === `${e.id}:label`)) {
+        for (const [r0, c0] of [[r + 1, c], [r - 3, c], [r, c + 1], [r, c - 3]] as const) {
+          if (r0 < 0 || c0 < 0 || !RING.every(([dr, dc]) => free(r0 + dr, c0 + dc))) continue
+          yield [`${e.id} ring at (${r0},${c0}) beside its label`, ring(r0, c0)]
+        }
+      }
     }
   }, [...CASES, ...C_GRAPHS])
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])

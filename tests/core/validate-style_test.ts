@@ -134,3 +134,22 @@ test('#27 re-review: an edge with a part joined to nothing fails edge-disconnect
   assert.deepEqual(d.conflicts, []); assert.equal(rows(d)[6], '    ┆ ┆')
   assert.equal(validate(d)?.reason, 'edge-disconnected', rows(d).join('\n'))
 })
+
+// GPT-6's re-review of 0506f33: a walk through an edge label into a line cell needs that cell to point at the label, as
+// line to line does. A -.-|x| B drawn as [ A ]┼┼x[ B ], C---D and E---F crossing its two cells, plus a closed ┄ ring of
+// A-.-B's own whose ┌ sits right under x: ┌ has no arm toward x, so the ring is joined to nothing, and it is no witness.
+test('#27 re-review: a stray ring beside an edge label is not reached through the label, and fails edge-disconnected', () => {
+  const c = createCanvas(5, 13, 13)
+  c.text(1, 0, '[ A ]', 'node', 'A'); c.text(1, 8, '[ B ]', 'node', 'B')
+  c.text(0, 5, 'c', 'node', 'C'); c.text(2, 5, 'd', 'node', 'D'); c.text(0, 6, 'e', 'node', 'E'); c.text(2, 6, 'f', 'node', 'F')
+  c.line(1, 5, 10, 'dotted', 'edge', 'AB'); c.line(1, 6, 10, 'dotted', 'edge', 'AB')
+  c.line(1, 5, 5, 'light', 'edge', 'CD'); c.line(1, 6, 5, 'light', 'edge', 'EF')
+  c.text(1, 7, 'x', 'label', ['AB:label', 'AB'])
+  for (const [r, col, dirs] of [[2, 7, 6], [2, 8, 10], [2, 9, 12], [3, 7, 5], [3, 9, 5], [4, 7, 3], [4, 8, 10], [4, 9, 9]] as const) c.line(r, col, dirs, 'dotted', 'edge', 'AB')
+  const d = c.toDrawing({ labels: [...['A', 'B'].map(o => ({ owner: o, text: `[ ${o} ]` })), ...['C', 'D', 'E', 'F'].map(o => ({ owner: o, text: o.toLowerCase() })),
+    { owner: 'AB:label', text: 'x' }], edgeLabels: [{ owner: 'AB:label', edge: 'AB' }], frames: [],
+    edges: [{ id: 'AB', from: 'A', to: 'B', ends: [], style: 'dotted' }, { id: 'CD', from: 'C', to: 'D', ends: [], style: 'solid' },
+      { id: 'EF', from: 'E', to: 'F', ends: [], style: 'solid' }] })
+  assert.deepEqual(d.conflicts, []); assert.deepEqual(rows(d).slice(1, 3), ['[ A ]┼┼x[ B ]', '     df┌┄┐'])
+  assert.equal(validate(d)?.reason, 'edge-disconnected', rows(d).join('\n'))
+})

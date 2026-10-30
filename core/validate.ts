@@ -107,14 +107,16 @@ function labels(d: Drawing): Fail | null {
   return null
 }
 
-// The cells of mine a walk from starts reaches. Two line cells step only where their dirs point at each other; an arrow or
-// label cell steps to any adjacent cell.
+// The cells of mine a walk from starts reaches. A step into or out of a line cell needs that cell's arm on that side: two
+// line cells step only where their dirs point at each other, and a line cell and an arrow or label cell only where the line
+// points at it (#27 re-review: a ┌ under a label, its arms away from it, is not joined to it). Arrow and label cells step to
+// each other freely, as a label's rows do.
 function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   const byPos = new Map(mine.map(p => [`${p.r},${p.c}`, p]))
   const reached = new Set(starts)
   for (const p of reached) for (const s of SIDES) {               // a Set's for…of also visits what the loop adds
     const q = byPos.get(`${p.r + s.dr},${p.c + s.dc}`)
-    if (q && (p.cell.kind !== 'line' || q.cell.kind !== 'line' || ((p.cell.dirs & s.bit) !== 0 && (q.cell.dirs & s.back) !== 0))) reached.add(q)
+    if (q && (p.cell.kind !== 'line' || (p.cell.dirs & s.bit) !== 0) && (q.cell.kind !== 'line' || (q.cell.dirs & s.back) !== 0)) reached.add(q)
   }
   return [...reached]
 }
