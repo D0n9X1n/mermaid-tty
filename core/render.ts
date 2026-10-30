@@ -1,5 +1,6 @@
 // The render entry point (plan A §6, T19): a fence body to colored rows, or null to fall back to its source.
 import type { Cell, Drawing } from './canvas.ts'
+import { BOLD, ITALIC } from './emphasis.ts'
 import type { Fail } from './fail.ts'
 import { fail, isFail } from './fail.ts'
 import type { Step } from './fit.ts'
@@ -16,7 +17,7 @@ import './diagrams/flowchart/layout.ts'
 import './diagrams/sequence/layout.ts'
 import './diagrams/all.ts'
 
-export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: Color; bold?: boolean; dimColor?: boolean }
+export type Span = { text: string; role?: Ink; color?: Color; backgroundColor?: Color; bold?: boolean; italic?: boolean; dimColor?: boolean }
 export type Rows = Span[][]
 export type Options = { columns: number; theme?: string }
 
@@ -58,7 +59,8 @@ export function renderMermaid(source: string, o: Options): Rows | null {
 
 // One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
 // fills, take that color as their background and onFill as their color; caps and C's key cells keep it as their color.
-// Null colors are omitted, so mono's spans carry none.
+// Null colors are omitted, so mono's spans carry none. A title is bold; a text cell's em (core/emphasis.ts) sets bold and
+// italic as Mermaid's <strong> and <em> show.
 function cellSpan(cell: Cell, p: Palette): Span {
   const ink = (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
   const pill = p.fill && (cell.role === 'node' || cell.role === 'decision') && (cell.kind === 'text' || cell.kind === 'fill')
@@ -66,13 +68,14 @@ function cellSpan(cell: Cell, p: Palette): Span {
   const span: Span = { text: cell.ch, role: cell.role }
   if (color !== null) span.color = color
   if (backgroundColor !== null) span.backgroundColor = backgroundColor
-  if (cell.role === 'title') span.bold = true
+  if (cell.role === 'title' || (cell.em ?? 0) & BOLD) span.bold = true
+  if ((cell.em ?? 0) & ITALIC) span.italic = true
   if ((p.dim as readonly Ink[]).includes(cell.role)) span.dimColor = true
   return span
 }
 
 const sameStyle = (a: Span, b: Span): boolean => a.role === b.role && a.color === b.color
-  && a.backgroundColor === b.backgroundColor && a.bold === b.bold && a.dimColor === b.dimColor
+  && a.backgroundColor === b.backgroundColor && a.bold === b.bold && a.italic === b.italic && a.dimColor === b.dimColor
 
 // Each row as spans: cont cells skipped, each missing cell a blank space with no role, neighbours of one role and style
 // merged, and trailing blank spans trimmed.

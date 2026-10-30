@@ -1,3 +1,4 @@
+import { emOf } from './emphasis.ts'
 import { fail, type Fail } from './fail.ts'
 import { isWide, width } from './width.ts'
 
@@ -118,7 +119,9 @@ export function wrap(line: string, max: number): Piece[] | null {
   // Each token, and whether a space came before it.
   const toks: { t: string; sp: boolean }[] = []
   let cur = '', sp = false, prevWide = false
+  let mark = ''                                    // an emphasis marker, held until the character it styles
   for (const ch of line) {
+    if (emOf(ch)) { mark = ch; continue }
     if (ch === ' ') {
       if (cur) toks.push({ t: cur, sp })
       cur = ''; sp = true; prevWide = false
@@ -126,7 +129,7 @@ export function wrap(line: string, max: number): Piece[] | null {
     }
     const w = isWide(ch.codePointAt(0)!)
     if (w && prevWide && cur) { toks.push({ t: cur, sp }); cur = ''; sp = false }
-    cur += ch; prevWide = w
+    cur += mark + ch; prevWide = w; mark = ''
   }
   if (cur) toks.push({ t: cur, sp })
   const out: Piece[] = []

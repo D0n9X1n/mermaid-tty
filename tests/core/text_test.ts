@@ -149,3 +149,13 @@ test('X3: drawable: markdown and member fail emphasis marked renders and a \\ es
 test('X3: drawable: a literal \\n fails newline in html, where Mermaid splits it, and draws in markdown', () => {
   assert.deepEqual(['a\\nb', 'x\\n'].map(t => [D(t, 'html'), D(t, 'markdown')]), [['newline', null], ['newline', null]])
 })
+
+// A marker stays with the character it styles: wrap splits before the marker, never between it and its character.
+test('X3.emphasis: wrap measures a marked line by what it shows and keeps each marker with its character', async () => {
+  const { emphasize, plain } = await import('../../core/emphasis.ts')
+  const m = emphasize('**中文字** ab')!
+  const ps = wrap(m, 5)!
+  assert.deepEqual(ps.map(p => plain(p.text)), ['中文', '字 ab'])
+  assert.ok(ps.every(p => !/[\x01-\x03]$/.test(p.text)))
+  assert.equal(ps[1]!.text, emphasize('**字** ab'))
+})

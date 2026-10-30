@@ -57,3 +57,16 @@ test('toSvg escapes & as &amp;, first, in the aria-label and in glyphs', () => {
   assert.ok(svg.includes(`<text x="${CELL}" y="14" fill="#fff">&amp;</text>`));
   assert.deepEqual(misplaced(svg, amp, width), []);
 });
+
+test('an italic span sets font-style on its glyphs; bold and italic set both', () => {
+  const rows = [[{ text: 'I', fg: '#fff', italic: true }, { text: 'X', fg: '#fff', bold: true, italic: true }, { text: 'p', fg: '#aaa' }]], svg = toSvg(rows, width, 'italic');
+  assert.ok(svg.includes('<text x="0" y="14" fill="#fff" font-style="italic">I</text>'));
+  assert.ok(svg.includes('<text x="9" y="14" fill="#fff" font-weight="bold" font-style="italic">X</text>'));
+  assert.ok(svg.includes('<text x="18" y="14" fill="#aaa">p</text>'));
+  assert.deepEqual(misplaced(svg, rows, width), []);
+});
+
+test('spanStyle carries a span\'s bold and italic to its styled span', async () => {
+  const { spanStyle } = await import('../lib/render-image.ts');
+  assert.deepEqual(spanStyle({ text: 'x', bold: true, italic: true }), { fg: spanStyle({ text: 'x' }).fg, bold: true, italic: true });
+});

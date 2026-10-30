@@ -4,6 +4,7 @@ import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
 import { lineGlyph } from './canvas.ts'
+import { marker } from './emphasis.ts'
 import { width } from './width.ts'
 
 export type Expect = {
@@ -35,11 +36,11 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
+// The first broken invariant of d: emphasis, labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
 // labels, frames, edges kept inside their frames, edges crossing frames only as their ends need, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
+  return emphasis(all) ?? labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
     inFrames(d, all) ?? crossFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
@@ -63,21 +64,27 @@ const norm = (s: string): string => s.replace(/\s+/g, ' ').trim()
 
 // Each text owner's drawn label instances, in reading order. A run is consecutive text and cont cells with one owners[0].
 // A run starts an instance if its first cell has no join or its owner has none yet; any other run joins the owner's last
-// instance by its join.
+// instance by its join. A cell with em reads as its marker (core/emphasis.ts), then its ch.
 function instances(d: Drawing): Map<string, string[]> {
   const drawn = new Map<string, string[]>()
   for (const row of d.cells) {
     let prev: string | undefined                                  // the owner of the run the last cell belongs to
     for (const x of row) {
       if (x?.kind !== 'text' && x?.kind !== 'cont') { prev = undefined; continue }
-      const owner = x.owners[0]!, list = drawn.get(owner) ?? []
-      if (owner === prev) list.push(list.pop()! + x.ch)
-      else if (x.join === undefined || list.length === 0) list.push(x.ch)
-      else list.push(list.pop()! + x.join + x.ch)
+      const owner = x.owners[0]!, list = drawn.get(owner) ?? [], ch = marker(x.em ?? 0) + x.ch
+      if (owner === prev) list.push(list.pop()! + ch)
+      else if (x.join === undefined || list.length === 0) list.push(ch)
+      else list.push(list.pop()! + x.join + ch)
       drawn.set(owner, list); prev = owner
     }
   }
   return drawn
+}
+
+// X3. em is a text cell's emphasis (BOLD, ITALIC or both); no other cell has one. instances reads it back as its marker,
+// so labels compares emphasis as part of the text.
+function emphasis(all: readonly Spot[]): Fail | null {
+  return all.some(({ cell: x }) => x.em !== undefined && (x.kind !== 'text' || ![1, 2, 3].includes(x.em))) ? fail('emphasis') : null
 }
 
 // Each listed label is drawn exactly once, as its text. One blank after norm is drawn nowhere, since text('') writes no

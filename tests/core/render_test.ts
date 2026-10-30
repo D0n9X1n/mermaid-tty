@@ -149,3 +149,12 @@ test('A8.cache: with no capacity given, a renderer keeps 64 entries, and evicts 
   r.render('flowchart TD\nN64', O); r.render('flowchart TD\nN0', O)
   assert.deepEqual([calls, r.size], [66, 64])
 })
+
+// X3. A text cell's em draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its role;
+// emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only bold role.
+test('X3.emphasis: toRows draws a cell\'s em as bold and italic, split from unstyled neighbours of its role', () => {
+  const x = (ch: string, em?: number): Cell => ({ ...c(ch, 'label', 'text'), ...(em ? { em } : {}) })
+  const d: Drawing = { ...D, cells: [[x('a'), x('b', 1), x('c', 2), x('d', 3), x('e')]] }
+  assert.deepEqual(toRows(d, palette('mono'))[0], [{ text: 'a', role: 'label' }, { text: 'b', role: 'label', bold: true },
+    { text: 'c', role: 'label', italic: true }, { text: 'd', role: 'label', bold: true, italic: true }, { text: 'e', role: 'label' }])
+})

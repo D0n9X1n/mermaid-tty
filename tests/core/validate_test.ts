@@ -664,3 +664,23 @@ test('#18 re-review: a merged junction with a heavy arm on a light line fails li
   assert.deepEqual(d.conflicts, []); assert.equal(text(d)[0], 'a─┰─►b')
   assert.equal(validate(d)?.reason, 'line-glyph', text(d).join('\n'))
 })
+
+// X3. Emphasis is part of a label's text: a label is drawn as its marked text (core/emphasis.ts), each marker its cell's em.
+test('X3.emphasis: a label drawn with emphasis it does not have, or without emphasis it has, fails label-missing', async () => {
+  const { emphasize } = await import('../../core/emphasis.ts')
+  const b = emphasize('**b**')!
+  assert.equal(validate(two('a', b)), null)
+  const lost = two('a', b); lost.cells[3]![2] = { ...lost.cells[3]![2]!, em: undefined }
+  assert.equal(validate(lost)?.reason, 'label-missing')
+  const swapped = two('a', b); swapped.cells[3]![2] = { ...swapped.cells[3]![2]!, em: 2 }
+  assert.equal(validate(swapped)?.reason, 'label-missing')
+  const added = two(); added.cells[0]![2] = { ...added.cells[0]![2]!, em: 1 }
+  assert.equal(validate(added)?.reason, 'label-missing')
+})
+
+test('X3.emphasis: em on any cell but a text cell, or outside BOLD | ITALIC, fails emphasis', () => {
+  const line = two(); line.cells[1]![2] = { ...line.cells[1]![2]!, em: 1 }
+  assert.equal(validate(line)?.reason, 'emphasis')
+  const odd = two(); odd.cells[0]![2] = { ...odd.cells[0]![2]!, em: 4 }
+  assert.equal(validate(odd)?.reason, 'emphasis')
+})
