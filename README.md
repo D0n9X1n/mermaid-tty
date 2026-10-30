@@ -38,7 +38,7 @@ Needs Claude Code 2.1.287 or later, on macOS, Linux or Windows. Start a new Clau
 
 ## Supported diagrams
 
-v1.0.0 draws these 13 types, within each type's supported syntax:
+mermaid-tty draws these 13 types, within each type's supported syntax:
 
 | Type | Header keywords |
 |---|---|
