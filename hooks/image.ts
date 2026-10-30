@@ -1,14 +1,16 @@
 // Pictures of Mermaid's own rendering, for a terminal that shows pixels: mermaid-cli (mmdc, if it is on PATH) draws a
 // fence to a PNG in the background, and the next draw of the reply uses it. A draw never waits on mmdc: a miss answers
 // undefined (the text drawing stands) and queues one render, at most one running at a time.
-// Safety: a source goes to mmdc only when hooks/safe.ts finds no way in it to style, configure, fetch or load anything,
-// and core parses it (core rejects HTML, icons and image nodes); Chromium under mmdc runs with no network, loopback
-// included (puppeteerConfig); and mmdc's Mermaid config holds only securityLevel strict and the theme. Termination: each source, look and width is rendered at most
-// once per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
-// redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
+// Safety, in layers: a source goes to mmdc only when hooks/safe.ts (layer B) finds no way in it to style, configure,
+// fetch or load anything and core parses it; Chromium under mmdc runs with no network, loopback included
+// (puppeteerConfig); mmdc's Mermaid config holds only securityLevel strict and the theme; and the authority, layer A
+// (hooks/svg.ts), checks the SVG mmdc draws for the source before a second run makes the PNG.
+// Termination: each source, look and width is rendered at most once per store, so a picture the bounded cache drops
+// stays text rather than rendering again, and a batch of renders redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
+import { svgUnsafe } from './svg.ts'
 
 export type Picture = { png: string; columns: number; rows: number }
 export type Look = 'dark' | 'default'                // Mermaid's theme: dark, or its light default
@@ -26,6 +28,7 @@ const CSS = 8, SCALE = 2, PX = CSS * SCALE           // CSS px per column, drawn
 // 2/3; a wider one was shrunk, perhaps past reading, and the text drawing stands.
 const PAGE = 12, FULL = 0.9
 const MAX_PNG = 2 * 1024 * 1024                      // what an Image's { png } takes, decoded
+const MAX_SVG = 4 * 1024 * 1024                      // what $.fs.read reads
 const MAX_SOURCE = 50000                             // Mermaid's maxTextSize: past it, mmdc draws an error picture and exits 0
 const MMDC_MS = 30000, SHORT_MS = 5000, PROBE_MS = 10000
 
@@ -112,19 +115,29 @@ function keep(s: Pictures, key: string, p: Picture) {
   }
 }
 
-// One render in a fresh temp dir, removed after: the picture, or why there is none. mmdc before 12 takes -w; 12 removed
-// it and sizes its page by the puppeteer config's defaultViewport.
+// One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same source,
+// config and page: an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG. mmdc before 12 takes -w; 12
+// removed it and sizes its page by the puppeteer config's defaultViewport, and embeds fonts in an SVG as data: URLs
+// unless told --no-font-embed (layer A allows no data: at all).
 async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
   const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
   const made = await $.process.run(['mktemp', '-d', `${base}XXXXXX`], { timeoutMs: SHORT_MS })
   const dir = made.stdout.trim()
   if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) return 'no temp dir'
   try {
-    const config = `${dir}/config.json`, puppeteer = `${dir}/puppeteer.json`, out = `${dir}/out.png`
+    const config = `${dir}/config.json`, puppeteer = `${dir}/puppeteer.json`, svg = `${dir}/out.svg`, out = `${dir}/out.png`
     await $.fs.write(config, JSON.stringify({ securityLevel: 'strict', theme: look }))
     await $.fs.write(puppeteer, JSON.stringify(puppeteerConfig(columns)))
-    const r = await $.process.run(['mmdc', '-i', '-', '-o', out, '-e', 'png', '-b', 'transparent', '-t', look, '-c', config,
-      '-p', puppeteer, '-s', String(SCALE), '-q', ...(major < 12 ? ['-w', String(columns * PAGE)] : [])], { stdin: body, timeoutMs: MMDC_MS })
+    const mmdc = (o: string, e: 'svg' | 'png') => $.process.run(['mmdc', '-i', '-', '-o', o, '-e', e, '-b', 'transparent', '-t', look,
+      '-c', config, '-p', puppeteer, ...(e === 'png' ? ['-s', String(SCALE)] : []), '-q',
+      ...(major < 12 ? ['-w', String(columns * PAGE)] : e === 'svg' ? ['--no-font-embed'] : [])], { stdin: body, timeoutMs: MMDC_MS })
+    const v = await mmdc(svg, 'svg')
+    if (v.exitCode !== 0) return `mmdc exited ${v.exitCode}: ${oneLine(v.stderr)}`
+    if ((await $.fs.stat(svg)).size > MAX_SVG) return 'svg over 4 MiB'
+    const text = await $.fs.read(svg)
+    const unsafe = typeof text === 'string' ? svgUnsafe(text) : 'unreadable'
+    if (unsafe) return `unsafe svg (${unsafe})`
+    const r = await mmdc(out, 'png')
     if (r.exitCode !== 0) return `mmdc exited ${r.exitCode}: ${oneLine(r.stderr)}`
     if ((await $.fs.stat(out)).size > MAX_PNG) return 'png over 2 MiB'
     const { base64 } = await $.fs.read(out, { as: 'bytes' })

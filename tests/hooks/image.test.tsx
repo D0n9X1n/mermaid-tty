@@ -13,7 +13,7 @@ const world = (on: any, vars: Record<string, string>) => {
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } } })
   on('fs.write', async () => ({ value: undefined }))
   on('fs.stat', async () => ({ value: { kind: 'file', size: 100, mtimeMs: 0, isLink: false } }))
-  on('fs.read', async () => ({ value: { base64: PNG } }))
+  on('fs.read', async (_$: any, e: any) => ({ value: e.path.endsWith('.svg') ? '<svg><path marker-end="url(#a)"/></svg>' : { base64: PNG } }))
   on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
   return runs
 }
@@ -24,7 +24,7 @@ test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s
   const runs = world(on, { TERM: 'xterm-kitty' }), ui = await mount($, 'flowchart TD\nK1 --> K2')
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image'); expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
-  expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'rm -rf'])
+  expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'mmdc -i', 'rm -rf'])
 })
 
 // The reviewer's themeCSS repro in kitty: core draws it as text, and nothing runs on the host.

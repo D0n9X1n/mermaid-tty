@@ -31,7 +31,7 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
     process: { run: async (argv: string[]) => {
       runs.push(argv[1] === '--version' ? 'probe' : argv[0]!)
       return { exitCode: 0, stdout: argv[1] === '--version' ? '11.17.1\n' : argv[0] === 'mktemp' ? '/tmp/mermaid-tty.X1\n' : '', stderr: '' } } },
-    fs: { write: async () => {}, stat: async () => ({ size: 100 }), read: async () => ({ base64: PNG }) } }
+    fs: { write: async () => {}, stat: async () => ({ size: 100 }), read: async (p: string) => p.endsWith('.svg') ? '<svg><path marker-end="url(#a)"/></svg>' : { base64: PNG } } }
   return { $, runs }
 }
 const shape = (p: any) => p?.parts.map((x: any) => 'prose' in x ? 'prose' : 'rows' in x ? 'rows' : 'picture')
@@ -43,7 +43,7 @@ const at = (text: string, columns: number) => ({ ...ev(text), viewport: { column
 test('A6.hook-tests: where pixels show, a fence draws as text first, then as its picture; one core does not parse never does', async () => {
   const { $, runs } = pix(), s = createPictures(), reply = `a\n${FC}m\n${BAD}b`
   assert.deepEqual(shape(await safePlan($, ev(reply), 'default', diagram, s)), ['prose', 'rows', 'prose'])
-  await s.idle(); assert.deepEqual(runs, ['probe', 'mktemp', 'mmdc', 'rm'])
+  await s.idle(); assert.deepEqual(runs, ['probe', 'mktemp', 'mmdc', 'mmdc', 'rm'])
   const p = await safePlan($, ev(reply), 'default', diagram, s)
   assert.deepEqual(shape(p), ['prose', 'picture', 'prose'])
   assert.deepEqual((p!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 }); assert.equal((p!.parts[2] as any).prose, `m\n${BAD}b`)
