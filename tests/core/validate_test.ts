@@ -2,7 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { createCanvas, type Canvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'
 import { labelLines } from '../../core/text.ts'; import type { Piece } from '../../core/text.ts'; import { explain } from '../../core/render.ts'
 import { drawGraph } from '../../core/graph/draw.ts'; import { layoutGraph } from '../../core/graph/layered.ts'; import { routeGraph } from '../../core/graph/route.ts'
-import type { Graph } from '../../core/graph/model.ts'; import { g, text } from './graph-fixture.ts'; import { junction } from '../../core/glyphs.ts'
+import type { Graph } from '../../core/graph/model.ts'; import { falsePairs, g, text } from './graph-fixture.ts'; import { junction } from '../../core/glyphs.ts'
 function two(t1 = 'a', t2 = 'b'): Drawing {
   const c = createCanvas(4, 8, 8); c.text(0, 2, t1, 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'A>B'); c.arrow(2, 2, '▼', 'A>B'); c.text(3, 2, t2, 'node', 'B')
   return c.toDrawing({ labels: [{ owner: 'A', text: t1 }, { owner: 'B', text: t2 }], edges: [{ id: 'A>B', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: [] })
@@ -577,4 +577,53 @@ test('#18: at that crossing, a trunk edge turning onto the crossing edge still f
   const d = bipartite(), x = d.cells[2]![2]!
   d.cells[2]![2] = { ...x, segs: x.segs!.map(s => (s.owner === 'e1' ? { ...s, dirs: 6 } : s)) }   // e1 turns right inside the ┼
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
+})
+
+// GPT-6's review of #18: the same trunk with mixed heads. B--xD's x head, on one line with A-->D's ▶, reads as A--xD too,
+// and A-->D's as B-->D; neither is in the source, so the trunk must not pass. Each path runs through its corners, from its
+// source's cell to its target's, its head the cell just before the target.
+const STEP = (a: { r: number; c: number }, b: { r: number; c: number }) => (b.r < a.r ? 1 : b.c > a.c ? 2 : b.r > a.r ? 4 : 8)
+function drawPath(c: Canvas, id: string, corners: [number, number][], head: string): void {
+  const cells: { r: number; c: number }[] = []
+  for (const [i, [r, col]] of corners.entries()) {
+    if (i === 0) { cells.push({ r, c: col }); continue }
+    const [r0, c0] = corners[i - 1]!
+    for (let k = 1; k <= Math.abs(r - r0) + Math.abs(col - c0); k++) cells.push({ r: r0 + Math.sign(r - r0) * k, c: c0 + Math.sign(col - c0) * k })
+  }
+  for (let i = 1; i < cells.length - 2; i++) c.line(cells[i]!.r, cells[i]!.c, STEP(cells[i]!, cells[i - 1]!) | STEP(cells[i]!, cells[i + 1]!), 'light', 'edge', id)
+  const h = cells.at(-2)!; c.arrow(h.r, h.c, head, id)
+}
+function mixedHeads(): Drawing {
+  const c = createCanvas(7, 8, 8, () => true)
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  drawPath(c, 'AC', [[0, 0], [1, 0], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
+  drawPath(c, 'AD', [[0, 0], [1, 0], [1, 2], [6, 2], [6, 4]], '►')
+  drawPath(c, 'BC', [[0, 4], [1, 4], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
+  drawPath(c, 'BD', [[0, 4], [1, 4], [1, 2], [4, 2], [4, 4], [6, 4]], 'x')
+  drawPath(c, 'PQ', [[2, 0], [2, 7]], '►')
+  const e = (id: string, from: string, to: string, glyph: string) => ({ id, from, to, ends: [{ node: to, glyph }] })
+  return c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
+    edges: [e('AC', 'A', 'C', '▼'), e('AD', 'A', 'D', '►'), e('BC', 'B', 'C', '▼'), e('BD', 'B', 'D', 'x'), e('PQ', 'P', 'Q', '►')], edgeLabels: [], frames: [] })
+}
+test('#18 review: a trunk whose heads differ implies links the source lacks, and fails merge-ambiguous', () => {
+  const d = mixedHeads()
+  assert.deepEqual(falsePairs(d), ['A-xD', 'B->D'], text(d).join('\n'))
+  assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
+})
+// The same trunk with B-->D dotted instead: its own cells ┄ beside the trunk's solid ones read as the merged line changing
+// style, so any of its implied links may be dotted or solid. One line draws one style.
+test('#18 review: a trunk whose edges draw different line styles fails merge-ambiguous', () => {
+  const c = createCanvas(7, 8, 8, () => true)
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  drawPath(c, 'AC', [[0, 0], [1, 0], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
+  drawPath(c, 'AD', [[0, 0], [1, 0], [1, 2], [6, 2], [6, 4]], '►')
+  drawPath(c, 'BC', [[0, 4], [1, 4], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
+  drawPath(c, 'PQ', [[2, 0], [2, 7]], '►')
+  c.line(4, 3, 10, 'dotted', 'edge', 'BD'); c.line(4, 4, 12, 'dotted', 'edge', 'BD'); c.arrow(5, 4, '▼', 'BD')
+  for (const [r, col, dirs] of [[1, 4, 9], [1, 3, 10], [1, 2, 6], [2, 2, 5], [3, 2, 5], [4, 2, 3]] as const) c.line(r, col, dirs, 'light', 'edge', 'BD')
+  const e = (id: string, from: string, to: string, glyph: string) => ({ id, from, to, ends: [{ node: to, glyph }] })
+  const d = c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
+    edges: [e('AC', 'A', 'C', '▼'), e('AD', 'A', 'D', '►'), e('BC', 'B', 'C', '▼'), e('BD', 'B', 'D', '▼'), e('PQ', 'P', 'Q', '►')], edgeLabels: [], frames: [] })
+  assert.deepEqual(d.conflicts, [])
+  assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
