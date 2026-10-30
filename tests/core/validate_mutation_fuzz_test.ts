@@ -4,7 +4,7 @@
 // fails on any survivor.
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
-import type { Cell, Drawing } from '../../core/canvas.ts'; import { BOX } from '../../core/box-table.ts'
+import type { Cell, Drawing } from '../../core/canvas.ts'; import { lineGlyph } from '../../core/canvas.ts'; import { BOX } from '../../core/box-table.ts'
 import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
 
 const ROOT = new URL('../../fixtures/', import.meta.url)
@@ -73,6 +73,26 @@ const SAME_ARMS = (dirs: number) => [...DIRS].filter(([, n]) => n === dirs).map(
 test('A5.mutation-tests: fuzz: every line cell redrawn in another style of the same arms fails', t => {
   const { mutants, survivors } = tally(t, 'style', function* (d) {
     for (const { r, c, x } of lineCells(d)) for (const g of SAME_ARMS(x.dirs)) yield [`(${r},${c}) ${x.ch} as ${g}`, [[r, c, { ...x, ch: g }]]]
+  })
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// #18 re-review: one arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the
+// mixed one the canvas would draw for those arms, so the cell is self-consistent and only its weight is wrong: a thick
+// branch on a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm (a
+// gitGraph lane's tail ╵) has no other arm to differ from: expect states no line's weight, so its weight is unchecked.
+test('A5.mutation-tests: fuzz: one arm of a line cell redrawn in the other weight fails', t => {
+  const { mutants, survivors } = tally(t, 'weight', function* (d) {
+    for (const { r, c, x } of lineCells(d)) {
+      if (x.style === 'dotted' || [1, 2, 4, 8].filter(b => x.dirs & b).length < 2) continue
+      const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
+      for (let i = 0; i < 4; i++) {
+        if (arms[i] === '0') continue
+        const flipped = arms.slice(0, i) + (arms[i] === '1' ? '2' : '1') + arms.slice(i + 1)
+        yield [`(${r},${c}) ${x.ch} arm ${i} as ${lineGlyph(x.dirs, flipped, x.style ?? 'light')}`,
+          [[r, c, { ...x, arms: flipped, ch: lineGlyph(x.dirs, flipped, x.style ?? 'light') }]]]
+      }
+    }
   })
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })

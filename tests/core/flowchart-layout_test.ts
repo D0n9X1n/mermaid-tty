@@ -39,9 +39,11 @@ test('A1: R2 recentered labels never erase or enter an unrelated cluster frame',
       label.col < f.col + f.cols && f.col < label.col + label.cols
     assert.ok(!intersects, JSON.stringify({ label, f }))
   }
+  // Its edge can only reach N1 through S0 more than once here, so the router refuses it (edge-crosses-frame, #19); any
+  // routes it does return must validate.
   const rs = routeGraph(p)
-  assert.ok(Array.isArray(rs))
-  assert.equal(validate(drawGraph(p, rs, 80)), null)
+  if (Array.isArray(rs)) assert.equal(validate(drawGraph(p, rs, 80)), null)
+  else assert.equal(rs.reason, 'route-conflict')
 })
 
 test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarked stems', () => {

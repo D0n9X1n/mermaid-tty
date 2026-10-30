@@ -88,6 +88,17 @@ function fences(p: Placed, e: GEdge): Box[] {
   return walls(p).filter(f => held(e.from, f) && held(e.to, f))
 }
 const fenced = (fs: readonly Box[], c: Point) => fs.every(f => within(c, f))
+// #19: whether e's cells cross each drawn frame's border only as its hold on e's ends needs: once when it holds one end,
+// never when it holds neither or both. A frame never holds itself, so an edge ending at a frame never crosses it: its mark
+// meets the border from outside. The validator rejects any other count (edge-crosses-frame), so a route that breaks it is
+// refused here.
+function crossesTrue(p: Placed, e: GEdge, cells: readonly Point[]): boolean {
+  const frameless = new Set(p.graph.clusters.filter(c => c.frameless).map(c => c.id))
+  const held = (id: string, f: Box) => { const b = p.boxes.get(id) ?? p.frames.get(id)
+    return !!b && within({ r: b.row, c: b.col }, f) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, f) }
+  return [...p.frames].every(([id, f]) => frameless.has(id) ||
+    cells.filter(c => border(c, f) !== 0).length === (held(e.from, f) !== held(e.to, f) ? 1 : 0))
+}
 
 function detour(path: Point[], blocked: (c: Point) => boolean, p: Placed, pinned: Set<string>): Point[] | null {
   while (path.some(blocked)) {
@@ -231,7 +242,7 @@ function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
       .filter(c => !ink.some(b => inside(c, b)))
     const ends = [...(e.tail === 'none' ? [] : [{ ...tail, ch: endGlyph(e.tail, face) }]), ...(e.head === 'none' ? [] : [{ ...head, ch: endGlyph(e.head, targetFace) }])]
     if (ends.some(c => occupied.has(keyOf(c)) || frames.some(b => border(c, b)))) continue
-    if (cells.some(c => !allowed(c, c.dirs)) || !crossingsFit(p, e, cells, routes)) continue
+    if (cells.some(c => !allowed(c, c.dirs)) || !crossingsFit(p, e, cells, routes) || !crossesTrue(p, e, cells)) continue
     if (new Set(path.map(keyOf)).size !== path.length) continue
     p.rows = Math.max(p.rows, ...path.map(c => c.r + 1)); p.cols = Math.max(p.cols, ...path.map(c => c.c + 1))
     return { edge: e.id, cells, ends, style: e.style as Route['style'] }
@@ -451,7 +462,8 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
     const after = e.head === 'none' ? move(target.at, back(target.face)) : target.at
     const cells = path.map((c, i) => ({ ...c, dirs: arm(c, path[i - 1] ?? before) | arm(c, path[i + 1] ?? after) }))
       .filter(c => !ink.some(b => inside(c, b)))
-    if (cells.some(c => ![3, 5, 6, 9, 10, 12].includes(c.dirs)) || !crossingsFit(p, e, cells, [...reserved, ...routes])) return null
+    if (cells.some(c => ![3, 5, 6, 9, 10, 12].includes(c.dirs)) || !crossingsFit(p, e, cells, [...reserved, ...routes]) ||
+      !crossesTrue(p, e, cells)) return null
     for (const other of routes) {
       const common = new Set<string>()
       for (let i = 0; i < Math.min(cells.length, other.cells.length); i++) {
@@ -682,7 +694,7 @@ function channelsRoute(p: Placed): Route[] | Fail {
       cells.some(c => walls(p).some(b => { const d = border(c, b); return d !== 0 && d !== c.dirs }))) {
       return fail('route-conflict')
     }
-    if (!crossingsFit(p, e, cells, routes)) return fail('route-conflict')
+    if (!crossingsFit(p, e, cells, routes) || !crossesTrue(p, e, cells)) return fail('route-conflict')
     for (const other of routes) {
       const edge = edges.find(n => n.id === other.edge)!
       const related = groups.get(e.id) === groups.get(edge.id) &&

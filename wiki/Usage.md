@@ -164,7 +164,7 @@ Reason codes can carry a source line suffix, such as `html:3`; line numbers coun
 | `label-missing`, `label-dup`, `label-misplaced`, `label-unbound` | Text is missing, repeated, misplaced or no longer attached to its node/row. |
 | `edge-disconnected`, `end-misplaced`, `head-extra`, `head-on-junction`, `line-dangling` | An edge, endpoint or arrowhead is missing, misplaced, extra or ambiguous. |
 | `crossing-ambiguous`, `merge-ambiguous`, `line-glyph` | A crossing, merged route or line glyph would imply the wrong connections or line style. |
-| `overwrite`, `frame-broken`, `edge-outside-frame` | Cells conflict, a frame is open, or an internal edge leaves its frame. |
+| `overwrite`, `frame-broken`, `edge-outside-frame`, `edge-crosses-frame` | Cells conflict, a frame is open, an internal edge leaves its frame, or an edge crosses a frame it doesn't belong to (or crosses one more than once). |
 | `label-not-adjacent`, `end-label`, `note-unbound`, `lifeline-unbound` | An edge label, cardinality, note or lifeline is not bound to its intended item. |
 | `bar`, `bar-misplaced`, `bar-stray` | A bar has the wrong length, position or owner. |
 | `member`, `member-unlisted`, `member-outside`, `member-misplaced` | A class member or ER attribute is missing, unlisted, outside its pill or in the wrong row/column. |

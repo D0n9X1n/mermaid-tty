@@ -1,5 +1,6 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'; import { readSource, type Source } from '../../core/source.ts'
+import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
 const P = (t: string) => parseFlowchart(readSource(`flowchart TD\n${t}`) as Source) as any
 test('A1: nested, titled subgraphs with direction', () => {
   const g = P('subgraph outer [Outer box]\n  direction LR\n  A --> B\n  subgraph inner\n    C\n  end\nend\nB --> C')
@@ -125,4 +126,15 @@ test('A1: matrix rows flowchart-ok-34…39, -47 and -48 parse to their graphs, a
 })
 test('A5.errors: matrix row flowchart-reject-02, a subgraph with no end, falls back', () => {
   assert.deepEqual(P('subgraph s\n  A --> B'), { reason: 'unclosed-subgraph' }, 'flowchart-reject-02')
+})
+
+// #13: an LR chart with two subgraphs. Case 1 (flowchart-reject-06) can reach Data tier only by crossing it more than once
+// or not at all, so it falls back at every width. Case 2 draws left to right at 120, each edge crossing a frame once; at 80
+// and 60 every step crosses Data tier wrongly or conflicts, so it falls back rather than draw a broken frame.
+test('#13: case 2 draws at 120 columns and falls back at 80 and 60', () => {
+  const src = 'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
+    '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
+  const wide = explain(src, { columns: 120 })
+  assert.ok('drawing' in wide && validate(wide.drawing) === null)
+  for (const columns of [60, 80]) assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
 })

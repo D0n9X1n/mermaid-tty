@@ -36,12 +36,12 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 const JUNCTION = 3
 
 // The first broken invariant of d: labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
-// labels, frames, edges kept inside their frames, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
+// labels, frames, edges kept inside their frames, edges crossing frames only as their ends need, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
   return labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
-    inFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
+    inFrames(d, all) ?? crossFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
 
 const at = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
@@ -172,11 +172,25 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 // read as light, as canvas.line records a light line.
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
-  const marks = new Set((d.expect.rows ?? []).map(x => x.mark))
+  const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
     if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
+    // A cell joins its arms in one weight unless it is a straight crossing, ┼ of one │ and one ─ by the dirs it records for
+    // each owner: a corner or tee of two weights shows a thick branch on a thin line (#18 re-review).
+    const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
+    if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
+    // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so no
+    // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
+    for (const o of x.owners) {
+      const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
+      for (const [i, b] of [1, 2, 4, 8].entries()) {
+        if (!(dirs & b) || arms[i] === '0') continue
+        if ((weight.get(o) ?? arms[i]) !== arms[i]) return fail('line-glyph')
+        weight.set(o, arms[i]!)
+      }
+    }
     const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
     if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
@@ -209,14 +223,15 @@ function joined(d: Drawing, all: readonly Spot[]): (id: string) => string {
 // drew it straight, 5 (│) or 10 (─), by the dirs the cell records for that edge, and each such pair crosses, one │ and one
 // ─: read as a crossing, an edge turning inside would vanish, and read as a junction, the crossing edges would join. A
 // cell where only related edges meet, a fan-out or fan-in, is fine; so is one whose edges all join, as a trunk's do, for
-// merges to judge.
+// merges to judge. Only pairs on different lines must cross (#18): unrelated edges of one line, a complete-bipartite trunk's,
+// run one axis through a ┼ another line crosses, and merges judges them as it does anywhere else on that line.
 function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Map(d.expect.edges.map(e => [e.id, e])), line = joined(d, all)
   for (const p of all) {
     if (p.cell.kind !== 'line') continue
     const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
     if (new Set(mine.map(e => line(e.id))).size === 1) continue
-    const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b)).map(b => [a, b] as const))
+    const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b) && line(a.id) !== line(b.id)).map(b => [a, b] as const))
     if (pairs.length === 0) continue
     const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
     if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) return fail('crossing-ambiguous')
@@ -228,7 +243,7 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 // Merged lines imply only real links. Edges on one drawn line, as joined reads them, read as one line, so each end that may
 // start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark), or if it
 // is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such start t and:
-// - each mark h of another edge must be an edge of the drawing from t to h (real); for a bare t, a self-loop when t = h,
+// - each mark h of another edge must be an edge of the drawing from t to h drawing h's mark kind (real), a self-loop when t = h,
 //   while a head t and a head h at one node are one shared head;
 // - each endpoint of another edge with no marks, which shows no direction, must be t's own node or one some edge joins to
 //   t, either way (linked);
@@ -245,13 +260,27 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const starts = (e: Edge) => (bare(e).length > 0 || e.ends.length === 0 ? bare(e).map(n => ({ n, head: false })) : e.ends.map(x => ({ n: x.node, head: true })))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
-  const real = (t: string, h: string) => d.expect.edges.some(e => (e.from === t && e.to === h) || (e.from === h && e.to === t && marks(e, h) > 0))
+  // A real link also draws the mark seen at h, by kind (#18 review): A-->D and B--xD on one line read as A--xD and B-->D,
+  // and a bare start at h's own node reads as a self-loop with that head, so the loop there must draw it (A--xA is no A-->A).
+  const real = (t: string, h: string, g: string) => d.expect.edges.some(e => ((e.from === t && e.to === h) || (e.from === h && e.to === t)) &&
+    e.ends.some(x => x.node === h && headKind(x.glyph) === headKind(g)))
   const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
+  // One line draws one style (#18 review): a cell whose edges are all of one line, two or more of them on it, takes the
+  // style of every other such cell of that line, so no implied link reads solid where its own edge is dotted.
+  const styles = new Map<string, string>()
+  for (const p of all) {
+    if (p.cell.kind !== 'line') continue
+    const mine = p.cell.owners.filter(id => groups.has(line(id)) && d.expect.edges.some(e => e.id === id))
+    if (mine.length === 0 || new Set(mine.map(line)).size !== 1 || (groups.get(line(mine[0]!))?.length ?? 0) < 2) continue
+    const k = line(mine[0]!), style = p.cell.style ?? 'light'
+    if ((styles.get(k) ?? style) !== style) return fail('merge-ambiguous')
+    styles.set(k, style)
+  }
   for (const group of groups.values()) {
     for (const a of group) for (const b of group) {
       if (a === b) continue
       for (const t of starts(a)) {
-        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node))) return fail('merge-ambiguous')
+        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node, x.glyph))) return fail('merge-ambiguous')
         if (a.ends.length > 0 && b.ends.length === 0 && (!linked(t.n, b.from) || !linked(t.n, b.to))) return fail('merge-ambiguous')
       }
     }
@@ -261,6 +290,8 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 // Whether unmarked edges on one line read true. With no mark to tell them apart, each end seems to lead to every other, so
 // they must all leave one node, as a mindmap's siblings do, or all enter one; a line of one edge is just that edge.
+// A head's kind: a pointed arrow ▲►▼◄ in any direction, a hollow triangle △▷▽◁ in any, or the glyph itself (o x ◆ ◇ ● ◉).
+const headKind = (g: string): string => ('▲►▼◄'.includes(g) ? '▶' : '△▷▽◁'.includes(g) ? '▷' : g)
 const fans = (open: readonly Edge[]): boolean =>
   open.length < 2 || open.every(e => e.from === open[0]!.from) || open.every(e => e.to === open[0]!.to)
 
@@ -357,6 +388,29 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
     if (held.length === 0) continue
     const mine = all.filter(p => connects(p.cell, e.id))
     if (held.some(b => !mine.every(p => within(p, b)))) return fail('edge-outside-frame')
+  }
+  return null
+}
+
+// #19: an edge crosses a frame's border only as often as the frame's hold on its ends needs: once when the frame holds one
+// end, as inFrames reads holding, and never when it holds neither (or both, which inFrames checks). A crossing is a line cell
+// of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame holding neither
+// end, or leaves and re-enters it, reads as reaching into it. A frame never holds itself, so an edge ending at the frame
+// crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays outside (#19 review: a
+// self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
+function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
+  const drawn = new Map<string, Spot[]>()
+  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  for (const id of d.expect.frames) {
+    const b = frameBox(all, id)
+    if (!b) continue
+    const within = (p: Spot) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
+    const onBorder = (p: Spot) => !within(p) && p.r >= b.top && p.r <= b.bottom && p.c >= b.left && p.c <= b.right
+    const holds = (n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(within)
+    for (const e of d.expect.edges) {
+      const got = all.filter(p => p.cell.kind === 'line' && owns(p.cell, e.id) && onBorder(p)).length
+      if (got !== (holds(e.from) !== holds(e.to) ? 1 : 0)) return fail('edge-crosses-frame')
+    }
   }
   return null
 }
