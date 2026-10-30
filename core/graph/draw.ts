@@ -209,7 +209,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
     // Each end label is listed by its true end, in endLabels, labels and edgeLabels, and drawn in endRole ?? 'label', owned by
     // [its owner, the edge]; one that needs a drawn cell is a Conflict.
     const tagged = tags.get(e.id)!
-    edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to,
+    edges.push({ id: e.id, from: e.reversed ? e.to : e.from, to: e.reversed ? e.from : e.to, style: e.style as 'solid' | 'thick' | 'dotted',
       ends: (route?.ends ?? []).map((m, i) => ({ node: nodes[i] ?? '', glyph: m.ch })),
       ...(tagged.length > 0 ? { endLabels: tagged.map(l => ({ node: l.node, owner: l.owner })) } : {}) })
     for (const l of tagged) {
@@ -224,7 +224,9 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
     labels.push({ owner, text: text.join('\n') })
     if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
-  const made = cv.toDrawing({ labels, edges, edgeLabels, frames,
+  // An invisible edge (~~~) is listed only as hidden: it draws nowhere (#27).
+  const hidden = p.graph.edges.filter(e => e.style === 'invisible').map(e => e.id)
+  const made = cv.toDrawing({ labels, edges, edgeLabels, frames, ...(hidden.length > 0 ? { hidden } : {}),
     ...(members.size > 0 ? { members: [...members].map(([id, parent]) => ({ id, parent, ...(places.has(id) ? { place: places.get(id)! } : {}) })) } : {}) })
   // An end label that meets other text on its row, end to end, would read as one with it: a Conflict, as an overlap is.
   const meets = [...tags.values()].flat().flatMap(l => (l.at ? [-1, width(l.text)].flatMap(k => {

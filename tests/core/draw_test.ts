@@ -72,9 +72,9 @@ test('expect lists each drawn edge with its original ends and head glyphs; a bac
   const { d } = D(g('TB', ['A>B', 'B>C', 'C>A']))
   assert.equal(validate(d), null)
   assert.deepEqual(d.expect.edges, [
-    { id: 'e0', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] },
-    { id: 'e1', from: 'B', to: 'C', ends: [{ node: 'C', glyph: '▼' }] },
-    { id: 'e2', from: 'C', to: 'A', ends: [{ node: 'A', glyph: '◄' }] },
+    { id: 'e0', from: 'A', to: 'B', style: 'solid', ends: [{ node: 'B', glyph: '▼' }] },
+    { id: 'e1', from: 'B', to: 'C', style: 'solid', ends: [{ node: 'C', glyph: '▼' }] },
+    { id: 'e2', from: 'C', to: 'A', style: 'solid', ends: [{ node: 'A', glyph: '◄' }] },
   ])
 })
 

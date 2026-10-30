@@ -44,7 +44,7 @@ test('A3: colorBy branch inks each top-level subtree the next series; depth inks
     ['node m0', 's1 m1', 's1 m2', 's2 m3', 's2 m4', 's1 m1:link,m3:link', 's2 m3:link', 's1 m2:link'])
   const e = explain(`---\nconfig:\n  mindmap:\n    colorBy: depth\n---\nmindmap\n${S}`, { columns: 80, theme: 'mono' }).drawing
   assert.deepEqual(['Root', 'A ', 'A1', 'Bee', 'B1'].map(s => cell(e, s)), ['node m0', 's1 m1', 's2 m2', 's1 m3', 's2 m4'])
-  const edges = [[0, 1], [1, 2], [0, 3], [3, 4]].map(([f, t]) => ({ id: `m${t}:link`, from: `m${f}`, to: `m${t}`, ends: [] }))
+  const edges = [[0, 1], [1, 2], [0, 3], [3, 4]].map(([f, t]) => ({ id: `m${t}:link`, from: `m${f}`, to: `m${t}`, ends: [], style: 'solid' }))
   assert.deepEqual(d.expect, { labels: ['Root', 'A', 'A1', 'Bee', 'B1'].map((t, k) => ({ owner: `m${k}`, text: t })), edges, edgeLabels: [], frames: [] })
 })
 test('A4.fit-ladder: wrap tries 24 before narrower widths; the outline tries its labels unwrapped first', () => {

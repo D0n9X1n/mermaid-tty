@@ -10,7 +10,9 @@ import { width } from './width.ts'
 export type Expect = {
   labels: readonly { owner: string; text: string; at?: { r: number; c: number } }[]    // every label instance, keyed by owner id; C: at, its first cell
   edges: readonly { id: string; from: string; to: string; ends: readonly End[]           // drawn edges; ~~~ is not listed
-    endLabels?: readonly { node: string; owner: string }[] }[]   // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
+    endLabels?: readonly { node: string; owner: string }[]       // C: each end label, owner `${id}:tail` or `${id}:head` by its true end
+    style?: 'solid' | 'thick' | 'dotted' }[]                      // #27: the source's line style, which every line cell of it draws
+  hidden?: readonly string[]                                                              // #27: invisible edges (~~~), drawn nowhere
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[]                                                              // each frame's owner id: a cluster, a sequence frame or box
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]  // C: each bar; lanes: its width across the axis, default 1; at: its base cell
@@ -36,11 +38,11 @@ const POINT: ReadonlyMap<string, Side> = new Map([['▲', SIDES[0]!], ['►', SI
 // A head whose cell behind it has at least this many dirs bits sits on a junction, so its direction is ambiguous (VR.tangled).
 const JUNCTION = 3
 
-// The first broken invariant of d: emphasis, labels, edges, dangling lines, crossings, merged lines, conflicts, row widths, edge
+// The first broken invariant of d: emphasis, labels, edges, dangling lines, stray parts of an edge, crossings, merged lines, conflicts, row widths, edge
 // labels, frames, edges kept inside their frames, edges crossing frames only as their ends need, then C's end labels, bars, member rows and their places, keys, order, glyphs, row labels and side notes, then lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
   const all = spots(d)
-  return emphasis(all) ?? labels(d) ?? edges(d, all) ?? dangling(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
+  return emphasis(all) ?? labels(d) ?? edges(d, all) ?? dangling(d, all) ?? strays(d, all) ?? crossings(d, all) ?? lineGlyphs(d, all) ?? merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ?? rows(d) ?? edgeLabels(d, all) ?? frames(d, all) ??
     inFrames(d, all) ?? crossFrames(d, all) ?? endLabels(d, all) ?? bars(d, all) ?? members(d) ?? memberPlaces(d, all) ?? keys(d, all) ?? order(d, all) ?? glyphs(d, all) ?? places(d, all) ?? rowLabels(d, all) ?? notes(all) ?? lifelines(all) ?? inPills(d, all)
 }
@@ -105,14 +107,16 @@ function labels(d: Drawing): Fail | null {
   return null
 }
 
-// The cells of mine a walk from starts reaches. Two line cells step only where their dirs point at each other; an arrow or
-// label cell steps to any adjacent cell.
+// The cells of mine a walk from starts reaches. A step into or out of a line cell needs that cell's arm on that side: two
+// line cells step only where their dirs point at each other, and a line cell and an arrow or label cell only where the line
+// points at it (#27 re-review: a ┌ under a label, its arms away from it, is not joined to it). Arrow and label cells step to
+// each other freely, as a label's rows do.
 function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   const byPos = new Map(mine.map(p => [`${p.r},${p.c}`, p]))
   const reached = new Set(starts)
   for (const p of reached) for (const s of SIDES) {               // a Set's for…of also visits what the loop adds
     const q = byPos.get(`${p.r + s.dr},${p.c + s.dc}`)
-    if (q && (p.cell.kind !== 'line' || q.cell.kind !== 'line' || ((p.cell.dirs & s.bit) !== 0 && (q.cell.dirs & s.back) !== 0))) reached.add(q)
+    if (q && (p.cell.kind !== 'line' || (p.cell.dirs & s.bit) !== 0) && (q.cell.kind !== 'line' || (q.cell.dirs & s.back) !== 0)) reached.add(q)
   }
   return [...reached]
 }
@@ -125,16 +129,35 @@ const connects = (x: Cell, id: string): boolean =>
 // Each edge is connected: a walk over the cells that connect it, from its line or arrow cells next to from (a line there
 // must point at from), reaches a cell next to to. Each end mark is its own arrow cell of the edge beside its own node, and
 // none sits on a junction.
+// The cells that connect edge e, and those a walk reaches from its line or arrow cells next to its from (a line there must
+// point at from).
+function path(d: Drawing, all: readonly Spot[], e: Expect['edges'][number]): { mine: Spot[]; reached: Spot[] } {
+  const mine = all.filter(p => connects(p.cell, e.id))
+  const starts = mine.filter(p => SIDES.some(s => owns(beside(d, p, s), e.from) &&
+    (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (p.cell.dirs & s.bit) !== 0))))
+  return { mine, reached: walk(mine, starts) }
+}
+
+// #27 re-review: the walk from an edge's from reaches every line and arrow cell of the edge, so its glyphs are one path
+// between its ends: a part joined to nothing, a closed loop of them included, is a stray copy of the edge, and could show a
+// style its path does not. A keyed label's legend row lies apart from the line by design; keys binds it. Run after edges
+// and dangling, which name an open spur or a misplaced mark more exactly.
+function strays(d: Drawing, all: readonly Spot[]): Fail | null {
+  for (const e of d.expect.edges) {
+    const { mine, reached } = path(d, all, e), got = new Set(reached)
+    if (mine.some(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && !got.has(p))) return fail('edge-disconnected')
+  }
+  return null
+}
+
 function edges(d: Drawing, all: readonly Spot[]): Fail | null {
   // The first of sides on which p touches a cell of any of ids.
   const toward = (p: Spot, ids: readonly string[], sides = SIDES) => sides.find(s => ids.some(id => owns(beside(d, p, s), id)))
   // The side a mark meets its node on: the side its glyph points at, or any side for a mark with no point.
   const aim = (p: Spot, node: string) => { const s = POINT.get(p.cell.ch); return toward(p, [node], s ? [s] : SIDES) }
   for (const e of d.expect.edges) {
-    const mine = all.filter(p => connects(p.cell, e.id))
-    const starts = mine.filter(p => SIDES.some(s => owns(beside(d, p, s), e.from) &&
-      (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (p.cell.dirs & s.bit) !== 0))))
-    if (!walk(mine, starts).some(p => toward(p, [e.to]))) return fail('edge-disconnected')
+    const { mine, reached } = path(d, all, e)
+    if (!reached.some(p => toward(p, [e.to]))) return fail('edge-disconnected')
     // Every end claims its own arrow cell first; only then is the cell behind each, opposite the side it meets its node on,
     // checked. An end whose glyph the edge draws fewer times than its ends need is missing; any other unclaimed end has its
     // mark drawn somewhere else: beside the other node, or pointing away from its own.
@@ -183,6 +206,11 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
+  const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : []))), hidden = new Set(d.expect.hidden ?? [])
+  // #27 review: an invisible edge draws no cell of any kind: no line, head or label.
+  if (all.some(({ cell: x }) => x.owners.some(o => hidden.has(o) || hidden.has(o.replace(/:(label|tail|head)$/, ''))))) return fail('line-glyph')
+  // Each listed edge's line cells, and those of a dotted or thick edge that show its style: any cell but a straight crossing.
+  const lines = new Map<string, number>(), shown = new Set<string>()
   for (const { cell: x } of all) {
     if (x.kind !== 'line') continue
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
@@ -191,6 +219,20 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     // each owner: a corner or tee of two weights shows a thick branch on a thin line (#18 re-review).
     const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
     if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
+    // #27: an edge draws in its own style. Each arm it draws has its weight, heavy for thick and light otherwise, and a cell
+    // drawn dotted is drawn only for dotted edges. A dotted edge's cell may draw solid only at a straight crossing, where the
+    // canvas draws the other line's style and ┼ shows no dash.
+    for (const o of x.owners) {
+      lines.set(o, (lines.get(o) ?? 0) + 1)
+      const style = styles.get(o)
+      if (!style) continue
+      // Its style shows in a cell of its own path: a dotted edge's in a straight ┄ or ┆ (a corner draws solid), a thick
+      // edge's in any heavy cell but a crossing.
+      if (style === 'dotted' ? x.style === 'dotted' && (x.dirs === 5 || x.dirs === 10) : !crossing) shown.add(o)
+      const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
+      if ([1, 2, 4, 8].some((b, i) => (dirs & b) !== 0 && arms[i] !== (style === 'thick' ? '2' : '1'))) return fail('line-glyph')
+      if ((x.style === 'dotted') !== (style === 'dotted') && !(style === 'dotted' && crossing)) return fail('line-glyph')
+    }
     // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so no
     // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
     for (const o of x.owners) {
@@ -203,6 +245,13 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     }
     const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
     if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
+  }
+  // #27 review: every edge draws at least one line cell, so a head alone (A►B) cannot hide its style; the router never
+  // draws one. A dotted edge draws a straight ┄ or ┆, and a thick edge a heavy cell that is not a crossing: a corner shows no
+  // dash, and ┼ shows neither dash nor weight. edges keeps every cell on the path, so this cell is on it too (#27 re-review).
+  for (const e of d.expect.edges) {
+    if (!lines.get(e.id)) return fail('line-glyph')
+    if ((e.style === 'dotted' || e.style === 'thick') && !shown.has(e.id)) return fail('line-glyph')
   }
   return null
 }

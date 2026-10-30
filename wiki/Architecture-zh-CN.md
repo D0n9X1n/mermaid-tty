@@ -101,7 +101,7 @@ flowchart TD
 
 1. **标签只出现一次。** 每个非空标签在空白归一化后必须与其所有者的文本一致，且只出现一次；空标签不绘制文字。不同所有者可使用相同文字（`label-missing`、`label-dup`）。
 2. **连线与箭头。** 每条边连接自己的端点。端点标记的字形和位置正确；方向箭头指向节点而非分叉处（`edge-disconnected`、`end-misplaced`、`head-extra`、`head-on-junction`）。
-3. **连线不误导。** 不允许悬空线段、有歧义的交叉，或暗示不存在连接的合并主干。线条字形必须匹配记录的连接方向和粗细（`line-dangling`、`crossing-ambiguous`、`line-glyph`、`merge-ambiguous`）。
+3. **连线不误导。** 不允许悬空线段、有歧义的交叉，或暗示不存在连接的合并主干。线条字形必须匹配记录的连接方向和粗细，且每条边的线条单元格都按该边自身的线型绘制（实线、粗线或虚线；不可见的边不绘制任何单元格）（`line-dangling`、`crossing-ambiguous`、`line-glyph`、`merge-ambiguous`）。
 4. **无覆盖且宽度正确。** 画布不能有冲突，输出的每行都不超出指定列数（`overwrite`、`row-too-wide`）。
 5. **标签与边框。** 连线标签必须靠近自身路径；边框保持闭合；同一框内节点之间的边不得越出边框；连线只有在边框恰好包含其一端时才穿过该边框，且只穿过一次。端点标签必须无歧义地指向自己的连线端点（`label-not-adjacent`、`frame-broken`、`edge-outside-frame`、`edge-crosses-frame`、`end-label`）。
 6. **图表与成员结构。** 条形的八分之一单元格长度和位置必须正确。类成员及 ER 属性列属于自己的节点框，并位于声明的行列。短键在原位及自身图例文字旁各出现一次；同类可替换项要么全部用短键，要么都不用。

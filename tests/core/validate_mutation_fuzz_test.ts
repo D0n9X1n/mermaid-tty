@@ -333,3 +333,105 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
   })
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
+
+// #27: a whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
+// arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A cell
+// it shares (a stem, a crossing) is left as drawn; an edge with no cell of its own is skipped.
+const RESTYLE = { solid: ['light', '1'], thick: ['heavy', '2'], dotted: ['dotted', '1'] } as const
+test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails', t => {
+  const { mutants, survivors } = tally(t, 'restyle', function* (d) {
+    for (const e of d.expect.edges) {
+      if (!e.style) continue
+      const own = spots(d).filter(p => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
+      if (own.length === 0) continue
+      for (const to of ['solid', 'thick', 'dotted'] as const) {
+        if (to === e.style) continue
+        const [style, w] = RESTYLE[to]
+        yield [`${e.id} ${e.style} as ${to}`, own.map(({ r, c, x }): Patch[number] => {
+          const arms = [1, 2, 4, 8].map(b => (x.dirs & b ? w : '0')).join('')
+          return [r, c, { ...x, arms, style, ch: lineGlyph(x.dirs, arms, style) }]
+        })]
+      }
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// #27 review: an edge's line cut out, as compaction cuts slack: every column (row) whose drawn cells are only that edge's own
+// straight ─ (│) is removed, the grid closing up, so its head meets its node and no line shows its style (A►B for A┄┄►B).
+// Only a cut that leaves the edge no line cell is a mutant: one that just shortens a longer line draws the same edge.
+// As one patch: every cell that the removal changes.
+function cut(d: Drawing, cols: ReadonlySet<number>, rws: ReadonlySet<number>): Patch {
+  const kept = d.cells.filter((_, r) => !rws.has(r)).map(row => row.filter((_, c) => !cols.has(c)))
+  const out: Patch = []
+  d.cells.forEach((row, r) => row.forEach((x, c) => { const y = kept[r]?.[c] ?? null; if (!same(x, y)) out.push([r, c, y]) }))
+  return out
+}
+test('A5.mutation-tests: fuzz: an edge with its own line cut out, its head against its node, fails', t => {
+  const { mutants, survivors } = tally(t, 'unline', function* (d) {
+    const width = Math.max(...d.cells.map(row => row.length))
+    for (const e of d.expect.edges) {
+      const only = (x: Cell | null, dirs: number) => !x || (x.kind === 'line' && x.dirs === dirs && x.owners.length === 1 && x.owners[0] === e.id)
+      const mine = (x: Cell | null) => x?.kind === 'line' && x.owners.includes(e.id)
+      const cols = new Set(Array.from({ length: width }, (_, c) => c).filter(c => d.cells.every(row => only(row[c] ?? null, 10)) && d.cells.some(row => mine(row[c] ?? null))))
+      const rws = new Set(d.cells.flatMap((row, r) => (row.every(x => only(x, 5)) && row.some(mine) ? [r] : [])))
+      // Whether the cut leaves e no line cell: every one of its line cells is in a cut column (row).
+      const gone = (inCut: (r: number, c: number) => boolean) => d.cells.every((row, r) => row.every((x, c) => !mine(x) || inCut(r, c)))
+      if (cols.size > 0 && gone((_, c) => cols.has(c))) yield [`${e.id} columns cut`, cut(d, cols, new Set())]
+      if (rws.size > 0 && gone(r => rws.has(r))) yield [`${e.id} rows cut`, cut(d, new Set(), rws)]
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// #27 review: an invisible edge (~~~) given a head, ► in an empty cell beside each of its nodes, or a line cell there.
+const HIDDEN: Case[] = [['hidden', 'flowchart LR\nA ~~~ B\nB --> C'], ['hidden TB', 'flowchart TB\nA ~~~ B\nA --> C']].flatMap(([name, src]) => draw(name!, src!))
+test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
+  const { mutants, survivors } = tally(t, 'hidden', function* (d) {
+    for (const id of d.expect.hidden ?? []) for (const { r, c } of spots(d).filter(p => p.x.kind !== 'line')) {
+      for (const [dr, dc] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+        const y = r + dr, x = c + dc
+        if (y < 0 || x < 0 || y >= d.cells.length || x >= d.cells[y]!.length || d.cells[y]![x]) continue
+        yield [`${id} head at (${y},${x})`, [[y, x, { ch: '►', role: 'arrow', kind: 'arrow', owners: [id], dirs: 0 }]]]
+        yield [`${id} line at (${y},${x})`, [[y, x, { ch: '─', role: 'edge', kind: 'line', owners: [id], dirs: 10, arms: '0101', style: 'light', segs: [{ owner: id, dirs: 10 }] }]]]
+      }
+    }
+  }, [...CASES, ...HIDDEN])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
+
+// #27 re-review: an edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
+// own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part no
+// arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side: no
+// arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the edge.
+const RING = [[0, 0, 6], [0, 1, 10], [0, 2, 12], [1, 0, 5], [1, 2, 5], [2, 0, 3], [2, 1, 10], [2, 2, 9]] as const
+test('A5.mutation-tests: fuzz: an edge\'s glyphs copied to a spot joined to nothing fail', t => {
+  const { mutants, survivors } = tally(t, 'stray', function* (d) {
+    const free = (r: number, c: number) => !d.cells[r]?.[c] && r < d.cells.length && c < d.cells[r]!.length
+    let at: [number, number] | null = null
+    for (let r = 0; r + 4 < d.cells.length && !at; r++) for (let c = 0; c + 4 < d.cells[r]!.length && !at; c++) {
+      if ([0, 1, 2, 3, 4].every(i => [0, 1, 2, 3, 4].every(j => free(r + i, c + j)))) at = [r + 1, c + 1]
+    }
+    for (const e of d.expect.edges) {
+      const own = spots(d).find(p => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
+      if (!own) continue
+      const style = own.x.style ?? 'light', w = style === 'heavy' ? '2' : '1'
+      const ring = (r0: number, c0: number): Patch => RING.map(([dr, dc, dirs]): Patch[number] => {
+        const arms = [1, 2, 4, 8].map(b => (dirs & b ? w : '0')).join('')
+        return [r0 + dr, c0 + dc, { ch: lineGlyph(dirs, arms, style), role: own.x.role, kind: 'line', owners: [e.id], dirs, arms, style, segs: [{ owner: e.id, dirs }] }]
+      })
+      if (at) {
+        yield [`${e.id} ${own.x.ch} copied to (${at[0] + 1},${at[1] + 1})`, [[at[0] + 1, at[1] + 1, own.x]]]
+        yield [`${e.id} ring at (${at[0]},${at[1]})`, ring(at[0], at[1])]
+      }
+      // The ring's top-left for a corner just under, over, right of and left of a label cell (r, c).
+      for (const { r, c } of spots(d).filter(p => (p.x.kind === 'text' || p.x.kind === 'key') && p.x.owners[0] === `${e.id}:label`)) {
+        for (const [r0, c0] of [[r + 1, c], [r - 3, c], [r, c + 1], [r, c - 3]] as const) {
+          if (r0 < 0 || c0 < 0 || !RING.every(([dr, dc]) => free(r0 + dr, c0 + dc))) continue
+          yield [`${e.id} ring at (${r0},${c0}) beside its label`, ring(r0, c0)]
+        }
+      }
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})

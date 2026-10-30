@@ -125,7 +125,7 @@ function draw(m: Mindmap, form: 'natural' | 'compact' | 'outline', max: number, 
   const shares = (a: string, b: string) => from.has(a) && from.get(a) === from.get(b)
   const cv = createCanvas(form === 'outline' ? all.reduce((s, p) => s + p.rows.length, 0) : root.sub, w, columns, shares)
   lay(cv)
-  const edges = kids.map(p => ({ id: link(p), from: from.get(link(p))!, to: `m${p.node.k}`, ends: [] }))
+  const edges = kids.map(p => ({ id: link(p), from: from.get(link(p))!, to: `m${p.node.k}`, ends: [], style: 'solid' as const }))   // links draw light (#27)
   const body = cv.toDrawing({ labels: all.map(p => ({ owner: `m${p.node.k}`, text: p.node.lines.join('\n') })), edges, edgeLabels: [], frames: [] })
   if (m.title === null) return body
   const head = heading(m.title, 'title', 'title', columns)

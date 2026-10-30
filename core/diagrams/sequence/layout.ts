@@ -253,11 +253,14 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
       const [p, q] = stretch(c, f, t, cap), from = xs[p.tie]! + p.off, to = xs[q.tie]! + q.off
       stack(top, ps, w => from + 1 + Math.floor((to - from - 1 - w) / 2), 'label', `${id}:label`)
     } else {
-      // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline.
-      fore.push(seg(line, xf + cap + 1, 10, tail), seg(line, xf + cap + 2, 12, null), seg(line + 1, xf + cap + 2, 9, null))
-      for (let col = xf + 1; col <= xf + cap + 1; col++) fore.push(seg(line + 1, col, 10, col === xf + 1 ? head : null))
-      touch(xf, xf + cap + 2)
-      stack(top, ps, () => xf + cap + 2, 'label', `${id}:label`)
+      // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline. With a head
+      // at its start too (<<->>), each row runs one cell further, ◄─┐ over ◄─┘, so a straight cell shows its style: ◄┄┐ for
+      // a dotted one, which ◄┐ would draw as solid (#27 re-review).
+      const k = tail ? 1 : 0, turn = xf + cap + 2 + k
+      fore.push(seg(line, xf + cap + 1, 10, tail), ...(k ? [seg(line, xf + cap + 2, 10, null)] : []), seg(line, turn, 12, null), seg(line + 1, turn, 9, null))
+      for (let col = xf + 1; col < turn; col++) fore.push(seg(line + 1, col, 10, col === xf + 1 ? head : null))
+      touch(xf, turn)
+      stack(top, ps, () => turn, 'label', `${id}:label`)
     }
     if (make) { born.set(m.to, line); pillAt(t, line) }
     const end = line + (xf === xt ? 1 : 0)
@@ -267,7 +270,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (m.activate) shift(m.to, end, 1)
     if (m.deactivate) shift(m.from, end + 1, -1)
     labels.push({ owner: `${id}:label`, text: plain(c.text.get(m)!) })
-    edges.push({ id, from: m.from, to: m.to, ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
+    edges.push({ id, from: m.from, to: m.to, style: m.line === 'dotted' ? 'dotted' : 'solid', ends: [...(head ? [{ node: m.to, glyph: head }] : []), ...(tail ? [{ node: m.from, glyph: tail }] : [])] })
     if (ps.some(p => p.text)) edgeLabels.push({ owner: `${id}:label`, edge: id })
   }
   // A note: one row per line, centered between ┆ caps in a box of note fill, cap and blank one column each beyond its
