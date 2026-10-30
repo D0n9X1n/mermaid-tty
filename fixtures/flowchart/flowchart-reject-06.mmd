@@ -1,0 +1,15 @@
+flowchart LR
+  User((User)) --> CDN[/CDN/]
+  CDN --> LB{{Load balancer}}
+  subgraph app [App tier]
+    LB --> W1[Web 1] & W2[Web 2]
+  end
+  subgraph data [Data tier]
+    Cache[(Redis)]
+    DB[(Postgres)]
+    Q>Job queue]
+  end
+  W1 & W2 --> Cache
+  W1 & W2 --> DB
+  W1 & W2 -.-> Q
+  Q --> Worker[[Worker]] --> DB
