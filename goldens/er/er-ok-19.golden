@@ -2,14 +2,14 @@
         1
   [ A ]───────┐
     │         │
-    │1        │
+    │1        c
   ┌─┘         │
   a           │
   │           │
   │           │
   │1          │
   │           │
-[ B ]         c
+[ B ]         │
   │           │
   │1          │
   └─┐         │
@@ -27,14 +27,14 @@ c closesloopxxclosesloopxxclosesloopxxclosesloo
         A
   nnNnneeeeeeee
     e         e
-    eA        e
+    eA        l
   eee         e
   l           e
   e           e
   e           e
   eA          e
   e           e
-nnNnn         l
+nnNnn         e
   e           e
   eA          e
   eee         e
@@ -52,13 +52,13 @@ l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
              1
        [ A ]───────────────────────────┐
          │                             │
-         │1                            │
+         │1      closesloopxxclosesloopxxclosesloopxxclosesloo
   ┌──────┘                             │
   x                                    │
   │                                    │
   │1                                   │
   │                                    │
-[ B ]            closesloopxxclosesloopxxclosesloopxxclosesloo
+[ B ]                                  │
   │                                    │
   │1                                   │
   └───────┐                            │
@@ -72,13 +72,13 @@ l LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
              A
        nnNnneeeeeeeeeeeeeeeeeeeeeeeeeeee
          e                             e
-         eA                            e
+         eA      LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
   eeeeeeee                             e
   L                                    e
   e                                    e
   eA                                   e
   e                                    e
-nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+nnNnn                                  e
   e                                    e
   eA                                   e
   eeeeeeeee                            e
@@ -92,13 +92,13 @@ nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
              1
        [ A ]───────────────────────────┐
          │                             │
-         │1                            │
+         │1      closesloopxxclosesloopxxclosesloopxxclosesloo
   ┌──────┘                             │
   x                                    │
   │                                    │
   │1                                   │
   │                                    │
-[ B ]            closesloopxxclosesloopxxclosesloopxxclosesloo
+[ B ]                                  │
   │                                    │
   │1                                   │
   └───────┐                            │
@@ -112,13 +112,13 @@ nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
              A
        nnNnneeeeeeeeeeeeeeeeeeeeeeeeeeee
          e                             e
-         eA                            e
+         eA      LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
   eeeeeeee                             e
   L                                    e
   e                                    e
   eA                                   e
   e                                    e
-nnNnn            LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+nnNnn                                  e
   e                                    e
   eA                                   e
   eeeeeeeee                            e

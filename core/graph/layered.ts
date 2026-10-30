@@ -153,7 +153,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     for (const [id, b] of boxes) if (id.startsWith(`${e.id}#`)) {
       boxes.set(id, across ? { ...b, row: lane } : { ...b, col: lane })
     }
-    if (label) boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
+    if (label) boxes.set(`${e.id}:label`, nearSource(e, across ? { ...label, row: outside } : { ...label, col: outside }, boxes, frames, across))
     outside += (label ? across ? label.rows : label.cols : 1) + 2
   }
   // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it goes.
@@ -198,4 +198,24 @@ function stripLanes(g: Graph, t: Tree, boxes: Map<string, Box>, frames: Map<stri
     for (const [k, b] of frames) frames.set(k, k === c || wraps(b, f) ? grow(b) : start(b) >= past ? move(b) : b)
   }
   return new Set([...home.values()].flat().map(e => e.id))
+}
+
+// A back edge's label in its lane, moved along it to just past the turn out of the edge's drawn source, a cell of line
+// between, so it reads beside that end rather than mid-span (#8): only nearer that turn, short of the far one, and only
+// onto cells no other box, dummy or frame holds. Else the label as given.
+function nearSource(e: GEdge, label: Box, boxes: ReadonlyMap<string, Box>, frames: ReadonlyMap<string, Box>, across: boolean): Box {
+  const a = boxes.get(e.from), b = boxes.get(e.to)
+  if (!a || !b) return label
+  const main = (x: Box) => (across ? x.col : x.row), long = (x: Box) => (across ? x.cols : x.rows)
+  const am = main(a) + (long(a) >> 1), bm = main(b) + (long(b) >> 1), size = long(label)
+  // An edge between adjacent ranks has its label beside the turn already: only a longer one, past another node, moves.
+  const [lo, hi] = [Math.min(am, bm), Math.max(am, bm)]
+  if (![...boxes].some(([id, x]) => !id.includes('#') && !id.endsWith(':label') && main(x) > lo && main(x) + long(x) - 1 < hi)) return label
+  const start = bm > am ? am + 2 : am - 1 - size
+  if (bm > am ? start + size - 1 > bm - 2 || start >= main(label) : start < bm + 2 || start <= main(label)) return label
+  const candidate = across ? { ...label, col: start } : { ...label, row: start }
+  const meets = (u: Box, v: Box) => u.row < v.row + v.rows && v.row < u.row + u.rows && u.col < v.col + v.cols && v.col < u.col + u.cols
+  const taken = [...boxes].some(([id, x]) => id !== `${e.id}:label` && !id.startsWith(`${e.id}#`) && meets(candidate, x)) ||
+    [...frames.values()].some(f => meets(candidate, f) && !meets(label, f))
+  return taken ? label : candidate
 }
