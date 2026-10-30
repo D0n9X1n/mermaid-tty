@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readdirSync, readFileSync } from 'node:fs'
-import type { Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'; import { explain } from '../../core/render.ts'
+import { createCanvas, type Drawing } from '../../core/canvas.ts'; import { validate } from '../../core/validate.ts'; import { explain } from '../../core/render.ts'
 
 const drawing = (src: string): Drawing => {
   const r = explain(src, { columns: 80, theme: 'mono' })
@@ -100,4 +100,37 @@ test('#27 review: a head drawn for an invisible edge fails line-glyph', () => {
   assert.equal(d.cells[0]![5], null)
   d.cells[0]![5] = { ch: '►', role: 'arrow', kind: 'arrow', owners: [id!], dirs: 0 }
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
+})
+
+// GPT-6's re-review of #27. A corner shows no dash: a dotted edge needs a straight dotted cell, ┄ or ┆, on its path.
+// A -.- B drawn as ┐ then a ┼ that C---D crosses: every cell of it reads as solid.
+function cornerCross(ring = false): Drawing {
+  const c = createCanvas(ring ? 8 : 4, 8, 8)
+  c.text(1, 0, 'a', 'node', 'A'); c.text(3, 1, 'b', 'node', 'B'); c.text(2, 0, 'c', 'node', 'C'); c.text(2, 2, 'd', 'node', 'D')
+  c.line(1, 1, 12, 'dotted', 'edge', 'AB'); c.line(2, 1, 5, 'dotted', 'edge', 'AB'); c.line(2, 1, 10, 'light', 'edge', 'CD')
+  // A closed ┄ ring owned by A-.-B, joined to nothing: a dotted witness off its path.
+  if (ring) for (const [r, col, dirs] of [[5, 4, 6], [5, 5, 10], [5, 6, 12], [6, 4, 5], [6, 6, 5], [7, 4, 3], [7, 5, 10], [7, 6, 9]] as const) c.line(r, col, dirs, 'dotted', 'edge', 'AB')
+  return c.toDrawing({ labels: ['A', 'B', 'C', 'D'].map(o => ({ owner: o, text: o.toLowerCase() })), edgeLabels: [], frames: [],
+    edges: [{ id: 'AB', from: 'A', to: 'B', ends: [], style: 'dotted' }, { id: 'CD', from: 'C', to: 'D', ends: [], style: 'solid' }] })
+}
+test('#27 re-review: a dotted edge drawn only as a corner and a crossing fails line-glyph', () => {
+  const d = cornerCross()
+  assert.deepEqual(d.conflicts, []); assert.deepEqual(rows(d), ['', 'a┐', 'c┼d', ' b'])
+  assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
+})
+// The renderer did this: a dotted two-headed self-message's line was only ┐┘, as a solid one's is. It must draw a ┄ or fall back.
+test('#27 re-review: a dotted two-headed self-message draws a dotted straight cell, or falls back', () => {
+  for (const columns of [60, 80, 120]) {
+    const r = explain('sequenceDiagram\nA<<-->>A: x', { columns, theme: 'mono' })
+    if (!('drawing' in r)) continue
+    const mine = r.drawing.cells.flat().filter(x => x?.kind === 'line' && x.owners.includes('m0'))
+    assert.ok(mine.some(x => x!.style === 'dotted' && (x!.dirs === 5 || x!.dirs === 10)), `${columns}\n${rows(r.drawing).join('\n')}`)
+    assert.equal(validate(r.drawing), null, `${columns}`)
+  }
+})
+// An edge's cells form one connected path between its ends: a closed ┄ ring of A-.-B's own, off its path, is a stray part.
+test('#27 re-review: an edge with a part joined to nothing fails edge-disconnected', () => {
+  const d = cornerCross(true)
+  assert.deepEqual(d.conflicts, []); assert.equal(rows(d)[6], '    ┆ ┆')
+  assert.equal(validate(d)?.reason, 'edge-disconnected', rows(d).join('\n'))
 })

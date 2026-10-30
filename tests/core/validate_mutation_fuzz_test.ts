@@ -399,3 +399,30 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
   }, [...CASES, ...HIDDEN])
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
+
+// #27 re-review: an edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
+// own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part no
+// arm leaves open. Each is a second, stray component of the edge.
+const RING = [[0, 0, 6], [0, 1, 10], [0, 2, 12], [1, 0, 5], [1, 2, 5], [2, 0, 3], [2, 1, 10], [2, 2, 9]] as const
+test('A5.mutation-tests: fuzz: an edge\'s glyphs copied to a spot joined to nothing fail', t => {
+  const { mutants, survivors } = tally(t, 'stray', function* (d) {
+    const free = (r: number, c: number) => !d.cells[r]?.[c] && r < d.cells.length && c < d.cells[r]!.length
+    let at: [number, number] | null = null
+    for (let r = 0; r + 4 < d.cells.length && !at; r++) for (let c = 0; c + 4 < d.cells[r]!.length && !at; c++) {
+      if ([0, 1, 2, 3, 4].every(i => [0, 1, 2, 3, 4].every(j => free(r + i, c + j)))) at = [r + 1, c + 1]
+    }
+    if (!at) return
+    const [r0, c0] = at
+    for (const e of d.expect.edges) {
+      const own = spots(d).find(p => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
+      if (!own) continue
+      yield [`${e.id} ${own.x.ch} copied to (${r0 + 1},${c0 + 1})`, [[r0 + 1, c0 + 1, own.x]]]
+      const style = own.x.style ?? 'light', w = style === 'heavy' ? '2' : '1'
+      yield [`${e.id} ring at (${r0},${c0})`, RING.map(([dr, dc, dirs]): Patch[number] => {
+        const arms = [1, 2, 4, 8].map(b => (dirs & b ? w : '0')).join('')
+        return [r0 + dr, c0 + dc, { ch: lineGlyph(dirs, arms, style), role: own.x.role, kind: 'line', owners: [e.id], dirs, arms, style, segs: [{ owner: e.id, dirs }] }]
+      })]
+    }
+  }, [...CASES, ...C_GRAPHS])
+  assert.ok(mutants > 0); assert.deepEqual(survivors, [])
+})
