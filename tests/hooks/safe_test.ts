@@ -63,7 +63,7 @@ test('A5.errors: (d) url(, image(, image-set(, @import, file:, data:, javascript
 // before this change. Core still parses each; the gate now stops each.
 const ch = (n: number) => String.fromCharCode(n), NB = ch(0xa0)
 const MARK = `${ch(0xfb02)}${ch(0xb0)}${ch(0xb0)}117${ch(0xb6)}${ch(0xdf)}` // Mermaid's marker for #117; (u)
-// Each gap source is unsafe here whatever core says. Core's config allowlist (#25) now also rejects the themeCSS one, as
+// Each gap source is unsafe here whatever core says. Core's config allowlist now also rejects the themeCSS one, as
 // config:themeCSS; the other four still parse in core, so this gate is what stops them.
 test('A5.errors: the five gap sources are unsafe; four of them parse in core', () => {
   for (const [src, reason, core] of [

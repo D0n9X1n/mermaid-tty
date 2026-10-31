@@ -453,7 +453,7 @@ function splitLabel(t: string): string[] | Fail {
 // otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where the drawing
 // splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label }, which
 // Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says. edge: an edge label, styled's breaks.
-// In an HTML label where <br> splits, a literal \n is a <br /> (#16): Mermaid's nonMarkdownToHTML replaces it before
+// In an HTML label where <br> splits, a literal \n is a <br />: Mermaid's nonMarkdownToHTML replaces it before
 // decodeEntities, and draws the same SVG as for <br />. Elsewhere it falls back newline.
 function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html', edge = false): string | Fail {
   if (mode === 'markdown') return styled(text, br, { decode: true, breaks: edge })

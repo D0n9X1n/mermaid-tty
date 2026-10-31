@@ -66,7 +66,7 @@ test('#25: settings honoured here, or seen to change only pixels with a value Me
   assert.deepEqual((readSource('%%{init: {"htmlLabels": false}}%%\n%%{init: {"htmlLabels": true}}%%\nflowchart TD\nA') as Source).config, { htmlLabels: true })
 })
 
-// PM, #25: a sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so
+// A sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so
 // none of them is allowed, default value or not.
 test('#25: a sequence geometry setting around a framed diagram falls back', () => {
   const framed = 'sequenceDiagram\nbox Team\nparticipant A\nparticipant B\nend\nrect rgb(1, 2, 3)\nA->>B: hi\nend\nloop again\nB->>A: ok\nend'

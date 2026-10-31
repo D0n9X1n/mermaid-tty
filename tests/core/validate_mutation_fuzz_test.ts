@@ -334,7 +334,7 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #27: a whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
+// A whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
 // arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A cell
 // it shares (a stem, a crossing) is left as drawn; an edge with no cell of its own is skipped.
 const RESTYLE = { solid: ['light', '1'], thick: ['heavy', '2'], dotted: ['dotted', '1'] } as const

@@ -1,4 +1,4 @@
-// Mermaid 12.2.0's geometry for the frames of a sequence diagram (#17, #24). Mermaid sizes a frame (loop, alt, opt, par,
+// Mermaid 12.2.0's geometry for the frames of a sequence diagram. Mermaid sizes a frame (loop, alt, opt, par,
 // critical, break or rect) to the bounds inserted while it is open, 10 px beyond them for each frame open inside it then,
 // and draws a box 20 px beyond its members' pills; both turn on text widths a terminal does not know. So a frame draws
 // only where, at every text width, it covers the lifelines its run covers and nests in or stands clear of each box:

@@ -12,7 +12,7 @@ const show = (d: Drawing) => text(d).join('\n')
 
 // QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2 in
 // flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where one is
-// due, so the router refuses it (edge-crosses-frame, #19) and the fence falls back. The validator half of the finding, a
+// due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the finding, a
 // label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between() further down.
 test('A5.mutation-tests: QA\'s cluster-border repro, its edge through S0 and back, falls back', () => {
   const src = 'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
@@ -54,7 +54,7 @@ test('A5.mutation-tests: a frame passes with its title and a straight crossing; 
   assert.equal(validate(framed(straight, ['F', 'G']))?.reason, 'frame-broken')
 })
 
-// #19: a node's pill sharing cells with a frame's border, across its top or down its side, is a true overlap: frame-broken.
+// A node's pill sharing cells with a frame's border, across its top or down its side, is a true overlap: frame-broken.
 // Inside, beside the border, it passes. (A run of an edge along a border fails alike: framed(along) above.)
 test('#19: a node pill drawn on a frame\'s border fails frame-broken', () => {
   // C's pill, a cap and its text, two cells from (r, col); F spans columns 0–6, and e runs down column 3.
@@ -119,7 +119,7 @@ test('V6: an edge between two nodes of one frame that leaves it through its bord
   assert.equal(validate(kept), null, show(kept))
 })
 
-// #19: frame F, rows 1–5 and columns 1–7, between a at (0,4) above it and b at (7,4) below it; edge e from A to B, its head
+// Frame F, rows 1–5 and columns 1–7, between a at (0,4) above it and b at (7,4) below it; edge e from A to B, its head
 // ▼ at (6,4), as ink draws it. F holds neither end, so e must not cross its border at all.
 function between(ink: (c: Canvas) => void): Drawing {
   const c = createCanvas(8, 9, 9); c.frame(1, 1, 5, 7, 'frame', 'F', 'T'); c.text(0, 4, 'a', 'node', 'A'); c.text(7, 4, 'b', 'node', 'B'); ink(c)
@@ -142,7 +142,7 @@ test('#19: #13 case 2 at 80 columns, its dotted edge crossing Data tier, falls b
   const r = explain(src, { columns: 80 })
   assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
 })
-// GPT-6's review of #19: an edge whose end is the frame itself was exempt from every crossing. Only its mark, which meets
+// An edge whose end is the frame itself is not exempt from every crossing. Only its mark, which meets
 // the border from outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S.
 // Here S-->S ran down through S, across its top and bottom borders, and drew at 60, 80 and 120.
 test('#19 review: a self-loop on a frame never runs over the frame\'s border', () => {

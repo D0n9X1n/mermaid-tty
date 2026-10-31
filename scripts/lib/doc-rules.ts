@@ -86,6 +86,8 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   e.push(...grammarErrors('README', md, true));
   return e;
 }
+// The wiki is the only documentation: a docs/ folder at the repo root would be a second copy that drifts from it.
+export const docsFolderErrors = (hasDocs: boolean) => hasDocs ? ['docs/: documentation lives in wiki/; there is no docs/ folder'] : [];
 export function iconErrors(png: Uint8Array): string[] {
   const sig = [137, 80, 78, 71, 13, 10, 26, 10];
   if (png.length < 24 || sig.some((b, i) => png[i] !== b) || String.fromCharCode(...png.subarray(12, 16)) !== 'IHDR') return ['icon.png: not a PNG'];

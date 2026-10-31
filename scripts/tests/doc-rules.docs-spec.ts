@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INSTALL, LOCAL, TAGLINE, iconErrors, imageErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
+import { readFileSync } from 'node:fs';
+import { INSTALL, LOCAL, TAGLINE, docsFolderErrors, iconErrors, imageErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
 import { publishWikiErrors } from '../docs/workflow-tree.ts';
 const R = 'https://github.com/D0n9X1n/mermaid-tty', S = 'https://img.shields.io/github', SHA = 'a'.repeat(40), IMG = ['assets/readme/after.svg'];
 const README = `<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>\n\n**${TAGLINE}**\n\n` +
@@ -96,4 +97,12 @@ test('wiki images: rendered diagrams or allow-listed only', () => {
 test('icon rule reads the IHDR size', () => {
   assert.ok(iconErrors(png(256, 256))[0]!.includes('want 512×512'));
   assert.deepEqual(iconErrors(new Uint8Array(40)), ['icon.png: not a PNG']);
+});
+test('a docs/ folder fails: the wiki is the only documentation', () => {
+  assert.deepEqual(docsFolderErrors(true), ['docs/: documentation lives in wiki/; there is no docs/ folder']);
+  assert.deepEqual(docsFolderErrors(false), []);
+});
+test('check-docs runs the docs/ folder rule on the repo root', () => {
+  const checker = readFileSync(new URL('../check-docs.ts', import.meta.url), 'utf8');
+  assert.match(checker, /docsFolderErrors\(existsSync\(at\('docs'\)\)\)/);
 });

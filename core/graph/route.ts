@@ -88,7 +88,7 @@ function fences(p: Placed, e: GEdge): Box[] {
   return walls(p).filter(f => held(e.from, f) && held(e.to, f))
 }
 const fenced = (fs: readonly Box[], c: Point) => fs.every(f => within(c, f))
-// #19: whether e's cells cross each drawn frame's border only as its hold on e's ends needs: once when it holds one end,
+// Whether e's cells cross each drawn frame's border only as its hold on e's ends needs: once when it holds one end,
 // never when it holds neither or both. A frame never holds itself, so an edge ending at a frame never crosses it: its mark
 // meets the border from outside. The validator rejects any other count (edge-crosses-frame), so a route that breaks it is
 // refused here.
@@ -134,7 +134,7 @@ function detour(path: Point[], blocked: (c: Point) => boolean, p: Placed, pinned
 }
 
 // May extend rows/cols for exterior routing lanes; node, label and frame boxes never move. A back edge with no dummy and no
-// label routes first with the forward edges, in the nearest free column, so a 2-cycle draws as two parallel edges (#8);
+// label routes first with the forward edges, in the nearest free column, so a 2-cycle draws as two parallel edges, not a long detour;
 // else, as each back edge with a dummy or label, in an outside lane.
 export function routeGraph(p: Placed): Route[] | Fail {
   const backs = p.graph.edges.filter(e => e.reversed && e.style !== 'invisible')
@@ -495,7 +495,7 @@ function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = [
       !fanInOut || preferred % 2 !== 0 || port.face === back(preferred))
     let result: { route: Route; source: Port; target: Port } | null = null
     for (const source of sources) {
-      // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight (#8).
+      // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight.
       const faces = [...new Set(targets.map(t => t.face))], off = (t: Port) => t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c)
       for (const target of e.reversed ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v)) : targets) {
         if (budget.left <= 0) return fail('route-conflict')

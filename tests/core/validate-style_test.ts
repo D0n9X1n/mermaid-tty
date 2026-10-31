@@ -30,7 +30,7 @@ test('line-glyph: a line cell drawn in another style than it records fails', () 
   }
 })
 
-// #27: an edge draws in its own line style. Each line cell of `A --> B` redrawn whole in another style, its arms, style and
+// An edge draws in its own line style. Each line cell of `A --> B` redrawn whole in another style, its arms, style and
 // glyph all agreeing, reads as another arrow: ━━ as Mermaid's thick ==>, ┄┄ as dotted -.->. expect records the style.
 test('#27: a whole edge redrawn heavy or dotted fails line-glyph', () => {
   const r = explain('flowchart LR\nA --> B', { columns: 60, theme: 'mono' }) as { drawing: Drawing }
@@ -45,7 +45,7 @@ test('#27: a whole edge redrawn heavy or dotted fails line-glyph', () => {
   assert.equal(validate(r.drawing), null)
 })
 
-// #27: an invisible edge (~~~) draws nowhere. Listed as hidden, a line cell drawn for it, self-consistent, fails line-glyph:
+// An invisible edge (~~~) draws nowhere. Listed as hidden, a line cell drawn for it, self-consistent, fails line-glyph:
 // before, its owner was in no list, so nothing checked the cell.
 test('#27: a line cell drawn for an invisible edge fails line-glyph', () => {
   const r = explain('flowchart LR\nA --> B\nB ~~~ C', { columns: 60, theme: 'mono' }) as { drawing: Drawing }
@@ -68,7 +68,7 @@ test('#27: every drawn edge of every ok fixture records its line style', () => {
   assert.deepEqual(missing, [])
 })
 
-// GPT-6's review of #27. In each, expect is the renderer's and the cells change.
+// Line-style cases a renderer can get wrong. In each, expect is the renderer's and the cells change.
 const drawn = (src: string): Drawing => structuredClone((explain(src, { columns: 60, theme: 'mono' }) as { drawing: Drawing }).drawing)
 const rows = (d: Drawing) => d.cells.map(row => row.map(x => (!x ? ' ' : x.kind === 'cont' ? '' : x.ch)).join('').replace(/ +$/, ''))
 const lineCell = (ch: string, segs: { owner: string; dirs: number }[], style: 'light' | 'dotted' = 'light') => {
@@ -102,7 +102,7 @@ test('#27 review: a head drawn for an invisible edge fails line-glyph', () => {
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
 
-// GPT-6's re-review of #27. A corner shows no dash: a dotted edge needs a straight dotted cell, ┄ or ┆, on its path.
+// A corner shows no dash: a dotted edge needs a straight dotted cell, ┄ or ┆, on its path.
 // A -.- B drawn as ┐ then a ┼ that C---D crosses: every cell of it reads as solid.
 function cornerCross(ring = false): Drawing {
   const c = createCanvas(ring ? 8 : 4, 8, 8)
@@ -135,7 +135,7 @@ test('#27 re-review: an edge with a part joined to nothing fails edge-disconnect
   assert.equal(validate(d)?.reason, 'edge-disconnected', rows(d).join('\n'))
 })
 
-// GPT-6's re-review of 0506f33: a walk through an edge label into a line cell needs that cell to point at the label, as
+// A walk through an edge label into a line cell needs that cell to point at the label, as
 // line to line does. A -.-|x| B drawn as [ A ]┼┼x[ B ], C---D and E---F crossing its two cells, plus a closed ┄ ring of
 // A-.-B's own whose ┌ sits right under x: ┌ has no arm toward x, so the ring is joined to nothing, and it is no witness.
 test('#27 re-review: a stray ring beside an edge label is not reached through the label, and fails edge-disconnected', () => {

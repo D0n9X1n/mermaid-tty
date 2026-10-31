@@ -193,7 +193,7 @@ test('A2: validate rejects a note ┆ cap removed, given to another owner, or re
     }
   }
 })
-// #17: a box and the frames inside or beside it. A box's border stands a blank column clear of every frame it holds and
+// A box and the frames inside or beside it. A box's border stands a blank column clear of every frame it holds and
 // every frame beside it, however deep they nest; a rect that would cross a box's border still falls back.
 test('A2: nested rects inside a box draw, the box border a blank column beyond the outer rect', () => {
   for (const t of ['box Team\nparticipant A\nparticipant B\nend\nparticipant C\nrect\nA->>B: hi\nrect\nB->>A: back\nend\nend\nB->>C: yo',
@@ -235,7 +235,7 @@ test('A2: in a boxed diagram, a frame a wide note widens over a lifeline beyond 
   // The ladder reports its last step's reason: wrap cannot fit the 20-letter word.
   for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `@${w}`)
 })
-// #24: without a box, a frame covers exactly the lifelines Mermaid 12.2.0's frame covers, or the diagram falls back. Mermaid
+// Without a box, a frame covers exactly the lifelines Mermaid 12.2.0's frame covers, or the diagram falls back. Mermaid
 // sizes a frame to its contents' bounds, 10 px beyond them per frame open inside it; a self-message reaches max(text / 2,
 // 75) px from its lifeline and a note on one lifeline its own width, each widening only the gap on one side.
 test('A2: without a box, a frame that a self-message or a wide note widens over a lifeline Mermaid leaves out falls back', () => {

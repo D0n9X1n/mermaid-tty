@@ -1,4 +1,4 @@
-// tests/core/layout-quality_test.ts — issue #8: drawings that are correct but read worse than they should.
+// tests/core/layout-quality_test.ts — drawings that are correct but read worse than they should: detours, far labels.
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
 import { fx } from '../golden/c-lib.ts'; import { text } from './graph-fixture.ts'

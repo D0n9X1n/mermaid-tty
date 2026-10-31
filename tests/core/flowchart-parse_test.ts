@@ -306,7 +306,7 @@ test('A5.errors: an @{ that ends a line joins the next lines only on a line that
   assert.deepEqual(F('  A@{\n    label: x\n  } --> B').nodes.map((n: any) => n.rows[0].text), ['x', 'B'])
 })
 
-// Issue #4: Mermaid 12.2.0's lexer (flow.jison) tries its keyword rules at each token start before an id's own token: the
+// Mermaid 12.2.0's lexer (flow.jison) tries its keyword rules at each token start before an id's own token: the
 // id's start, after a leading digit run (NUM), and after each non-ASCII character (UNICODE_TEXT, one table character).
 // Verified under JSDOM, at the start, after a link and after &.
 test('A5.errors: an id the lexer of Mermaid reads as a keyword, or cannot lex, falls back', () => {

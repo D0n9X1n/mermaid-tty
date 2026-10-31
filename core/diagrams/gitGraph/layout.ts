@@ -178,7 +178,7 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
   const all = g.events.flatMap((e, i) => (e.kind === 'start' ? [] : [i])), ids = (is: number[]) => (bt ? [...is].reverse() : is).map(i => `c${i}`)
   const edges = all.flatMap(i => {
     const p = L.parent.get(i)!, hd = L.merged.get(i)
-    // Every lane and merge line draws light (#27): each edge is solid.
+    // Every lane and merge line draws light: each edge is solid, and the validator checks each line cell's style.
     const run = p !== null && (lane(p) !== lane(i) || Math.abs(rowOf(i) - rowOf(p)) > 1) ? [{ id: `r${i}`, from: `c${p}`, to: `c${i}`, ends: [], style: 'solid' as const }] : []
     return hd === undefined ? run : [...run, { id: `m${i}`, from: `c${hd}`, to: `c${i}`, ends: [], style: 'solid' as const }]
   })

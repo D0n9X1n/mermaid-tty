@@ -224,7 +224,7 @@ export function drawGraph(p: Placed, routes: readonly Route[], columns: number, 
     labels.push({ owner, text: text.join('\n') })
     if (b) lines(cv, b, ['', ''], 'label', owner, text.map(t => ({ text: t, role: 'label' as const, owners: [owner, e.id] })), true)
   }
-  // An invisible edge (~~~) is listed only as hidden: it draws nowhere (#27).
+  // An invisible edge (~~~) is listed only as hidden: it draws nowhere.
   const hidden = p.graph.edges.filter(e => e.style === 'invisible').map(e => e.id)
   const made = cv.toDrawing({ labels, edges, edgeLabels, frames, ...(hidden.length > 0 ? { hidden } : {}),
     ...(members.size > 0 ? { members: [...members].map(([id, parent]) => ({ id, parent, ...(places.has(id) ? { place: places.get(id)! } : {}) })) } : {}) })

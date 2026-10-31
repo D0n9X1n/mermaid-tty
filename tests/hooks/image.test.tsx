@@ -27,7 +27,7 @@ test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s
   expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'mmdc -i', 'rm -rf'])
 })
 
-// The themeCSS repro now falls back in core too (config:themeCSS, #25), so it shows as source; a source core still draws,
+// The themeCSS repro now falls back in core too (config:themeCSS), so it shows as source; a source core still draws,
 // with a click href the gate rejects, stays text. Neither runs anything.
 test('A5.errors: in kitty, the themeCSS repro and a click href never become an Image and run nothing', async ($, on) => {
   const runs = world(on, { TERM: 'xterm-kitty' })

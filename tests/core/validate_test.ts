@@ -551,7 +551,7 @@ test('label-unbound: a node label moved off its pill fails', () => {
   }
 })
 
-// #18: a complete-bipartite trunk, A→C, A→D, B→C and B→D merged into one line down column 2, crossed straight at (2,2) by an
+// A complete-bipartite trunk, A→C, A→D, B→C and B→D merged into one line down column 2, crossed straight at (2,2) by an
 // unrelated P→Q. The trunk's own unrelated pairs there (A→C with B→D, A→D with B→C) run one axis, as a trunk's do; merges
 // judges them. Only pairs from different lines, the trunk's and P→Q's, must cross.
 //   a ─┬─ b
@@ -585,7 +585,7 @@ test('#18: at that crossing, a trunk edge turning onto the crossing edge still f
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })
 
-// GPT-6's review of #18: the same trunk with mixed heads. B--xD's x head, on one line with A-->D's ▶, reads as A--xD too,
+// The same trunk with mixed heads. B--xD's x head, on one line with A-->D's ▶, reads as A--xD too,
 // and A-->D's as B-->D; neither is in the source, so the trunk must not pass. Each path runs through its corners, from its
 // source's cell to its target's, its head the cell just before the target.
 const STEP = (a: { r: number; c: number }, b: { r: number; c: number }) => (b.r < a.r ? 1 : b.c > a.c ? 2 : b.r > a.r ? 4 : 8)
@@ -634,7 +634,7 @@ test('#18 review: a trunk whose edges draw different line styles fails merge-amb
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 
-// Re-review of #18, hole 1: a self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare
+// A self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare
 // end leads to B-->A's ▶ at A (A->A) and B's to A-->B's at B (B->B). The loops at A and B are --x and --o, so neither
 // pair is in the source.
 test('#18 re-review: a merged line implying a self-loop whose head the loop lacks fails merge-ambiguous', () => {

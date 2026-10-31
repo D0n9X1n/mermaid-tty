@@ -127,7 +127,7 @@ function assertNoRun(r: ReturnType<typeof check>, id: string): void {
   assert.equal(r.status, 1, id); assert.deepEqual(r.steps, ['> @nt'], id)
   assert.match(r.stderr, new RegExp(`^no tests ran for ${id.replaceAll('.', '\\.')}$`, 'm'), id)
 }
-// Tests node:test passes that execute no assertion: GPT-6's repros of the static scan, and each placeholder form. Under
+// Tests node:test passes that execute no assertion: the forms the static scan must catch, and each placeholder form. Under
 // check.ts's preload each fails, so @nt fails. [what, the tests in tests/a_test.ts]
 const UNASSERTING: [string, string][] = [
   ['an assert only in a regex after a for (…) header', "test('A1: x', () => {\n  for (const word of ['assert', 'assertion'])\n    /assert(ion)?/.test(word)\n})"],

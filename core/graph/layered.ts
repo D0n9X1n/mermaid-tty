@@ -201,7 +201,7 @@ function stripLanes(g: Graph, t: Tree, boxes: Map<string, Box>, frames: Map<stri
 }
 
 // A back edge's label in its lane, moved along it to just past the turn out of the edge's drawn source, a cell of line
-// between, so it reads beside that end rather than mid-span (#8): only nearer that turn, short of the far one, and only
+// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, and only
 // onto cells no other box, dummy or frame holds. Else the label as given.
 function nearSource(e: GEdge, label: Box, boxes: ReadonlyMap<string, Box>, frames: ReadonlyMap<string, Box>, across: boolean): Box {
   const a = boxes.get(e.from), b = boxes.get(e.to)
