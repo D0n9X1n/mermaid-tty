@@ -9,8 +9,8 @@ const env = (vars: Record<string, string>, listing = '') => ({
   process: { run: async () => ({ exitCode: 0, stdout: listing, stderr: '' }) },
 })
 
-// Process tables as `sh -c 'echo $$; exec ps ...'` prints them: the first line is the listing's own pid, 500, a child of
-// Claude Code (400) under a shell (300) on ttys008, whose parent at 200 holds the pty from no tty of its own.
+// Process tables as `sh -c 'echo $$; exec ps ...'` prints them: the first line is the listing's own pid, 500, a child
+// of Claude Code (400) under a shell (300) on ttys008, whose parent at 200 holds the pty from no tty of its own.
 const table = (terminal: string, terminalTty = '??') =>
   [
     '500',
@@ -24,7 +24,7 @@ const SONICTERM_MAC = table('/Applications/SonicTerm.app/Contents/MacOS/sonicter
 const SONICTERM_LINUX = table('sonicterm', '?').replaceAll('ttys008', 'pts/3')
 const PAIR = { TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm' }
 
-test('A6.hook-tests: pixels in SonicTerm only when SonicTerm holds this session\'s pty', async () => {
+test("A6.hook-tests: pixels in SonicTerm only when SonicTerm holds this session's pty", async () => {
   for (const [vars, listing, want] of [
     [PAIR, SONICTERM_MAC, true],
     [PAIR, SONICTERM_LINUX, true],
