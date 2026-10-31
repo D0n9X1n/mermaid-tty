@@ -4,22 +4,22 @@
 <circle cx="40" cy="14" r="5" fill="#febc2e"/>
 <circle cx="58" cy="14" r="5" fill="#28c840"/>
 <g transform="translate(16 44)" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="15">
-<text x="0" y="14" fill="#ffffff" font-weight="bold">W</text>
-<text x="9" y="14" fill="#ffffff" font-weight="bold">h</text>
-<text x="18" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="27" y="14" fill="#ffffff" font-weight="bold">r</text>
-<text x="36" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="54" y="14" fill="#ffffff" font-weight="bold">t</text>
-<text x="63" y="14" fill="#ffffff" font-weight="bold">h</text>
-<text x="72" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="90" y="14" fill="#ffffff" font-weight="bold">t</text>
-<text x="99" y="14" fill="#ffffff" font-weight="bold">i</text>
-<text x="108" y="14" fill="#ffffff" font-weight="bold">m</text>
-<text x="117" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="135" y="14" fill="#ffffff" font-weight="bold">w</text>
-<text x="144" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="153" y="14" fill="#ffffff" font-weight="bold">n</text>
-<text x="162" y="14" fill="#ffffff" font-weight="bold">t</text>
+<text x="180" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">W</text>
+<text x="189" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">h</text>
+<text x="198" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="207" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">r</text>
+<text x="216" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="234" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">t</text>
+<text x="243" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">h</text>
+<text x="252" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="270" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">t</text>
+<text x="279" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">i</text>
+<text x="288" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">m</text>
+<text x="297" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="315" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">w</text>
+<text x="324" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="333" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">n</text>
+<text x="342" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">t</text>
 <text x="0" y="32" fill="#ffffff">L</text>
 <text x="9" y="32" fill="#ffffff">a</text>
 <text x="18" y="32" fill="#ffffff">y</text>

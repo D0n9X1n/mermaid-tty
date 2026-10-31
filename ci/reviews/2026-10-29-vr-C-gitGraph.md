@@ -14,7 +14,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 | goldens/gitGraph/gitGraph-ok-04.golden | 5ff6f7ebf28ceb78af2c971f34c20370a0d184f5522c3be53bd17fa7aed8b1a2 |
 | goldens/gitGraph/gitGraph-ok-05.golden | 161c739001dbe097203b92ab8154ab2bf328809ef2863fc3c792503ecdc7635b |
 | goldens/gitGraph/gitGraph-ok-06.golden | 30ca24902936c16cf4e0d220943da3f1844a3717e784a567152ccbec9258b2fe |
-| goldens/gitGraph/gitGraph-ok-07.golden | 6e6d4ecf667667f9895fe9f366614f18dd3ff30ae9a7a821176f2853f7045406 |
+| goldens/gitGraph/gitGraph-ok-07.golden | 707a8cfdea6e77a44a1af435a5719456421e6252cf72c5d912ac7493f9a1ae50 |
 | goldens/gitGraph/gitGraph-ok-08.golden | 0ab651fbbd7aa69ef04ed3aa675e6480ebf29decabd9c8504ca86243d3c55415 |
 | goldens/gitGraph/gitGraph-ok-09.golden | 86ab27094cb7eb058550f51ab9fee67677c2461d6fe6d19ed8c2434a8c317f9f |
 | goldens/gitGraph/gitGraph-ok-10.golden | 2488fc8dd03f9fdfbfd32cc70038596787c808348e1893d1da4867027fdb6f6b |
@@ -29,3 +29,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 - The cross-family reviewer (gpt-6-astra) first failed five goldens: a lane that ended at a merge row drew a junction (┴) that read as joining the merge. Commit 69e5814 ends such a lane one row above and crosses an empty column; the re-review of all 15 goldens at 60, 80 and 120 passed.
 - v1.1.1 (#16): the cross-family reviewer (gpt-6-astra) read gitGraph-ok-16 (a %%{init}%% directive setting mainBranchName) against its source at 60, 80 and 120 columns: branches, topology and roles pass. Mermaid also shows the two bare commits' generated ids (0- or 1- plus a random suffix), which change on every render; the PM ruled they stay hidden, as wiki Usage documents.
 - 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
+- 2026-10-31: 1 golden(s) re-hashed after the title moved to the center of its drawing (gitGraph-ok-07). Each changed only in its title row's leading spaces, checked line by line against the reviewed golden; every other row and every role row is byte-identical, so the verdict stands.

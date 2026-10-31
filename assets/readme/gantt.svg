@@ -4,15 +4,15 @@
 <circle cx="40" cy="14" r="5" fill="#febc2e"/>
 <circle cx="58" cy="14" r="5" fill="#28c840"/>
 <g transform="translate(16 44)" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="15">
-<text x="0" y="14" fill="#ffffff" font-weight="bold">R</text>
-<text x="9" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="18" y="14" fill="#ffffff" font-weight="bold">l</text>
-<text x="27" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="36" y="14" fill="#ffffff" font-weight="bold">a</text>
-<text x="45" y="14" fill="#ffffff" font-weight="bold">s</text>
-<text x="54" y="14" fill="#ffffff" font-weight="bold">e</text>
-<text x="72" y="14" fill="#ffffff" font-weight="bold">v</text>
-<text x="81" y="14" fill="#ffffff" font-weight="bold">1</text>
+<text x="225" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">R</text>
+<text x="234" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="243" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">l</text>
+<text x="252" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="261" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">a</text>
+<text x="270" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">s</text>
+<text x="279" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">e</text>
+<text x="297" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">v</text>
+<text x="306" y="14" fill="#ffffff" font-weight="bold" text-decoration="underline">1</text>
 <text x="0" y="32" fill="#b1b9f9">B</text>
 <text x="9" y="32" fill="#b1b9f9">u</text>
 <text x="18" y="32" fill="#b1b9f9">i</text>

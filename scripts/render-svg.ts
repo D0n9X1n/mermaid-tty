@@ -48,8 +48,8 @@ export const CELL_W = 10
 export const CELL_H = 20
 
 // rows as a dark SVG page of cellW × cellH cells: a <rect> per background run, the most neighbouring cells of a row
-// with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style; dimColor,
-// which terminals draw faint, sets opacity 0.5.
+// with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style, underline
+// text-decoration; dimColor, which terminals draw faint, sets opacity 0.5.
 export function rowsToSvg(
   rows: Rows,
   { cellW = CELL_W, cellH = CELL_H }: { cellW?: number; cellH?: number } = {},
@@ -90,6 +90,7 @@ export function rowsToSvg(
       (sp.color !== undefined ? ` fill="${paint(sp.color)}"` : '') +
       (sp.bold ? ' font-weight="bold"' : '') +
       (sp.italic ? ' font-style="italic"' : '') +
+      (sp.underline ? ' text-decoration="underline"' : '') +
       (sp.dimColor ? ' opacity="0.5"' : '')
     out.push(`<text x="${g.col * cellW}" y="${g.row * cellH + Math.round(cellH * 0.8)}"${style}>${esc(g.text)}</text>`)
   }

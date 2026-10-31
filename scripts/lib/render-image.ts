@@ -35,6 +35,7 @@ export function spanStyle(sp: Span): Omit<Styled, 'text'> {
     ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}),
     ...(sp.bold ? { bold: true } : {}),
     ...(sp.italic ? { italic: true } : {}),
+    ...(sp.underline ? { underline: true } : {}),
   }
 }
 export function styledRows(source: string, columns: number, theme: string, raw = false): Styled[][] | null {

@@ -129,3 +129,8 @@ test('toSvg draws a picture as an <image> of its PNG over its cells, beside the 
   )
   assert.ok(svg.includes('<text x="0" y="14" fill="#fff">a</text>'))
 })
+
+test('an underlined span draws its glyphs with text-decoration underline, as a title does', () => {
+  const svg = toSvg([[{ text: 'Go', fg: '#fff', bold: true, underline: true }]], width, 'title')
+  assert.ok(svg.includes('<text x="0" y="14" fill="#fff" font-weight="bold" text-decoration="underline">G</text>'))
+})

@@ -7,7 +7,7 @@ export const BASE = 14
 export const PAD = 16
 export const BAR = 28
 export const BG = '#1e1f26'
-export type Styled = { text: string; fg: string; bg?: string; bold?: boolean; italic?: boolean }
+export type Styled = { text: string; fg: string; bg?: string; bold?: boolean; italic?: boolean; underline?: boolean }
 export type Glyph = { row: number; col: number; text: string; span: number }
 // A PNG over a block of cells, as the plugin's image mode shows a fence in kitty and Ghostty.
 export type Pic = { row: number; col: number; columns: number; rows: number; png: string }
@@ -71,9 +71,12 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
 
   for (const g of glyphCells(rows, width)) {
     const sp = rows[g.row]![g.span]!
-    out.push(
-      `<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}${sp.italic ? ' font-style="italic"' : ''}>${esc(g.text)}</text>`,
-    )
+    const style = [
+      sp.bold ? ' font-weight="bold"' : '',
+      sp.italic ? ' font-style="italic"' : '',
+      sp.underline ? ' text-decoration="underline"' : '',
+    ].join('')
+    out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${style}>${esc(g.text)}</text>`)
   }
 
   return [...out, '</g>', '</svg>', ''].join('\n')
