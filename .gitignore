@@ -3,3 +3,4 @@ node_modules/
 scripts/e2e/node_modules/
 scripts/docs/node_modules/
 out/
+__pycache__/

@@ -47,6 +47,8 @@ export function releaseErrors(yml: string): string[] {
     ['publish-wiki run for the tagged commit', j => hasRun(j, /^conclusion="\$\(gh api "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/workflows\/publish-wiki\.yml\/runs\?branch=main&head_sha=\$\{GITHUB_SHA\}&per_page=1" -q '\.workflow_runs\[0\]\.conclusion'\)"$/m)],
     ['publish-wiki concluded success', j => hasRun(j, 'test "$conclusion" = success')],
     ['tag check', j => hasRun(j, 'node scripts/check-release.ts tag "$GITHUB_REF_NAME"')],
+    ['notes generated from the tag\'s issues and PRs', j => hasRun(j, 'python3 scripts/release-notes.py "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"')],
+    ['full history for the notes', j => steps(j).some(s => action(s, 'checkout') && s.with?.['fetch-depth'] === 0 && s.with?.['fetch-tags'] === true)],
     ['notes check on the published release', j => hasRun(j, 'gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -')],
     ['GitHub marketplace install', j => hasRun(j, 'claude plugin marketplace add D0n9X1n/mermaid-tty')],
     ['A9 against the installed copy', j => hasRun(j, /^node scripts\/e2e\/run\.ts --installed "\$CLAUDE_CONFIG_DIR"(?:\s|$)/)]])];

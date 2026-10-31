@@ -79,6 +79,7 @@
   "B4": "check",
   "B5": [
     "check",
+    "release-notes-test",
     "release-tag",
     "release-notes",
     "release-notes-published",
@@ -87,6 +88,7 @@
   ],
   "B5.every-pr": "check",
   "B5.release": [
+    "release-notes-test",
     "release-tag",
     "release-notes",
     "release-notes-published",
