@@ -147,6 +147,8 @@ test('A6.hook-tests: the console owner is the nearest ancestor hosting a console
   assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('210 200 2100', '210 200 1000')), false)
   assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('200 150 2000', '200 150 0')), false)
   assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('400 300 4000', '400 300 0')), false)
+  // A nearer console host whose start is withheld might be Claude Code's own window, so the walk stops there.
+  assert.equal(sonicTermOwnsConsole(windows('450 400 0 conhost.exe')), false)
   // The walk checks at most 64 processes from Claude Code up: above 62 shells SonicTerm is the 64th, above 63 the 65th.
   assert.equal(sonicTermOwnsConsole(shells(62)), true)
   assert.equal(sonicTermOwnsConsole(shells(63)), false)

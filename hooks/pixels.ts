@@ -136,6 +136,10 @@ export function sonicTermOwnsConsole(listing: string): boolean {
   let currentPid = lister.ppid
   for (let depth = 0; depth < 64; depth++) {
     const hosts = hostStarts.get(currentPid) ?? []
+    if (hosts.includes(0n)) {
+      return false
+    }
+
     if (hosts.some((started) => started >= current!.started)) {
       return current.name === 'sonicterm-windows.exe'
     }
