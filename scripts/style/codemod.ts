@@ -57,11 +57,23 @@ function edits(ast: Node, source: string): Edit[] {
   const out: Edit[] = []
   const comments = (ast.comments as Node[] | undefined) ?? []
   const inComment = (at: number) => comments.some((c) => c.range[0] <= at && at < c.range[1])
-  // Whether a directive comment ends on the line just above the one that starts at offset.
+  // Whether a directive comment applies to the code at offset: one in the run of comments directly above it, with only
+  // whitespace between them, since TypeScript applies a directive to the next line of code past comments and blanks.
   const directed = (at: number) => {
-    const lineStart = source.lastIndexOf('\n', at - 1) + 1
-    const above = source.slice(source.lastIndexOf('\n', lineStart - 2) + 1, lineStart)
-    return DIRECTIVE.test(above) && /^\s*(?:\/\/|\/\*|\*)/.test(above)
+    let end = at
+    for (const c of comments.filter((x) => x.range[1] <= at).reverse()) {
+      if (source.slice(c.range[1], end).trim() !== '') {
+        return false
+      }
+
+      if (DIRECTIVE.test(source.slice(c.range[0], c.range[1]))) {
+        return true
+      }
+
+      end = c.range[0]
+    }
+
+    return false
   }
 
   for (const { node, parent } of nodes(ast)) {

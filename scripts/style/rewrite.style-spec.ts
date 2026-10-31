@@ -21,8 +21,14 @@ test('codemod splits a declaration at its own comma, never one inside a comment'
 })
 
 test('codemod leaves a declaration a directive covers whole, so the directive still covers all of it', async () => {
-  const source = '// @ts-expect-error\nconst a: number = "x", b: number = "y"\n'
-  assert.deepEqual(await rewrite(source), { output: source, problem: null })
+  // TypeScript applies the directive to the next line of code, past any comments and blank lines between them.
+  for (const between of ['', '// Both assignments deliberately violate the type.\n', '\n', '/* why */\n\n']) {
+    const source = `// @ts-expect-error\n${between}const a: number = "x", b: number = "y"\n`
+    assert.deepEqual(await rewrite(source), { output: source, problem: null }, JSON.stringify(between))
+  }
+
+  const split = await rewrite('// @ts-expect-error\nf()\nconst a = 1, b = 2\n')
+  assert.equal(split.output, '// @ts-expect-error\nf()\nconst a = 1\nconst b = 2\n', 'code between ends its reach')
 })
 
 test('the rewriters report a change to a comment instead of making it', async () => {
