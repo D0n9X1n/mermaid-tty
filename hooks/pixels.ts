@@ -2,23 +2,22 @@
 // only the Image's alt text, so anything unsure is a no. TERM must name kitty or Ghostty (TERM travels over ssh, so a
 // remote session counts), or SonicTerm must own this session's terminal. SonicTerm sets TERM_PROGRAM SonicTerm and TERM
 // xterm-256color, since it ships no terminfo of its own, but a terminal started inside it can keep both (VTE and
-// QTermWidget do), so that pair only asks the process table, where the terminal holding this session's pty is the
-// nearest ancestor on another tty. A TERM_PROGRAM naming another terminal means one started inside them, which
-// inherited TERM. tmux, screen and Zellij pass no pixels through, and Windows has no terminal that shows them. A
-// failing env read or process listing is a no.
+// QTermWidget do), so that pair only asks the process table who holds this session's terminal: on macOS and Linux the
+// nearest ancestor on another tty, on Windows the nearest ancestor hosting a console. A TERM_PROGRAM naming another
+// terminal means one started inside them, which inherited TERM. tmux, screen and Zellij pass no pixels through, and on
+// Windows only SonicTerm shows them. A failing env read or process listing is a no.
 export async function showsPixels($: any): Promise<boolean> {
   try {
-    if (
-      (await $.env.get('TMUX')) ||
-      (await $.env.get('STY')) ||
-      (await $.env.get('ZELLIJ')) ||
-      (await $.env.get('OS')) === 'Windows_NT'
-    ) {
+    if ((await $.env.get('TMUX')) || (await $.env.get('STY')) || (await $.env.get('ZELLIJ'))) {
       return false
     }
 
-    const term = (await $.env.get('TERM')) ?? ''
     const program = ((await $.env.get('TERM_PROGRAM')) ?? '').toLowerCase()
+    if ((await $.env.get('OS')) === 'Windows_NT') {
+      return program === 'sonicterm' && sonicTermOwnsConsole(await listWindowsProcesses($))
+    }
+
+    const term = (await $.env.get('TERM')) ?? ''
     if (term === 'xterm-kitty') {
       return program === '' || program === 'kitty'
     }
@@ -81,6 +80,69 @@ export function sonicTermOwnsTty(listing: string): boolean {
     }
 
     current = parent
+  }
+
+  return false
+}
+
+// The Windows process table, after a first line holding the pid of the PowerShell that lists it, a child of this
+// session: one `pid ppid ticks name` row per process, ticks being its start time (0 when Windows withholds it). Empty
+// when the listing fails.
+async function listWindowsProcesses($: any): Promise<string> {
+  const script =
+    '$PID; Get-CimInstance Win32_Process | ForEach-Object { ' +
+    "'{0} {1} {2} {3}' -f $_.ProcessId, $_.ParentProcessId, " +
+    '$(if ($_.CreationDate) { $_.CreationDate.Ticks } else { 0 }), $_.Name }'
+  const listed = await $.process.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script], {
+    timeoutMs: WINDOWS_LIST_MS,
+  })
+  return listed.exitCode === 0 ? listed.stdout : ''
+}
+
+// How long the Windows listing may take, in milliseconds: PowerShell and CIM start slower than ps.
+const WINDOWS_LIST_MS = 15000
+
+// Whether SonicTerm hosts the console of the session the Windows listing starts from. The terminal emulator is the
+// process that created the pseudoconsole, which makes it the parent of the console host (conhost.exe, or the
+// OpenConsole.exe SonicTerm ships); a shell or Claude Code under it hosts none. Walking up from the session (the
+// lister's parent), the first ancestor with a console host child owns the console and must be SonicTerm's own
+// `sonicterm-windows.exe`. A parent that started after its child is a reused pid, which breaks the chain, as does a gap
+// or a chain longer than any real one.
+export function sonicTermOwnsConsole(listing: string): boolean {
+  const [first = '', ...rows] = listing.split(/\r?\n/)
+  const byPid = new Map<string, { ppid: string; started: bigint; name: string }>()
+  const hostsConsole = new Set<string>()
+  for (const row of rows) {
+    const fields = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+?)\s*$/.exec(row)
+    if (fields) {
+      byPid.set(fields[1], { ppid: fields[2], started: BigInt(fields[3]), name: fields[4].toLowerCase() })
+    }
+  }
+
+  for (const [, entry] of byPid) {
+    if (entry.name === 'conhost.exe' || entry.name === 'openconsole.exe') {
+      hostsConsole.add(entry.ppid)
+    }
+  }
+
+  const lister = byPid.get(first.trim())
+  let child = lister && byPid.get(lister.ppid)
+  if (!lister || !child || child.started > lister.started) {
+    return false
+  }
+
+  for (let depth = 0; depth < 64; depth++) {
+    const parentPid = child.ppid
+    const parent = byPid.get(parentPid)
+    if (!parent || parent.started > child.started) {
+      return false
+    }
+
+    if (hostsConsole.has(parentPid)) {
+      return parent.name === 'sonicterm-windows.exe'
+    }
+
+    child = parent
   }
 
   return false

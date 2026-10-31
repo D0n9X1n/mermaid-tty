@@ -105,7 +105,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 在能显示像素的终端里，mermaid-tty 可以把图表绘制成 Mermaid 自身渲染的图片。需要同时满足：
 
-- **kitty、Ghostty 或 SonicTerm**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，或 `TERM_PROGRAM` 为 `SonicTerm` 且 `TERM` 为它设置的 `xterm-256color`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。对于 SonicTerm，mermaid-tty 还会用 `ps` 列出进程，确认持有当前会话终端的是 SonicTerm 自己的可执行文件（`sonicterm-mac` 或 `sonicterm`），因此从 SonicTerm 内部启动的其他终端即使保留了这两个变量也不算。从 kitty 或 Ghostty 内部启动的其他终端同样不算。
+- **kitty、Ghostty 或 SonicTerm**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，或 `TERM_PROGRAM` 为 `SonicTerm` 且 `TERM` 为它设置的 `xterm-256color`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。对于 SonicTerm，mermaid-tty 还会用 `ps` 列出进程，确认持有当前会话终端的是 SonicTerm 自己的可执行文件（`sonicterm-mac` 或 `sonicterm`），因此从 SonicTerm 内部启动的其他终端即使保留了这两个变量也不算。在 Windows 上只有 SonicTerm 算数：`TERM_PROGRAM` 必须为 `SonicTerm`，mermaid-tty 用 PowerShell 列出进程，确认承载当前会话控制台的是 `sonicterm-windows.exe`。从 kitty 或 Ghostty 内部启动的其他终端同样不算。
 - PATH 上有 **mermaid-cli** 11 或 12：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
 
 新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。
@@ -114,7 +114,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 以下情况保留文本绘制（文本渲染器无法绘制时显示源码）：
 
-- 终端不是上述之一，或在 Windows 上；
+- 终端不是上述之一；
 - 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
 - mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
 - 源码含有纯文本 `title` 以外的 frontmatter、`%%{` 指令、`style`、`classDef`、`linkStyle`、`class`、`cssClass`、`click`、`link`、`call`、`callback`、`href`、`accTitle` 或 `accDescr` 语句、`#hex`、`rgb()` 或 `rgba()` 以外的时序图 `rect` 或 `box` 颜色、`#117;` 这样的实体、普通空格和制表符以外的空白、控制字符，或任何可能指向 URL 或文件的内容（如 `url(`、`http:`、`file:`、`//` 或反斜杠）；

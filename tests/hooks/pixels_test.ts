@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { showsPixels, sonicTermOwnsTty } from '../../hooks/pixels.ts'
+import { showsPixels, sonicTermOwnsConsole, sonicTermOwnsTty } from '../../hooks/pixels.ts'
 
 // A fake $ whose env.get answers from vars, a name not listed being unset, and whose process listing prints `listing`.
 const env = (vars: Record<string, string>, listing = '') => ({
@@ -33,7 +33,7 @@ test("A6.hook-tests: pixels in SonicTerm only when SonicTerm holds this session'
     [{ ...PAIR, TMUX: '/tmp/tmux-501/default,1,0' }, SONICTERM_MAC, false],
     [{ ...PAIR, TERM: 'screen-256color', STY: '1.pts-0.host' }, SONICTERM_MAC, false],
     [{ ...PAIR, ZELLIJ: '0' }, SONICTERM_MAC, false],
-    [{ ...PAIR, OS: 'Windows_NT' }, SONICTERM_MAC, false], // Windows panes take another path
+    [{ ...PAIR, OS: 'Windows_NT' }, SONICTERM_MAC, false], // Windows reads its own listing, not ps's
     [{ TERM: 'xterm-256color', TERM_PROGRAM: 'vscode' }, SONICTERM_MAC, false], // a terminal inside sets its own
     [{ ...PAIR, TERM: 'vt100' }, SONICTERM_MAC, false], // only the TERM SonicTerm sets
     // A terminal started inside SonicTerm that keeps both variables owns its own pty: QTerminal sets only WINDOWID,
@@ -70,6 +70,77 @@ test('A6.hook-tests: the pty owner is the nearest ancestor on another tty, and a
   assert.equal(sonicTermOwnsTty(table('/opt/sonicterm/bin/sonicterm-helper')), false)
   // A cycle in a corrupt listing ends at the depth cap instead of looping.
   assert.equal(sonicTermOwnsTty(['500', '500   500 ttys008  ps'].join('\n')), false)
+})
+
+// Windows process tables as the PowerShell listing prints them: its own pid first, then `pid ppid ticks name` rows.
+// SonicTerm (200) created the pseudoconsole, so its OpenConsole (210) is its child; pwsh (300) runs Claude Code (400),
+// whose PowerShell (500) lists. Ticks rise with start time; Claude Code's own hidden console host (450) is ignored.
+const windows = (...extra: string[]) =>
+  [
+    '500',
+    '4 0 100 System',
+    '150 4 1000 explorer.exe',
+    '200 150 2000 sonicterm-windows.exe',
+    '210 200 2100 OpenConsole.exe',
+    '300 200 3000 pwsh.exe',
+    '400 300 4000 claude.exe',
+    '450 400 4500 conhost.exe',
+    '500 400 5000 powershell.exe',
+    ...extra,
+  ].join('\r\n')
+const SONICTERM_WINDOWS = windows()
+const WINDOWS_PAIR = { TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', OS: 'Windows_NT' }
+
+test("A6.hook-tests: on Windows, pixels only when SonicTerm hosts the session's console", async () => {
+  // The Windows listing comes from PowerShell, never ps.
+  const windowsEnv = (vars: Record<string, string>, listing: string) => ({
+    env: { get: async (n: string) => vars[n] },
+    process: {
+      run: async (argv: string[]) => ({ exitCode: 0, stdout: argv[0] === 'powershell.exe' ? listing : '', stderr: '' }),
+    },
+  })
+  for (const [vars, listing, want] of [
+    [WINDOWS_PAIR, SONICTERM_WINDOWS, true],
+    [{ ...WINDOWS_PAIR, TERM: '' }, SONICTERM_WINDOWS, true], // ConPTY needs no TERM; SonicTerm's console decides
+    [{ OS: 'Windows_NT', TERM: 'xterm-kitty' }, SONICTERM_WINDOWS, false], // only SonicTerm on Windows
+    [{ ...WINDOWS_PAIR, TERM_PROGRAM: 'vscode' }, SONICTERM_WINDOWS, false],
+    [{ ...WINDOWS_PAIR, TMUX: '/tmp/tmux,1,0' }, SONICTERM_WINDOWS, false],
+    [WINDOWS_PAIR, '', false], // a failed listing
+  ] as [Record<string, string>, string, boolean][]) {
+    assert.equal(await showsPixels(windowsEnv(vars, listing)), want, JSON.stringify(vars))
+  }
+})
+
+test('A6.hook-tests: the console owner is the nearest ancestor hosting a console, and anything unclear is a no', () => {
+  // The bundled OpenConsole or the system conhost both mark the owner.
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('OpenConsole.exe', 'conhost.exe')), true)
+  // A terminal started inside SonicTerm hosts its own console: Alacritty under SonicTerm's pwsh, Windows Terminal
+  // launched apart from it, and a classic console window whose host is the shell's.
+  const nested = [
+    '500',
+    '200 150 2000 sonicterm-windows.exe',
+    '210 200 2100 OpenConsole.exe',
+    '300 200 3000 pwsh.exe',
+    '320 300 3200 alacritty.exe',
+    '330 320 3300 conhost.exe',
+    '340 320 3400 pwsh.exe',
+    '400 340 4000 claude.exe',
+    '500 400 5000 powershell.exe',
+  ].join('\r\n')
+  assert.equal(sonicTermOwnsConsole(nested), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('sonicterm-windows.exe', 'WindowsTerminal.exe')), false)
+  const classic = SONICTERM_WINDOWS.replace('210 200 2100 OpenConsole.exe', '310 300 3100 conhost.exe')
+  assert.equal(sonicTermOwnsConsole(classic), false)
+  // No console host anywhere above, a parent that started after its child (a reused pid), a gap and a missing lister.
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('210 200 2100 OpenConsole.exe', '')), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('200 150 2000', '200 150 3500')), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('300 200 3000', '300 999 3000')), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace(/^500/, '777')), false)
+  // A name that only contains SonicTerm's is not its executable.
+  assert.equal(
+    sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('sonicterm-windows.exe', 'sonicterm-windows.exe.bak')),
+    false,
+  )
 })
 
 test('A5.errors: a listing that fails or throws means no pixels', async () => {

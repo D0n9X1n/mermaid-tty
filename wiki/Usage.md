@@ -105,7 +105,7 @@ ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid
 
 In a terminal that shows pixels, mermaid-tty can draw a diagram as a picture of Mermaid's own rendering. It needs both:
 
-- **kitty, Ghostty or SonicTerm**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, or `TERM_PROGRAM` is `SonicTerm` with the `xterm-256color` it sets, and not inside tmux, screen or Zellij, which pass no pixels through. For SonicTerm, mermaid-tty also lists processes with `ps` and checks that SonicTerm's own executable (`sonicterm-mac` or `sonicterm`) holds the session's terminal, so another terminal started from inside SonicTerm doesn't count even when it keeps both variables. Another terminal started from inside kitty or Ghostty doesn't count either.
+- **kitty, Ghostty or SonicTerm**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, or `TERM_PROGRAM` is `SonicTerm` with the `xterm-256color` it sets, and not inside tmux, screen or Zellij, which pass no pixels through. For SonicTerm, mermaid-tty also lists processes with `ps` and checks that SonicTerm's own executable (`sonicterm-mac` or `sonicterm`) holds the session's terminal, so another terminal started from inside SonicTerm doesn't count even when it keeps both variables. On Windows, SonicTerm is the only terminal that counts: `TERM_PROGRAM` must be `SonicTerm`, and mermaid-tty lists processes with PowerShell and checks that `sonicterm-windows.exe` hosts the session's console. Another terminal started from inside kitty or Ghostty doesn't count either.
 - **mermaid-cli** 11 or 12 on PATH: `npm i -g @mermaid-js/mermaid-cli` installs `mmdc`. mermaid-tty doesn't bundle it, so the plugin keeps no dependencies.
 
 A new diagram is drawn as text first. `mmdc` renders it in the background, one diagram at a time, and the reply is drawn again with the picture. The picture uses Mermaid's dark or light theme to match your Claude Code theme, a transparent background and `securityLevel: strict`, and is sized to the available columns.
@@ -114,7 +114,7 @@ Only a diagram mermaid-tty can parse becomes a picture, so a picture never shows
 
 You keep the text drawing, or the source when the text renderer can't draw it, when:
 
-- the terminal isn't one of the above, or is Windows;
+- the terminal isn't one of the above;
 - the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
 - mermaid-tty can't parse the diagram, or its source is over 50,000 characters, Mermaid's limit;
 - the source has frontmatter beyond a plain `title`, a `%%{` directive, a `style`, `classDef`, `linkStyle`, `class`, `cssClass`, `click`, `link`, `call`, `callback`, `href`, `accTitle` or `accDescr` statement, a sequence `rect` or `box` colour other than `#hex`, `rgb()` or `rgba()`, an entity such as `#117;`, a space other than a plain space or tab, a control character, or anything that could name a URL or file (such as `url(`, `http:`, `file:`, `//` or a backslash);
