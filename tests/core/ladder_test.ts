@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { graphSteps, drawAt, type Build } from '../../core/graph/ladder.ts'
 import { validate } from '../../core/validate.ts'
 import type { Drawing } from '../../core/canvas.ts'
-import { g, text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { g, untitled as text } from './graph-fixture.ts'
 import type { Graph } from '../../core/graph/model.ts'
 const keyable = [{ item: 'e0:label', cls: 'label' }]
 const build: Build = ({ dir, keyed }) => {

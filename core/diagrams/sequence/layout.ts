@@ -5,6 +5,7 @@
 import type { Canvas, Drawing } from '../../canvas.ts'
 import { createCanvas } from '../../canvas.ts'
 import { CAPS } from '../../caps.ts'
+import { centerTitle } from '../../title.ts'
 import type { Fail } from '../../fail.ts'
 import { fail, isFail } from '../../fail.ts'
 import type { Step } from '../../fit.ts'
@@ -647,7 +648,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   }
 
   const glyphs = marks.map((m) => ({ owner: m.owner, ch: '┆', at: { r: m.r, c: m.c - lo } }))
-  return cv.toDrawing({ labels, edges, edgeLabels, frames, ...(glyphs.length ? { glyphs } : {}) })
+  return centerTitle(cv.toDrawing({ labels, edges, edgeLabels, frames, ...(glyphs.length ? { glyphs } : {}) }))
 }
 
 // natural and tight draw once, unwrapped; wrap tries each width in WRAPS: the first drawing validate accepts, else the

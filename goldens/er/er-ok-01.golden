@@ -1,5 +1,5 @@
 @60
-Orders
+       Orders
 [ DELIVERY-ADDRESS ]
          ┆
          ┆1..*
@@ -26,7 +26,7 @@ Orders
           │
    [ LINE-ITEM ]
 @60 roles
-TTTTTT
+       TTTTTT
 nnNNNNNNNNNNNNNNNNnn
          e
          eAAAA
@@ -53,7 +53,7 @@ nnNNNNNNNNNNNNNNNNnn
           e
    nnNNNNNNNNNnn
 @80
-Orders
+       Orders
 [ DELIVERY-ADDRESS ]
          ┆
          ┆1..*
@@ -80,7 +80,7 @@ Orders
           │
    [ LINE-ITEM ]
 @80 roles
-TTTTTT
+       TTTTTT
 nnNNNNNNNNNNNNNNNNnn
          e
          eAAAA
@@ -107,7 +107,7 @@ nnNNNNNNNNNNNNNNNNnn
           e
    nnNNNNNNNNNnn
 @120
-Orders
+       Orders
 [ DELIVERY-ADDRESS ]
          ┆
          ┆1..*
@@ -134,7 +134,7 @@ Orders
           │
    [ LINE-ITEM ]
 @120 roles
-TTTTTT
+       TTTTTT
 nnNNNNNNNNNNNNNNNNnn
          e
          eAAAA

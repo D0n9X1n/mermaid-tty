@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'
-import { text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { untitled as text } from './graph-fixture.ts'
 const X = (body: string, columns: number) => explain(`gantt\n${body}`, { columns, theme: 'mono' }) as any
 const SKETCH =
   'title Release\nsection Build\nSpec :crit, done, s, 2024-01-01, 10d\nCode :active, after s, 20d\nShip :milestone, 2024-01-31, 0d'

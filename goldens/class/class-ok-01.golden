@@ -1,5 +1,5 @@
 @60
-Animal example
+                    Animal example
  [     Animal     ]                      can fly
  [ +int age       ]   From Duck till     can swim
  [ +String gender ]   Zebra              can dive
@@ -15,7 +15,7 @@ Animal example
 [ -canEat()       ]  [ +run()        ]  [ +swim()    ]
                                         [ +quack()   ]
 @60 roles
-TTTTTTTTTTTTTT
+                    TTTTTTTTTTTTTT
  nnnnnnNNNNNNnnnnnn                     oOOOOOOOooooo
  nlLLLLLLLLllllllln  oOOOOOOOOOOOOOOo   oOOOOOOOOoooo
  nlLLLLLLLLLLLLLLln  oOOOOOoooooooooo   oOOOOOOOOoooo
@@ -31,7 +31,7 @@ nlLLLLLLLLLLLLLLLln  nlLLLLLLLLLLLLLln  nllLLLLLLLLLln
 nlLLLLLLLLLllllllln  nlLLLLLLlllllllln  nlLLLLLLLlllln
                                         nlLLLLLLLLllln
 @80
-Animal example
+                             Animal example
  [     Animal     ]                               can fly
  [ +int age       ]                               can swim
  [ +String gender ]   From Duck till Zebra        can dive
@@ -47,7 +47,7 @@ Animal example
 [ -canEat()       ]  [ +run()        ]       [ +swim()           ]
                                              [ +quack()          ]
 @80 roles
-TTTTTTTTTTTTTT
+                             TTTTTTTTTTTTTT
  nnnnnnNNNNNNnnnnnn                              oOOOOOOOooooooooooooooo
  nlLLLLLLLLllllllln                              oOOOOOOOOoooooooooooooo
  nlLLLLLLLLLLLLLLln  oOOOOOOOOOOOOOOOOOOOOo      oOOOOOOOOoooooooooooooo
@@ -63,7 +63,7 @@ nlLLLLLLLLLLLLLLLln  nlLLLLLLLLLLLLLln       nlLLLLLLLLLLLLLLLLLln
 nlLLLLLLLLLllllllln  nlLLLLLLlllllllln       nlLLLLLLLllllllllllln
                                              nlLLLLLLLLlllllllllln
 @120
-Animal example
+                             Animal example
  [     Animal     ]                               can fly
  [ +int age       ]                               can swim
  [ +String gender ]   From Duck till Zebra        can dive
@@ -79,7 +79,7 @@ Animal example
 [ -canEat()       ]  [ +run()        ]       [ +swim()           ]
                                              [ +quack()          ]
 @120 roles
-TTTTTTTTTTTTTT
+                             TTTTTTTTTTTTTT
  nnnnnnNNNNNNnnnnnn                              oOOOOOOOooooooooooooooo
  nlLLLLLLLLllllllln                              oOOOOOOOOoooooooooooooo
  nlLLLLLLLLLLLLLLln  oOOOOOOOOOOOOOOOOOOOOo      oOOOOOOOOoooooooooooooo

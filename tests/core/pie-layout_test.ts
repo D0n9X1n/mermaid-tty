@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'
-import { text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { untitled as text } from './graph-fixture.ts'
 const X = (src: string, columns: number) => explain(src, { columns, theme: 'mono' }) as any
 const bar = (e: number, w: number) => ('█'.repeat(Math.floor(e / 8)) + (e % 8 ? '▏▎▍▌▋▊▉'[(e % 8) - 1] : '')).padEnd(w)
 test('A4: label, bar, value, percentage; sorted by value, largest first; bars are round(8·v/Σv·W) eighths', () => {

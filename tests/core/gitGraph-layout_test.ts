@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'
-import { text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { untitled as text } from './graph-fixture.ts'
 const X = (body: string, columns = 80, h = 'gitGraph') => explain(`${h}\n${body}`, { columns, theme: 'mono' }) as any
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'
 test('A3: one row per event; lanes 2 cells apart; main opens with ╷; a fork ├─╮; a merge ◉─┤; one label column; BT flips', () => {

@@ -1,6 +1,7 @@
 // Test fixture, not a test file: a Graph from short edge specs, and a Drawing's rows as text.
 import type { Cell, Drawing } from '../../core/canvas.ts'
 import type { Dir, GEdge, GNode, Graph } from '../../core/graph/model.ts'
+import { titleRows } from '../../core/title.ts'
 
 const STYLES: Readonly<Record<string, GEdge['style']>> = { '>': 'solid', '=>': 'thick', '.>': 'dotted' }
 
@@ -41,6 +42,13 @@ export function cellText(c: Cell | null): string {
 
 // One string per row, each cell as cellText shows it; trailing spaces trimmed.
 export const text = (d: Drawing): string[] => d.cells.map((row) => row.map(cellText).join('').replace(/ +$/, ''))
+
+// A drawing's text with its title rows read from their first character: tests of a layout check what it draws, and
+// tests/core/title_test.ts checks where the title sits, centered over the drawing.
+export const untitled = (d: Drawing): string[] => {
+  const rows = titleRows(d.cells)
+  return text(d).map((line, r) => (rows.includes(r) ? line.trimStart() : line))
+}
 
 // Independently read shared arms as joined edge networks, then enumerate the bare-end/mark pairs they imply that no
 // edge draws.

@@ -5,7 +5,8 @@ import { parseSequence } from '../../core/diagrams/sequence/parse.ts'
 import { readSource, type Source } from '../../core/source.ts'
 import { validate } from '../../core/validate.ts'
 import { lookup } from '../../core/registry.ts'
-import { text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { untitled as text } from './graph-fixture.ts'
 import { fitLadder } from '../../core/fit.ts'
 import { explain } from '../../core/render.ts'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -177,7 +178,7 @@ test('A2: the title row comes first, bold, then the box tops, then the header', 
   const d = L('title Hello\nbox G\nparticipant A\nend')
   assert.equal(validate(d), null)
   assert.deepEqual(text(d), ['Hello', '┌─G─────┐', '│ [ A ] │', '└───────┘'])
-  assert.equal(d.cells[0][0].role, 'title')
+  assert.equal(d.cells[0].find((x) => x !== null)?.role, 'title')
 })
 test('A2: a CJK label counts 2 columns a character, so the lifelines stay aligned under the pills', () => {
   const d = L('participant 用户\nparticipant 服务\n用户->>服务: 你好')

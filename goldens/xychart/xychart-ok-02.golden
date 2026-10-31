@@ -1,5 +1,5 @@
 @60
-An Example Chart
+                   An Example Chart
 Seconds
 198.2 ┤                           ▲       ▲
       │
@@ -15,7 +15,7 @@ Seconds
 ◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
 ▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
 @60 roles
-TTTTTTTTTTTTTTTT
+                   TTTTTTTTTTTTTTTT
 LLLLLLL
 VVVVV f                           3       3
       f
@@ -31,7 +31,7 @@ LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
 LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
 LLLLL     VVVVV    VVVV   VVVVV   VVVVV   VVVVV   VVVVV
 @80
-An Example Chart
+                   An Example Chart
 Seconds
 198.2 ┤                           ▲       ▲
       │
@@ -47,7 +47,7 @@ Seconds
 ◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
 ▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
 @80 roles
-TTTTTTTTTTTTTTTT
+                   TTTTTTTTTTTTTTTT
 LLLLLLL
 VVVVV f                           3       3
       f
@@ -63,7 +63,7 @@ LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
 LLLLL      VVVV    VVVV    VVVV    VVVV    VVVV    VVVV
 LLLLL     VVVVV    VVVV   VVVVV   VVVVV   VVVVV   VVVVV
 @120
-An Example Chart
+                   An Example Chart
 Seconds
 198.2 ┤                           ▲       ▲
       │
@@ -79,7 +79,7 @@ Seconds
 ◆ p50      38.2    36.8    39.7    54.5    49.0    38.4
 ▲ p95     112.2    75.3   103.0   177.0   180.2   109.4
 @120 roles
-TTTTTTTTTTTTTTTT
+                   TTTTTTTTTTTTTTTT
 LLLLLLL
 VVVVV f                           3       3
       f

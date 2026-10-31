@@ -1,6 +1,7 @@
 // core/graph/draw.ts — a placed, routed graph drawn onto the canvas: node rows, frames, routes, labels.
 import { CAPS } from '../caps.ts'
 import { createCanvas } from '../canvas.ts'
+import { centerTitle } from '../title.ts'
 import type { Canvas, Drawing } from '../canvas.ts'
 import { labelLines, wrap } from '../text.ts'
 import type { Piece } from '../text.ts'
@@ -483,5 +484,6 @@ export function drawGraph(
   // Compaction keeps one row of a run of │ rows, so it can bring an end label's far terminal as near as its own: a
   // drawing
   // with end labels that compacts to an invalid one keeps its drawn size.
-  return out !== drawn && boxes.length > 0 && validate({ ...out, columns: Infinity }) !== null ? drawn : out
+  const kept = out !== drawn && boxes.length > 0 && validate({ ...out, columns: Infinity }) !== null ? drawn : out
+  return centerTitle(kept)
 }

@@ -24,6 +24,7 @@ export type Span = {
   backgroundColor?: Color
   bold?: boolean
   italic?: boolean
+  underline?: boolean
   dimColor?: boolean
 }
 export type Rows = Span[][]
@@ -117,6 +118,11 @@ function cellSpan(cell: Cell, p: Palette): Span {
     span.bold = true
   }
 
+  // A title is underlined too: underline shows on every terminal, where bold alone may only brighten the color.
+  if (cell.role === 'title') {
+    span.underline = true
+  }
+
   if ((cell.em ?? 0) & ITALIC) {
     span.italic = true
   }
@@ -134,6 +140,7 @@ const sameStyle = (a: Span, b: Span): boolean =>
   a.backgroundColor === b.backgroundColor &&
   a.bold === b.bold &&
   a.italic === b.italic &&
+  a.underline === b.underline &&
   a.dimColor === b.dimColor
 
 // Each row as spans: cont cells skipped, each missing cell a blank space with no role, neighbours of one role and style

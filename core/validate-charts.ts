@@ -4,6 +4,7 @@
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
+import { bodyWidth, titleColumn, titleRows } from './title.ts'
 import type { Spot } from './validate-cells.ts'
 import { at, norm, owns } from './validate-cells.ts'
 
@@ -332,6 +333,23 @@ export function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
 // C: each label stated at a cell is drawn there: the first text cell its owner draws as owners[0], in reading order, is
 // that cell. So text that only its place gives meaning (an axis tick, a category, a header, a legend part) cannot move
 // or swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its
+// Whether each row the title draws on alone starts at its centered column: half the room the rest of the drawing
+// leaves beside it. A row the title shares with another cell is not checked, as it isn't moved.
+function titleCentered(d: Drawing): boolean {
+  const rows = titleRows(d.cells)
+  const body = bodyWidth(d.cells, rows)
+  return rows.every((r) => {
+    const row = d.cells[r]!
+    if (!row.every((x) => x === null || x.owners[0] === 'title')) {
+      return true
+    }
+
+    const first = row.findIndex((x) => x !== null)
+    const shown = row.findLastIndex((x) => x !== null) + 1 - first
+    return first === titleColumn(body, shown)
+  })
+}
+
 // title first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
 export function places(d: Drawing, all: readonly Spot[]): Fail | null {
   const first = new Map<string, Spot>()
@@ -341,8 +359,10 @@ export function places(d: Drawing, all: readonly Spot[]): Fail | null {
     }
   }
 
+  // A diagram's title heads the drawing: it starts on the top row, and each row it draws on, when it draws alone there,
+  // is centered over the rest of the drawing, as Mermaid centers it.
   const title = first.get('title')
-  if (title && title.cell.role === 'title' && (title.r !== 0 || title.c !== 0)) {
+  if (title && title.cell.role === 'title' && (title.r !== 0 || !titleCentered(d))) {
     return fail('label-misplaced')
   }
 

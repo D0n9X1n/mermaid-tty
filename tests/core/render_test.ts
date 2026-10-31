@@ -153,7 +153,7 @@ test('A7: toRows merges neighbours of one role and style, skips cont cells, trim
     ],
     [],
     [{ text: ' ' }, { text: '──', role: 'edge', color: n.edge }, { text: 'yes', role: 'label', color: n.label }],
-    [{ text: 'Ti', role: 'title', color: n.title, bold: true }],
+    [{ text: 'Ti', role: 'title', color: n.title, bold: true, underline: true }],
     [
       { text: '{', role: 'decision', color: n.decision },
       { text: '?', role: 'decision', color: on, backgroundColor: n.decision },

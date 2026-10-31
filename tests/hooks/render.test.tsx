@@ -159,3 +159,21 @@ test(
     ]).toEqual([true, true])
   },
 )
+
+// A diagram's title reaches the engine bold and underlined, and centered: underline shows on every terminal, where
+// bold alone may only brighten the color.
+for (const theme of ['default', 'mono'] as const) {
+  test(
+    `a title draws bold and underlined, centered over the diagram (${theme})`,
+    { options: { theme } },
+    async ($, on) => {
+      capture(on)
+      const ui = await mount($, '```mermaid\n---\ntitle: Go\n---\nflowchart LR\nAlpha --> Beta --> Gamma\n```\n')
+      const texts = await ui.findAll({ type: 'Text' })
+      const title = texts.find((x: any) => x.text === 'Go' && x.props.wrap === undefined)
+      expect([title?.props.bold, title?.props.underline]).toEqual([true, true])
+      const row = texts.find((x: any) => x.props.wrap === 'truncate-end' && x.text.includes('Go'))
+      expect(row?.text.indexOf('Go')).toBeGreaterThan(0)
+    },
+  )
+}

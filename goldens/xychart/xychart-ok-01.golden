@@ -1,5 +1,5 @@
 @60
-Sales Revenue
+                       Sales Revenue
 jan a ██████▉                                           5000
     ●       ●                                           5000
 feb a █████████████▊                                    6000
@@ -28,7 +28,7 @@ dec a █████████████▊                                
       4000                                       11000
 Revenue (in $)
 @60 roles
-TTTTTTTTTTTTT
+                       TTTTTTTTTTTTT
 LLL l 1111111                                           VVVV
     l       2                                           VVVV
 LLL l 11111111111111                                    VVVV
@@ -57,7 +57,7 @@ LLL l 11111111111111                                    VVVV
       VVVV                                       VVVVV
 LLLLLLLLLLLLLL
 @80
-Sales Revenue
+                                 Sales Revenue
 Revenue (in $)
 11000 ┤                               ▃▃▃▃● ████● ▁▁▁▁●
       │                         ▂▂▂▂● ████  ████  ████
@@ -72,7 +72,7 @@ Revenue (in $)
 a        5000  6000  7500  8200  9500 10500 11000 10200  9200  8500  7000  6000
 ●        5000  6000  7500  8200  9500 10500 11000 10200  9200  8500  7000  6000
 @80 roles
-TTTTTTTTTTTTT
+                                 TTTTTTTTTTTTT
 LLLLLLLLLLLLLL
 VVVVV f                               11112 11112 11112
       f                         11112 1111  1111  1111
@@ -87,7 +87,7 @@ VVVVV f                               11112 11112 11112
 L        VVVV  VVVV  VVVV  VVVV  VVVV VVVVV VVVVV VVVVV  VVVV  VVVV  VVVV  VVVV
 L        VVVV  VVVV  VVVV  VVVV  VVVV VVVVV VVVVV VVVVV  VVVV  VVVV  VVVV  VVVV
 @120
-Sales Revenue
+                                 Sales Revenue
 Revenue (in $)
 11000 ┤                               ▃▃▃▃● ████● ▁▁▁▁●
       │                         ▂▂▂▂● ████  ████  ████
@@ -102,7 +102,7 @@ Revenue (in $)
 a        5000  6000  7500  8200  9500 10500 11000 10200  9200  8500  7000  6000
 ●        5000  6000  7500  8200  9500 10500 11000 10200  9200  8500  7000  6000
 @120 roles
-TTTTTTTTTTTTT
+                                 TTTTTTTTTTTTT
 LLLLLLLLLLLLLL
 VVVVV f                               11112 11112 11112
       f                         11112 1111  1111  1111

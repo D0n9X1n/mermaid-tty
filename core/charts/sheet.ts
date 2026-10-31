@@ -3,6 +3,7 @@ import { createCanvas, type Cell, type Conflict, type Drawing } from '../canvas.
 import type { Fail } from '../fail.ts'
 import { fail } from '../fail.ts'
 import { labelLines, wrap, type Piece } from '../text.ts'
+import { centerTitle } from '../title.ts'
 import type { Ink } from '../themes.ts'
 import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
@@ -62,7 +63,7 @@ export function stack(parts: readonly Drawing[], columns: number): Drawing {
     }
   }
 
-  return { columns, cells, conflicts, expect: merge(expects) }
+  return centerTitle({ columns, cells, conflicts, expect: merge(expects) })
 }
 
 // A part's expect as it sits dr rows down: an entry's at, in any field (a key's, a label's, a bar's, a glyph's), names

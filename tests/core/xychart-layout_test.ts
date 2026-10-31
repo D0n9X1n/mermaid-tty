@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'
-import { text } from './graph-fixture.ts'
+// text reads a title row from its first character; tests/core/title_test.ts checks the title is centered.
+import { untitled as text } from './graph-fixture.ts'
 import { validate } from '../../core/validate.ts'
 import { xychart } from '../../core/diagrams/xychart/layout.ts'
 import { readSource } from '../../core/source.ts'
