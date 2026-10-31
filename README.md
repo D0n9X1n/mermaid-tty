@@ -155,6 +155,15 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **Can diagrams show as images?** Yes, in kitty, Ghostty and SonicTerm, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on.
 
+**Can images show inside tmux or RMUX?** Not yet; you keep the text drawing there. tmux and RMUX forward a kitty image only when it arrives wrapped in their passthrough sequence, and only with passthrough allowed:
+
+```tmux
+# ~/.tmux.conf, or rmux.conf for RMUX
+set -g allow-passthrough on
+```
+
+Claude Code 2.1.309 sends its kitty image uploads unwrapped inside tmux, so the multiplexer drops them before they reach the terminal. With `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` the picture's cells still arrive, but they show blank. mermaid-tty therefore keeps text inside tmux, screen and Zellij until Claude Code wraps those uploads. Start Claude Code outside the multiplexer to see pictures.
+
 **Which platforms and terminals work?** macOS, Linux and Windows, in any terminal Claude Code supports: Windows Terminal; macOS Terminal, iTerm2 and Ghostty; and Linux terminals. Truecolor terminals show the palettes exactly; 256-color terminals use their available colors. Use a monospaced font with box-drawing and geometric-shape glyphs, plus a CJK font for CJK labels. Keep ambiguous-width characters set to one column so lines meet.
 
 ## Development

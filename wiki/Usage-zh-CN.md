@@ -123,6 +123,8 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。
 
+在 tmux 或 RMUX 中保留文本绘制。只有当 kitty 图像包裹在它们的透传序列中、且配置里有 `set -g allow-passthrough on` 时，二者才会转发该图像；但 Claude Code 2.1.309 在其中发送的图像上传未经包裹，因此会被多路复用器丢弃。即使设置 `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1`，图片的单元格仍会到达但显示为空白，所以 mermaid-tty 在 tmux、screen 和 Zellij 中保留文本。要看到图片，请在多路复用器之外启动 Claude Code。
+
 ## 回退
 
 无法准确绘制时，mermaid-tty 原样显示代码块，不会给出残缺或近似的图。以下情况会回退：

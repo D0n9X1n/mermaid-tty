@@ -123,6 +123,8 @@ You keep the text drawing, or the source when the text renderer can't draw it, w
 
 `claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings everywhere; `/mermaid-tty diagram` turns pictures back on. `/copy` still copies the source.
 
+Inside tmux or RMUX you keep the text drawing. Both forward a kitty image only when it arrives wrapped in their passthrough sequence and `set -g allow-passthrough on` is in their config, but Claude Code 2.1.309 sends its image uploads unwrapped there, so the multiplexer drops them. With `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` the picture's cells still arrive and show blank, so mermaid-tty keeps text inside tmux, screen and Zellij. Start Claude Code outside the multiplexer to see pictures.
+
 ## Fallback
 
 When mermaid-tty can't draw a diagram exactly, it shows the original code block, unchanged. It never shows a partial or approximate drawing. A diagram falls back when:
