@@ -36,15 +36,19 @@ const FAQ = [
   /\/mermaid-tty diagram/,
   /\/copy\b/,
 ]
+// The diagram types the README's Supported diagrams table lists: the backquoted name opening each row.
 export const supportedTypes = (md: string) =>
   [...(section(md, 'Supported diagrams') ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!)
 // B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram
 // list.
 export const NON_DIAGRAM = ['assets/icon.svg']
+// The assets/ images md displays, each as its path from assets/ on, whether written relative or as a full URL; any
+// other image is not one of ours.
 export const assetImages = (md: string) =>
   all(parse(md), 'image')
     .map((i) => i.url!.replace(/^.*?(?=assets\/)/, ''))
     .filter((p) => p.startsWith('assets/'))
+// Each assets/ image md displays that is neither a rendered diagram nor on NON_DIAGRAM: a stale or hand-made picture.
 export const imageErrors = (where: string, md: string, diagrams: string[]) =>
   assetImages(md)
     .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p))
@@ -60,6 +64,8 @@ const PAGE = /^[A-Za-z0-9-]+$/
 const REFS = ['linkReference', 'imageReference', 'definition', 'footnoteReference', 'footnoteDefinition']
 const BADGE_HOSTS = ['https://img.shields.io/', 'https://github.com/D0n9X1n/mermaid-tty/actions/']
 const LINK_HOSTS = ['github.com', 'mermaid.js.org', 'docs.anthropic.com']
+// Whether link target t may stand: in the README its two wiki pages or LICENSE, in the wiki a page name; anywhere, an
+// https URL on an allowed host whose rest holds no %, &, \, // or /wiki, which could reach another site or page.
 function linkOk(t: string, readme: boolean): boolean {
   if (readme ? [`${REPO}/wiki`, `${REPO}/wiki/Home-zh-CN`, 'LICENSE'].includes(t) : PAGE.test(t)) {
     return true
@@ -69,6 +75,7 @@ function linkOk(t: string, readme: boolean): boolean {
   return !!host && LINK_HOSTS.includes(host) && !/[%&\\]|\/\/|\/wiki/i.test(t.slice(8))
 }
 
+// Where the first ## heading starts, or the end of md when there is none: the hero is everything before it.
 const firstH2 = (tree: Node, md: string) =>
   all(tree, 'heading').find((h) => h.depth === 2)?.position!.start.offset ?? md.length
 export function grammarErrors(where: string, md: string, readme: boolean): string[] {
@@ -136,6 +143,9 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
   })
   return e
 }
+// B1: what the README must hold, read from the GFM tree: the hero (logo, tagline, badges) before the first ##, the
+// install block, every section and FAQ answer, both wiki links, every generated image, and the local commands; and
+// what it must not: hand-drawn diagram glyphs, the ctrl+o claim, or anything grammarErrors rejects.
 export function readmeErrors(md: string, generated: string[]): string[] {
   const e: string[] = []
   const tree = parse(md)
@@ -220,6 +230,7 @@ export function readmeErrors(md: string, generated: string[]): string[] {
 // The wiki is the only documentation: a docs/ folder at the repo root would be a second copy that drifts from it.
 export const docsFolderErrors = (hasDocs: boolean) =>
   hasDocs ? ['docs/: documentation lives in wiki/; there is no docs/ folder'] : []
+// B6: the icon must be a PNG, by its signature and IHDR chunk, 512×512 as IHDR's width and height say, and under 2 MB.
 export function iconErrors(png: Uint8Array): string[] {
   const sig = [137, 80, 78, 71, 13, 10, 26, 10]
   if (png.length < 24 || sig.some((b, i) => png[i] !== b) || String.fromCharCode(...png.subarray(12, 16)) !== 'IHDR') {

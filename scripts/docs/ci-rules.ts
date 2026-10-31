@@ -15,16 +15,25 @@ type Job = {
   'runs-on'?: string
   permissions?: Record<string, string>
 }
+// A job's steps that are objects; none when it has no steps list. A malformed step is skipped here, so the rule that
+// needs it reports it missing rather than throwing.
 const steps = (job?: Job): Step[] =>
   Array.isArray(job?.steps) ? job.steps.filter((s) => s && typeof s === 'object') : []
+// Every job of a workflow; none when it has no jobs map.
 const jobs = (value: any): Job[] => Object.values(value?.jobs ?? {})
+// Whether a step of job runs command. A string must be one whole line of a run script, trimmed, so a command that only
+// appears inside a longer line does not count; a regex is tested against the whole script, and anchors with /m.
 const hasRun = (job: Job, command: string | RegExp) =>
   steps(job).some(
     (s) =>
       typeof s?.run === 'string' &&
       (typeof command === 'string' ? s.run.split('\n').some((line) => line.trim() === command) : command.test(s.run)),
   )
+// Whether s uses actions/<name> pinned to a full commit SHA: a tag or branch could move under the workflow.
 const action = (s: Step, name: string) => new RegExp(`^actions/${name}@[0-9a-f]{40}$`).test(s?.uses ?? '')
+// The rules every cross-platform job meets: each of the three OSes runs to the end even when another fails, on Node 24
+// from the pinned setup action, with an exact Claude Code version from npm. The versions job takes all but the last,
+// as it installs the version under test.
 const MATRIX: [string, (j: Job) => unknown][] = [
   ['fail-fast: false', (j) => j.strategy?.['fail-fast'] === false],
   [
@@ -38,6 +47,8 @@ const MATRIX: [string, (j: Job) => unknown][] = [
   ],
   ['pinned Claude Code from npm', (j) => hasRun(j, /^npm install -g @anthropic-ai\/claude-code@\d+\.\d+\.\d+\s*$/m)],
 ]
+// ci.yml's problems: unreadable YAML, then each missing rule. It runs on every push and pull request with a read-only
+// token, cancels superseded runs, and its check, e2e and gallery jobs each run their own scripts.
 export function ciErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('ci.yml', yml)
   const w = value as any
@@ -112,6 +123,8 @@ export function ciErrors(yml: string): string[] {
       ['gallery render', (j) => hasRun(j, /^node scripts\/render-gallery\.ts(?:\s|$)/)],
       ['artifact upload', (j) => steps(j).some((s) => action(s, 'upload-artifact'))],
     ]),
+    // npm ci only where its tooling runs: e2e installs scripts/e2e and check scripts/docs; any other install would put
+    // packages in a job that runs none of them.
     ...Object.entries(w?.jobs ?? {}).flatMap(([name, job]) =>
       steps(job as Job)
         .filter(
@@ -127,6 +140,9 @@ export function ciErrors(yml: string): string[] {
     ),
   ]
 }
+// release.yml's problems: unreadable YAML, then each missing rule. A v* tag publishes only once the wiki for that
+// commit has published and the tag matches plugin.json; the notes come from the tag's own history and are checked
+// once published, then A9 runs against the copy installed from the marketplace.
 export function releaseErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('release.yml', yml)
   const w = value as any

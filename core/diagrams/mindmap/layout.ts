@@ -37,11 +37,25 @@ type At = { p: Pill; r: number; c: number }
 const series = (n: number): SeriesKey => `s${(n % 8) + 1}` as SeriesKey
 const link = (p: Pill): string => `m${p.node.k}:link`
 
+// The ink of a pill at depth, the i-th child of parent: the root inks node; under colorBy branch each top-level branch
+// the next series, and deeper pills their branch's; under depth each depth its own.
+function inkAt(m: Mindmap, parent: Pill | null, depth: number, i: number): Ink {
+  if (!parent) {
+    return 'node'
+  }
+
+  if (m.colorBy === 'depth') {
+    return series(depth - 1)
+  }
+
+  return depth === 1 ? series(i) : parent.ink
+}
+
 // The pills of node's subtree, the i-th child of parent, labels wrapped at max; 'too-wide' if a word is wider than max.
 // The root inks node; under colorBy branch each top-level branch the next series, under depth each depth its own.
 function pills(m: Mindmap, node: MNode, parent: Pill | null, i: number, max: number): Pill | Fail {
   const depth = parent ? parent.depth + 1 : 0
-  const ink: Ink = !parent ? 'node' : m.colorBy === 'depth' ? series(depth - 1) : depth === 1 ? series(i) : parent.ink
+  const ink = inkAt(m, parent, depth, i)
   const rows: Piece[] = []
   for (const [j, line] of node.lines.entries()) {
     const ps = wrap(line, max)

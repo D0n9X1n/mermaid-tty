@@ -102,7 +102,14 @@ function tokens(t: string, n: number): Token[] {
       stop(`syntax:${n}`)
     }
 
-    out.push(m[1] ? { key: m[1] } : m[2] !== undefined ? { str: m[2] } : { word: m[3]! })
+    if (m[1]) {
+      out.push({ key: m[1] })
+    } else if (m[2] !== undefined) {
+      out.push({ str: m[2] })
+    } else {
+      out.push({ word: m[3]! })
+    }
+
     i = TOKEN.lastIndex
   }
 

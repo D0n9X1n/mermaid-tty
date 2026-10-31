@@ -48,7 +48,11 @@ export const div = (a: Dec, b: Dec): Dec | null => (b.n === 0n ? null : make(a.n
 export function cmp(a: Dec, b: Dec): -1 | 0 | 1 {
   const l = a.n * b.d
   const r = b.n * a.d
-  return l < r ? -1 : l > r ? 1 : 0
+  if (l === r) {
+    return 0
+  }
+
+  return l < r ? -1 : 1
 }
 
 // BigInt division truncates toward 0; the remainder's sign corrects it toward −∞ or +∞.

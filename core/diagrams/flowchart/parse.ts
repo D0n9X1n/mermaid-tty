@@ -270,10 +270,8 @@ function edgeData(s: string, st: State): boolean {
 }
 
 // Opens the subgraph header s declares: `subgraph id`, `subgraph id [title]` (title "…" or not), or `subgraph "title"`,
-// whose
-// title is also its id. null, or why it fails: 'syntax' for any other form, a blank title, or an id that a subgraph or
-// a
-// node with a shape, a label or an @{…} already has; or the title's label Fail.
+// whose title is also its id. null, or why it fails: 'syntax' for any other form, a blank title, or an id that a
+// subgraph or a node with a shape, a label or an @{…} already has; or the title's label Fail.
 function openSubgraph(s: string, st: State): Fail | null {
   const m = SUBGRAPH.exec(s)
   if (!m) {
@@ -293,7 +291,13 @@ function openSubgraph(s: string, st: State): Fail | null {
     return fail('syntax')
   }
 
-  const raw = name === undefined ? quoted! : c ? rest.slice(1, c.at) : name
+  let raw: string
+  if (name === undefined) {
+    raw = quoted!
+  } else {
+    raw = c ? rest.slice(1, c.at) : name
+  }
+
   // Mermaid keeps any other backquote in the id or title (subgraph "A`" is id A`), so only "`…`" around it all is read.
   if (raw.includes('`') && !/^"`[^`"]+`"$/.test(raw)) {
     return fail('syntax')
@@ -704,9 +708,8 @@ function label(raw: string, br: Br = 'any', token = true, edge = false): string 
 }
 
 // An edge label as label reads it (edge: Mermaid makes each <br> a newline before marked, styled's breaks), but null if
-// it
-// is blank: a blank label would draw no cells. A blank line in it fails,
-// as splitLabel says, so one of only <br/> fails too.
+// it is blank: a blank label would draw no cells. A blank line in it fails, as splitLabel says, so one of only <br/>
+// fails too.
 function edgeLabel(raw: string, token: boolean): string | null | Fail {
   const t = label(raw, 'any', token, true)
   if (isFail(t)) {
@@ -714,7 +717,11 @@ function edgeLabel(raw: string, token: boolean): string | null | Fail {
   }
 
   const ls = splitLabel(t)
-  return isFail(ls) ? ls : t.trim() ? t : null
+  if (isFail(ls)) {
+    return ls
+  }
+
+  return t.trim() ? t : null
 }
 
 // A label's lines, split at each <br>. A blank line among two or more, from consecutive <br/> or one leading or

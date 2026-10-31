@@ -43,7 +43,11 @@ function wantsLead(messages: unknown): boolean {
   }
 
   const content = messages.findLast((m) => m?.role === 'user')?.content
-  const texts = typeof content === 'string' ? [content] : Array.isArray(content) ? content.map((b) => b?.text) : []
+  if (typeof content === 'string') {
+    return content.includes('lead')
+  }
+
+  const texts = Array.isArray(content) ? content.map((b) => b?.text) : []
   return texts.some((t) => typeof t === 'string' && t.includes('lead'))
 }
 

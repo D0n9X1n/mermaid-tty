@@ -452,7 +452,7 @@ test(
 )
 
 test(
-  'A9.harness: with its live tmux socket unlinked, stop() still kills the server whose pid it recorded, and the program',
+  'A9.harness: with its live tmux socket unlinked, stop() still kills the server by its recorded pid, and the program',
   { skip: SKIP.tmux },
   async () => {
     const s = await start('tmux')

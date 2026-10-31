@@ -23,7 +23,13 @@ const hex = (c: string) => {
 // Plan A's spans carry resolved colors (a CC ThemeKey or #rrggbb; none under mono; dimColor for mono notes); keys
 // resolve through DARK (D2).
 export function spanStyle(sp: Span): Omit<Styled, 'text'> {
-  const fg = sp.dimColor ? DARK.inactive! : sp.color ? hex(sp.color) : DARK.text!
+  let fg = DARK.text!
+  if (sp.dimColor) {
+    fg = DARK.inactive!
+  } else if (sp.color) {
+    fg = hex(sp.color)
+  }
+
   return {
     fg,
     ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}),

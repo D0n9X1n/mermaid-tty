@@ -32,7 +32,13 @@ export function drawnDiagrams(reply: string, columns: number, theme: string): st
     return [
       r.drawing.cells.map((row) =>
         row
-          .map((c) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch))
+          .map((c) => {
+            if (c === null) {
+              return ' '
+            }
+
+            return c.kind === 'cont' ? '' : c.ch
+          })
           .join('')
           .trimEnd(),
       ),

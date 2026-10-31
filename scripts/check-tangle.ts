@@ -71,9 +71,8 @@ const count = (k: number, word: string): string => `${k} ${word}${k === 1 ? '' :
 const typeOf = (id: string): string => id.slice(0, id.indexOf('-'))
 
 // The report on blocks under label: a line of counts, then each hit, each id that hit once, or nothing more, as show
-// says.
-// 'types' is 'hits' with a <type>: <n> ok line per type after the counts, in first-seen order: n counts its blocks with
-// no hit.
+// says. 'types' is 'hits' with a <type>: <n> ok line per type after the counts, in first-seen order: n counts its
+// blocks with no hit.
 export function report(
   label: string,
   blocks: readonly Block[],
@@ -88,7 +87,13 @@ export function report(
           (t) => `${t}: ${blocks.filter((b) => typeOf(b.id) === t && !hit.has(b.id)).length} ok`,
         )
       : []
-  const more = show === 'hits' || show === 'types' ? found.map((f) => f.hit) : show === 'ids' ? [...hit] : []
+  let more: string[] = []
+  if (show === 'hits' || show === 'types') {
+    more = found.map((f) => f.hit)
+  } else if (show === 'ids') {
+    more = [...hit]
+  }
+
   const head = `${label}: ${count(blocks.length, 'block')}, ${count(found.length, 'hit')} at 60, 80 and 120 columns`
   return { lines: [head, ...types, ...more.map((m) => `  ${m}`)], hits: found.length }
 }

@@ -65,6 +65,16 @@ export const puppeteerConfig = (columns: number) => ({
 // The Mermaid config mmdc gets with -c: securityLevel strict and the theme, nothing else.
 export const mermaidConfig = (look: Look) => ({ securityLevel: 'strict', theme: look })
 
+// The arguments that differ by mmdc's major version: before 12, -w sizes the page; from 12, an SVG gets
+// --no-font-embed, and a PNG nothing more.
+function versionArgs(o: { format: 'svg' | 'png'; columns: number; major: number }): string[] {
+  if (o.major < 12) {
+    return ['-w', String(o.columns * PAGE)]
+  }
+
+  return o.format === 'svg' ? ['--no-font-embed'] : []
+}
+
 // mmdc's argv for one run: an SVG or the PNG of the source on stdin, on the same page, config and look. mmdc before 12
 // takes -w; 12 removed it and sizes its page by the puppeteer config's defaultViewport, and embeds fonts in an SVG as
 // data: URLs unless told --no-font-embed.
@@ -95,7 +105,7 @@ export function mmdcArgs(o: {
     o.puppeteer,
     ...(o.format === 'png' ? ['-s', String(SCALE)] : []),
     '-q',
-    ...(o.major < 12 ? ['-w', String(o.columns * PAGE)] : o.format === 'svg' ? ['--no-font-embed'] : []),
+    ...versionArgs(o),
   ]
 }
 
@@ -136,7 +146,15 @@ export async function pictureLook($: any, s: Pictures, theme: string): Promise<L
 
   try {
     const v = (await $.config.list()).find((r: any) => r.key === 'theme')?.value
-    return typeof v !== 'string' ? null : v.startsWith('dark') ? 'dark' : v.startsWith('light') ? 'default' : null
+    if (typeof v !== 'string') {
+      return null
+    }
+
+    if (v.startsWith('dark')) {
+      return 'dark'
+    }
+
+    return v.startsWith('light') ? 'default' : null
   } catch {
     return null
   }

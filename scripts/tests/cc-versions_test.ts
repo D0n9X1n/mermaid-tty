@@ -7,7 +7,7 @@ test('unrecorded stable versions after the first recorded one, oldest first; pre
   assert.deepEqual(untested(P, []), ['2.1.310'])
   assert.deepEqual(untested(P, ['2.1.306'], 2), ['2.1.307', '2.1.308'])
 })
-test('a failing version is recorded and never stalls later ones (tested 2.1.0; 2.1.0–2.1.21 published; 2.1.1 fails)', () => {
+test('a failing version is recorded and never stalls the rest (tested 2.1.0; 2.1.0–2.1.21 out; 2.1.1 fails)', () => {
   const pub = Array.from({ length: 22 }, (_, i) => `2.1.${i}`)
   const ok = { 'ubuntu-latest': 'success', 'macos-latest': 'success', 'windows-latest': 'success' }
   let tested = '2.1.0 pass\n'
@@ -24,7 +24,7 @@ test('a missing leg fails the version; a retried result replaces its line', () =
   assert.equal(verdict({ 'ubuntu-latest': 'success', 'macos-latest': 'success' }), 'fail')
   assert.equal(record('2.1.1 fail\n2.1.2 pass\n', { '2.1.1': 'pass' }), '2.1.2 pass\n2.1.1 pass\n')
 })
-test('the CLI lists untested versions, retries one, and records every selected version with a missing leg as fail', async () => {
+test('the CLI lists untested versions, retries one, records every selected version missing a leg as fail', async () => {
   const { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } = await import('node:fs')
   const { spawnSync } = await import('node:child_process')
   const { tmpdir } = await import('node:os')
