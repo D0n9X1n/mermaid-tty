@@ -1,6 +1,5 @@
-// A level's items and segments (plan A §7.1–3): its units on their longest-path ranks, a label node on the middle rank
-// of a
-// labelled edge, and a dummy on every other rank an edge spans. A back edge is reversed, its ends swapped.
+// A level's items and segments: its units on their longest-path ranks, a label node on the middle rank of a labelled
+// edge, and a dummy on every other rank an edge spans. A back edge is reversed, its ends swapped.
 import type { GEdge } from './model.ts'
 import { backLinks, longestPath } from './ranks.ts'
 import type { Link } from './ranks.ts'
@@ -50,8 +49,16 @@ export function buildLevel(
   const out = edges.map((e) => (back.has(e.id) ? swap(e) : e))
   for (const e of out) {
     const lo = rank.get(e.from)!
-    const span = e.from === e.to ? (e.label === null ? 0 : 1) : rank.get(e.to)! - lo
-    const mid = e.label === null ? -1 : e.from === e.to ? 1 : Math.floor(span / 2)
+    const loop = e.from === e.to
+    const labelled = e.label !== null
+    // A self-loop spans one rank only to hold its label, on that rank. Any other edge's label sits on its middle rank;
+    // an edge with no label has no label rank (-1).
+    const span = loop ? Number(labelled) : rank.get(e.to)! - lo
+    let mid = -1
+    if (labelled) {
+      mid = loop ? 1 : Math.floor(span / 2)
+    }
+
     const own = common(owner.get(e.from) ?? null, owner.get(e.to) ?? null)
     let prev = e.from
     for (let k = 1; k < span || k === mid; k++) {
