@@ -105,7 +105,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 在能显示像素的终端里，mermaid-tty 可以把图表绘制成 Mermaid 自身渲染的图片。需要同时满足：
 
-- **kitty、Ghostty 或 SonicTerm**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，或 `TERM_PROGRAM` 为 `SonicTerm` 且 `TERM` 为它设置的 `xterm-256color`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。从这些终端内部启动的其他终端不算。
+- **kitty、Ghostty 或 SonicTerm**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，或 `TERM_PROGRAM` 为 `SonicTerm` 且 `TERM` 为它设置的 `xterm-256color`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。从这些终端内部启动的其他终端不算，包括保留 SonicTerm 的 `TERM_PROGRAM`、但设置了自身标记（如 `VTE_VERSION`）的终端。
 - PATH 上有 **mermaid-cli** 11 或 12：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
 
 新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。

@@ -16,6 +16,18 @@ test('A6.hook-tests: pixels in SonicTerm, which keeps TERM=xterm-256color and dr
     [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', OS: 'Windows_NT' }, false], // Windows panes take another path
     [{ TERM: 'xterm-256color', TERM_PROGRAM: 'vscode' }, false], // a terminal started inside SonicTerm sets its own
     [{ TERM: 'vt100', TERM_PROGRAM: 'SonicTerm' }, false], // only the TERM SonicTerm sets
+    // A terminal started inside SonicTerm that keeps its TERM_PROGRAM still marks itself: VTE (xfce4-terminal copies
+    // TERM_PROGRAM), Konsole, Alacritty, kitty, WezTerm, Windows Terminal, Terminator, Tilix, GNOME Terminal, iTerm2.
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', VTE_VERSION: '7800' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', KONSOLE_VERSION: '240802' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', ALACRITTY_WINDOW_ID: '1' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', KITTY_WINDOW_ID: '1' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', WEZTERM_PANE: '0' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', WT_SESSION: 'abc' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', TERMINATOR_UUID: 'urn:uuid:1' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', TILIX_ID: '1' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', GNOME_TERMINAL_SCREEN: '/org/gnome/1' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', ITERM_SESSION_ID: 'w0t0p0' }, false],
   ] as [Record<string, string>, boolean][]) {
     assert.equal(await showsPixels(env(vars)), want, JSON.stringify(vars))
   }
