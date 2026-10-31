@@ -95,7 +95,7 @@ Prettier (`.prettierrc.json`) uses single quotes, no semicolons, two-space inden
 | At most one blank line in a row, in comments too | `no-multiple-empty-lines` |
 | No line over 120 columns, unless a string, template, regex or URL crosses it | `max-len` |
 | No file over 1000 lines | `max-lines` |
-| No issue or PR number in a comment, string or test name | project rule |
+| No issue or PR number in a comment or test name, and no issue or PR link in any string | project rule |
 
 For the Python release scripts, `scripts/style/check_py.py` reads each file with Python's tokenizer and enforces one statement per line, no compound one-line statements, and the same line, file and citation limits. The release-notes tests hold real issue numbers as data and are exempt from the citation rule.
 

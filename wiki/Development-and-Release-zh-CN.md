@@ -95,7 +95,7 @@ Prettier（`.prettierrc.json`）使用单引号、不加分号、两个空格缩
 | 连续空行最多一行，注释中也一样 | `no-multiple-empty-lines` |
 | 每行不超过 120 列，除非是字符串、模板、正则或 URL 越过了限制 | `max-len` |
 | 每个文件不超过 1000 行 | `max-lines` |
-| 注释、字符串和测试名中不出现 issue 或 PR 编号 | 本项目规则 |
+| 注释和测试名中不出现 issue 或 PR 编号，任何字符串中不出现 issue 或 PR 链接 | 本项目规则 |
 
 对于 Python 发布脚本，`scripts/style/check_py.py` 用 Python 的分词器读取每个文件，要求一行一条语句、不写单行复合语句，并适用同样的行宽、文件长度和编号限制。发布说明的测试把真实 issue 编号当作数据，因此不受编号规则约束。
 

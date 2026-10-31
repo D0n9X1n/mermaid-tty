@@ -36,7 +36,7 @@ function main(args: string[]): number {
   const checked =
     step('prettier --check', [PRETTIER, '--log-level', 'warn', '--check', '.']) &&
     step('check-style', ['scripts/style/check-style.ts']) &&
-    step('style tests', ['--test', 'scripts/style/check-style.style-spec.ts'])
+    step('style tests', ['--test', 'scripts/style/check-style.style-spec.ts', 'scripts/style/rewrite.style-spec.ts'])
   return checked ? 0 : 1
 }
 

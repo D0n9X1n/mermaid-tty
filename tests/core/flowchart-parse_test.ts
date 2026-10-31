@@ -239,7 +239,7 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
 })
 
 // Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and
-// backquotes, joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style
+// backquotes, joined to any text after it, through marked. Emphasis draws (its test is below); an escape, a style
 // nested in itself or a block start falls back as any Markdown field's does.
 test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
   const g = P(

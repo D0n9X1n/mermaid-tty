@@ -213,8 +213,8 @@ const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
   // The pie's slice and outer ring strokes, up to Mermaid's 2px default. Slice labels are drawn after them, but wider
   // black strokes cover more of a thin slice's label (a 1% slice beside a 90% one: 21% of its box at 2px, 52% at 5px,
   // all of it at 20px, where the ring also reaches the title). Every colour falls back: any one can match the colour
-  // drawn under or over it (base's primaryTextColor equal to its primaryColor; a mainBkg of #333 under the default's
-  // #28253D text), so text vanishes. Text sizes fall back too: 0px hides text, and wrapLabel measures with them.
+  // drawn under or over it (base's primaryTextColor equal to its primaryColor; a dark grey mainBkg under the default's
+  // near-black text), so text vanishes. Text sizes fall back too: 0px hides text, and wrapLabel measures with them.
   'themeVariables.pieStrokeWidth': px(0.5, 2),
   'themeVariables.pieOuterStrokeWidth': px(0.5, 2),
 }

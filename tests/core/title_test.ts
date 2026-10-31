@@ -85,3 +85,48 @@ test('centerTitle leaves a drawing with no title, or a title as wide as the draw
   assert.ok('drawing' in plain)
   assert.equal(centerTitle(plain.drawing), plain.drawing)
 })
+
+test('a node, subgraph or edge named title is not the diagram title: only the title role moves', () => {
+  for (const src of [
+    'flowchart TD\ntitle["X"] --> A\nA --> N0 & N1',
+    'flowchart TD\nsubgraph title [Group]\nA --> B\nend\nB --> C & D',
+    'flowchart LR\nA -- title --> B',
+  ]) {
+    const d = explain(src, { columns: 80, theme: 'mono' })
+    assert.ok('drawing' in d, `${src}: ${(d as { reason?: string }).reason}`)
+  }
+})
+
+// A synthetic drawing: two title rows of different widths over a five-cell body, and a title row shared with a node.
+function sheet(rows: (string | null)[][]): Drawing {
+  const cell = (s: string | null) => {
+    if (s === null) {
+      return null
+    }
+
+    const [ch, owner, role] = s.split(':') as [string, string, string]
+    return { ch, kind: 'text', owners: [owner], role } as unknown as Drawing['cells'][number][number]
+  }
+
+  return {
+    columns: 20,
+    cells: rows.map((r) => r.map(cell)),
+    conflicts: [],
+    expect: { labels: [], edges: [], edgeLabels: [], frames: [] },
+  } as unknown as Drawing
+}
+
+test('each title row centers on its own width; a row the title shares with another cell stays put', () => {
+  const t = (ch: string) => `${ch}:title:title`
+  const n = (ch: string) => `${ch}:A:node`
+  const wrapped = centerTitle(
+    sheet([[t('L'), t('o'), t('n'), t('g')], [t('X')], [n('a'), n('b'), n('c'), n('d'), n('e'), n('f'), n('g')]]),
+  )
+  const first = (r: number) => wrapped.cells[r]!.findIndex((x) => x !== null)
+  assert.deepEqual([first(0), first(1)], [1, 3], 'a 4-wide row and a 1-wide row over 7 cells')
+  const shared = sheet([
+    [t('T'), null, n('a')],
+    [n('b'), n('c'), n('d'), n('e'), n('f'), n('g'), n('h')],
+  ])
+  assert.equal(centerTitle(shared), shared)
+})

@@ -49,9 +49,21 @@ const BODIES: Record<string, string[]> = {
   DoWhileStatement: ['body'],
 }
 
-// The edits for one file: braces around each unbraced body, and each multi-variable declaration split.
+// The edits for one file: braces around each unbraced body, and each multi-variable declaration split. A comment a
+// compiler or formatter applies to the line below it, which a split would leave covering only part of a declaration.
+const DIRECTIVE = /@ts-|prettier-ignore|eslint-|c8 |istanbul /
+
 function edits(ast: Node, source: string): Edit[] {
   const out: Edit[] = []
+  const comments = (ast.comments as Node[] | undefined) ?? []
+  const inComment = (at: number) => comments.some((c) => c.range[0] <= at && at < c.range[1])
+  // Whether a directive comment ends on the line just above the one that starts at offset.
+  const directed = (at: number) => {
+    const lineStart = source.lastIndexOf('\n', at - 1) + 1
+    const above = source.slice(source.lastIndexOf('\n', lineStart - 2) + 1, lineStart)
+    return DIRECTIVE.test(above) && /^\s*(?:\/\/|\/\*|\*)/.test(above)
+  }
+
   for (const { node, parent } of nodes(ast)) {
     for (const key of BODIES[node.type] ?? []) {
       const body = node[key] as Node | null
@@ -66,16 +78,27 @@ function edits(ast: Node, source: string): Edit[] {
       parent !== null &&
       ['ForStatement', 'ForInStatement', 'ForOfStatement'].includes(parent.type) &&
       (parent.init === node || parent.left === node)
-    if (node.type === 'VariableDeclaration' && declarations && declarations.length > 1 && !loopHeader) {
+    const statementStart = (parent?.type === 'ExportNamedDeclaration' ? parent : node).range[0]
+    const split = declarations && declarations.length > 1 && !loopHeader && !directed(statementStart)
+    if (node.type === 'VariableDeclaration' && split) {
       // Each declarator after the first starts its own statement with the same keyword. The comma before it, and the
       // space after the comma, become a line break; anything else between them, such as a comment, stays.
       const exported = parent?.type === 'ExportNamedDeclaration' && parent.declaration === node
       const keyword = source.slice((exported ? parent : node).range[0], declarations[0]!.range[0]).trim()
       for (let i = 1; i < declarations.length; i++) {
-        const gap = source.slice(declarations[i - 1]!.range[1], declarations[i]!.range[0])
-        const comma = gap.indexOf(',')
-        const from = declarations[i - 1]!.range[1] + comma
-        out.push({ at: from, end: from + 1, text: `\n${keyword} ` })
+        // The comma between them is the first one outside a comment: a comment's own commas are its text.
+        let from = declarations[i - 1]!.range[1]
+        while (from < declarations[i]!.range[0] && (source[from] !== ',' || inComment(from))) {
+          from++
+        }
+
+        // The comma and the spaces after it become a line break and the keyword.
+        let end = from + 1
+        while (source[end] === ' ' || source[end] === '\t') {
+          end++
+        }
+
+        out.push({ at: from, end, text: `\n${keyword} ` })
       }
     }
   }

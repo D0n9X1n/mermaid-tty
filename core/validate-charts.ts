@@ -340,7 +340,7 @@ function titleCentered(d: Drawing): boolean {
   const body = bodyWidth(d.cells, rows)
   return rows.every((r) => {
     const row = d.cells[r]!
-    if (!row.every((x) => x === null || x.owners[0] === 'title')) {
+    if (!row.every((x) => x === null || (x.role === 'title' && x.owners[0] === 'title'))) {
       return true
     }
 

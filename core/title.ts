@@ -3,8 +3,9 @@
 // result on its own, the same way: each title row's first cell at half the gap between its text and the drawing.
 import type { Cell, Drawing } from './canvas.ts'
 
-// The cells a drawing's title owns as owners[0]: its text and the cont cells of its wide characters.
-const isTitle = (x: Cell | null): boolean => x !== null && x.owners[0] === 'title'
+// The cells of the drawing's title: its text and the cont cells of its wide characters, drawn in the title role. A
+// node, subgraph or edge whose id is 'title' draws in its own role, so it is never taken for the title.
+const isTitle = (x: Cell | null): boolean => x !== null && x.role === 'title' && x.owners[0] === 'title'
 
 // The rows the title draws on: each row with a title text cell. Empty if the drawing has no title.
 export function titleRows(cells: readonly (readonly (Cell | null)[])[]): number[] {

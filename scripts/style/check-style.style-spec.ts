@@ -103,8 +103,8 @@ test('spec-reference: comments state the fact, not a label of a spec or task the
     'plan A',
     'spec C rule 5',
     '§6',
-    'T17',
-    'D15c',
+    '(T17)',
+    'see D15c.',
     'X3.',
     'V6:',
     'common rule 5',
@@ -129,5 +129,38 @@ test('spec-reference: comments state the fact, not a label of a spec or task the
     'flow.jison rule 108',
   ]) {
     assert.ok(!citesSpec(text), text)
+  }
+})
+
+test('issue-number: a hash and a number in prose is a citation, a color only where a color goes', async () => {
+  // Three digits after a hash read as an issue in prose; only a CSS color property or a whole color string is a color.
+  assert.ok(citesIssue('See #123 for details.'))
+  assert.ok(!citesIssue('fill:#123'))
+  assert.ok(!citesIssue('#abc'))
+  assert.ok(!citesIssue('stroke: #282828 and color:#fff'))
+})
+
+test('issue-number: test names in templates, and links to an issue or pull request in any string', async () => {
+  assert.deepEqual(await rules('test(`draws a box (#17)`, () => {})\n'), ['1 issue-number'])
+  assert.deepEqual(await rules("it('fixes #3', () => {})\n"), ['1 issue-number'])
+  const link = "const a = 'see https://github.com/o/r/issues/4'\nconst b = `see /pull/9 now`\n"
+  assert.deepEqual(await rules(link), ['1 issue-number', '2 issue-number'])
+  assert.deepEqual(await rules("const label = 'Team #1'\n"), [], 'a hash and a number in data is not a citation')
+})
+
+test('spec-reference: words that only look like labels are not citations', () => {
+  for (const text of ['Run the CI matrix on every platform.', 'S3 stores the images.', 'X11 forwarding', 'a V8 heap']) {
+    assert.ok(!citesSpec(text), text)
+  }
+
+  for (const text of [
+    '(X3)',
+    'X3. A text cell',
+    'see V6:',
+    '(D15c)',
+    'the diagram matrix',
+    "the matrix's tick steps",
+  ]) {
+    assert.ok(citesSpec(text), text)
   }
 })

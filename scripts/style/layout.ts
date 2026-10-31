@@ -123,6 +123,9 @@ const PARTS = /^(\s*(?:\/\/|\*)\s?)(\s*)(.*)$/
 const STARTS_BLOCK = /^(?:[-*•]\s|\d+[.)]\s|\||```|$)/
 // Aligned columns or box drawing: a comment laid out by hand, left exactly as written.
 const LAID_OUT = /\S {3,}\S|[─│┌┐└┘├┤┬┴┼━┃]/
+// A comment a compiler or formatter reads: it applies to the line below it, so it keeps its own line, never joined to
+// prose or wrapped.
+export const DIRECTIVE = /^\s*(?:\/\/|\*)\s*(?:@ts-|prettier-ignore|eslint-|c8 |istanbul |@vitest-|@jsx)/
 
 // Comment lines refilled as paragraphs: each run of `//` (or ` *`) lines with one prefix and no deeper indent is joined
 // and wrapped again at the limit, so no line holds a stray word cut from the one above. Lists, tables, code, indented
@@ -132,7 +135,7 @@ export function refill(lines: readonly string[], inComment: (n: number) => boole
   let i = 0
   while (i < lines.length) {
     const first = PARTS.exec(lines[i]!)
-    if (!inComment(i + 1) || !first) {
+    if (!inComment(i + 1) || !first || DIRECTIVE.test(lines[i]!)) {
       out.push(lines[i]!)
       i++
       continue
@@ -144,7 +147,8 @@ export function refill(lines: readonly string[], inComment: (n: number) => boole
     while (j < lines.length && inComment(j + 1)) {
       const next = PARTS.exec(lines[j]!)
       const previous = run.at(-1)!
-      if (!next || next[1] !== prefix || next[2] !== '' || STARTS_BLOCK.test(next[3]!) || /:$/.test(previous)) {
+      const ends = !next || next[1] !== prefix || next[2] !== '' || STARTS_BLOCK.test(next[3]!) || /:$/.test(previous)
+      if (ends || DIRECTIVE.test(lines[j]!)) {
         break
       }
 
@@ -244,7 +248,7 @@ export async function layout(source: string): Promise<{ output: string; problem:
       const code = text.slice(0, column).trimEnd()
       const indent = /^\s*/.exec(text)![0]
       out.push(...wrap(indent + text.slice(column).trim()), code)
-    } else if (inComment.has(number) && /^\s*(?:\/\/|\*)/.test(text)) {
+    } else if (inComment.has(number) && /^\s*(?:\/\/|\*)/.test(text) && !DIRECTIVE.test(text)) {
       out.push(...wrap(text))
     } else {
       out.push(text)

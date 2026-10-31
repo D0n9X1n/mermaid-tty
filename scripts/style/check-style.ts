@@ -106,25 +106,52 @@ const CITATIONS = [
   /\/(?:issues|pulls?)\/\d+\b/,
 ]
 
-// A hash and 3, 4, 6 or 8 hex digits is a color, not a citation.
-const COLOR = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g
+// A color is not a citation: a hash and hex digits after a color property (fill, stroke, color, background, border), or
+// a string that is nothing but a color. Elsewhere a hash and a number reads as an issue, so it is one.
+const COLOR =
+  /\b(?:fill|stroke|color|background(?:-color)?|border(?:-color)?)\s*[:=]\s*['"]?#[0-9a-fA-F]+\b|^\s*#[0-9a-fA-F]{3,8}\s*$/gi
+
+// A link to an issue or pull request page, which a string can hold as well as a comment.
+const TRACKER_LINK = /\/(?:issues|pulls?)\/\d+\b/
+
+// The checker's own tests, whose strings are the links the rule exists to catch; their comments are still checked.
+const EXAMPLES = new Set(['scripts/style/check-style.style-spec.ts'])
 
 // A label that points at a spec, plan or task outside the code, which the reader can't open: a plan or spec named by
-// letter, a section sign and number, a task, decision or requirement label (a T, D, V, X or S and a number), or a
-// numbered rule. The patterns below spell each one out; the comment should say the fact itself instead.
+// letter, a section sign and number, a task, decision or requirement label (a T, D, V, X or S and a number) set off as
+// a citation, a numbered rule, or a matrix of diagrams. The patterns below spell each one out; the comment should say
+// the fact itself instead.
+const LABEL = String.raw`(?<![\w.#-])(?:T\d{1,3}|[DVXS]\d{1,2}[a-z]?)`
 const SPEC_LABELS = [
   /\b(?:plan|spec) [ABC]\b/,
   /§\s?\d/,
-  /(?<![\w.-])T\d{1,3}\b(?![\w-]|\.\w)/,
-  /(?<![\w.#-])[DVXS]\d{1,2}[a-z]?\b(?![\w-]|\.\w)/,
+  // A label is a citation inside parentheses, or before a colon or a full stop that ends a phrase; bare in a sentence,
+  // a letter and a number is more often the name of a product, a protocol or an engine.
+  new RegExp(String.raw`\(${LABEL}\b|${LABEL}(?:\)|[:.](?=\s|$))`),
   // A rule of Mermaid's own grammar (flow.jison rule 108) is a real place to look; a spec's numbered rule is not.
   /(?<!jison )\b(?:common )?rules? \d+\b/,
-  // A diagram table or task list from a document outside the code, named as a comment's source.
-  /\b(?:the |diagram[ -])?matrix\b|\bthe plan's\b|\bBeyond the plan\b/i,
+  // A diagram table or task list from a document outside the code, named as a comment's source. A build's platform
+  // matrix is the build's own, so only the bare noun with "the", or the diagram one, counts.
+  /\bthe matrix\b|\bdiagram[ -]matrix\b|\bthe plan's\b|\bBeyond the plan\b/i,
 ]
 
 export function citesSpec(prose: string): boolean {
   return SPEC_LABELS.some((pattern) => pattern.test(prose))
+}
+
+// The text of a string literal, or of a template literal's fixed parts; null for any other node.
+function stringText(node: Node): string | null {
+  if (node.type === 'Literal' && typeof node.value === 'string') {
+    return node.value
+  }
+
+  if (node.type === 'TemplateLiteral') {
+    return (node.quasis as (Node & { value: { cooked: string | null; raw: string } })[])
+      .map((q) => q.value.cooked ?? q.value.raw)
+      .join(' ')
+  }
+
+  return null
 }
 
 export function citesIssue(prose: string): boolean {
@@ -207,7 +234,14 @@ export async function check(file: string, source: string): Promise<Violation[]> 
     const isTest = node.type === 'CallExpression' && (node.callee as Node).type === 'Identifier'
     const name = isTest && ['test', 'it', 'describe'].includes((node.callee as Node & { name: string }).name)
     const title = name ? ((node.arguments as Node[])[0] as Node & { value?: unknown }) : null
-    if (title?.type === 'Literal' && typeof title.value === 'string' && citesIssue(title.value)) {
+    if (title && citesIssue(stringText(title) ?? '')) {
+      add(line, 'issue-number')
+    }
+
+    // Any string may hold a link to an issue or pull request; a bare hash and a number in a string is data, as in
+    // Mermaid's own syntax, so only a test's name is held to the prose rule above.
+    const text = stringText(node)
+    if (text !== null && TRACKER_LINK.test(text) && !EXAMPLES.has(file)) {
       add(line, 'issue-number')
     }
   }

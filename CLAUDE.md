@@ -63,7 +63,7 @@ Run `--write` before every commit. CI fails on any difference.
 | At most one blank line in a row, in comments too | `no-multiple-empty-lines` |
 | No line over 120 columns, unless a string, template, regex or URL crosses it | `max-len` |
 | No file over 1000 lines: split it by topic | `max-lines` |
-| No issue or PR number in a comment, string or test name | project rule |
+| No issue or PR number in a comment or test name, and no issue or PR link in any string | project rule |
 
 Python scripts: one statement per line, no compound one-line statements, the same line, file and citation limits (`scripts/style/check_py.py`).
 
