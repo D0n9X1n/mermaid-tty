@@ -1,9 +1,7 @@
 // A convergence fuzz over real drawings. Each ok fixture, and every fourth corpus block, is drawn at 60 and 80 columns;
 // each mutation keeps expect unchanged and changes what the cells show, so validate must fail it. A mutation that
-// leaves
-// the cells identical, or that only relabels an automorphism of the source, is skipped. Each class counts its mutants
-// and
-// fails on any survivor.
+// leaves the cells identical, or that only relabels an automorphism of the source, is skipped. Each class counts its
+// mutants and fails on any survivor.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -92,8 +90,7 @@ function tally(
 
 const spots = (d: Drawing) => d.cells.flatMap((row, r) => row.flatMap((x, c) => (x ? [{ r, c, x }] : [])))
 // A drawing's line cells, at most two of each context: glyph, style and how many owners drew there. Cells of one
-// context
-// meet the validator's rules alike, and a big drawing has thousands of them.
+// context meet the validator's rules alike, and a big drawing has thousands of them.
 function lineCells(d: Drawing) {
   const seen = new Map<string, number>()
   return spots(d).filter(({ x }) => {
@@ -109,8 +106,7 @@ function lineCells(d: Drawing) {
 }
 
 // Every line glyph by the dirs it draws: the Box Drawing table's light and heavy mixes, the dashed runs, the doubles
-// and
-// their single mixes, and the round corners.
+// and their single mixes, and the round corners.
 const bits = (arms: string) => [1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0)
 const DIRS = new Map<string, number>([
   ...Object.entries(BOX).map(([a, g]) => [g, bits(a)] as const),
@@ -144,11 +140,10 @@ test('A5.mutation-tests: fuzz: every line cell redrawn in another style of the s
   assert.deepEqual(survivors, [])
 })
 
-// One arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the
-// mixed one the canvas would draw for those arms, so the cell is self-consistent and only its weight is wrong: a thick
-// branch on a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm
-// (a
-// gitGraph lane's tail ╵) has no other arm to differ from: expect states no line's weight, so its weight is unchecked.
+// One arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the mixed one
+// the canvas would draw for those arms, so the cell is self-consistent and only its weight is wrong: a thick branch on
+// a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm (a gitGraph
+// lane's tail ╵) has no other arm to differ from: expect states no line's weight, so its weight is unchecked.
 test('A5.mutation-tests: fuzz: one arm of a line cell redrawn in the other weight fails', (t) => {
   const { mutants, survivors } = tally(t, 'weight', function* (d) {
     for (const { r, c, x } of lineCells(d)) {
@@ -233,8 +228,7 @@ test('A5.mutation-tests: fuzz: a line cell given to another edge of its joined n
 })
 
 // Each node's pill: the box of the cap, fill, text, cont and frame cells it draws as owners[0], if that box holds no
-// other
-// cell; and the pill's shape, its empty, border and inner cells, so pills of one shape and size can swap.
+// other cell; and the pill's shape, its empty, border and inner cells, so pills of one shape and size can swap.
 const PILL = new Set(['cap', 'fill', 'text', 'cont', 'frame'])
 // A pill cell's part of its shape: '.' when empty, a border cell (cap or frame) its ch, an inner cell 'i'.
 function shapeOf(x: Cell | null): string {
@@ -328,10 +322,8 @@ test('A5.mutation-tests: fuzz: two node pills of one shape and size swapped fail
 })
 
 // Where each label may lie, by its owner: an edge label within one cell of its edge's line or arrow cells (at least one
-// of
-// its cells), a node's label inside its pill's box (every cell), a row's label in its mark's block right of the mark
-// (every
-// cell). Other text (titles, axes, legends) has no span to leave, so it is not moved.
+// of its cells), a node's label inside its pill's box (every cell), a row's label in its mark's block right of the mark
+// (every cell). Other text (titles, axes, legends) has no span to leave, so it is not moved.
 function spanOf(d: Drawing, owner: string): ((cells: [number, number][]) => boolean) | null {
   const all = spots(d)
   const edge = d.expect.edgeLabels.find((l) => l.owner === owner)?.edge
@@ -419,8 +411,7 @@ function units(d: Drawing): Unit[] {
   return [...by.values()]
 }
 // u's cells moved so its first cell is at (r, c), and v's to u's, as one patch; null if a target is off the grid or
-// holds
-// a cell neither draws.
+// holds a cell neither draws.
 function relocate(d: Drawing, us: readonly Unit[], to: readonly [number, number][]): Patch | null {
   const held = new Set(us.flatMap((u) => u.cells.map((p) => `${p.r},${p.c}`)))
   const writes: Patch = []
@@ -564,8 +555,7 @@ test("A5.mutation-tests: fuzz: an edge's two end labels swapped fail", (t) => {
 })
 
 // Bar glyphs by axis, and a bar's own cells: the caps in a bar glyph its owner draws. Each run's base and tip are
-// redrawn,
-// since every inner cell is a full █ that the same rule reads; the tip is also cut, and grown by one cell.
+// redrawn, since every inner cell is a full █ that the same rule reads; the tip is also cut, and grown by one cell.
 const BAR_GLYPHS = { h: [...'█▏▎▍▌▋▊▉'], v: [...'█▁▂▃▄▅▆▇'] } as const
 test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cell redrawn another length fails', (t) => {
   const { mutants, survivors } = tally(t, 'bar', function* (d) {
@@ -602,12 +592,10 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
 })
 
 // X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each
-// other
-// kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch instead
-// (which
-// would read the same to labels), and a marker or another control character added to the first cells of each kind. The
-// emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
-// are among the ok fixtures, so styled cells lose their style here too.
+// other kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch
+// instead (which would read the same to labels), and a marker or another control character added to the first cells of
+// each kind. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15) are among the
+// ok fixtures, so styled cells lose their style here too.
 test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cell given emphasis, fails', (t) => {
   const { mutants, survivors } = tally(t, 'emphasis', function* (d) {
     const seen = new Map<string, number>()
@@ -809,8 +797,8 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', (t) =>
 // own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part
 // no
 // arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side:
-// no
-// arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the edge.
+// no arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the
+// edge.
 const RING = [
   [0, 0, 6],
   [0, 1, 10],

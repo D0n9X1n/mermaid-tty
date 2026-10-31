@@ -358,9 +358,8 @@ test('A2: a rect from one box into another, which would cross both borders, fall
     reason: 'box-frame',
   })
 })
-// A frame in a boxed diagram draws only where Mermaid 12.2.0's own geometry keeps it inside a box, or clear of
-// it, whatever the text widths; a self-message, a note on one lifeline, a deactivation outside the frame's run, or
-// nesting
+// A frame in a boxed diagram draws only where Mermaid 12.2.0's own geometry keeps it inside a box, or clear of it,
+// whatever the text widths; a self-message, a note on one lifeline, a deactivation outside the frame's run, or nesting
 // that reaches the box's border falls back. Each repro was checked against Mermaid 12.2.0.
 const TEAM = 'box Team\nparticipant A\nparticipant B\nend\n'
 const nest = (n: number, body: string) => `${'rect\n'.repeat(n)}${body}\n${'end\n'.repeat(n)}`

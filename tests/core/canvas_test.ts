@@ -524,8 +524,7 @@ test('A5.mutation-tests: a write at a non-integer row or column is outside the g
   assert.deepEqual(d.conflicts, [outside(0.5, 0, 'n1'), outside(0, 0.5, 'e1')])
 })
 // Edges into one node may end in one head: an arrow on an arrow of the same glyph merges owners when shares holds for
-// an old
-// owner. Another glyph, or an edge that shares nothing with the old owners, conflicts.
+// an old owner. Another glyph, or an edge that shares nothing with the old owners, conflicts.
 test('A5.mutation-tests: an arrow on a same-glyph arrow of an edge it shares with merges owners; another glyph or an unrelated edge conflicts', () => {
   const c = createCanvas(1, 3, 3, (a, b) => a.split('>')[1] === b.split('>')[1])
   c.arrow(0, 0, '▼', 'A>C')
@@ -542,8 +541,7 @@ test('A5.mutation-tests: an arrow on a same-glyph arrow of an edge it shares wit
   ])
 })
 // Beside the union dirs and owners, a line cell keeps the dirs each owner drew there, OR-merged per owner in write
-// order,
-// so the validator can tell a crossing from a turn that shares its glyph.
+// order, so the validator can tell a crossing from a turn that shares its glyph.
 test('A5.mutation-tests: a line cell records the dirs each owner drew there', () => {
   const c = createCanvas(1, 2, 2, (a, b) => a[0] === b[0])
   c.line(0, 0, 3, 'light', 'edge', 'e1')

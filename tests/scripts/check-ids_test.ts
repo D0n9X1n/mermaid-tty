@@ -63,8 +63,8 @@ function scratch(files: Record<string, string>, body: (dir: string) => void): vo
     rmSync(dir, { recursive: true, force: true })
   }
 }
-// Runs this repo's check.ts in dir. NODE_TEST_CONTEXT is dropped, because a node --test
-// that inherits it from this run skips its files (node:test's recursion guard).
+// Runs this repo's check.ts in dir. NODE_TEST_CONTEXT is dropped, because a node --test that inherits it from this run
+// skips its files (node:test's recursion guard).
 function check(dir: string, id: string, env: Record<string, string> = {}) {
   const { NODE_TEST_CONTEXT: _, ...base } = process.env
   const r = spawnSync(process.execPath, [resolve('scripts/check.ts'), id], {
@@ -253,8 +253,7 @@ function assertNoRun(r: ReturnType<typeof check>, id: string): void {
   assert.match(r.stderr, new RegExp(`^no tests ran for ${id.replaceAll('.', '\\.')}$`, 'm'), id)
 }
 // Tests node:test passes that execute no assertion: the forms the static scan must catch, and each placeholder form.
-// Under
-// check.ts's preload each fails, so @nt fails. [what, the tests in tests/a_test.ts]
+// Under check.ts's preload each fails, so @nt fails. [what, the tests in tests/a_test.ts]
 const UNASSERTING: [string, string][] = [
   [
     'an assert only in a regex after a for (…) header',
@@ -289,8 +288,8 @@ for (const [what, tests] of UNASSERTING) {
     }))
 }
 // Accepted: an EventEmitterAsyncResource runs its listeners in the async context it was made in, so a node:assert call
-// in
-// a listener of one made outside the test counts for no test (count.ts). Such a test must assert in its own flow too.
+// in a listener of one made outside the test counts for no test (count.ts). Such a test must assert in its own flow
+// too.
 test('A8.validation: @nt fails on a test whose only assertion is in a listener of an EventEmitterAsyncResource made outside it', () =>
   scratch(
     {

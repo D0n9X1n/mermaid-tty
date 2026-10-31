@@ -1,6 +1,6 @@
-// The pie module (plan C T63; matrix, pie): a row per slice, largest first, each its label, a bar of its share of the
-// field, its value as written and its percentage, under the title; a wrapped label's later pieces take the rows below.
-// It registers itself on import, as flowchart's does.
+// The pie module: a row per slice, largest first, each its label, a bar of its share of the field, its value as written
+// and its percentage, under the title; a wrapped label's later pieces take the rows below. It registers itself on
+// import, as flowchart's does.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { hbar } from '../../charts/bars.ts'
 import { add, cmp, dec } from '../../charts/decimal.ts'
@@ -18,10 +18,9 @@ import { parsePie, type Pie } from './parse.ts'
 const widest = (xs: readonly string[]): number => Math.max(0, ...xs.map(width))
 
 // Both steps draw each label as wrap's pieces, so a run of spaces draws as one and the ends trim, as validate reads it.
-// A label never splits at a <br>: Mermaid shows a slice's <br> as written, so it wraps only at spaces.
-// natural: labels unwrapped, and the bar field W = min(60, columns − N − V − P − 3), at least 10. wrap: W = 10, and
-// labels
-// wrap to columns − V − P − 13, so the row still fits. Any other step fails 'step'.
+// A label never splits at a <br>: Mermaid shows a slice's <br> as written, so it wraps only at spaces. natural: labels
+// unwrapped, and the bar field W = min(60, columns − N − V − P − 3), at least 10. wrap: W = 10, and labels wrap to
+// columns − V − P − 13, so the row still fits. Any other step fails 'step'.
 function layout(pie: Pie, step: Step, columns: number): Drawing | Fail {
   if (step !== 'natural' && step !== 'wrap') {
     return fail('step')

@@ -1,5 +1,5 @@
-// The one parser for the acceptance doc's check IDs, following B7's rules.
-// scripts/check-ids.ts (A's parity CLI) and B's check-ci-coverage.ts import it.
+// The one parser for the acceptance doc's check IDs, following B7's rules. scripts/check-ids.ts (A's parity CLI) and
+// B's check-ci-coverage.ts import it.
 
 // A label is bold text with the colon inside the bold: **No build:**
 const LABEL = /\*\*([^*:]+):\*\*/g
@@ -16,8 +16,8 @@ export function slug(s: string): string {
     .replace(/^-|-$/g, '')
 }
 
-// Row IDs plus <row>.<slug> per label in the row (spec A and B), and
-// VR.<slug> per label in the visual review section, in document order.
+// Row IDs plus <row>.<slug> per label in the row (spec A and B), and VR.<slug> per label in the visual review section,
+// in document order.
 export function parseIds(md: string): string[] {
   const ids: string[] = []
   let section = ''

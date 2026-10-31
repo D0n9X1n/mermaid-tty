@@ -37,8 +37,7 @@ test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence,
 })
 
 // Beyond the plan's tests: each end sits at its own class with its own glyph; keys count only labelled relations, then
-// notes;
-// a class or namespace named as a relation or note would make owners ambiguous, so it falls back.
+// notes; a class or namespace named as a relation or note would make owners ambiguous, so it falls back.
 test('A3: each end is drawn at the class it faces, with the glyph its relation names', () => {
   const d = X('Animal <|-- Duck\nDuck *-- Egg\nLake o-- Duck\nDuck ..|> Swimmer\nDuck --> Pond').drawing
   assert.deepEqual(

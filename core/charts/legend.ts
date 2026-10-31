@@ -1,8 +1,6 @@
-// Keyed legends (plan C, T46). When an item's text does not fit in place, the item draws a short key there, and its
-// legend
-// row, below the chart, draws that key, one blank, then the item's own text. T87's keys rule checks both: each key once
-// in
-// place and once in its own row, bound to the text its item owns, and a class keyed all or none.
+// Keyed legends. When an item's text does not fit in place, the item draws a short key there, and its legend row, below
+// the chart, draws that key, one blank, then the item's own text. T87's keys rule checks both: each key once in place
+// and once in its own row, bound to the text its item owns, and a class keyed all or none.
 import { createCanvas, type Drawing } from '../canvas.ts'
 import type { Fail } from '../fail.ts'
 import { fail, isFail } from '../fail.ts'
@@ -19,8 +17,7 @@ export const fieldKey = (i: number): string => (i < 26 ? letter(i) : fieldKey(Ma
 export const pointKey = (i: number): string => String(i + 1)
 
 // A run of a legend row's text, drawn in ink. A part with an owner is text that owner's label lists; an owner-null part
-// is
-// a separator such as ' · ', drawn as caps.
+// is a separator such as ' · ', drawn as caps.
 export type LegendPart = { text: string; ink: Ink; owner: string | null }
 // A keyed item's legend row: key in keyInk, then parts. item is the keyed thing's own id, such as a note, `r3:label` or
 // `t2.t`, which owns the key; the first part, which the key binds to, must be owned by item too. cls is item's class.
@@ -37,8 +34,7 @@ export type LegendRow = {
 
 // s packed greedily into a line of field cells whose first used cells are taken, one space after them, then into more
 // lines: wrap packs a stand-in word used cells wide, then s, so s breaks exactly where wrap breaks a label. The first
-// piece
-// is what fits on the line, possibly '', and each later piece starts a line. null if a word is wider than field.
+// piece is what fits on the line, possibly '', and each later piece starts a line. null if a word is wider than field.
 function fill(s: string, used: number, field: number): Piece[] | null {
   if (used === 0) {
     return wrap(s, field)
@@ -89,10 +85,8 @@ function layout(row: LegendRow, columns: number): { runs: Run[]; lines: number }
 }
 
 // rows top to bottom, each its key at column 0, legend: true and owned by its item, then its parts by layout: an owned
-// part
-// is text its owner owns, and an owner-null part caps its item owns. expect lists each owned part's text under its
-// owner.
-// 'word-too-wide' if a word is wider than a row's field.
+// part is text its owner owns, and an owner-null part caps its item owns. expect lists each owned part's text under its
+// owner. 'word-too-wide' if a word is wider than a row's field.
 export function legendRows(rows: readonly LegendRow[], columns: number): Drawing | Fail {
   const laid: { row: LegendRow; runs: Run[]; lines: number }[] = []
   for (const row of rows) {
@@ -142,9 +136,8 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
 }
 
 // d with rows' legend stacked under it, columns wide. Its expect.keys gains every row's key and its expect.keyable
-// gains
-// keyable, with or without rows, so T87 checks the keys d drew in place: one missing there, or one no row lists, fails.
-// A Fail, d's or the legend's, is returned as is.
+// gains keyable, with or without rows, so T87 checks the keys d drew in place: one missing there, or one no row lists,
+// fails. A Fail, d's or the legend's, is returned as is.
 export function withLegend(
   d: Drawing | Fail,
   rows: readonly LegendRow[],

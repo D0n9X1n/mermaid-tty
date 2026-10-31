@@ -1,5 +1,5 @@
-// node scripts/render-svg.ts FILE COLS THEME OUT.svg: writes the rows core draws of FILE at COLS columns under THEME
-// as an SVG, for review outside a terminal. Every glyph is its own <text> at x = col × cellW, a W/F glyph taking two
+// node scripts/render-svg.ts FILE COLS THEME OUT.svg: writes the rows core draws of FILE at COLS columns under THEME as
+// an SVG, for review outside a terminal. Every glyph is its own <text> at x = col × cellW, a W/F glyph taking two
 // cells, so the columns line up whatever font the viewer picks. Exits 1 when core falls back, 2 on bad arguments.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
@@ -12,8 +12,7 @@ import { CC_DARK } from './lib/palette.ts'
 import { BG, PAD, esc, glyphCells, toSvg } from './lib/svg.ts'
 
 // A fixed hex preview of Claude Code's dark theme (palette.ts), for the ThemeKeys the default theme draws with. A
-// preview,
-// not the real theme: CC resolves each key at render time from the user's own theme, whose colors may differ.
+// preview, not the real theme: CC resolves each key at render time from the user's own theme, whose colors may differ.
 const USED = [
   'text',
   'inverseText',
@@ -30,8 +29,8 @@ const USED = [
 ] as const
 export const DARK_KEYS: Readonly<Record<string, string>> = Object.fromEntries(USED.map((k) => [k, CC_DARK[k]!]))
 
-// A span's color as hex: a '#rrggbb' as given, a ThemeKey through DARK_KEYS. Anything else throws, rather than
-// writing a color no viewer can draw.
+// A span's color as hex: a '#rrggbb' as given, a ThemeKey through DARK_KEYS. Anything else throws, rather than writing
+// a color no viewer can draw.
 function paint(c: string): string {
   if (/^#[0-9a-f]{6}$/i.test(c)) {
     return c
@@ -50,8 +49,7 @@ export const CELL_H = 20
 
 // rows as a dark SVG page of cellW × cellH cells: a <rect> per background run, the most neighbouring cells of a row
 // with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style; dimColor,
-// which terminals
-// draw faint, sets opacity 0.5.
+// which terminals draw faint, sets opacity 0.5.
 export function rowsToSvg(
   rows: Rows,
   { cellW = CELL_W, cellH = CELL_H }: { cellW?: number; cellH?: number } = {},
@@ -112,9 +110,8 @@ export function glyphXs(svg: string): [string, number][] {
 // The self-check, which measures columns on its own rather than through glyphCells, the renderer's placement: it walks
 // each row's text a code point at a time, summing width(ch), and expects a glyph wherever ch is neither blank nor
 // zero-width, so a combining mark rides on its base. Returns each glyph svg does not draw, starting with its code
-// point,
-// at x / cellW = its column, or both glyph counts when they differ. It counts code points, not graphemes: a base and a
-// spacing mark, which the renderer draws as one glyph, fail it, loudly rather than silently.
+// point, at x / cellW = its column, or both glyph counts when they differ. It counts code points, not graphemes: a base
+// and a spacing mark, which the renderer draws as one glyph, fail it, loudly rather than silently.
 export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
   const want: { row: number; col: number; ch: string }[] = []
   const got = glyphXs(svg)
@@ -163,8 +160,8 @@ function main(): number {
   return 0
 }
 
-// B: --readme rewrites the manifest; --stdout FILE [COLUMNS] [THEME] prints SVG (fallback exits 3).
-// Load B's adapter only for these modes: A's standalone review gallery needs no README files.
+// B: --readme rewrites the manifest; --stdout FILE [COLUMNS] [THEME] prints SVG (fallback exits 3). Load B's adapter
+// only for these modes: A's standalone review gallery needs no README files.
 if (isMain(import.meta) && process.argv[2] === '--readme') {
   const { IMAGES } = await import('./lib/images.ts')
   const { ROOT, renderImage } = await import('./lib/render-image.ts')

@@ -1,7 +1,7 @@
-// The xychart module (plan C T72; matrix, xychart): an 8-row plot over an axis row, a group of sub-columns per category
-// and a value row per series (vertical), or one row per category and series over a tick rule (horizontal). The header's
-// orientation draws first; a vertical chart that does not fit is redrawn horizontal, then with W = 10 and wrapped
-// categories. It registers itself on import, as flowchart's does.
+// The xychart module: an 8-row plot over an axis row, a group of sub-columns per category and a value row per series
+// (vertical), or one row per category and series over a tick rule (horizontal). The header's orientation draws first; a
+// vertical chart that does not fit is redrawn horizontal, then with W = 10 and wrapped categories. It registers itself
+// on import, as flowchart's does.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { axisRows } from '../../charts/axis.ts'
 import { hbar, vbar } from '../../charts/bars.ts'
@@ -41,12 +41,9 @@ const H = 8
 const MARKERS = [...'●◆▲■○◇△□']
 
 // The y range: the explicit one, else y0 = min(0, smallest value) and y1 = max(0, largest), as parse checked it; M = y1
-// − y0.
-// lo, hi and mid are the tick labels y0, y1 and (y0 + y1)/2: an explicit bound as written, a computed bound and the
-// midpoint
-// as the shortest exact decimal. Every bound is a source number, whose denominator is a power of 10, so it and the
-// midpoint
-// have one.
+// − y0. lo, hi and mid are the tick labels y0, y1 and (y0 + y1)/2: an explicit bound as written, a computed bound and
+// the midpoint as the shortest exact decimal. Every bound is a source number, whose denominator is a power of 10, so it
+// and the midpoint have one.
 type Scale = { y0: Dec; M: Dec; lo: string; hi: string; mid: string }
 function scale(xy: Xy): Scale {
   const vs = xy.series.flatMap((s) => s.values.map((v) => v.value))
@@ -63,10 +60,8 @@ function scale(xy: Xy): Scale {
 }
 
 // A series as drawn: its kind, its index k over all series in source order, its ink s<k mod 8 + 1>, its tag (a, b, …
-// for
-// bars, its marker for lines), its name, its text (its tag, then its name if it has one) and its values, each as
-// written and
-// measured from y0.
+// for bars, its marker for lines), its name, its text (its tag, then its name if it has one) and its values, each as
+// written and measured from y0.
 type Drawn = {
   kind: 'bar' | 'line'
   k: number
@@ -94,11 +89,10 @@ function drawn(xy: Xy, y0: Dec): Drawn[] {
 }
 
 // The vertical drawing's parts: the y-axis title, the plot over its axis row and category row, the x-axis title, then
-// one
-// row per series, its text in the gutter and its values right-aligned in the groups. G is 1 + the widest tick label or
-// text. A group is a gap cell, then c content cells, c the widest category or value or the number of series; each line
-// series takes 1 cell and the bar series share the rest evenly, rounded down, in source order. 'too-wide' if the chart,
-// G + 1 + n·(c + 1) cells, is wider than columns.
+// one row per series, its text in the gutter and its values right-aligned in the groups. G is 1 + the widest tick label
+// or text. A group is a gap cell, then c content cells, c the widest category or value or the number of series; each
+// line series takes 1 cell and the bar series share the rest evenly, rounded down, in source order. 'too-wide' if the
+// chart, G + 1 + n·(c + 1) cells, is wider than columns.
 function vertical(xy: Xy, sc: Scale, ss: Drawn[], columns: number): Part[] | Fail {
   const cats = xy.categories ?? []
   const n = xy.categories?.length ?? ss[0]?.values.length ?? 0
@@ -199,15 +193,11 @@ function vertical(xy: Xy, sc: Scale, ss: Drawn[], columns: number): Part[] | Fai
 }
 
 // The horizontal drawing's parts: the x-axis title; per category, one row per series, each the category (first row
-// only,
-// padded to C), its tag, its field of W cells and its value right-aligned to V; the tick rule under the field, y0 at
-// its
-// left end and y1 at its right; the y-axis title; then the legend. wrapped: W = 10 and categories wrap to columns − V −
-// 14,
-// a category's later pieces taking the rows below (more rows than series if need be); else W = min(60, columns − C − V
-// − 4),
-// and 'too-wide' when that is under 10. Either is 'too-wide' when y0 and y1, with a space between them, are wider than
-// W.
+// only, padded to C), its tag, its field of W cells and its value right-aligned to V; the tick rule under the field, y0
+// at its left end and y1 at its right; the y-axis title; then the legend. wrapped: W = 10 and categories wrap to
+// columns − V − 14, a category's later pieces taking the rows below (more rows than series if need be); else W =
+// min(60, columns − C − V − 4), and 'too-wide' when that is under 10. Either is 'too-wide' when y0 and y1, with a space
+// between them, are wider than W.
 function horizontal(xy: Xy, sc: Scale, ss: Drawn[], columns: number, wrapped: boolean): Part[] | Fail {
   const n = xy.categories?.length ?? ss[0]?.values.length ?? 0
   const V = widest(ss.flatMap((s) => s.values.map((v) => v.raw)))
@@ -284,8 +274,8 @@ function horizontal(xy: Xy, sc: Scale, ss: Drawn[], columns: number, wrapped: bo
 }
 
 // The legend: a row per named series, in source order, its tag, a space, then its name wrapped to columns − 2, each
-// later
-// piece indented under the first. Unnamed series are left out. 'word-too-wide' if a word is wider than columns − 2.
+// later piece indented under the first. Unnamed series are left out. 'word-too-wide' if a word is wider than columns −
+// 2.
 function legend(ss: Drawn[], columns: number): Part {
   const rows: { s: Drawn; ps: Piece[] }[] = []
   for (const s of ss) {
@@ -324,14 +314,12 @@ function legend(ss: Drawn[], columns: number): Part {
 }
 
 // A vertical header's ladder: vertical, then horizontal, then horizontal with W = 10; a horizontal header's:
-// horizontal,
-// then W = 10.
+// horizontal, then W = 10.
 const steps = (xy: Xy): readonly Step[] =>
   xy.orientation === 'vertical' ? ['natural', 'horizontal', 'wrap'] : ['natural', 'wrap']
 
 // natural draws the header's orientation, horizontal a vertical header's chart horizontally, and wrap with W = 10. A
-// step
-// off the header's ladder fails 'step'.
+// step off the header's ladder fails 'step'.
 function layout(xy: Xy, step: Step, columns: number): Drawing | Fail {
   if (!steps(xy).includes(step)) {
     return fail('step')

@@ -240,10 +240,8 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
 })
 
 // Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and
-// backquotes,
-// joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style nested in itself
-// or
-// a block start falls back as any Markdown field's does.
+// backquotes, joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style
+// nested in itself or a block start falls back as any Markdown field's does.
 test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
   const g = P(
     'flowchart TD\nA["`plain text`"] -->|"`edge words`"| B["`a_b x*y`" more]\nC("`a b`") -- "`t`" --> D\nsubgraph s ["`title t`"]\nD\nend',
@@ -408,8 +406,7 @@ test('A5.errors: an @{…} body that does not read whole as key: value pairs, ea
 })
 
 // A blank label line, from consecutive <br/> or a <br/> leading or trailing the trimmed label, is a box row with no
-// text,
-// and an inline edge label whose middle line the router cannot place. A label blank as a whole is still allowed.
+// text, and an inline edge label whose middle line the router cannot place. A label blank as a whole is still allowed.
 test('A5.errors: a node or edge label with a blank line fails label-blank-line', () => {
   const bad = [
     'A[a<br/><br/>b]',
@@ -433,8 +430,7 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
 })
 // X3. Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
 // markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX,
-// and
-// nonMarkdownToHTML turns a literal \n into <br />.
+// and nonMarkdownToHTML turns a literal \n into <br />.
 test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
   for (const [s, why] of [
     ['A[fa:fa-book]', 'icon'],
@@ -476,8 +472,7 @@ test('A literal \\n in an HTML flowchart label is a line break, as Mermaid draws
 })
 
 // Cross-family review of 37a8ff2: each repro verified against Mermaid 12.2.0 under JSDOM. Where we would draw other
-// than
-// Mermaid shows, we fall back.
+// than Mermaid shows, we fall back.
 const F = (s: string) => P(`flowchart TD\n${s}`)
 test('A1: a "`…`" subgraph title takes its text as id, as Mermaid does, so A --> C joins the cluster', () => {
   const g = F('subgraph "`A`"\nB\nend\nA --> C')
@@ -672,8 +667,8 @@ test('A5.errors: an @{ that ends a line joins the next lines only on a line that
   )
 })
 
-// Mermaid 12.2.0's lexer (flow.jison) tries its keyword rules at each token start before an id's own token: the
-// id's start, after a leading digit run (NUM), and after each non-ASCII character (UNICODE_TEXT, one table character).
+// Mermaid 12.2.0's lexer (flow.jison) tries its keyword rules at each token start before an id's own token: the id's
+// start, after a leading digit run (NUM), and after each non-ASCII character (UNICODE_TEXT, one table character).
 // Verified under JSDOM, at the start, after a link and after &.
 test('A5.errors: an id the lexer of Mermaid reads as a keyword, or cannot lex, falls back', () => {
   const bad = [
@@ -762,8 +757,7 @@ test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoi
 })
 
 // X3. Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph
-// title
-// and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
+// title and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
 test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as Mermaid shows them', () => {
   const g = P(
     'flowchart TD\nA["`**bold** and *it*`"] -->|"`__e__ _f_`"| B@{ label: "a*b*c" }\nsubgraph s ["`**t** x`"]\nB\nend',
@@ -794,8 +788,8 @@ test('X3.emphasis: a flowchart edge label reads each <br> as a newline: a block 
   )
 })
 
-// Mermaid 12.2.0 (JSDOM): A["`a\#110;b`"] shows anb (marked drops the \), but the edge label "`c\#110;d`" shows c\nd.
-// A \ right before a #…; code in a Markdown field is read two ways, so it falls back.
+// Mermaid 12.2.0 (JSDOM): A["`a\#110;b`"] shows anb (marked drops the \), but the edge label "`c\#110;d`" shows c\nd. A
+// \ right before a #…; code in a Markdown field is read two ways, so it falls back.
 test('A5.errors: a backslash before a #…; code in a Markdown string or @{ label } falls back as markdown', () => {
   const bad = [
     'A["`a\\#110;b`"]',

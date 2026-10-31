@@ -1,5 +1,5 @@
-// End caps: the glyphs drawn left and right of a pill's label. They show the
-// shape when there is no color (matrix, Common rules, "End caps").
+// End caps: the glyphs drawn left and right of a pill's label. They show the shape when there is no color (matrix,
+// Common rules, "End caps").
 export type Shape =
   | 'rect'
   | 'round'
@@ -71,8 +71,8 @@ const NAMES: readonly (readonly [Shape, readonly string[]])[] = [
   ['cloud', ['cloud']],
 ]
 
-// A Map, not an object: an object lookup returns inherited members for names
-// like `constructor`, and those must fall back to rect like any unknown name.
+// A Map, not an object: an object lookup returns inherited members for names like `constructor`, and those must fall
+// back to rect like any unknown name.
 export const ALIASES: ReadonlyMap<string, Shape> = new Map(
   NAMES.flatMap(([shape, names]) => names.map((n) => [n, shape] as const)),
 )

@@ -1,10 +1,10 @@
 // node scripts/style/codemod.ts [FILE...]: rewrites the code style rules that are mechanical but that Prettier won't
 // touch, on every file check-style checks or on the files given:
 // - an unbraced if, else, for or while body gets braces (curly);
-// - a declaration of several variables becomes one declaration per variable (one-var), outside loop headers.
-// Each rewrite must leave the program the same: the file's tree before and after, with locations dropped, a
-// one-statement block read as its statement and a declaration list read as its parts, must be equal, or the file is
-// left as it was and reported. Run Prettier afterwards to lay the result out.
+// - a declaration of several variables becomes one declaration per variable (one-var), outside loop headers. Each
+// rewrite must leave the program the same: the file's tree before and after, with locations dropped, a one-statement
+// block read as its statement and a declaration list read as its parts, must be equal, or the file is left as it was
+// and reported. Run Prettier afterwards to lay the result out.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -67,8 +67,8 @@ function edits(ast: Node, source: string): Edit[] {
       ['ForStatement', 'ForInStatement', 'ForOfStatement'].includes(parent.type) &&
       (parent.init === node || parent.left === node)
     if (node.type === 'VariableDeclaration' && declarations && declarations.length > 1 && !loopHeader) {
-      // Each declarator after the first starts its own statement with the same keyword. The comma before it, and
-      // the space after the comma, become a line break; anything else between them, such as a comment, stays.
+      // Each declarator after the first starts its own statement with the same keyword. The comma before it, and the
+      // space after the comma, become a line break; anything else between them, such as a comment, stays.
       const exported = parent?.type === 'ExportNamedDeclaration' && parent.declaration === node
       const keyword = source.slice((exported ? parent : node).range[0], declarations[0]!.range[0]).trim()
       for (let i = 1; i < declarations.length; i++) {
@@ -93,8 +93,8 @@ function apply(source: string, list: Edit[]): string {
   return out
 }
 
-// The tree with what these rewrites may change normalized away: locations, a one-statement block read as its
-// statement, and consecutive declarations of one kind read as one declaration of all their declarators.
+// The tree with what these rewrites may change normalized away: locations, a one-statement block read as its statement,
+// and consecutive declarations of one kind read as one declaration of all their declarators.
 function normal(node: unknown): unknown {
   if (Array.isArray(node)) {
     const out: unknown[] = []

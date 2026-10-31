@@ -1,7 +1,6 @@
-// Generates core/box-table.ts: the Box Drawing glyph for each set of arm
-// weights, keyed 'urdl' (up right down left; 0 none, 1 light, 2 heavy).
-// Usage: node scripts/gen-box-table.ts <UnicodeData.txt> > core/box-table.ts
-// Source: https://www.unicode.org/Public/16.0.0/ucd/UnicodeData.txt
+// Generates core/box-table.ts: the Box Drawing glyph for each set of arm weights, keyed 'urdl' (up right down left; 0
+// none, 1 light, 2 heavy). Usage: node scripts/gen-box-table.ts <UnicodeData.txt> > core/box-table.ts Source:
+// https://www.unicode.org/Public/16.0.0/ucd/UnicodeData.txt
 import { readFileSync } from 'node:fs'
 
 const SKIP = /\b(DOUBLE|SINGLE|ARC|DASH|DIAGONAL)\b/
@@ -39,8 +38,8 @@ function parsePart(text: string, name: string): Part {
   return part
 }
 
-// 'LIGHT DOWN AND RIGHT' -> '0110'; 'UP HEAVY AND RIGHT DOWN LIGHT' -> '2110'.
-// A part without a weight takes the other part's.
+// 'LIGHT DOWN AND RIGHT' -> '0110'; 'UP HEAVY AND RIGHT DOWN LIGHT' -> '2110'. A part without a weight takes the other
+// part's.
 function armsOf(name: string): string {
   const parts = name.split(' AND ').map((text) => parsePart(text, name))
   if (parts.length > 2) {

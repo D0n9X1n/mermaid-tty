@@ -322,8 +322,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
 
     outside += laneWidth(label, across) + 2
   }
-  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as
-  // it goes.
+  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it
+  // goes.
   const lanes = nested && backs.some((e) => e.style !== 'invisible') ? outside - 2 : 0
   const all = [...boxes.values(), ...frames.values()] // a strip widened for its lanes (stripLanes) too
   const rows = Math.max(across ? p.wide : p.long, ...all.map((b) => b.row + b.rows), across ? lanes : 0)
@@ -415,8 +415,8 @@ function stripLanes(
 }
 
 // A back edge's label in its lane, moved along it to just past the turn out of the edge's drawn source, a cell of line
-// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, and only
-// onto cells no other box, dummy or frame holds. Else the label as given.
+// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, and only onto
+// cells no other box, dummy or frame holds. Else the label as given.
 function nearSource(
   e: GEdge,
   label: Box,

@@ -39,8 +39,7 @@ test('A1: registry keywords; ENABLED is A, Tier 1 and the passed Tier 2 types', 
 
 // A fake type whose model is its own ladder: each step, and what its layout draws at the budget it is given: a one-row
 // label n cells wide; the label xxx with an arrow written over its first cell ('clash'); a label one cell wider than
-// the
-// budget on a canvas that declares 5 columns more ('liar'); the label xxx on a canvas that declares 5 columns fewer
+// the budget on a canvas that declares 5 columns more ('liar'); the label xxx on a canvas that declares 5 columns fewer
 // ('short'); or a Fail. calls logs each layout.
 type Rung = readonly [Step, number | 'clash' | 'liar' | 'short' | Fail]
 function draw(what: Rung[1], columns: number): Drawing | Fail {
@@ -218,8 +217,7 @@ test('A4.fit-ladder: a type with no steps fails with too-wide and lays out nothi
   assert.deepEqual(fit([], 10, calls), { reason: 'too-wide' })
   assert.deepEqual(calls, [])
 })
-// C widens Step (T40): flowchart's layout fails 'step' for any step outside its own ladder, before it reads SPACING,
-// and
+// C widens Step: flowchart's layout fails 'step' for any step outside its own ladder, before it reads SPACING, and
 // still draws each step of its own ladder.
 test('A4.fit-ladder: flowchart lays out only the steps of its own ladder; any other Step fails with step', () => {
   const g = flowchart.parse(readSource('flowchart LR\nA --> B') as Source) as never
@@ -265,8 +263,7 @@ const TABLE: [string, string | null][] = [
   ['requirement', null],
 ]
 // Tier 1 keywords are enabled but unregistered here, since this file does not load diagrams/all.ts;
-// registry-tiers_test.ts
-// checks that each resolves to its module.
+// registry-tiers_test.ts checks that each resolves to its module.
 test('A1: every keyword and alias maps as in the table; each Tier 2 one is disabled, and each null one falls back', () => {
   assert.deepEqual(KEYWORDS, Object.fromEntries(TABLE))
   const sweep = TABLE.filter(([, type]) => type === null || TIER2.some((t) => t === type))
@@ -283,7 +280,7 @@ const stub = (type: DiagramType): DiagramModule => ({
   steps: () => [],
   layout: () => fail('stub'),
 })
-// The flowchart and sequence modules register themselves on import (T19, T24), so neither stays unregistered.
+// The flowchart and sequence modules register themselves on import, so neither stays unregistered.
 test("A1: lookup returns each enabled type's registered module, sequenceDiagram included, then the module registered in its place; a disabled type stays disabled", () => {
   assert.equal(lookup('flowchart TD'), flowchart)
   assert.equal(lookup('graph LR'), flowchart)

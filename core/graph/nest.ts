@@ -1,7 +1,6 @@
-// One rank's order (plan A §7.4): its items sorted by val, then by source order, each strip's items kept together as a
-// block at their mean val, its first key breaking ties. Blocks of strips that are also on the fixed rank keep their
-// order
-// there (fixed: each strip's first index on it), so that two strips never swap from one rank to the next.
+// One rank's order: its items sorted by val, then by source order, each strip's items kept together as a block at their
+// mean val, its first key breaking ties. Blocks of strips that are also on the fixed rank keep their order there
+// (fixed: each strip's first index on it), so that two strips never swap from one rank to the next.
 import type { Item } from './chains.ts'
 
 type Block = { c: string | null; items: Item[]; v: number; key: number }

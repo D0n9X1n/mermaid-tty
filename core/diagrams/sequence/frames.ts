@@ -1,12 +1,10 @@
-// Mermaid 12.2.0's geometry for the frames of a sequence diagram. Mermaid sizes a frame (loop, alt, opt, par,
-// critical, break or rect) to the bounds inserted while it is open, 10 px beyond them for each frame open inside it
-// then,
-// and draws a box 20 px beyond its members' pills; both turn on text widths a terminal does not know. So a frame draws
-// only where, at every text width, it covers the lifelines its run covers and nests in or stands clear of each box:
+// Mermaid 12.2.0's geometry for the frames of a sequence diagram. Mermaid sizes a frame (loop, alt, opt, par, critical,
+// break or rect) to the bounds inserted while it is open, 10 px beyond them for each frame open inside it then, and
+// draws a box 20 px beyond its members' pills; both turn on text widths a terminal does not know. So a frame draws only
+// where, at every text width, it covers the lifelines its run covers and nests in or stands clear of each box:
 // checked on Mermaid's narrowest layout, every pill 150 px and every gap its least, since text only widens a gap.
-// Mirrors
-// sequenceRenderer's addActorRenderingData, getMaxMessageWidthPerActor, bounds.insert, boundMessage, activationBounds,
-// buildNoteModel and box drawing.
+// Mirrors sequenceRenderer's addActorRenderingData, getMaxMessageWidthPerActor, bounds.insert, boundMessage,
+// activationBounds, buildNoteModel and box drawing.
 import type { Fail } from '../../fail.ts'
 import { fail } from '../../fail.ts'
 import type { Frame, Item, Seq } from './parse.ts'
@@ -61,8 +59,7 @@ function narrowest(seq: Seq): { center: number[]; borders: number[] } {
 }
 
 // A Fail unless Mermaid draws each frame over the lifelines of its run (runs, as layout draws it) and inside or clear
-// of
-// each box, at every text width: box-frame with a box, frame-extent without. A participant created or destroyed in a
+// of each box, at every text width: box-frame with a box, frame-extent without. A participant created or destroyed in a
 // frame, or a frame with no bounds at all, falls back. With a box, so does a self-message or a note on or beside one
 // lifeline, whose bounds turn on text width. Without one, such a bound is drawn where Mermaid's own gap sizing keeps it
 // short of the next lifeline (getMaxMessageWidthPerActor widens the gap on the side the text grows), and falls back
@@ -146,8 +143,7 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
           spoil()
         }
         // Over one lifeline: centered, max(pill, 150, text + 20) px wide; the text widens the gap each side by half
-        // that,
-        // so the note stays short of either neighbour while pad < 50.
+        // that, so the note stays short of either neighbour while pad < 50.
         else if (it.side === 'over') {
           insert(c - WIDTH / 2, c + WIDTH / 2, { i: is[0]!, l: (pad) => pad < 50, r: (pad) => pad < 50 })
         }
@@ -165,8 +161,7 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
           spoil()
         }
         // boundMessage: a self-message reaches max(text / 2, 75) px either side of its start, a px right of its
-        // lifeline;
-        // its text widens only the gap on its right, enough for the reach while a + pad < 60.
+        // lifeline; its text widens only the gap on its right, enough for the reach while a + pad < 60.
         else if (f === t) {
           const a = bounds(f).r - center[f]!
           insert(center[f]! + a - WIDTH / 2, center[f]! + a + WIDTH / 2, { i: f, l: never, r: (pad) => a + pad < 60 })
@@ -187,8 +182,7 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
     })
   walk(seq.items)
   // Each frame reaches past its run's end lifelines but not to the next lifeline or box border beyond them; its run
-  // lies
-  // in each box or clear of it; and no bound of unknown reach faces a lifeline beyond its run.
+  // lies in each box or clear of it; and no bound of unknown reach faces a lifeline beyond its run.
   const points = [...center, ...borders]
   const last = center.length - 1
   for (const [f, got] of reach) {

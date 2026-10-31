@@ -38,8 +38,8 @@ function names(list: string): string[] | null {
   return items?.every(Boolean) ? items : null
 }
 
-// The acceptance doc's reviewers: the PM reviews every scope; a cross-family:<model id> reviews every scope but
-// beauty, which is the PM's review of the rendered GitHub page alone.
+// The acceptance doc's reviewers: the PM reviews every scope; a cross-family:<model id> reviews every scope but beauty,
+// which is the PM's review of the rendered GitHub page alone.
 const CROSS_FAMILY = /^cross-family:[\w.-]+$/
 
 // Each front matter key, in order, and whether a value is valid for it.
@@ -71,9 +71,9 @@ function tableLine(line: string): boolean {
   return line.trimStart().startsWith('|') || (DELIMITER.test(s) && /[|:]/.test(s))
 }
 
-// The files of the record's one ## Files table. Every non-blank line from that heading to the next ## heading
-// is the table: | path | sha256 |, a |---|---| row, then one | <path> | <64 lowercase hex> | row per reviewed
-// file, each path once. Any table anywhere else, a line tableLine finds, or a second ## Files heading fails the record.
+// The files of the record's one ## Files table. Every non-blank line from that heading to the next ## heading is the
+// table: | path | sha256 |, a |---|---| row, then one | <path> | <64 lowercase hex> | row per reviewed file, each path
+// once. Any table anywhere else, a line tableLine finds, or a second ## Files heading fails the record.
 function filesTable(path: string, lines: string[]): ReviewFile[] | { error: string } {
   const start = lines.indexOf('## Files')
   if (start < 0) {
@@ -116,9 +116,9 @@ function filesTable(path: string, lines: string[]): ReviewFile[] | { error: stri
   return files
 }
 
-// Raw HTML: a < that opens a tag (<table>), a closing tag (</td>), a comment or declaration (<!-- -->) or a
-// processing instruction (<?x ?>). A record is plain prose, list items and the one Files table: raw HTML could show a
-// reader files the check never reads, or hide rows it does.
+// Raw HTML: a < that opens a tag (<table>), a closing tag (</td>), a comment or declaration (<!-- -->) or a processing
+// instruction (<?x ?>). A record is plain prose, list items and the one Files table: raw HTML could show a reader files
+// the check never reads, or hide rows it does.
 const RAW_HTML = /<[A-Za-z/!?]/
 
 // The record in text, found at path, or { error } naming the first way it breaks the record format.
@@ -214,8 +214,8 @@ function walk(root: string, rel: string): string[] {
   return readdirSync(join(root, rel)).flatMap((name) => walk(root, `${rel}/${name}`))
 }
 
-// The paths a scope's globs name, from root: a path as given, present or not, or <dir>/** for each
-// file under dir, sorted, and none when dir is absent. No other glob is supported.
+// The paths a scope's globs name, from root: a path as given, present or not, or <dir>/** for each file under dir,
+// sorted, and none when dir is absent. No other glob is supported.
 export function expandGlobs(globs: string[], root = '.'): string[] {
   return globs.flatMap((g) => {
     if (g.endsWith('/**') && !g.slice(0, -3).includes('*')) {
@@ -243,8 +243,8 @@ function required(): Record<string, string[]> {
   return Object.fromEntries(Object.entries(globs).map(([scope, g]) => [scope, expandGlobs(g)]))
 }
 
-// Prints a Files row, | <path> | <SHA-256 of its raw bytes> |, for each file at or under each of
-// paths, sorted by path, for a reviewer to paste into a record. Fails on a path with no files.
+// Prints a Files row, | <path> | <SHA-256 of its raw bytes> |, for each file at or under each of paths, sorted by path,
+// for a reviewer to paste into a record. Fails on a path with no files.
 function table(paths: string[]): number {
   const found = paths.map((p) => [p, walk('.', p)] as const)
   for (const [p, files] of found) {

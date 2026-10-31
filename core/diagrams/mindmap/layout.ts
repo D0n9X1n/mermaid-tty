@@ -1,4 +1,4 @@
-// The mindmap module (plan C T77; matrix, mindmap): the root leftmost, each child group to its parent's right, the
+// The mindmap module: the root leftmost, each child group to its parent's right, the
 // first
 // child on its parent's first row and the rest on a │ trunk; narrower, the groups pack, the labels wrap, then an
 // indented
@@ -18,8 +18,7 @@ import { width } from '../../width.ts'
 import { parseMindmap, type Mindmap, type MNode } from './parse.ts'
 
 // A node as drawn: its label's rows (wrap's pieces, a later line's first joining '\n'), its pill's width, caps
-// included,
-// the rows its subtree takes, its ink, its children, its parent and its next sibling.
+// included, the rows its subtree takes, its ink, its children, its parent and its next sibling.
 type Pill = {
   node: MNode
   depth: number
@@ -199,8 +198,7 @@ function outline(cv: Canvas | null, root: Pill): number {
 }
 
 // The drawing of one form at one wrap width, the title stacked above: 'too-wide' for a word wider than max or a row
-// wider
-// than columns.
+// wider than columns.
 function draw(m: Mindmap, form: 'natural' | 'compact' | 'outline', max: number, columns: number): Drawing | Fail {
   const root = pills(m, m.root, null, 0, max)
   if (isFail(root)) {

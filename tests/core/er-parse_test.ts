@@ -87,7 +87,7 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
   assert.deepEqual(P('A ||--o{ B : x %% note'), { reason: 'directive' })
 })
 
-// Beyond the plan's three: the shared rules (matrix, Common rules) as ER reads them.
+// Beyond the plan's three: the shared rules as ER reads them.
 test('A5.common: entities, unsupported characters and blank label lines fall back; a lone # is text', () => {
   for (const body of [
     '"I #9829; you"',
@@ -249,9 +249,8 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
     ['12', 'B', 'TOTAL'],
   )
 })
-// Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
-// and each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from
-// the
+// Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label) and
+// each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from the
 // outside in. A relation label and a subgraph title show ~ as written. Each case below was rendered under JSDOM.
 test('~…~ in an ER entity label with attributes and in attribute columns draws as <…>, as erBox shows it', () => {
   const m = P(
@@ -296,8 +295,7 @@ test('~…~ in an ER entity label with attributes and in attribute columns draws
   )
 })
 // Mermaid's lexer reads a word holding a ~ through the last ~ on its line as one attribute word, so a ~ in two columns,
-// a
-// lone ~ in the type, or a ~ in a comment's first word with another after it is a parse error there; a <br> it would
+// a lone ~ in the type, or a ~ in a comment's first word with another after it is a parse error there; a <br> it would
 // show as written falls back.
 test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, falls back', () => {
   for (const [body, why] of [
@@ -337,10 +335,8 @@ test('X3: Markdown the emphasis port cannot match, icons and math in an attribut
 })
 
 // X3. Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or
-// one a <br>
-// splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's name is
-// its
-// id, so emphasis there still falls back.
+// one a <br> splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's
+// name is its id, so emphasis there still falls back.
 test('X3.emphasis: bold and italic in an ER alias, relation label, subgraph title or attribute comment draw as Mermaid shows them', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const m = P(

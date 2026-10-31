@@ -1,6 +1,5 @@
 // The diagram registry (plan A §6, A1; plan C T40): each header keyword's diagram type, the Tier 1 and Tier 2 types,
-// the
-// types drawn, and their modules.
+// the types drawn, and their modules.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -74,7 +73,7 @@ export const KEYWORDS: Readonly<Record<string, DiagramType | null>> = {
   packet: 'packet',
 }
 
-// The types C draws (plan C §4). Each has its own core/diagrams/<type>/{parse,layout}.ts, loaded by diagrams/all.ts.
+// The types C draws. Each has its own core/diagrams/<type>/{parse,layout}.ts, loaded by diagrams/all.ts.
 export const TIER1: readonly DiagramType[] = [
   'state',
   'class',
@@ -88,9 +87,8 @@ export const TIER1: readonly DiagramType[] = [
   'xychart',
   'quadrant',
 ]
-// The types C gates (plan C §9): each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens,
-// and
-// one commit then adds it to TIER2_PASSED. None has passed in v1.
+// The types C gates: each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens, and one commit
+// then adds it to TIER2_PASSED. None has passed in v1.
 export const TIER2: readonly DiagramType[] = [
   'requirement',
   'c4',
@@ -121,7 +119,7 @@ export type DiagramModule<M = unknown> = {
 }
 
 // Each type's module, filed by register under the module's own type. It starts empty: T19 and T24 register flowchart's
-// and sequence's here, and diagrams/all.ts (plan C T40) loads each Tier 1 type's.
+// and sequence's here, and diagrams/all.ts loads each Tier 1 type's.
 const MODULES: Partial<Record<DiagramType, DiagramModule>> = {}
 
 // Files mod under mod.type, replacing any module filed there before.
@@ -151,8 +149,7 @@ export function lookup(header: string): DiagramModule | Fail {
 }
 
 // The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its
-// header
-// keywords in KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
+// header keywords in KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
 export function supportTable(): string {
   const keywords = (t: DiagramType) =>
     Object.keys(KEYWORDS)

@@ -1,4 +1,4 @@
-// The timeline module (plan C T83; matrix, timeline): LR draws one column per period, in source order, under the title
+// The timeline module: LR draws one column per period, in source order, under the title
 // and the section names: its pill, an axis row of ─ with ● at each column's start, then its events. TD, and LR's last
 // step, draw a left axis: ● and the period on one row, then │ and each indented event, a section name on its own row.
 // It registers itself on import, as flowchart's does.
@@ -19,10 +19,8 @@ const ink = (k: number): SeriesKey => `s${(k % 8) + 1}` as SeriesKey
 const widest = (ps: readonly Piece[]): number => Math.max(0, ...ps.map((p) => width(p.text)))
 
 // t's rows at most max cells wide: split at each lowercase <br>, the only break Mermaid 12.2.0 makes in a timeline
-// (parse.ts),
-// so <BR> or <br/> draws as written; each line wrapped. A later line's first piece joins '\n', so validate reads one
-// label.
-// null if a word is wider than max.
+// (parse.ts), so <BR> or <br/> draws as written; each line wrapped. A later line's first piece joins '\n', so validate
+// reads one label. null if a word is wider than max.
 function pieces(t: string, max: number): Piece[] | null {
   const out: Piece[] = []
   for (const [i, line] of t.split('<br>').entries()) {
@@ -37,8 +35,7 @@ function pieces(t: string, max: number): Piece[] | null {
   return out
 }
 // ps drawn down from row r at column c in ink, owned by owner, and listed in labels as text, placed at its first cell;
-// its
-// row count. So a section, period or event cannot leave its span.
+// its row count. So a section, period or event cannot leave its span.
 type Labels = Expect['labels'][number][]
 function put(
   cv: Canvas,
@@ -78,8 +75,8 @@ function items(tl: Timeline): Item[] {
 // LR at step. A column is as wide as its widest pill, a pill its text with a pad cell each side, its events pills too;
 // the gap is 2 at natural, else 1. wrap caps every column at the largest w with n·w + (n − 1) ≤ columns, wrapping pills
 // to w − 2 and a section name to its span at that cap less 2. A section name wider than its span widens its last
-// column. A section with no period has no column to span, so it fails here and draws at lrToTd. 'too-wide' if a word
-// is wider than its cap, or the columns and gaps are wider than columns: the axis row runs across all of them.
+// column. A section with no period has no column to span, so it fails here and draws at lrToTd. 'too-wide' if a word is
+// wider than its cap, or the columns and gaps are wider than columns: the axis row runs across all of them.
 function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   const its = items(tl)
   const n = its.length
@@ -214,9 +211,8 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
 
 // LR, and a bare header: natural, tight, wrap, then lrToTd, which draws TD wrapped. TD: natural, unwrapped, then wrap.
 // lrToTd needs no unwrapped try first: TD unwrapped fits only when every text fits its field, and then wrapping to
-// those
-// fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns (common
-// rule 3).
+// those fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns
+// (common rule 3).
 function layout(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   if (!(tl.dir === 'TD' ? TD : LR).includes(step)) {
     return fail('step')

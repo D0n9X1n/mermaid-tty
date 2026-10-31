@@ -1,9 +1,8 @@
-// node scripts/fresh-clone.ts: shows the repo needs no install and no build step. It clones the committed
-// HEAD of the repo in the current directory into a temp dir and there runs, in turn: bare node --test;
-// node --test over the walked *_test.ts list, since Node 24 rejects a directory; claude plugin test .;
-// and node scripts/smoke.ts. Uncommitted changes are not in the clone, so commit first. It prints each
-// step's exit code, and whether bare node --test ran more than 0 tests, and exits 1 when any step fails.
-// The clone is removed, on a failure too.
+// node scripts/fresh-clone.ts: shows the repo needs no install and no build step. It clones the committed HEAD of the
+// repo in the current directory into a temp dir and there runs, in turn: bare node --test; node --test over the walked
+// *_test.ts list, since Node 24 rejects a directory; claude plugin test .; and node scripts/smoke.ts. Uncommitted
+// changes are not in the clone, so commit first. It prints each step's exit code, and whether bare node --test ran more
+// than 0 tests, and exits 1 when any step fails. The clone is removed, on a failure too.
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,8 +24,8 @@ export function testCount(output: string): number | null {
   return counts.length ? Number(counts.at(-1)![1]) : null
 }
 
-// Runs this Node with args in cwd, its stdout captured and then shown, its stderr shown as it comes: its
-// exit code and stdout. Every script's main() is synchronous, so the stdout shows when the run ends.
+// Runs this Node with args in cwd, its stdout captured and then shown, its stderr shown as it comes: its exit code and
+// stdout. Every script's main() is synchronous, so the stdout shows when the run ends.
 function capture(args: string[], cwd: string): { status: number; stdout: string } {
   const r = spawnSync(process.execPath, args, {
     cwd,

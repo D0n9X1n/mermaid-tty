@@ -131,14 +131,13 @@ test('A5.errors: a header with more, no name or colon, only tags, four items, a 
   }
 })
 
-// The PM's additions: the Date range, entities, the keyword rule (common rule 5), a second title, and undrawable text.
+// The PM's additions: the Date range, entities, the keyword rule, a second title, and undrawable text.
 test('A5.errors: an end past the Date range falls back with its line; one at the edge resolves', () => {
   assert.deepEqual(P('A :2024-01-01, 100000000d'), { reason: 'date:2' })
   assert.equal(P('A :1970-01-01, 100000000d').tasks[0].end, 8.64e15)
 })
 // Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so #9829; shows ♥: such text would
-// draw
-// differently here, so it falls back. A # with no ; is text.
+// draw differently here, so it falls back. A # with no ; is text.
 test('A5.errors: a #…; entity in a body title, a section or a task name falls back; a lone # is text', () => {
   for (const body of ['title Love #9829;', 'section #lt;3', 'A #9829; :2024-01-01, 1d']) {
     assert.deepEqual(P(`${body}\nX :2024-01-01, 1d`), { reason: 'entity' }, body)
@@ -175,10 +174,8 @@ test('A5.errors: a second title, from frontmatter or a statement, and an undrawa
 })
 
 // Mermaid 12.2.0's ganttDb resolves times in up to 11 passes in source order. A pass reads a task not yet resolved as
-// no
-// time: `after a b` with b later takes a's end alone, and the first task of a chain of 11 forward references never
-// resolves.
-// Such charts would draw differently here, so they fall back.
+// no time: `after a b` with b later takes a's end alone, and the first task of a chain of 11 forward references never
+// resolves. Such charts would draw differently here, so they fall back.
 const chain = (k: number) =>
   [...Array.from({ length: k }, (_, i) => `T${i} :t${i}, after t${i + 1}, 1d`), `T${k} :t${k}, 2024-01-01, 1d`].join(
     '\n',

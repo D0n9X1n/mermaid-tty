@@ -1,8 +1,6 @@
-// Reads a gantt chart (plan C T68; matrix, gantt) into its model: the title, the sections, the axis format, and each
-// task's
-// name, section, tags, timing as written, and start and end, naive UTC ms (time.ts). A statement outside the subset, or
-// a
-// time Mermaid would not resolve exactly so, fails, so the fence draws as source.
+// Reads a gantt chart into its model: the title, the sections, the axis format, and each task's name, section, tags,
+// timing as written, and start and end, naive UTC ms (time.ts). A statement outside the subset, or a time Mermaid would
+// not resolve exactly so, fails, so the fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
 import { unsupported } from '../../width.ts'
@@ -24,8 +22,7 @@ export type GanttTask = {
 export type Gantt = { title: string | null; dated: boolean; axis: AxisFmt; sections: string[]; tasks: GanttTask[] }
 
 // The statements, each a whole trimmed line; a value runs to the line's end. Mermaid's lexer ends an axisFormat at # or
-// ;,
-// so one with either falls back (a dateFormat's # or ; fails its token check).
+// ;, so one with either falls back (a dateFormat's # or ; fails its token check).
 const TITLE = /^title\s+(.+)$/
 const SECTION = /^section\s+(.+)$/
 const DATE_FORMAT = /^dateFormat\s+(.+)$/
@@ -34,8 +31,8 @@ const AXIS_FORMAT = /^axisFormat\s+([^#;]+)$/
 // accDescr { to its first }.
 const ACC = /^acc(?:Title|Descr)\s*:/
 const ACC_BLOCK = /^accDescr\s*\{/
-// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
-// A click as Mermaid's grammar reads one on its line: click, an id, then href "<url>", call <name>(<args>), or both in
+// An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified). A
+// click as Mermaid's grammar reads one on its line: click, an id, then href "<url>", call <name>(<args>), or both in
 // either order. Mermaid reads a call with no ( on to the next ( in the chart, so one falls back.
 const HREF = String.raw`href\s+"[^"\n]+"`
 const CALL = String.raw`call\s+[^\s(][^(\n]*\([^)\n]*\)`
@@ -46,8 +43,7 @@ const CLICK = new RegExp(String.raw`^click\s+\S+\s+(?:${HREF}(?:\s*${CALL})?|${C
 const KEYWORD =
   /^(?:title|section|dateformat|axisformat|todaymarker|click|acctitle|accdescr|gantt|excludes|includes|weekday|weekend|tickinterval|topaxis|inclusiveenddates)/i
 // A task name Mermaid's lexer reads as something else: % first or second (a comment), a leading YYYY-MM-DD (a date),
-// call
-// as its first word (a callback), or href then a " (a link), in any case.
+// call as its first word (a callback), or href then a " (a link), in any case.
 const BAD_NAME = /^.?%|^\d{4}-\d{2}-\d{2}|^call(?:\s|$)|^href\s+"/i
 // The tags Mermaid reads before a task's other items; vert falls back.
 const TAGS: readonly string[] = ['done', 'active', 'crit', 'milestone', 'vert']
@@ -80,12 +76,11 @@ function stop(reason: string): never {
 }
 
 // The model src's statements build, or why it cannot be drawn: 'header' (not gantt), 'syntax:<n>' (a statement on
-// source
-// line n outside the subset, or an accDescr { there with no }), 'repeat:<n>' (a repeated id, or a second title, from
-// frontmatter or a statement), 'ref:<n>' (an unknown id), 'start:<n>' (a first task with no start), 'date:<n>' (a start
-// that is neither after nor a date, or an end past the Date range), 'order:<n>' (an end before its start), 'cycle' (a
-// task whose time depends on itself), 'ref-order:<n>' (a task Mermaid's passes time differently, reading a reference
-// before its task resolves), a drawn text's 'entity' or 'unsupported-char U+XXXX', or the dateFormat's or
+// source line n outside the subset, or an accDescr { there with no }), 'repeat:<n>' (a repeated id, or a second title,
+// from frontmatter or a statement), 'ref:<n>' (an unknown id), 'start:<n>' (a first task with no start), 'date:<n>' (a
+// start that is neither after nor a date, or an end past the Date range), 'order:<n>' (an end before its start),
+// 'cycle' (a task whose time depends on itself), 'ref-order:<n>' (a task Mermaid's passes time differently, reading a
+// reference before its task resolves), a drawn text's 'entity' or 'unsupported-char U+XXXX', or the dateFormat's or
 // axisFormat's Fail.
 export function parseGantt(src: Source): Gantt | Fail {
   try {
@@ -198,8 +193,8 @@ function closes(rest: string, n: number): boolean {
 }
 
 // Text s draws as written: a body title, a section or a task name. A #…; entity fails 'entity': Mermaid's
-// Diagram.fromText
-// encodes it in the body and its SVG decodes it, so #9829; would show ♥. An undrawable character fails too.
+// Diagram.fromText encodes it in the body and its SVG decodes it, so #9829; would show ♥. An undrawable character fails
+// too.
 function drawn(s: string): string {
   if (/#\w+;/.test(s)) {
     stop('entity')
@@ -212,9 +207,8 @@ function drawn(s: string): string {
 // Task line t, `<name> :<items>`, on source line n in section `section`, split at its first :. Fails syntax:<n> for no
 // :
 // or no name, a name Mermaid's lexer reads as something else, a vert tag, no item or more than 3 after the tags, or a
-// bad
-// id: __proto__ too, as Mermaid keeps ids as keys of a plain object, where that one is no key. A repeated tag counts
-// once.
+// bad id: __proto__ too, as Mermaid keeps ids as keys of a plain object, where that one is no key. A repeated tag
+// counts once.
 function row(t: string, n: number, section: number): Row {
   const colon = t.indexOf(':')
   const name = t.slice(0, colon).trim()
@@ -253,12 +247,9 @@ function row(t: string, n: number, section: number): Row {
 }
 
 // Each row's start and end, read under fmt in source order. As in Mermaid, a task with no id is task<n>, n counting
-// such
-// tasks. Fails repeat:<n> for an id an earlier task has, start:<n> for a first task with no start item, ref:<n> for an
-// id
-// no task has, date:<n> for a start that is neither after nor a date, and syntax:<n> for an end that is neither until,
-// a
-// date nor a duration.
+// such tasks. Fails repeat:<n> for an id an earlier task has, start:<n> for a first task with no start item, ref:<n>
+// for an id no task has, date:<n> for a start that is neither after nor a date, and syntax:<n> for an end that is
+// neither until, a date nor a duration.
 function classify(rows: readonly Row[], fmt: DateFmt): Spec[] {
   const index = new Map<string, number>()
   let auto = 0
@@ -393,9 +384,8 @@ function resolve(specs: readonly Spec[]): number[] {
 }
 
 // Each task's start and end as Mermaid 12.2.0's ganttDb sets them, undefined where it sets none: up to 11 passes over
-// the
-// tasks in source order, until each has an end. A pass reads a task it has not resolved yet as no time: after and until
-// take their first task's time, then any later one's that is strictly later (after) or earlier (until).
+// the tasks in source order, until each has an end. A pass reads a task it has not resolved yet as no time: after and
+// until take their first task's time, then any later one's that is strictly later (after) or earlier (until).
 function mermaidTimes(specs: readonly Spec[]): (number | undefined)[] {
   const t: (number | undefined)[] = []
   const done: boolean[] = []

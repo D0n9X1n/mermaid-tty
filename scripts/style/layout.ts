@@ -124,9 +124,9 @@ const STARTS_BLOCK = /^(?:[-*•]\s|\d+[.)]\s|\||```|$)/
 // Aligned columns or box drawing: a comment laid out by hand, left exactly as written.
 const LAID_OUT = /\S {3,}\S|[─│┌┐└┘├┤┬┴┼━┃]/
 
-// Comment lines refilled as paragraphs: each run of `//` (or ` *`) lines with one prefix and no deeper indent is
-// joined and wrapped again at the limit, so no line holds a stray word cut from the one above. Lists, tables, code,
-// indented continuations and hand-aligned text keep their lines.
+// Comment lines refilled as paragraphs: each run of `//` (or ` *`) lines with one prefix and no deeper indent is joined
+// and wrapped again at the limit, so no line holds a stray word cut from the one above. Lists, tables, code, indented
+// continuations and hand-aligned text keep their lines.
 export function refill(lines: readonly string[], inComment: (n: number) => boolean): string[] {
   const out: string[] = []
   let i = 0
@@ -178,8 +178,8 @@ function fill(prefix: string, text: string): string[] {
   return out
 }
 
-// The comments' words, in order: what wrapping and moving may not change.
-// A block comment's ` *` line prefixes are layout, not words; a line comment's text is all words, a leading * too.
+// The comments' words, in order: what wrapping and moving may not change. A block comment's ` *` line prefixes are
+// layout, not words; a line comment's text is all words, a leading * too.
 const words = (tree: Tree) =>
   tree.comments
     .flatMap((comment) =>

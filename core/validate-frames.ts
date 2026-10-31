@@ -124,13 +124,10 @@ export function frames(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // V6: an edge between nodes of one frame stays inside it. A frame holds a node when every cell drawn for the node, by
-// its
-// owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose own
-// border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and label
-// cell
-// of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame. Run after
-// frames,
-// so every listed frame spans a box.
+// its owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose
+// own border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and
+// label cell of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame.
+// Run after frames, so every listed frame spans a box.
 export function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const boxes = d.expect.frames.flatMap((id) => frameBox(all, id) ?? [])
   const within = (p: Spot, b: FrameBox) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
@@ -159,13 +156,10 @@ export function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
 
 // An edge crosses a frame's border only as often as the frame's hold on its ends needs: once when the frame holds one
 // end, as inFrames reads holding, and never when it holds neither (or both, which inFrames checks). A crossing is a
-// line cell
-// of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame holding
-// neither
-// end, or leaves and re-enters it, reads as reaching into it. A frame never holds itself, so an edge ending at the
-// frame
-// crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays outside (a
-// self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
+// line cell of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame
+// holding neither end, or leaves and re-enters it, reads as reaching into it. A frame never holds itself, so an edge
+// ending at the frame crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays
+// outside (a self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
 export function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const drawn = new Map<string, Spot[]>()
   for (const p of all) {
@@ -195,16 +189,12 @@ export function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: each end label names its own edge and end unambiguously. A node's terminal is the edge's line or arrow cells
-// beside it.
-// The label's cells, taken together, come within distance 1 of its node's terminal, and strictly nearer it than every
-// rival:
+// beside it. The label's cells, taken together, come within distance 1 of its node's terminal, and strictly nearer it
+// than every rival:
 // the edge's other terminal, and every line or arrow cell the edge does not own. And no cell of its terminal within
-// distance
-// 1 of the label is another edge's too. So a tie fails: a label that spans the edge, sits between parallel edges, or
-// ends a
-// self-loop, whose two terminals are one; and so does a label on a stem two edges share, a fan-out's or a fan-in's,
-// which
-// keeps every glyph when its owners swap. labels checks its text.
+// distance 1 of the label is another edge's too. So a tie fails: a label that spans the edge, sits between parallel
+// edges, or ends a self-loop, whose two terminals are one; and so does a label on a stem two edges share, a fan-out's
+// or a fan-in's, which keeps every glyph when its owners swap. labels checks its text.
 export function endLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   const lines = all.filter((p) => p.cell.kind === 'line' || p.cell.kind === 'arrow')
   for (const e of d.expect.edges) {

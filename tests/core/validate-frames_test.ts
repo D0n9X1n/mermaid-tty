@@ -18,11 +18,10 @@ const S = (t: string): Drawing =>
 const show = (d: Drawing) => text(d).join('\n')
 
 // QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2
-// in
-// flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where
-// one is
-// due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the finding, a
-// label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between() further down.
+// in flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where
+// one is due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the
+// finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between()
+// further down.
 test("A5.mutation-tests: QA's cluster-border repro, its edge through S0 and back, falls back", () => {
   const src =
     'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
@@ -294,8 +293,8 @@ test('An edge through a frame that holds neither of its ends fails edge-crosses-
   assert.equal(validate(framed(straight)), null)
 })
 // The two-subgraph LR chart (case 2) at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds
-// neither end, and leaves through its
-// right wall. Every step of the ladder draws a frame crossed so, or another broken drawing, so the fence falls back.
+// neither end, and leaves through its right wall. Every step of the ladder draws a frame crossed so, or another broken
+// drawing, so the fence falls back.
 test('The two-subgraph LR chart at 80 columns, its dotted edge crossing Data tier, falls back', () => {
   const src =
     'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
@@ -303,9 +302,9 @@ test('The two-subgraph LR chart at 80 columns, its dotted edge crossing Data tie
   const r = explain(src, { columns: 80 })
   assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
 })
-// An edge whose end is the frame itself is not exempt from every crossing. Only its mark, which meets
-// the border from outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S.
-// Here S-->S ran down through S, across its top and bottom borders, and drew at 60, 80 and 120.
+// An edge whose end is the frame itself is not exempt from every crossing. Only its mark, which meets the border from
+// outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S. Here S-->S ran
+// down through S, across its top and bottom borders, and drew at 60, 80 and 120.
 test("A self-loop on a frame never runs over the frame's border", () => {
   const src = 'flowchart BT\nsubgraph S\nX\nY\nend\nB --> F\nS --> F\nF --> S\nS --> B\nS --> S'
   for (const columns of [60, 80, 120]) {
@@ -329,8 +328,7 @@ test("A self-loop on a frame never runs over the frame's border", () => {
   }
 })
 // The validator half alone, on F of between() with no a: e from F to b leaves F's top from above, at (0,3), then runs
-// down
-// column 4 through F's interior, crossing its top and bottom borders. F is e's end, but not that way.
+// down column 4 through F's interior, crossing its top and bottom borders. F is e's end, but not that way.
 test('An edge from a frame that runs through the frame fails edge-crosses-frame', () => {
   const c = createCanvas(8, 9, 9)
   c.frame(1, 1, 5, 7, 'frame', 'F', 'T')

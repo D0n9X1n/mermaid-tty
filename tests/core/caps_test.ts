@@ -11,8 +11,8 @@ test('A3: every shape has its own cap pair', () => {
   }
 })
 
-// Each shape's end caps, as drawn in place of Mermaid's outline; the block
-// arrow gives four shapes. Keys are core/caps.ts's Shape names, and '' is no cap.
+// Each shape's end caps, as drawn in place of Mermaid's outline; the block arrow gives four shapes. Keys are
+// core/caps.ts's Shape names, and '' is no cap.
 test("A3: CAPS is exactly the 22 shapes' end caps", () => {
   const matrix = {
     rect: ['[', ']'],
@@ -57,8 +57,7 @@ test('A1: names inherited from Object.prototype are unknown → rect', () => {
   assert.deepEqual(leaked, [])
 })
 
-// Every flowchart.md @{shape} name whose shape has end caps, with that shape.
-// There are 49.
+// Every flowchart.md @{shape} name whose shape has end caps, with that shape. There are 49.
 test('A1: ALIASES is exactly the 49 @{shape} aliases; shapeFromName agrees', () => {
   const aliases: Record<string, string> = {
     rect: 'rect',

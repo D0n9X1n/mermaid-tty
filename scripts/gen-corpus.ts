@@ -57,8 +57,8 @@ function keep<T>(xs: readonly T[], k: number): T[] {
 // first mention only.
 type Block = { zh: boolean; quoted: boolean; br: boolean; dash: boolean; pad: string; drawn: Set<string> }
 
-// A label is 'English|中文|detail|细节': 中文 defaults to the English, 细节 to the detail. Its text in b's language, with
-// the detail after <br/> when b shows details.
+// A label is 'English|中文|detail|细节': 中文 defaults to the English, 细节 to the detail. Its text in b's language, with the
+// detail after <br/> when b shows details.
 function text(b: Block, label: string): string {
   const [en = '', zh = en, detail = '', detailZh = detail] = label.split('|')
   const more = b.zh ? detailZh : detail
@@ -666,8 +666,8 @@ function pipeline(b: Block, p: Pipeline): string[] {
 }
 
 // A service architecture: the client outside; the entry and a nested subgraph of services inside the backend subgraph;
-// the stores in their own subgraph; edges across the subgraphs' borders, and a dotted one out to an external system.
-// A node's id is its English label's first word.
+// the stores in their own subgraph; edges across the subgraphs' borders, and a dotted one out to an external system. A
+// node's id is its English label's first word.
 function architecture(b: Block, a: Arch): string[] {
   const node = (shape: Shape, label: string): Node => ({
     id: label
@@ -746,9 +746,8 @@ const FLOWS: Template[] = [
 const PADS = ['    ', '    ', '    ', '  ', '']
 
 // The 100 blocks, the kinds in a shuffled order. Quotas over the 92 flowcharts hold the mix: 51 in Chinese, 80 quoted,
-// 37
-// with <br/> details, 8 with a frontmatter title, 28 that put a plain arrow's label between dashes, 24 headed graph, 4
-// with no direction. Decisions, retry loops and architectures always label an edge; architectures always have
+// 37 with <br/> details, 8 with a frontmatter title, 28 that put a plain arrow's label between dashes, 24 headed graph,
+// 4 with no direction. Decisions, retry loops and architectures always label an edge; architectures always have
 // subgraphs. Of the 8 sequence diagrams, 4 are in Chinese and 3 have a title.
 function generate(): string[] {
   rand = mulberry32(SEED)

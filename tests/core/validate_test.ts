@@ -65,8 +65,7 @@ test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', ()
     dirs,
   })
   // A disconnected loop has two arms per cell: valid arms first, then one missing reciprocal bit. Closed, no arm
-  // dangles,
-  // but it is a stray part of A>B joined to nothing, so it fails edge-disconnected; open, it dangles first.
+  // dangles, but it is a stray part of A>B joined to nothing, so it fails edge-disconnected; open, it dangles first.
   loop.cells[0]![4] = line(6)
   loop.cells[0]![5] = line(12)
   loop.cells[1]![4] = line(3)
@@ -105,8 +104,7 @@ function label(expected: string, pieces: readonly (readonly [string, Piece['join
   return c.toDrawing({ labels: [{ owner: 'n1', text: expected }], edges: [], edgeLabels: [], frames: [] })
 }
 // The first piece joins with '' or none; a piece split at a space with ' ', one split between W/F characters with '',
-// and
-// the first piece of a later label line with '\n'.
+// and the first piece of a later label line with '\n'.
 test('A5.mutation-tests: a wrapped label is one instance, its pieces joined by their join', () => {
   assert.equal(validate(label('alpha beta gamma', [['alpha'], ['beta', ' '], ['gamma', ' ']])), null)
   assert.equal(
@@ -209,8 +207,7 @@ test('A5.mutation-tests: an edge passes through a junction cell it shares with a
   assert.equal(validate(cut(fork(), 2, 0))?.reason, 'edge-disconnected')
 })
 // An edge label drawn on the path: its cells list the label id A>B:label, then the edge id. Text under any other owner
-// is not
-// the edge's label, even when its cells list A>B too.
+// is not the edge's label, even when its cells list A>B too.
 test("A5.mutation-tests: an edge's own label cell joins any adjacent cell of its edge but starts nothing; text of another owner breaks the edge, even text the edge owns", () => {
   assert.equal(validate(path([5, { text: 'L', owners: ['A>B:label', 'A>B'] }, 5, '▼'], ['B▼'])), null)
   assert.equal(validate(path([5, { text: 'L', owners: ['L1'] }, 5, '▼'], ['B▼']))?.reason, 'edge-disconnected')
@@ -362,8 +359,7 @@ test('A5.mutation-tests: an edge label needs a cell within Chebyshev distance 1 
   assert.equal(validate(labelled(1, 2, 'X>Y'))?.reason, 'label-not-adjacent')
 })
 // Each drawing breaks two adjacent checks of labels, edges, conflicts, row widths and edge labels. The last breaks an
-// edge
-// twice: its ▲ sits on a junction, and its ▼ is missing.
+// edge twice: its ▲ sits on a junction, and its ▼ is missing.
 test('A5.mutation-tests: a drawing broken two ways reports the earlier check', () => {
   assert.equal(validate(cut(cut(two(), 3, 2), 1, 2))?.reason, 'label-missing')
   assert.equal(
@@ -378,9 +374,8 @@ test('A5.mutation-tests: a drawing broken two ways reports the earlier check', (
   assert.equal(validate(path(['▲', 7, 5, 5], ['A▲', 'B▼']))?.reason, 'edge-disconnected')
 })
 // An edge owns only its end marks' arrow cells. The canvas merges a same-glyph arrow of edges that share an endpoint,
-// so an edge
-// whose arrow lands on another edge's head owns an extra head, which fails; a merged fan-in head, <-->, o and x ends
-// pass.
+// so an edge whose arrow lands on another edge's head owns an extra head, which fails; a merged fan-in head, <-->, o
+// and x ends pass.
 test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-extra', () => {
   const draw = (
     rows: number,
@@ -471,8 +466,7 @@ test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-
 })
 
 // A lifeline is read as the participant whose pill heads it, so each lifeline cell lies in its own pill's columns:
-// header
-// pills of one width swapped over their lifelines reverse every message.
+// header pills of one width swapped over their lifelines reverse every message.
 test("lifeline-unbound: a lifeline under another participant's pill fails", () => {
   const r = explain('sequenceDiagram\nparticipant A\nparticipant B\nA->>B: hi', { columns: 80, theme: 'mono' }) as {
     drawing: Drawing

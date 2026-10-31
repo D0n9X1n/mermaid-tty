@@ -1,7 +1,6 @@
-// Checks the curated palettes: every role has contrast >= 3 against the palette's
-// background, and every pair of roles, and every pair of series colors, is at least
-// 0.08 apart in OKLab. `default` (theme keys) and `mono` (no color) are exempt.
-// Usage: node scripts/check-palettes.ts  (prints the table; exits 1 on any problem)
+// Checks the curated palettes: every role has contrast >= 3 against the palette's background, and every pair of roles,
+// and every pair of series colors, is at least 0.08 apart in OKLab. `default` (theme keys) and `mono` (no color) are
+// exempt. Usage: node scripts/check-palettes.ts (prints the table; exits 1 on any problem)
 import { contrast, oklabDistance } from '../core/color.ts'
 import { THEMES } from '../core/themes.ts'
 import type { Palette, ThemeName } from '../core/themes.ts'
@@ -62,8 +61,8 @@ function nearest(group: readonly Swatch[], i: number): [string, number] {
   return best
 }
 
-// A header, then for each palette notHex passed: its background, and each role and
-// series color with its contrast on the background and the nearest ink of its group.
+// A header, then for each palette notHex passed: its background, and each role and series color with its contrast on
+// the background and the nearest ink of its group.
 function table(themes: Readonly<Record<ThemeName, Palette>>): string {
   const rows = [['theme', 'ink', 'color', 'contrast', 'nearest', 'distance']]
   for (const t of CHECKED) {

@@ -8,9 +8,8 @@ import { toRows } from '../../core/render.ts'
 import { palette, THEMES } from '../../core/themes.ts'
 const TEXT: Record<string, string> = { n1: 'memo', n2: 'other' }
 // Row 0: each item's in-place key, or its text when it is unkeyed. Row 1 + i: item i's legend row, its key and then its
-// text.
-// Each tuple is [item, in-place key, legend key]; a null legend key drops that key cell, and an omitted one drops the
-// whole row.
+// text. Each tuple is [item, in-place key, legend key]; a null legend key drops that key cell, and an omitted one drops
+// the whole row.
 function keyed(drawn: readonly [string, string | null, (string | null)?][], keys: Expect['keys']): Drawing {
   const c = createCanvas(4, 12, 12)
   drawn.forEach(([item, key, lk], i) => {
@@ -453,8 +452,7 @@ test("A5.mutation-tests: an entry's at is in its in-place key or beside it on it
   }
 })
 // In-place keys a and b at (0, 0) and (0, 2), then the legend: a alpha · 0.3, its separator and value owned by others,
-// then
-// n1's wrapped tail and b beta in the given order.
+// then n1's wrapped tail and b beta in the given order.
 function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
   const c = createCanvas(4, 16, 16)
   c.key(0, 0, 'a', 'note', 'n1', false)
@@ -489,8 +487,7 @@ function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
   })
 }
 // A legend beside the diagram: a alpha in row 0 and its wrapped tail in row 1, b beta in row 2; the in-place keys at
-// column 10,
-// b's in row 0 and a's in row 1, tail's row.
+// column 10, b's in row 0 and a's in row 1, tail's row.
 function beside(): Drawing {
   const c = createCanvas(3, 16, 16)
   c.key(0, 0, 'a', 'note', 'n1', true)
@@ -564,9 +561,8 @@ test("A5.mutation-tests: a legend key reads its entry's key even where the in-pl
     { reason: 'key-mismatch' },
   )) // a / b; b memo, b other
 // In-place keys a and b at (0, 0) and (0, 2), then a alpha as the legend's first row. Shared: b beta on that row at
-// column 12,
-// and alpha's wrapped tail under beta at column 14. Else alpha's tail at (2, 2), then b 设计, wide cells, in the next
-// row.
+// column 12, and alpha's wrapped tail under beta at column 14. Else alpha's tail at (2, 2), then b 设计, wide cells, in
+// the next row.
 function oneRow(shared: boolean): Drawing {
   const c = createCanvas(4, 20, 20)
   c.key(0, 0, 'a', 'note', 'n1', false)

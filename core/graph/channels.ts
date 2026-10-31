@@ -444,8 +444,8 @@ export function channelsRoute(p: Placed): Route[] | Fail {
 
       return near ? 0 : 2
     }
-    // The side face a moved tail sits on, by the direction it moved: above or below when ranks run across, else left
-    // or right.
+    // The side face a moved tail sits on, by the direction it moved: above or below when ranks run across, else left or
+    // right.
     const sideFace = (direction: number) => {
       if (across) {
         return direction < 0 ? 0 : 2

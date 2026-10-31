@@ -21,7 +21,7 @@ const hex = (c: string) => {
   return v
 }
 // Plan A's spans carry resolved colors (a CC ThemeKey or #rrggbb; none under mono; dimColor for mono notes); keys
-// resolve through DARK (D2).
+// resolve through DARK.
 export function spanStyle(sp: Span): Omit<Styled, 'text'> {
   let fg = DARK.text!
   if (sp.dimColor) {
@@ -48,9 +48,8 @@ export function styledRows(source: string, columns: number, theme: string, raw =
   const rows = renderMermaid(source, theme === 'default' ? { columns } : { columns, theme })
   return rows && rows.map((row) => row.map((sp) => ({ text: sp.text, ...spanStyle(sp) })))
 }
-// A reply as Claude Code shows it with the plugin on: each prose line as written, each closed mermaid fence drawn
-// by core. null if any fence falls back, so the preview never shows a fence core would not draw. With png (base64),
-// each
+// A reply as Claude Code shows it with the plugin on: each prose line as written, each closed mermaid fence drawn by
+// core. null if any fence falls back, so the preview never shows a fence core would not draw. With png (base64), each
 // fence instead leaves blank the cells the plugin's image mode gives that picture (fit), pushed onto pics.
 export function replyRows(
   source: string,

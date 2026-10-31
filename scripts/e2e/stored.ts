@@ -42,8 +42,8 @@ const CLIPBOARD_COMMANDS = new Map([
   ['linux', ['wl-copy', 'xclip', 'xsel']],
 ])
 
-// Stand-ins for the platform's clipboard commands, by file name: each writes its stdin to out. On Windows,
-// clip.cmd, which Claude Code runs as clip.
+// Stand-ins for the platform's clipboard commands, by file name: each writes its stdin to out. On Windows, clip.cmd,
+// which Claude Code runs as clip.
 export function clipboardStubs(platform: string, out: string): Record<string, string> {
   if (platform === 'win32') {
     const ps = out.replaceAll("'", "''")

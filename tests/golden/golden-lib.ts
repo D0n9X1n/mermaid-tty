@@ -27,8 +27,7 @@ const CODE: Readonly<Record<Ink, string>> = {
   s8: '8',
 }
 // A text cell's (source text's) role code: its ink's code in uppercase, or for a series ink the shifted key of its
-// digit,
-// !@#$%^&* for 1–8, so the glyph scan never reads source text as a drawn series glyph.
+// digit, !@#$%^&* for 1–8, so the glyph scan never reads source text as a drawn series glyph.
 const SHIFTED = '!@#$%^&*'
 const textCode = (code: string): string => (/^[1-8]$/.test(code) ? SHIFTED[Number(code) - 1]! : code.toUpperCase())
 const glyph = (c: Cell | null): string => {
@@ -86,10 +85,8 @@ const hex = (s: string): string =>
   [...s].map((ch) => 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')).join(' ')
 
 // 'row r col c U+XXXX' for each drawn cell (any kind but text and cont) whose ch is not an allow-listed glyph of width
-// 1 or
-// more, or holds a zero-width code point. A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in
-// the
-// source text before it, so this checks the drawing itself.
+// 1 or more, or holds a zero-width code point. A golden cannot tell a drawn cell whose whole ch is zero-width from a
+// mark in the source text before it, so this checks the drawing itself.
 export function drawnGlyphs(d: Drawing): string[] {
   const out: string[] = []
   d.cells.forEach((row, r) =>
@@ -107,10 +104,8 @@ export function drawnGlyphs(d: Drawing): string[] {
 }
 
 // 'file:line ch' for each drawn (lowercase) or series (digit) cell in dir's *.golden files, at any depth, whose glyph
-// is not
-// allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase, or a
-// series
-// ink's shifted digit) is not checked.
+// is not allow-listed, and for each zero-width code point not inside source text (see scan). Source text (uppercase, or
+// a series ink's shifted digit) is not checked.
 export function goldenGlyphs(dir: string): string[] {
   const out: string[] = []
   const files = (readdirSync(dir, { recursive: true }) as string[]).filter((f) => f.endsWith('.golden')).sort()
@@ -136,19 +131,15 @@ export function goldenGlyphs(dir: string): string[] {
 }
 
 // Is a role code a drawn or series cell (lowercase or digit), or source text (uppercase, or a series ink's shifted
-// digit)?
-// Neither for ' ', '~' or none.
+// digit)? Neither for ' ', '~' or none.
 const drawn = (code: string | undefined): boolean => code !== undefined && /[a-z0-9]/.test(code)
 const sourceText = (code: string | undefined): boolean => code !== undefined && /[A-Z!@#$%^&*]/.test(code)
 
 // Pairs a text row with its role row by column: a character takes width(ch) columns, and a zero-width code point joins
-// the
-// cell before it, as canvas.text() joins it. So it is part of source text when that cell is source text, and is flagged
-// otherwise: on a drawn cell, since no allow-listed glyph holds one, and on an empty cell or at a row's start, where no
-// cell
-// can take it. A drawn cell whose whole ch is zero-width reads the same in a golden as a mark in the source text before
-// it;
-// drawnGlyphs catches that one on the drawing.
+// the cell before it, as canvas.text() joins it. So it is part of source text when that cell is source text, and is
+// flagged otherwise: on a drawn cell, since no allow-listed glyph holds one, and on an empty cell or at a row's start,
+// where no cell can take it. A drawn cell whose whole ch is zero-width reads the same in a golden as a mark in the
+// source text before it; drawnGlyphs catches that one on the drawing.
 function scan(text: string, roles: string, where: string, out: string[]): void {
   let col = 0
   let lead = -1 // lead: the column of the last character that took a column

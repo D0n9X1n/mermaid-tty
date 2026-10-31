@@ -50,8 +50,7 @@ test('A5.errors: zero, negative, repeated, unquoted, backslash and empty pies fa
 })
 
 // Beyond the plan's tests. Nine slices, so ink cycles: ties keep source order, and ink and owners follow the source
-// index
-// k, not the rank. A bar's ink is s<(k mod 8) + 1>, so i (k = 8) wraps to s1.
+// index k, not the rank. A bar's ink is s<(k mod 8) + 1>, so i (k = 8) wraps to s1.
 test('A4: ties keep source order; ink and owners follow the source index; expect lists every bar and text owner once', () => {
   const vs = [1, 2, 2, 1, 1, 1, 1, 1, 3]
   const E = [0, 37, 74, 111]

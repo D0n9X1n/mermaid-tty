@@ -3,9 +3,9 @@ import type { Source } from '../../source.ts'
 import { drawable, labelLines, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
-// The sequence model (matrix, sequence): participants in column order, the boxes
-// around them, and the statements in source order, each frame holding its own.
-// Not in the plan: a note's side keeps its source words; an absent condition or box label is null.
+// The sequence model: participants in column order, the boxes around them, and the statements in source order, each
+// frame holding its own. Not in the plan: a note's side keeps its source words; an absent condition or box label is
+// null.
 export type Participant = { id: string; kind: 'participant' | 'actor'; label: string }
 export type Box = { label: string | null; ids: string[] }
 export type Msg = {
@@ -51,16 +51,14 @@ const TITLE = re(String.raw`title\s+(.*)`)
 const ACC = re(String.raw`(?:accTitle|accDescr)\s*:.*`)
 const ACC_BLOCK = re(String.raw`accDescr\s*\{(.*)`)
 // Where a message or note names a participant, Mermaid 12.2.0's lexer reads these words as keywords, in any case and
-// before
-// any character but a-z, 0-9 and _ (jison's word boundary), and fails on an id made of one. After participant, actor,
-// create, activate, deactivate or destroy it reads any id.
+// before any character but a-z, 0-9 and _ (jison's word boundary), and fails on an id made of one. After participant,
+// actor, create, activate, deactivate or destroy it reads any id.
 const KEYWORDS =
   `participant actor note over end loop alt else opt par and rect critical break option activate deactivate autonumber
   box create destroy par_over off sequenceDiagram`.split(/\s+/)
 const KEYWORD = new RegExp(`^(?:${KEYWORDS.join('|')})(?![A-Za-z0-9_])`, 'i')
 // Words Mermaid reads as keywords only before what follows here: title x, title: x, accTitle: x, accDescr: x or {.
-// Before
-// an arrow, a bare colon or a comma they are ids, as link, links, properties and details always are there.
+// Before an arrow, a bare colon or a comma they are ids, as link, links, properties and details always are there.
 const SOFT: ReadonlyMap<string, RegExp> = new Map([
   ['title', /^(?:\s|:\s|:$)/],
   ['acctitle', /^\s*:/],
@@ -88,8 +86,7 @@ const NAMED = new Set(
   ),
 )
 // Words a browser also reads as a color, each to its own support: currentColor, the CSS-wide keywords, and the CSS
-// Color 4
-// system colors, deprecated ones included. A box label led by one fails box-color.
+// Color 4 system colors, deprecated ones included. A box label led by one fails box-color.
 const OTHER_COLORS = new Set(
   `currentcolor inherit initial unset revert accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas
   canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption
@@ -99,12 +96,9 @@ const OTHER_COLORS = new Set(
   ),
 )
 // Not in the plan: the strict subset of rgb(), rgba(), hsl() and hsla() box colors. rgb() and rgba() take three
-// integers
-// 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or turn,
-// then two
-// percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts are
-// space-separated.
-// Spaces are free inside the parentheses.
+// integers 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or
+// turn, then two percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts
+// are space-separated. Spaces are free inside the parentheses.
 const BYTE = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`
 const PERCENT = String.raw`(?:100(?:\.0+)?|[1-9]?\d(?:\.\d+)?|\.\d+)%`
 const ALPHA = String.raw`(?:1(?:\.0+)?|0?\.\d+|0|${PERCENT})`
@@ -117,8 +111,8 @@ const COLOR_FN = new RegExp(
   String.raw`^(?:rgba?\(${SP}(?:${parts(BYTE, BYTE, BYTE)}|${parts(PERCENT, PERCENT, PERCENT)})` +
     String.raw`|hsla?\(${SP}${parts(HUE, PERCENT, PERCENT)})${SP}\)$`,
 )
-// A message: the sender's id, the first arrow (longest first) that starts the rest, an optional + or -, the
-// target's id, a colon and the text. Not in the plan: spaces may separate the parts, as in Mermaid's lexer.
+// A message: the sender's id, the first arrow (longest first) that starts the rest, an optional + or -, the target's
+// id, a colon and the text. Not in the plan: spaces may separate the parts, as in Mermaid's lexer.
 const FROM = new RegExp(String.raw`^(${ID})\s*`, 'u')
 const TO = new RegExp(String.raw`^\s*([+-]?)\s*(${ID})(\s*:(.*))$`, 'u')
 const ARROWS: [string, Msg['line'], Msg['tail'], Msg['head']][] = [
@@ -139,8 +133,8 @@ function stop(reason: string): never {
   throw fail(reason)
 }
 
-// Drawn text, trimmed: every label line of it must be supported. Mermaid reads a # as the start of a comment, or of
-// an entity such as #9829;, so it would draw other text; and text it shows otherwise in a field of mode and br fails as
+// Drawn text, trimmed: every label line of it must be supported. Mermaid reads a # as the start of a comment, or of an
+// entity such as #9829;, so it would draw other text; and text it shows otherwise in a field of mode and br fails as
 // drawable says. A message or note splits each <br>; an alias, condition or box label draws on one line (br 'none'); a
 // title, statement or frontmatter, is sanitized with no <br>, as Mermaid shows title a<!--c-->b as ab.
 function text(s: string, mode: Mode, br: Br): string {
@@ -192,8 +186,7 @@ function closes(rest: string, n: number): boolean {
 type Stmt = { n: number; raw: string; cut: string }
 // Not in the plan: as in Mermaid 12.2.0, a ; ends a statement and a # starts a comment that runs to the line end.
 // Accessibility text runs to the line end, an accDescr { block to its }, whatever it holds. encodeEntities turns an
-// entity
-// such as #9829; into other text before the lexer runs, so one fails hash.
+// entity such as #9829; into other text before the lexer runs, so one fails hash.
 function* statements(lines: Source['lines']): Generator<Stmt> {
   let accFrom = 0
   for (const { n, text } of lines) {
@@ -274,8 +267,7 @@ function walk(src: Source): Seq {
   // A statement goes into the innermost open frame's last section, or the top level.
   const add = (item: Item) => void (frames.at(-1)?.sections.at(-1)?.items ?? seq.items).push(item)
   // Naming a participant declares it if it is new; naming a destroyed one fails. A message or note naming it passes
-  // what
-  // follows the id in the statement: a keyword there, or a number before a space, fails as Mermaid's lexer does.
+  // what follows the id in the statement: a keyword there, or a number before a space, fails as Mermaid's lexer does.
   const mention = (id: string, after?: string) => {
     if (after !== undefined && (KEYWORD.test(id) || SOFT.get(id.toLowerCase())?.test(after))) {
       stop('keyword')
@@ -309,8 +301,8 @@ function walk(src: Source): Seq {
   }
   for (const { n, raw, cut } of statements(src.lines)) {
     const t = raw.trim()
-    // A message, note, frame, section, end or autonumber may end at a #, as Mermaid reads it; any other statement
-    // that does would show other text, so it fails hash, as does one that does not parse.
+    // A message, note, frame, section, end or autonumber may end at a #, as Mermaid reads it; any other statement that
+    // does would show other text, so it fails hash, as does one that does not parse.
     const hash = cut === '#'
     const bad: () => never = () => stop(hash ? 'hash' : `syntax:${n}`)
     let m: RegExpExecArray | null
@@ -362,8 +354,7 @@ function walk(src: Source): Seq {
       const kind = m[1] as Mark['kind']
       const id = m[2]!
       // As in Mermaid 12.2.0, a mark does not declare its id, so it does not set column order. Mermaid fails on one
-      // nothing
-      // else declares; one that a message could not name, a keyword or number, falls back here.
+      // nothing else declares; one that a message could not name, a keyword or number, falls back here.
       if (!seq.participants.some((p) => p.id === id) && (KEYWORD.test(id) || SOFT.has(id.toLowerCase()))) {
         stop('keyword')
       }
@@ -556,11 +547,9 @@ function message(t: string): [Msg, string] | null {
 }
 
 // A box's label, cut at any # by statements(): its text after a leading CSS color, which is not drawn; null if none is
-// left. As in Mermaid, a lowercase
-// rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in the plan: Mermaid drops that color
-// only if
-// the browser reads it as one, and else titles the box with the whole label, so one outside the strict subset fails
-// box-color.
+// left. As in Mermaid, a lowercase rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in
+// the plan: Mermaid drops that color only if the browser reads it as one, and else titles the box with the whole label,
+// so one outside the strict subset fails box-color.
 function boxLabel(s: string): string | null {
   if (/^(?:rgba?|hsla?)\(/.test(s)) {
     const color = s.slice(0, s.lastIndexOf(')') + 1)

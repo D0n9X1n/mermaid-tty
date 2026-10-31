@@ -1,7 +1,6 @@
-// The gantt module (plan C T69; matrix, gantt): under the title, each section's header rows in its series ink, then its
-// tasks: a 2-cell status, the name padded to N, the timing padded to T or its key, and the bar field W, then the tick
-// rule
-// and labels, and at the keyed steps a legend of the timings. It registers itself on import, as flowchart's does.
+// The gantt module: under the title, each section's header rows in its series ink, then its tasks: a 2-cell status, the
+// name padded to N, the timing padded to T or its key, and the bar field W, then the tick rule and labels, and at the
+// keyed steps a legend of the timings. It registers itself on import, as flowchart's does.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { axisRows, type Tick } from '../../charts/axis.ts'
 import { hbar } from '../../charts/bars.ts'
@@ -62,10 +61,8 @@ const statusOf = (t: GanttTask): string => (t.tags.includes('crit') ? '!' : ' ')
 
 // Why g's text would draw other text than Mermaid 12.2.0 shows: 'section-repeat' for two sections of one name, which
 // Mermaid merges into one label; 'section-empty' for a section with no task, whose header Mermaid does not draw;
-// 'entity'
-// for a marker, or 'html' for a title Mermaid sanitizes. A task name draws as written, a section name split at any
-// <br>,
-// and a title is sanitized, with no <br>.
+// 'entity' for a marker, or 'html' for a title Mermaid sanitizes. A task name draws as written, a section name split at
+// any <br>, and a title is sanitized, with no <br>.
 function undrawable(g: Gantt): Fail | null {
   const title = g.title === null ? null : drawable(g.title, 'sanitized', 'none')
   if (title) {
@@ -98,10 +95,8 @@ function undrawable(g: Gantt): Fail | null {
 }
 
 // A step's widths: each name's pieces, N the widest, F the timing or key field, W the bar field, keyed whether keys
-// stand
-// for the timings. natural: W = min(60, columns − N − T − 5). keyed: W = min(60, columns − N − 5 − K). keyedWrap: W =
-// 20,
-// names wrapped to columns − 25 − K. 'too-wide' for W below 20 or a word wider than its field.
+// stand for the timings. natural: W = min(60, columns − N − T − 5). keyed: W = min(60, columns − N − 5 − K). keyedWrap:
+// W = 20, names wrapped to columns − 25 − K. 'too-wide' for W below 20 or a word wider than its field.
 type Plan = { names: Piece[][]; N: number; F: number; W: number; keyed: boolean }
 function plan(tasks: readonly GanttTask[], step: Step, columns: number): Plan | Fail {
   const keyed = step !== 'natural'
@@ -138,13 +133,11 @@ function header(name: string, columns: number): Piece[] | null {
 }
 
 // The body: each section's header rows in its series ink, owned by sec<k>, then its tasks. Tasks before the first
-// section
-// have no header and take s1, so the sections take s2, s3, …; with none, the first section takes s1. Task i's row: its
-// status caps, its name pieces from cell 3 (t<i>), its timing (t<i>.t) or key from N + 4, then from the field's cell
-// left = N + F + 5 its bar, or a milestone's ◆ at min(W − 1, the cell of start + duration/2). The status, bar and ◆ are
-// caps owned by t<i>; its key and bar sit on its name's first row, which tops[i] gets. Every text, bar, status and ◆
-// states
-// its cell, so none can leave its task's row.
+// section have no header and take s1, so the sections take s2, s3, …; with none, the first section takes s1. Task i's
+// row: its status caps, its name pieces from cell 3 (t<i>), its timing (t<i>.t) or key from N + 4, then from the
+// field's cell left = N + F + 5 its bar, or a milestone's ◆ at min(W − 1, the cell of start + duration/2). The status,
+// bar and ◆ are caps owned by t<i>; its key and bar sit on its name's first row, which tops[i] gets. Every text, bar,
+// status and ◆ states its cell, so none can leave its task's row.
 function body(g: Gantt, p: Plan, s: Scale, columns: number, tops: number[]): Drawing | Fail {
   const heads: Piece[][] = []
   for (const name of g.sections) {
@@ -220,12 +213,9 @@ function body(g: Gantt, p: Plan, s: Scale, columns: number, tops: number[]): Dra
 }
 
 // The tick rule under the field, from cell left: L the width of t0's label, step = tickStep(M, W, L), and a tick at
-// each
-// k·step ≤ M, at cell ⌊W·k·step/M⌋, labelled with t0 + k·step; with no step, only t0's. axisRows drops a label that
-// leaves
-// the field. M and k·step are exact Numbers: every time lies between year 100, parseDate's least, and 8.64e15 ms, so M
-// plus
-// one step stays below 2^53.
+// each k·step ≤ M, at cell ⌊W·k·step/M⌋, labelled with t0 + k·step; with no step, only t0's. axisRows drops a label
+// that leaves the field. M and k·step are exact Numbers: every time lies between year 100, parseDate's least, and
+// 8.64e15 ms, so M plus one step stays below 2^53.
 function axis(g: Gantt, s: Scale, left: number, W: number, columns: number): Drawing {
   const L = width(formatAxis(s.t0, g.axis))
   const M = Number(s.M.n)
@@ -250,8 +240,7 @@ const legendRow = (t: GanttTask, i: number, at: { r: number; c: number }): Legen
 })
 
 // The title's heading, the body and the tick rule on one sheet, then at the keyed steps the legend under it. Every
-// task's
-// timing is keyable. 'step' off the ladder; 'domain' for M = 0 or no task.
+// task's timing is keyable. 'step' off the ladder; 'domain' for M = 0 or no task.
 function layout(g: Gantt, step: Step, columns: number): Drawing | Fail {
   if (!STEPS.includes(step)) {
     return fail('step')

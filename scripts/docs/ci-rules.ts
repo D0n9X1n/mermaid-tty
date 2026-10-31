@@ -32,8 +32,8 @@ const hasRun = (job: Job, command: string | RegExp) =>
 // Whether s uses actions/<name> pinned to a full commit SHA: a tag or branch could move under the workflow.
 const action = (s: Step, name: string) => new RegExp(`^actions/${name}@[0-9a-f]{40}$`).test(s?.uses ?? '')
 // The rules every cross-platform job meets: each of the three OSes runs to the end even when another fails, on Node 24
-// from the pinned setup action, with an exact Claude Code version from npm. The versions job takes all but the last,
-// as it installs the version under test.
+// from the pinned setup action, with an exact Claude Code version from npm. The versions job takes all but the last, as
+// it installs the version under test.
 const MATRIX: [string, (j: Job) => unknown][] = [
   ['fail-fast: false', (j) => j.strategy?.['fail-fast'] === false],
   [
@@ -141,8 +141,8 @@ export function ciErrors(yml: string): string[] {
   ]
 }
 // release.yml's problems: unreadable YAML, then each missing rule. A v* tag publishes only once the wiki for that
-// commit has published and the tag matches plugin.json; the notes come from the tag's own history and are checked
-// once published, then A9 runs against the copy installed from the marketplace.
+// commit has published and the tag matches plugin.json; the notes come from the tag's own history and are checked once
+// published, then A9 runs against the copy installed from the marketplace.
 export function releaseErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('release.yml', yml)
   const w = value as any

@@ -100,8 +100,7 @@ test('A4.fit-ladder: expect lines parse', () =>
       { cols: 58, step: 'fallback' },
     ],
   ))
-// The plan's list (plan C T48), written out entry by entry, so a changed, dropped or added width fails without
-// fixtures.
+// The plan's list, written out entry by entry, so a changed, dropped or added width fails without fixtures.
 test("A4.fit-ladder: LADDER is the plan's 44 ladder fixtures, each with exactly its widths", () =>
   assert.deepEqual(LADDER, {
     'state-ok-18': [59, 60, 61],
@@ -205,8 +204,7 @@ test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as
 test('A8.platforms: the glyph scan skips a combining mark in series source text', () =>
   assert.deepEqual(scanGolden('@80\néx ß\n@80 roles\n!! 3\n'), ['2 ß']))
 // A drawn cell whose whole ch is a combining mark reads in a golden as a mark joined to the series text before it, so
-// the
-// glyph scan skips it; drawingFaults, which A4 runs on every drawing, checks each drawn cell on the drawing itself.
+// the glyph scan skips it; drawingFaults, which A4 runs on every drawing, checks each drawn cell on the drawing itself.
 test('A8.platforms: drawingFaults flags a drawn combining mark after series text, which the golden scan reads as source text', () => {
   const c = createCanvas(1, 2, 60)
   c.text(0, 0, 'e', 's1', 'label')

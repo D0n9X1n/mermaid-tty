@@ -395,9 +395,8 @@ test('A5: a transition and a region chain are whole edges: solid with an arrow h
   ])
 })
 
-// As Mermaid 12.2.0 shows them: a description, transition label or note is an HTML label
-// each <br> splits; a composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls
-// back.
+// As Mermaid 12.2.0 shows them: a description, transition label or note is an HTML label each <br> splits; a
+// composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls back.
 test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back', () => {
   for (const [body, why] of [
     ['state "a<!--c-->b" as A', 'html'],
@@ -427,8 +426,7 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
   )
 })
 // X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each,
-// a
-// state's id included where it has no description, and createText swaps icons and KaTeX.
+// a state's id included where it has no description, and createText swaps icons and KaTeX.
 test('X3: Markdown the emphasis port cannot match, icons and math in a state text, or a state id shown as its label, fall back', () => {
   for (const [body, why] of [
     ['state "**a **b** c**" as A', 'markdown'],

@@ -1,4 +1,4 @@
-// tests/golden/journey_test.ts — journey fixtures (plan C T66): the matrix's score-bar eighths and series/value inks.
+// tests/golden/journey_test.ts — journey fixtures: the matrix's score-bar eighths and series/value inks.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

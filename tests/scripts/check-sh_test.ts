@@ -38,10 +38,9 @@ test("A8.validation: check.sh is plan A §9's text, byte for byte with LF line e
   }
 })
 
-// Runs a copy of check.sh with bash, from outside its repo, so only its cd finds scripts/check.ts.
-// A fake claude and a stub scripts/check.ts print their argv; the fake fails `plugin validate .`
-// with VALIDATE_EXIT. PATH has no directory that could hold the real claude: only the fake's,
-// with a link to this Node, then the system's for bash and dirname.
+// Runs a copy of check.sh with bash, from outside its repo, so only its cd finds scripts/check.ts. A fake claude and a
+// stub scripts/check.ts print their argv; the fake fails `plugin validate .` with VALIDATE_EXIT. PATH has no directory
+// that could hold the real claude: only the fake's, with a link to this Node, then the system's for bash and dirname.
 function runCheckSh(env: Record<string, string> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'mtty-'))
   try {

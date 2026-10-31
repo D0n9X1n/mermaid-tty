@@ -1,6 +1,5 @@
-// tests/golden/c-lib.ts — C's golden harness helpers (plan C T48): the gated fixture folders, each ladder fixture's
-// widths,
-// a fixture's %% expect lines, the Coverage rows' problems, and probes of a drawing or its rows.
+// tests/golden/c-lib.ts — C's golden harness helpers: the gated fixture folders, each ladder fixture's widths, a
+// fixture's %% expect lines, the Coverage rows' problems, and probes of a drawing or its rows.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Cell, Drawing } from '../../core/canvas.ts'
@@ -118,10 +117,8 @@ export function unlistedFrames(d: Drawing): string[] {
 }
 
 // Every fault A4 checks on each drawing beyond render and validate: its border-only rows, its unlisted frames, and each
-// drawn
-// cell that is not one allow-listed glyph. A golden reads a drawn cell whose whole ch is zero-width as a mark joined to
-// the
-// cell before it, which the glyph scan skips after source text, so drawn cells are checked on the drawing
+// drawn cell that is not one allow-listed glyph. A golden reads a drawn cell whose whole ch is zero-width as a mark
+// joined to the cell before it, which the glyph scan skips after source text, so drawn cells are checked on the drawing
 // (drawnGlyphs).
 export const drawingFaults = (d: Drawing): string[] => [...borderRows(d), ...unlistedFrames(d), ...drawnGlyphs(d)]
 

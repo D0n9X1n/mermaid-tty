@@ -1,4 +1,4 @@
-// tests/golden/class_test.ts — class fixtures (plan C T59): member order, and nord roles.
+// tests/golden/class_test.ts — class fixtures: member order, and nord roles.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

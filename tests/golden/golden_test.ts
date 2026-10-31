@@ -79,8 +79,7 @@ test('A3: shape fixtures draw each one-line label in exactly one row', () => {
 test('A8.platforms: every drawn glyph in every golden is allow-listed', () =>
   assert.deepEqual(goldenGlyphs('goldens'), []))
 // A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in the source text before it, so each
-// drawn
-// cell is checked on the drawing too. A fixture that falls back has no drawing; A1 and A2 report it.
+// drawn cell is checked on the drawing too. A fixture that falls back has no drawing; A1 and A2 report it.
 const OK = ['flowchart', 'sequence']
   .flatMap((t) => (existsSync(`fixtures/${t}`) ? readdirSync(`fixtures/${t}`) : []).map((f) => f.replace(/\.mmd$/, '')))
   .filter((id) => !id.includes('-reject-'))

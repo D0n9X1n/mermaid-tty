@@ -1,9 +1,8 @@
-// The main axis (plan A §7.6): each rank's band is as tall as its tallest item, and the gap after it max(rankGap,
-// tracks + 2).
+// The main axis: each rank's band is as tall as its tallest item, and the gap after it max(rankGap, tracks + 2).
 import type { Item, Seg } from './chains.ts'
 
 // The estimate of each gap's tracks: the distinct items its segments leave from, one net per source port. The router
-// (T17)
+//
 // may refine them and rerun bandTops.
 export function tracks(ranks: readonly (readonly Item[])[], segs: readonly Seg[]): number[] {
   const rank = new Map(ranks.flatMap((r, k) => r.map((it) => [it.id, k] as const)))
@@ -21,8 +20,7 @@ export const channels = (gaps: readonly number[], rankGap: number): number[] =>
   gaps.map((t) => Math.max(rankGap, t + 2))
 
 // Each band's top and the main axis's length, from the band heights, each gap's channel and the border rows before and
-// after
-// each band. A gap holds, in order, the bottom borders that end there, the top borders that start there, then its
+// after each band. A gap holds, in order, the bottom borders that end there, the top borders that start there, then its
 // channel.
 export function bandTops(
   heights: readonly number[],
@@ -41,15 +39,11 @@ export function bandTops(
 }
 
 // Strip borders on the main axis: a strip's top border sits above the channel of the gap above its first band (just
-// above
-// the first band itself), so an edge into the strip has its in-stem and head inside; its bottom border just below its
-// last
-// band. Top borders stack outermost first, bottom borders innermost first, and strips at one depth share a row: they
-// never
-// overlap. So each gap gains a row per border level that starts or ends there. before[k], after[k]: the border rows
-// above
-// and below band k; up(c), down(c): how far c's top border sits above its first band, and its bottom border below its
-// last.
+// above the first band itself), so an edge into the strip has its in-stem and head inside; its bottom border just below
+// its last band. Top borders stack outermost first, bottom borders innermost first, and strips at one depth share a
+// row: they never overlap. So each gap gains a row per border level that starts or ends there. before[k], after[k]: the
+// border rows above and below band k; up(c), down(c): how far c's top border sits above its first band, and its bottom
+// border below its last.
 export function borders(
   spans: ReadonlyMap<string, readonly [number, number]>,
   depth: (c: string) => number,

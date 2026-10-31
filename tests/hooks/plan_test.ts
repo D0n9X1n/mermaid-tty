@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { safePlan } from '../../hooks/plan.ts'
 
-// Fail closed at the hook: an error in the plugin's own work gives null, and the hook then sends the
-// reply through next(e) unchanged. The debug log is best-effort: a failing log never stops a drawing.
+// Fail closed at the hook: an error in the plugin's own work gives null, and the hook then sends the reply through
+// next(e) unchanged. The debug log is best-effort: a failing log never stops a drawing.
 const FC = '```mermaid\nflowchart TD\nP[一] --> Q[二]\n```\n'
 const BAD = '```mermaid\nflowchart TD\nA[👩‍👧]\n```\n'
 const ev = (text: string) => ({
@@ -96,8 +96,7 @@ const partKind = (x: any) => {
 const shape = (p: any) => p?.parts.map(partKind)
 
 // Only a fence core parses becomes a picture: BAD (a character core rejects) stays prose. FAN parses but is too wide
-// for
-// text at 40 columns, so its picture stands in for its source.
+// for text at 40 columns, so its picture stands in for its source.
 const FAN =
   '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
 const at = (text: string, columns: number) => ({ ...ev(text), viewport: { columns, rows: 40 } })

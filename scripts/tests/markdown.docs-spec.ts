@@ -87,6 +87,6 @@ test('lineOf: a node with no position takes the line of its nearest ancestor tha
   assert.deepEqual([link.position, lineOf(link.children![0]!)], [undefined, 3])
   // A node that spans lines reports its first.
   assert.deepEqual(headings('A\n---\n'), [{ depth: 2, text: 'A', line: 1 }])
-  // A reference-style link is a linkReference, not a link; the docs rules reject those on their own (D15b).
+  // A reference-style link is a linkReference, not a link; the docs rules reject those on their own.
   assert.deepEqual(links('[x][r]\n\n[r]: Y'), [])
 })

@@ -7,10 +7,8 @@ import xterm from '@xterm/headless'
 // 0xRRGGBB.
 export type Color = { mode: 'default' | 'p16' | 'p256' | 'rgb'; value: number }
 // A cell. ch is ' ' in a blank cell, whether a space was written to it or not, so that the pty driver, whose program
-// may
-// move the cursor over blanks, reads what the tmux driver, whose capture-pane writes them, does. It is '' only in the
-// cell
-// after a wide character, whose width is 0.
+// may move the cursor over blanks, reads what the tmux driver, whose capture-pane writes them, does. It is '' only in
+// the cell after a wide character, whose width is 0.
 export type Cell = { ch: string; width: number; fg: Color; bg: Color }
 export type Screen = {
   // Resolves once the terminal has parsed data.

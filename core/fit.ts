@@ -6,7 +6,7 @@ import { fail, isFail } from './fail.ts'
 import type { DiagramModule } from './registry.ts'
 import { validate } from './validate.ts'
 
-// A's four steps, then C's (plan C §4, T40). A type's ladder lists only the steps its layout draws.
+// A's four steps, then C's. A type's ladder lists only the steps its layout draws.
 export type Step =
   | 'natural'
   | 'tight'
@@ -21,10 +21,8 @@ export type Step =
 
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a
-// wider
-// claim would pass it), or when validate rejects its drawing. If every step is skipped, the last one's reason;
-// 'too-wide'
-// when the ladder has no step.
+// wider claim would pass it), or when validate rejects its drawing. If every step is skipped, the last one's reason;
+// 'too-wide' when the ladder has no step.
 export function fitLadder<M>(
   mod: DiagramModule<M>,
   model: M,

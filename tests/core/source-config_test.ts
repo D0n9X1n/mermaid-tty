@@ -216,8 +216,7 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
     assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
   }
   // Other plain top-level keys, indicators after their first character included, are still ignored, but for
-  // displayMode,
-  // which processFrontmatter sets as gantt.displayMode.
+  // displayMode, which processFrontmatter sets as gantt.displayMode.
   assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), {
     a: 1,
     'gantt.displayMode': 'compact',

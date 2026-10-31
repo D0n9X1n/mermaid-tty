@@ -1,7 +1,6 @@
-// The quadrant module (plan C T74; matrix, quadrant): a frame split by a cross into four quadrants, each its text
-// centered
-// in a title row over five point rows; each point a key in its cell; the axis texts around the frame; then the legend.
-// It registers itself on import, as flowchart's does.
+// The quadrant module: a frame split by a cross into four quadrants, each its text centered in a title row over five
+// point rows; each point a key in its cell; the axis texts around the frame; then the legend. It registers itself on
+// import, as flowchart's does.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { dec, floor, mul } from '../../charts/decimal.ts'
 import { fieldKey, legendRows, pointKey, type LegendRow } from '../../charts/legend.ts'
@@ -15,10 +14,8 @@ import { width } from '../../width.ts'
 import { parseQuadrant, type Point, type Quadrant } from './parse.ts'
 
 // A cell of the plot box. Its rows: the top border 0, the top half's title row 1 and point rows 2…6, the cross 7, the
-// bottom
-// half's title row 8 and point rows 9…13, the bottom border 14, then the x-axis texts' row 15. Its columns: the left
-// border
-// 0, the left half 1…q, the cross q + 1, the right half q + 2…2q + 1, the right border 2q + 2.
+// bottom half's title row 8 and point rows 9…13, the bottom border 14, then the x-axis texts' row 15. Its columns: the
+// left border 0, the left half 1…q, the cross q + 1, the right half q + 2…2q + 1, the right border 2q + 2.
 type Spot = { r: number; c: number }
 const BOX = 15
 
@@ -65,22 +62,17 @@ function owned(keys: readonly Key[]): string[] {
 const collides = (k: Key, q: number): boolean => k.at.c + width(k.text) - 1 > (k.at.c <= q ? q : 2 * q + 1)
 
 // The frame's own cell at (r, c) redrawn as the joint dirs, where the cross meets the top or bottom border.
-// canvas.frame
-// draws only corners and straight runs, and a divider's line there would break the frame (validate, frames), so the
-// cell
-// stays the frame's.
+// canvas.frame draws only corners and straight runs, and a divider's line there would break the frame (validate,
+// frames), so the cell stays the frame's.
 function tee(d: Drawing, r: number, c: number, dirs: number): void {
   const cell = d.cells[r]![c]!
   d.cells[r]![c] = { ...cell, ch: junction(dirs, 'light'), dirs }
 }
 
 // The plot box, q cells a half, then the x-axis texts' row when the source gives any. keyed draws each quadrant and
-// x-axis
-// text as its field key, fieldKey(i) for fields[i]. cells are the points' cells, in source order. Each point key is
-// drawn
-// once, owned by every point it stands for, and each point's key entry carries its own cell as at, which stack moves
-// with
-// the box. 'key-collision' if a key would run into the cross or the frame.
+// x-axis text as its field key, fieldKey(i) for fields[i]. cells are the points' cells, in source order. Each point key
+// is drawn once, owned by every point it stands for, and each point's key entry carries its own cell as at, which stack
+// moves with the box. 'key-collision' if a key would run into the cross or the frame.
 function plot(
   m: Quadrant,
   cells: readonly Spot[],
@@ -214,9 +206,7 @@ function legend(m: Quadrant, keys: readonly Key[], keyed: boolean): LegendRow[] 
 }
 
 // glyph, then text wrapped at columns − 2 under it, owned by owner: a y-axis text's rows, which wrap like header rows.
-// The
-// glyph and text state their cells.
-// 'word-too-wide' if a word is wider than its field.
+// The glyph and text state their cells. 'word-too-wide' if a word is wider than its field.
 function arrowed(glyph: string, text: string, owner: string, columns: number): Drawing | Fail {
   const ps = wrap(text, columns - 2)
   if (!ps) {
@@ -236,8 +226,7 @@ function arrowed(glyph: string, text: string, owner: string, columns: number): D
 }
 
 // natural: every quadrant and x-axis text in place, and 'too-wide' if one is wider than q. keyed: each is its field
-// key. q
-// = min(30, ⌊(columns − 3)/2⌋), and q < 8 fails 'too-wide'. Any other step fails 'step'.
+// key. q = min(30, ⌊(columns − 3)/2⌋), and q < 8 fails 'too-wide'. Any other step fails 'step'.
 function layout(m: Quadrant, step: Step, columns: number): Drawing | Fail {
   if (step !== 'natural' && step !== 'keyed') {
     return fail('step')

@@ -1,11 +1,9 @@
 // node scripts/check-tangle.ts [--corpus] [--private DIR]: the independent tangle check (VR.tangled) over every golden,
-// each
-// -ok- fixture of every fixtures/<type> folder but corpus, drawn at 60, 80 and 120 columns in the mono theme. Prints
-// the
-// counts, a <type>: <n> ok line per type and each hit as <id>@<cols> <rule>, and exits 1 on any hit. --corpus adds
-// fixtures/corpus/*.mmd, and prints its counts and the ids that hit. --private DIR adds every closed mermaid fence of
-// the
-// .md files under DIR, and prints only its counts: no output names a private file or quotes a block.
+// each -ok- fixture of every fixtures/<type> folder but corpus, drawn at 60, 80 and 120 columns in the mono theme.
+// Prints the counts, a <type>: <n> ok line per type and each hit as <id>@<cols> <rule>, and exits 1 on any hit.
+// --corpus adds fixtures/corpus/*.mmd, and prints its counts and the ids that hit. --private DIR adds every closed
+// mermaid fence of the .md files under DIR, and prints only its counts: no output names a private file or quotes a
+// block.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'

@@ -142,8 +142,8 @@ test('VR.reviewers: scope is a slug, verdict pass or fail, date a real YYYY-MM-D
   }
 })
 
-// The acceptance doc: the PM inspects the PNGs; a cross-family reviewer, cross-family:<model id> with an id of
-// word characters, dots and dashes, inspects the text and the role map.
+// The acceptance doc: the PM inspects the PNGs; a cross-family reviewer, cross-family:<model id> with an id of word
+// characters, dots and dashes, inspects the text and the role map.
 test('VR.reviewers: vr-A reviewers include PM and a cross-family:<model id>', () => {
   const at = (reviewers: string) => parseRecord('r.md', withFront(...FRONT.slice(0, 3), `reviewers: ${reviewers}`))
   assert.deepEqual((at('[PM, cross-family:gpt-6-astra]') as ReviewRecord).reviewers, ['PM', 'cross-family:gpt-6-astra'])
@@ -251,10 +251,8 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
   })
 })
 
-// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two
-// folders, so
-// C's goldens never reopen A's review. Plan C (T85) adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes
-// here.
+// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C narrows it to A's two folders, so
+// C's goldens never reopen A's review. Plan C adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes here.
 test("VR.passes: ci/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
   const req = JSON.parse(
     readFileSync(fileURLToPath(new URL('../../ci/reviews/required.json', import.meta.url)), 'utf8'),
@@ -570,8 +568,7 @@ test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes'
   assert.deepEqual(parseRecord('r.md', withNotes('The PM read a < b, 1<2, x <= y and b <- a.')), parsed('r.md')))
 
 // The QA repro: CommonMark ends a line at a lone CR, so GitHub renders this table under ## Notes, while a split on LF
-// and
-// CRLF alone saw one line and left the absent row unchecked.
+// and CRLF alone saw one line and left the absent row unchecked.
 test('VR.reviewers: a table on lone-CR lines under ## Notes fails the record, so --require-pass exits 1', (t) => {
   const dir = tree(t, {
     'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }),

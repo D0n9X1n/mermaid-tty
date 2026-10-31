@@ -110,8 +110,8 @@ test('A6.hook-tests: a fence closed before a diagram stays prose, and so does on
 })
 
 // CommonMark ends a line at LF, CRLF or a lone CR, and nowhere else: U+2028 and U+2029 (JS line terminators, which `.`
-// does not match) and U+0085 are ordinary characters. They may sit in an info string, never on a closer line.
-// from code points: raw, they are invisible in source
+// does not match) and U+0085 are ordinary characters. They may sit in an info string, never on a closer line. from code
+// points: raw, they are invisible in source
 const SEP = [0x2028, 0x2029, 0x85].map((c) => String.fromCharCode(c))
 
 test('A6.hook-tests: QA repro: U+2028 in the info string of an outer fence still opens it, so its nested diagram stays prose', () => {

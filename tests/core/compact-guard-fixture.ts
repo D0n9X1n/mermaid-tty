@@ -1,8 +1,7 @@
 // Test fixture, not a test file: compact_test.ts runs `node --experimental-test-module-mocks FILE MODE`. A module mock
 // breaks every drawing the flowchart module makes, the way MODE says, where compaction alone would hide the break; the
 // fixture then draws through the module and prints, as JSON, the verdict on its natural step and what explain makes of
-// it.
-// route: each route loses its middle cell (repro A). frame: a frame-side cell goes, in the second row of a run of
+// it. route: each route loses its middle cell (repro A). frame: a frame-side cell goes, in the second row of a run of
 // pass-through rows if there is one, else in any pass-through row (repro B).
 import { mock } from 'node:test'
 import type { Cell, Drawing } from '../../core/canvas.ts'

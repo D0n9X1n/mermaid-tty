@@ -1,6 +1,5 @@
-// The pie model and its parser (plan C T63; matrix, pie): the title, and the slices in source order, each with its
-// value
-// as written and as an exact decimal.
+// The pie model and its parser: the title, and the slices in source order, each with its value as written and as an
+// exact decimal.
 import { parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
@@ -14,9 +13,8 @@ export type Pie = { title: string | null; slices: Slice[] }
 // The header: pie, then showData, then a title, each optional, on one line.
 const HEADER = /^pie( showData)?( title (.+))?$/
 // The statements, each a whole trimmed line: a title; an accTitle or accDescr line; an accDescr { block, whose text
-// runs to
-// its first }, which must end its line; and a slice: a "…" or '…' label, a colon with spaces or tabs around it, and the
-// rest.
+// runs to its first }, which must end its line; and a slice: a "…" or '…' label, a colon with spaces or tabs around it,
+// and the rest.
 const TITLE = /^title[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
@@ -26,8 +24,7 @@ const TOKEN = /^[+-]?\d+(\.\d+)?$/
 const POSITIVE = /^(?:[1-9]\d*|\d+\.\d+)$/
 
 // Why text cannot be drawn, or null: text Mermaid shows otherwise in a field of mode and br fails as drawable says, and
-// so
-// does an unsupported character. A slice is plain, each <br> drawn as written; a title is sanitized, with no <br>.
+// so does an unsupported character. A slice is plain, each <br> drawn as written; a title is sanitized, with no <br>.
 function undrawable(text: string, mode: Mode, br: Br): Fail | null {
   const f = drawable(text, mode, br)
   if (f) {
@@ -42,8 +39,7 @@ function undrawable(text: string, mode: Mode, br: Br): Fail | null {
 // no statement, a label with a backslash, a value that is no token, or an accDescr { block left open or not ending its
 // line), 'domain:<n>' (a token outside the subset: 0, a sign or a leading 0), 'repeat:<n>' (a label seen before, or a
 // second title), 'repeat:header' (a header title after a frontmatter one: Source numbers neither line), 'entity',
-// 'html' or
-// 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no slice).
+// 'html' or 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no slice).
 export function parsePie(src: Source): Pie | Fail {
   const head = HEADER.exec(src.header)
   if (!head) {

@@ -137,8 +137,8 @@ test('A4: d and w take no decimal point; a decimal ms, s, m or h is exact; ticks
   )
 })
 // Mermaid's Day.js reads MMM as a month name and a repeated field twice, and a one-letter token's 1–2 digits greedily,
-// never
-// backtracking: under Hmm it reads 930 as hour 93 and fails, where a backtracking pattern reads 9:30. So these fail.
+// never backtracking: under Hmm it reads 930 as hour 93 and fails, where a backtracking pattern reads 9:30. So these
+// fail.
 test('A4: a dateFormat that repeats a field, or puts a one-letter token right before another token, fails format-token', () => {
   for (const f of [
     'YYYY-MMM-DD',

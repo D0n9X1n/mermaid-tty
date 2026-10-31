@@ -37,8 +37,8 @@ test('A8.platforms: GLYPHS is rule 12: ASCII, Box Drawing, section-named glyphs;
     )
   }
 })
-// The 80 light/heavy Box Drawing glyphs by arms 'urdl' (0 none, 1 light, 2 heavy), in code point order.
-// The block's dashed, double, arc and diagonal glyphs have no key.
+// The 80 light/heavy Box Drawing glyphs by arms 'urdl' (0 none, 1 light, 2 heavy), in code point order. The block's
+// dashed, double, arc and diagonal glyphs have no key.
 const PINNED: Readonly<Record<string, string>> = {
   '0101': '─',
   '0202': '━',

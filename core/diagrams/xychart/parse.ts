@@ -1,6 +1,5 @@
-// Reads an xychart (plan C, T71; matrix, xychart) into its model: the header's orientation, the title, the axes and the
-// series, each number kept as written with its exact value. A statement outside the subset fails, so the fence draws
-// as source.
+// Reads an xychart into its model: the header's orientation, the title, the axes and the series, each number kept as
+// written with its exact value. A statement outside the subset fails, so the fence draws as source.
 import { cmp, dec, parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
@@ -11,8 +10,8 @@ import { unsupported } from '../../width.ts'
 export type Num = { raw: string; value: Dec }
 // A bar or line series: its name, null if unnamed, and one value per group.
 export type Series = { kind: 'bar' | 'line'; name: string | null; values: Num[] }
-// Each text is null when the source gives none; categories are null without an x-axis list, and range without a
-// y-axis range.
+// Each text is null when the source gives none; categories are null without an x-axis list, and range without a y-axis
+// range.
 export type Xy = {
   orientation: 'vertical' | 'horizontal'
   title: string | null
@@ -60,12 +59,10 @@ function stop(reason: string): never {
 
 // The model src's statements build, or why it cannot be drawn: 'header' (not xychart-beta or xychart, alone or with
 // vertical or horizontal), 'syntax:<n>' (a statement on source line n outside the subset, or an accDescr { there with
-// no
-// }), 'repeat:<n>' (a second title, from frontmatter or a statement, x-axis or y-axis, or a repeated category, on line
-// n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal draws
-// reliably), 'length' (a series without one value per
-// group), 'series' (more than 8 line series or 26 bar series) or 'domain' (no y range that holds every value: see
-// domain).
+// no }), 'repeat:<n>' (a second title, from frontmatter or a statement, x-axis or y-axis, or a repeated category, on
+// line n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal
+// draws reliably), 'length' (a series without one value per group), 'series' (more than 8 line series or 26 bar series)
+// or 'domain' (no y range that holds every value: see domain).
 export function parseXy(src: Source): Xy | Fail {
   try {
     return walk(src)
@@ -89,7 +86,7 @@ function walk(src: Source): Xy {
     range: null,
     series: [],
   }
-  // title, x-axis and y-axis, once each has come: a frontmatter title is the first title (common rule 3).
+  // title, x-axis and y-axis, once each has come: a frontmatter title is the first title.
   const seen = new Set<string>(src.title === null ? [] : ['title'])
   // The line of an accDescr { whose } has not come, else 0.
   let descr = 0
@@ -181,8 +178,8 @@ function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
 
 // A text's content. A "…" is trimmed, as Mermaid's xychart database trims each text; a "`…`" markdown string fails, and
 // so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. Text
-// Mermaid
-// shows otherwise fails as drawable says: each text is sanitized, with no <br>, as the title is ('entity' or 'html').
+// Mermaid shows otherwise fails as drawable says: each text is sanitized, with no <br>, as the title is ('entity' or
+// 'html').
 function text(s: string, n: number): string {
   const quoted = s.startsWith('"')
   const t = quoted ? s.slice(1, -1).trim() : s

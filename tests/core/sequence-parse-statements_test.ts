@@ -318,8 +318,7 @@ test('A2: a # ends a message, note or condition, and comments out the rest of it
   )
 })
 // Elsewhere Mermaid keeps the # (an id A#b or participant A #c), draws an alias, title or box label cut at it, or
-// decodes an
-// entity such as #9829; to ♥. Not in the plan: those fall back.
+// decodes an entity such as #9829; to ♥. Not in the plan: those fall back.
 test('A5.errors: a # in an id, alias, title, box label or entity fails hash', () => {
   const bad = [
     'participant A as #1',
@@ -369,9 +368,8 @@ test('A2: a ; ends a statement, and the rest of its line holds more', () => {
     ),
   )
 })
-// Mermaid's NUM token needs a space or line break after it: it fails on autonumber 10; and autonumber 7#c.
-// Mermaid 12.2.0's accTitle/accDescr tokens end in \s*, so an empty one eats the line break and takes the next line as
-// its
+// Mermaid's NUM token needs a space or line break after it: it fails on autonumber 10; and autonumber 7#c. Mermaid
+// 12.2.0's accTitle/accDescr tokens end in \s*, so an empty one eats the line break and takes the next line as its
 // text: A->>B: hi; accTitle: then B->>C: yo draws only A->>B.
 test('A5.errors: an empty accTitle or accDescr falls back as syntax', () => {
   const bad = [
@@ -457,8 +455,7 @@ test('A5.errors: a message or note naming a keyword fails keyword', () => {
 })
 // Mermaid reads any id, keyword or number, after participant, actor, create, activate, deactivate or destroy; and in a
 // message or note, link, links, properties, details, title, accTitle and accDescr before an arrow or a bare colon, and
-// a
-// number not followed by a space.
+// a number not followed by a space.
 test('A2: keyword and number ids draw where Mermaid reads them as ids', () => {
   assert.deepEqual(
     P(

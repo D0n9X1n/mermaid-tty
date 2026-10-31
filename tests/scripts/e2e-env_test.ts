@@ -45,9 +45,8 @@ test('A9.harness: a clean session env from the recipe; no inherited secrets', ()
 })
 
 // Variables a developer's or a CI runner's shell may hold. A session inherits none of them: the sessionEnv tests below
-// set
-// them on this process while they build their envs, so that an env built from process.env, rather than from nothing,
-// fails.
+// set them on this process while they build their envs, so that an env built from process.env, rather than from
+// nothing, fails.
 const PARENT: Record<string, string> = {
   HOME: '/parent-home',
   USER: 'parent-user',
@@ -111,8 +110,7 @@ test('A9.harness: on Linux and macOS the session env is exactly the recipe, its 
     E({ platform: 'darwin', driver: 'tmux', color: '256' }),
   ])
   // truecolor: COLORTERM, and under tmux the override of Claude Code's tmux clamp. 256: neither, and under the PTY
-  // driver
-  // TMUX=e2e, which turns that clamp on (E3).
+  // driver TMUX=e2e, which turns that clamp on (E3).
   assert.deepEqual(got, [
     { ...mac, COLORTERM: 'truecolor' },
     { ...linux, TMUX: 'e2e' },

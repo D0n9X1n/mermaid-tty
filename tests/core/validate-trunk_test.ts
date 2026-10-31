@@ -6,8 +6,7 @@ import { falsePairs, text } from './graph-fixture.ts'
 
 // A complete-bipartite trunk, A→C, A→D, B→C and B→D merged into one line down column 2, crossed straight at (2,2) by an
 // unrelated P→Q. The trunk's own unrelated pairs there (A→C with B→D, A→D with B→C) run one axis, as a trunk's do;
-// merges
-// judges them. Only pairs from different lines, the trunk's and P→Q's, must cross.
+// merges judges them. Only pairs from different lines, the trunk's and P→Q's, must cross.
 //   a ─┬─ b
 //   p ─┼─►q
 //     ┌┴┐  (to c and d)
@@ -85,10 +84,9 @@ test('At that crossing, a trunk edge turning onto the crossing edge still fails'
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })
 
-// The same trunk with mixed heads. B--xD's x head, on one line with A-->D's ▶, reads as A--xD too,
-// and A-->D's as B-->D; neither is in the source, so the trunk must not pass. Each path runs through its corners, from
-// its
-// source's cell to its target's, its head the cell just before the target.
+// The same trunk with mixed heads. B--xD's x head, on one line with A-->D's ▶, reads as A--xD too, and A-->D's as
+// B-->D; neither is in the source, so the trunk must not pass. Each path runs through its corners, from its source's
+// cell to its target's, its head the cell just before the target.
 function STEP(a: { r: number; c: number }, b: { r: number; c: number }): number {
   if (b.r < a.r) {
     return 1
@@ -224,8 +222,7 @@ test('A trunk whose heads differ implies links the source lacks, and fails merge
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 // The same trunk with B-->D dotted instead: its own cells ┄ beside the trunk's solid ones read as the merged line
-// changing
-// style, so any of its implied links may be dotted or solid. One line draws one style.
+// changing style, so any of its implied links may be dotted or solid. One line draws one style.
 test('A trunk whose edges draw different line styles fails merge-ambiguous', () => {
   const c = createCanvas(7, 8, 8, () => true)
   for (const [id, r, col] of [
@@ -317,9 +314,8 @@ test('A trunk whose edges draw different line styles fails merge-ambiguous', () 
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 
-// A self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare
-// end leads to B-->A's ▶ at A (A->A) and B's to A-->B's at B (B->B). The loops at A and B are --x and --o, so neither
-// pair is in the source.
+// A self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare end leads to B-->A's
+// ▶ at A (A->A) and B's to A-->B's at B (B->B). The loops at A and B are --x and --o, so neither pair is in the source.
 test('A merged line implying a self-loop whose head the loop lacks fails merge-ambiguous', () => {
   const c = createCanvas(14, 8, 8, () => true)
   c.text(3, 3, 'a', 'node', 'A')
@@ -387,10 +383,8 @@ test('A merged line implying a self-loop whose head the loop lacks fails merge-a
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 // Hole 2: one edge draws one weight in every arm, not just one cell style. A-->C leaves A-->B's light stem at (0,2)
-// with a
-// heavy arm down, ┰, then runs on light: style 'light' everywhere, but the junction shows a thick branch. Its glyph
-// shows a
-// weight its edge does not draw, so it fails line-glyph.
+// with a heavy arm down, ┰, then runs on light: style 'light' everywhere, but the junction shows a thick branch. Its
+// glyph shows a weight its edge does not draw, so it fails line-glyph.
 test('A merged junction with a heavy arm on a light line fails line-glyph', () => {
   const c = createCanvas(4, 6, 6, () => true)
   c.text(0, 0, 'a', 'node', 'A')

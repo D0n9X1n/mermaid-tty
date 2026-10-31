@@ -1,5 +1,5 @@
-// Order within ranks (plan A §7.4): source order, then 8 alternating barycenter sweeps, ties kept in source order. The
-// order with the fewest crossings wins; on a tie, the earliest.
+// Order within ranks: source order, then 8 alternating barycenter sweeps, ties kept in source order. The order with the
+// fewest crossings wins; on a tie, the earliest.
 import type { Item, Seg } from './chains.ts'
 import { nest } from './nest.ts'
 
@@ -54,8 +54,7 @@ function near(segs: readonly Seg[], from: 'upper' | 'lower'): Map<string, string
 
 // ranks in source order, built top down, then reordered by barycenter sweeps: a down sweep sorts each rank by the mean
 // position of its items' neighbours above, an up sweep by those below; an item with no neighbour there keeps its own
-// index.
-// path: the strips around an owner, outermost first.
+// index. path: the strips around an owner, outermost first.
 export function order(ranks: Ranks, segs: readonly Seg[], path: (o: string | null) => string[] = () => []): Item[][] {
   const above = near(segs, 'lower')
   const below = near(segs, 'upper')

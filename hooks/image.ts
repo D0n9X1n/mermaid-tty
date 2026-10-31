@@ -1,13 +1,12 @@
 // Pictures of Mermaid's own rendering, for a terminal that shows pixels: mermaid-cli (mmdc, if it is on PATH) draws a
 // fence to a PNG in the background, and the next draw of the reply uses it. A draw never waits on mmdc: a miss answers
-// undefined (the text drawing stands) and queues one render, at most one running at a time.
-// Safety, in layers: a source goes to mmdc only when hooks/safe.ts (layer B) finds no way in it to style, configure,
-// fetch or load anything and core parses it; Chromium under mmdc runs with no network, loopback included
-// (puppeteerConfig); mmdc's Mermaid config holds only securityLevel strict and the theme; and the authority, layer A
-// (hooks/svg.ts), checks the SVG mmdc draws for the source before a second run makes the PNG.
-// Termination: each source, look and width is rendered at most once per store, so a picture the bounded cache drops
-// stays text rather than rendering again, and a batch of renders redraws once. No JSX and no Node, so node --test can
-// import it and the engine can load it.
+// undefined (the text drawing stands) and queues one render, at most one running at a time. Safety, in layers: a source
+// goes to mmdc only when hooks/safe.ts (layer B) finds no way in it to style, configure, fetch or load anything and
+// core parses it; Chromium under mmdc runs with no network, loopback included (puppeteerConfig); mmdc's Mermaid config
+// holds only securityLevel strict and the theme; and the authority, layer A (hooks/svg.ts), checks the SVG mmdc draws
+// for the source before a second run makes the PNG. Termination: each source, look and width is rendered at most once
+// per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
+// redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
@@ -47,8 +46,8 @@ const SHORT_MS = 5000
 const PROBE_MS = 10000
 
 // Chromium's launch flags under mmdc: every request goes to a proxy at the discard port, loopback included (Chromium
-// bypasses the proxy for loopback unless told <-loopback>), no host name resolves, and nothing is prefetched or sent
-// in the background; WebRTC sends no UDP outside the proxy. The page is 12 CSS px a column: mmdc 12 sizes its page by
+// bypasses the proxy for loopback unless told <-loopback>), no host name resolves, and nothing is prefetched or sent in
+// the background; WebRTC sends no UDP outside the proxy. The page is 12 CSS px a column: mmdc 12 sizes its page by
 // defaultViewport, mmdc 11 by -w.
 export const puppeteerConfig = (columns: number) => ({
   args: [
@@ -109,8 +108,8 @@ export function mmdcArgs(o: {
   ]
 }
 
-// A store of pictures: at most `entries` kept and `bytes` of base64 PNG, and at most `tried` keys ever rendered.
-// idle() resolves once no render is queued.
+// A store of pictures: at most `entries` kept and `bytes` of base64 PNG, and at most `tried` keys ever rendered. idle()
+// resolves once no render is queued.
 export function createPictures(limits: Partial<Limits> = {}): Pictures {
   const s: Pictures = {
     limits: { entries: 256, bytes: 32 * 1024 * 1024, tried: 4096, ...limits },
@@ -277,8 +276,7 @@ function keep(s: Pictures, key: string, p: Picture) {
 }
 
 // One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same
-// source,
-// config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
+// source, config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
 async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
   const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
   const made = await $.process.run(['mktemp', '-d', `${base}XXXXXX`], { timeoutMs: SHORT_MS })

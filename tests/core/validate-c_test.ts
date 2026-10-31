@@ -137,10 +137,8 @@ test('A5.mutation-tests: an end label comes within 1 of its own terminal, and as
   assert.deepEqual(validate(span('zero..*', 0)), { reason: 'end-label' })
 })
 // QA's repro: a at (0,5); e0 to b at (6,1) and e1 to c at (6,9) share a stem down column 5 to row 3, then branch. '1'
-// at (1,4)
-// is e0's end label at A and '*' at (1,6) e1's, or, swapped, the other way round. A tail is a fan-out, ▼ at b and c; a
-// head
-// the reversed fan-in, one ▲ at a that both own.
+// at (1,4) is e0's end label at A and '*' at (1,6) e1's, or, swapped, the other way round. A tail is a fan-out, ▼ at b
+// and c; a head the reversed fan-in, one ▲ at a that both own.
 function fan(end: 'tail' | 'head', swap: boolean): Drawing {
   const c = createCanvas(7, 11, 11, () => true)
   const out = end === 'tail'
@@ -372,8 +370,7 @@ test('A5.mutation-tests: only bar glyphs make a bar; a split lane, lanes apart, 
   }) // no lane
 })
 // Eighths 1 to 15 as this test's own tables draw them: full cells, then the partial, left to right (h) or bottom up
-// (v). Each
-// partial must read as its own eighth, so moving any partial within core's tables fails.
+// (v). Each partial must read as its own eighth, so moving any partial within core's tables fails.
 test('A5.mutation-tests: every bar partial reads its own eighth, 1 to 15 on either axis', () => {
   const H = [...'▏▎▍▌▋▊▉']
   const V = [...'▁▂▃▄▅▆▇']

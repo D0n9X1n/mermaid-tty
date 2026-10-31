@@ -113,8 +113,7 @@ test('goldenGlyphs flags a zero-width code point joined to a drawn cell, an empt
 
 test('goldenGlyphs skips a zero-width code point that joins source text, CJK cont cells included', () => {
   // canvas.text() joins it to the cell before it, so it is part of that cell even when a drawn cell follows. A drawn
-  // cell
-  // whose whole ch is zero-width reads the same in a golden; drawnGlyphs catches that one on the drawing.
+  // cell whose whole ch is zero-width reads the same in a golden; drawnGlyphs catches that one on the drawing.
   assert.deepEqual(scanRow(`[ cafe${ACUTE} ]`, 'nnNNNNnn'), []) // a label's last character, then drawn padding
   assert.deepEqual(scanRow(`[ e${ACUTE}x ]`, 'nnNNnn'), []) // mid-label
   assert.deepEqual(scanRow(`中x${ACUTE}─`, 'N~Ne'), []) // after 中's cont cell, then a drawn cell
@@ -156,9 +155,8 @@ test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph 
 })
 
 // X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b
-// (bold),
-// i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its golden is
-// as before.
+// (bold), i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its
+// golden is as before.
 test('X3.emphasis: goldenOf adds an @w styles section only when a cell has emphasis, and goldenGlyphs skips it', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const c = createCanvas(2, 6, 80)

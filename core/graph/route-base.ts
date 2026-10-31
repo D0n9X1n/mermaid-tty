@@ -83,8 +83,8 @@ export function mergeGroups(p: Placed): Map<string, string> {
   return result
 }
 
-// An end's port net: its merge group, or for an end with a label its own edge's, so two cardinalities never share
-// a stem.
+// An end's port net: its merge group, or for an end with a label its own edge's, so two cardinalities never share a
+// stem.
 export const portOf = (groups: ReadonlyMap<string, string>, e: GEdge, end: 'tail' | 'head'): string =>
   (end === 'tail' ? e.tailLabel : e.headLabel) === undefined ? groups.get(e.id)! : `${groups.get(e.id)!}#${e.id}`
 
@@ -140,8 +140,8 @@ export const border = (c: Point, b: Box) =>
     ? (c.r === b.row || c.r === b.row + b.rows - 1 ? 5 : 0) | (c.c === b.col || c.c === b.col + b.cols - 1 ? 10 : 0)
     : 0
 
-// The frames drawn as a border: every frame box but a frameless region's, which draws none, so an edge may run
-// through it.
+// The frames drawn as a border: every frame box but a frameless region's, which draws none, so an edge may run through
+// it.
 export const walls = (p: Placed): Box[] => {
   const frameless = new Set(p.graph.clusters.filter((c) => c.frameless).map((c) => c.id))
   return [...p.frames].filter(([id]) => !frameless.has(id)).map(([, b]) => b)

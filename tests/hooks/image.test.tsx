@@ -1,8 +1,8 @@
 import { test, expect, mock } from 'claude-code/testing'
 
-// Beneath the plugins: kitty outside tmux, a dark Claude Code theme, and an mmdc that writes a
-// 320 x 640 PNG (20 columns, 20 rows): a whole one, 1-bit grey, since the engine checks what an Image
-// gets. Each test uses its own fence, so no cached picture leaks in.
+// Beneath the plugins: kitty outside tmux, a dark Claude Code theme, and an mmdc that writes a 320 x 640 PNG (20
+// columns, 20 rows): a whole one, 1-bit grey, since the engine checks what an Image gets. Each test uses its own fence,
+// so no cached picture leaks in.
 const PNG =
   'iVBORw0KGgoAAAANSUhEUgAAAUAAAAKAAQAAAADF65wuAAAAMElEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4NGaAAAE2fUvuAAAAAElFTkSuQmCC'
 const world = (on: any, vars: Record<string, string>) => {

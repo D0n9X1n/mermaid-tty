@@ -1,32 +1,29 @@
-// Reads a timeline (plan C, T82; matrix, timeline) into its model: the header's direction, the title, whether periods
-// take a color each, and the periods grouped by section, in source order. A statement outside the subset fails, so the
-// fence draws as source.
+// Reads a timeline into its model: the header's direction, the title, whether periods take a color each, and the
+// periods grouped by section, in source order. A statement outside the subset fails, so the fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
 import { drawable, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // Each text is trimmed. A period's text, its events and a section's name keep every <br> as written: Mermaid 12.2.0
-// splits them only at an exact lowercase <br>, and T83's layout splits there and nowhere else, so <BR>, <br/> and
-// <br /> draw as written.
+// splits them only at an exact lowercase <br>, and T83's layout splits there and nowhere else, so <BR>, <br/> and <br
+// /> draw as written.
 export type Period = { text: string; events: string[] }
 // A section's name is null for the one section that holds every period of a timeline with no section statement.
 export type Section = { name: string | null; periods: Period[] }
-// multicolor is false under disableMulticolor; it matters only with no section statement (matrix, timeline).
+// multicolor is false under disableMulticolor; it matters only with no section statement.
 export type Timeline = { dir: 'LR' | 'TD'; title: string | null; multicolor: boolean; sections: Section[] }
 
 const HEADER = /^timeline( (LR|TD))?$/
 // The statements, each a whole trimmed line: a title; a section; an accTitle or accDescr line; an accDescr { block,
-// whose
-// text runs to its first }, which must end its line; and a period or event line, which entry reads.
+// whose text runs to its first }, which must end its line; and a period or event line, which entry reads.
 const TITLE = /^title[ \t]+(.+)$/
 const SECTION = /^section[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // Mermaid's lexer reads its keywords in any case and at the start of a longer word, so a line that starts with one but
-// is
-// no statement falls back (common rule 5).
+// is no statement falls back.
 const KEYWORD = /^(?:timeline|title|section|accTitle|accDescr)/i
 // A ':' before a space splits a line into events, and Mermaid's lexer splits at a ':' before any whitespace or the
 // line's end too. Only ': ' is read, so a ':' before other whitespace, or at the end, falls back.

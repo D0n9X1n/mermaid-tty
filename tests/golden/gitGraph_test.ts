@@ -1,4 +1,4 @@
-// tests/golden/gitGraph_test.ts — gitGraph fixtures (plan C T81): and lane and tag inks.
+// tests/golden/gitGraph_test.ts — gitGraph fixtures: and lane and tag inks.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

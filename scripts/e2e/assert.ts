@@ -19,9 +19,8 @@ export type ScreenSpec = {
 }
 
 // The rows each of reply's closed mermaid fences draws as, at columns in theme, in order; a fence that falls back has
-// none.
-// Read from the drawing's cells, before toRows styles them, so a renderer that drops cells on the way to the screen
-// changes the screen but not these rows.
+// none. Read from the drawing's cells, before toRows styles them, so a renderer that drops cells on the way to the
+// screen changes the screen but not these rows.
 export function drawnDiagrams(reply: string, columns: number, theme: string): string[][] {
   return splitFences(reply).flatMap((f) => {
     const r = f.kind === 'mermaid' ? explain(f.body, { columns, theme }) : null
@@ -115,8 +114,7 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
   const drawn = new Set<number>()
   // Under mono, only the cells each diagram's rows cover must carry no color: a cell outside them may be Claude Code's
   // own UI, like its spinner, colored while the screen was read. A blank cell shows no foreground, so only its
-  // background
-  // counts: Claude Code's spinner can leave its color on one, on Windows.
+  // background counts: Claude Code's spinner can leave its color on one, on Windows.
   const colored = (c: Cell) => (c.ch.trim() !== '' && !plain(c.fg)) || !plain(c.bg)
   const noColor = (what: string, c: Cell | undefined) => {
     if (c) {
@@ -190,8 +188,7 @@ export function sourceShown(text: string, source: readonly string[]): string[] {
 }
 
 // The rows of a screen's text that show a diagram drawn: those holding one of labels but none of the source lines,
-// which
-// hold the labels too. [] when every diagram shows as source.
+// which hold the labels too. [] when every diagram shows as source.
 export function drawnRows(text: string, labels: readonly string[], source: readonly string[]): string[] {
   return text.split('\n').filter((row) => labels.some((l) => row.includes(l)) && !source.some((s) => row.includes(s)))
 }

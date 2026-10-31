@@ -1,6 +1,5 @@
-// Reads a state diagram (plan C, T54; matrix, state) into the graph model: states, transitions, start and end marks,
-// choices, composites and notes. A statement it cannot read whole fails with its source line, so the fence draws as
-// source.
+// Reads a state diagram into the graph model: states, transitions, start and end marks, choices, composites and notes.
+// A statement it cannot read whole fails with its source line, so the fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, Mark, NodeRow, Note } from '../../graph/model.ts'
 import type { Source } from '../../source.ts'
@@ -13,8 +12,7 @@ export type StateModel = { graph: Graph; title: string | null; notes: string[] }
 
 const HEADER = /^stateDiagram(?:-v2)?$/
 // A state id: letters, digits, _ and -, with no - at either end (where Mermaid's lexer would read it as part of --> or
-// --),
-// and not root, the id of the document Mermaid draws no node for.
+// --), and not root, the id of the document Mermaid draws no node for.
 const WORD = String.raw`[\p{L}\p{N}_]`
 const ID = String.raw`(?!root(?![\p{L}\p{N}_-]))${WORD}(?:[\p{L}\p{N}_-]*${WORD})?`
 // A :::name class after an id or [*]; it draws nothing.
@@ -38,14 +36,11 @@ const DIR = re(String.raw`direction\s+(TB|BT|RL|LR)`)
 // one.
 const DIR_ANY = /direction\s+(?:TB|BT|RL|LR)/i
 // Styling, which draws nothing, at the root or in a body: classDef name styles, class ids name, style ids styles. Each
-// needs
-// its last part on its own line, or Mermaid's lexer reads the next line as it.
+// needs its last part on its own line, or Mermaid's lexer reads the next line as it.
 const STYLING = re(String.raw`(?:classDef\s+\w+|class\s+\w+(?:,\s*\w+)*|style\s+[\w,]+)\s+\S.*`)
 // Lines that draw nothing at the root: hide empty description, scale N width, click id "url" "tip" or click id href
-// "url",
-// and accessibility with text (an empty one reads the next line as its text, so it reaches KEYWORD and fails).
-// Mermaid's lexer knows them only there, and in a body reads their words as states: there they reach
-// KEYWORD, and fail.
+// "url", and accessibility with text (an empty one reads the next line as its text, so it reaches KEYWORD and fails).
+// Mermaid's lexer knows them only there, and in a body reads their words as states: there they reach KEYWORD, and fail.
 const ROOT_ONLY = re(
   String.raw`hide empty description|scale\s+\d+\s+width|click\s+${ID}\s+(?:"[^"]*"\s*"[^"]*"|href\s*"[^"]*")` +
     String.raw`|acc(?:Title|Descr)\s*:.*\S.*`,
@@ -85,8 +80,7 @@ function read(src: Source): { stmts: Stmt[]; composites: Map<string, string> } |
   const composites = new Map<string, string>()
   const open: Extract<Stmt, { kind: 'open' }>[] = []
   // A multi-line note whose end note has not come, its lines so far, each trimmed, and the last one's source line; the
-  // line
-  // of an open accDescr {, or 0.
+  // line of an open accDescr {, or 0.
   let note: { stmt: NoteStmt; lines: string[]; last: number } | null = null
   let acc = 0
   for (const { n, text } of src.lines) {
@@ -112,8 +106,7 @@ function read(src: Source): { stmts: Stmt[]; composites: Map<string, string> } |
         continue
       }
       // Mermaid's lexer reads an opener and a first line that starts with : as a one-line note, and the lines after it
-      // as
-      // statements, up to an end note it then cannot read.
+      // as statements, up to an end note it then cannot read.
       if (note.lines.length === 0 && t.startsWith(':')) {
         return fail(`syntax:${note.stmt.n}`)
       }
@@ -285,8 +278,7 @@ function statement(t: string, n: number): Stmt | null {
 
 // The text after a description's or label's :, as Mermaid's lexer reads it whole, and as written: not blank, with no ;,
 // and no : that is doubled or ends it (both split it), or starts it (Mermaid strips a second leading :). A one-line
-// note's
-// text has no : or ; at all.
+// note's text has no : or ; at all.
 const COLON_TEXT = /^(?!\s*:)(?:[^:;]|:[^:;])+$/
 const NOTE_TEXT = /^[^:;]*[^:;\s][^:;]*$/
 // Mermaid encodes each #…; before its lexer runs, so an entity's ; ends nothing; drawText then fails it as an entity.
@@ -299,13 +291,11 @@ function closes(rest: string): boolean | null {
 }
 
 // Text a statement draws, trimmed and with its bold and italic marked (styled), or why it cannot be drawn: 'entity',
-// 'html', 'markdown', 'icon' or 'math' where
-// Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text than
-// written; 'semicolon' for a ;, where
-// Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
-// 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end). edge: a transition
-// label,
-// where Mermaid makes each <br> a newline before marked (styled's breaks).
+// 'html', 'markdown', 'icon' or 'math' where Mermaid's markdown HTML label (labelType 'markdown' on every state text),
+// each <br> splitting, shows other text than written; 'semicolon' for a ;, where Mermaid starts a new statement;
+// 'unsupported-char U+XXXX' for a character no terminal draws reliably; and 'label-blank-line' for a blank line among
+// two or more (from <br><br>, or a <br> at either end). edge: a transition label, where Mermaid makes each <br> a
+// newline before marked (styled's breaks).
 function drawText(raw: string, edge = false): string | Fail {
   const t = raw.trim()
   const f = drawable(t, 'markdown', 'any')
@@ -334,16 +324,11 @@ type Frame = { cluster: GCluster; region: GCluster | null; k: number }
 type Why = 'syntax' | 'scope' | 'repeat' | 'mark-label'
 
 // Pass 2: the graph the statements declare, but its title. Each id belongs to the body it is first mentioned in, the
-// root's
-// or a composite's (a composite's own id to its parent's), and takes the innermost open scope: the current region of
-// the
-// innermost open composite, else that composite; at the root, none. Fails 'scope:<n>' for an id mentioned in another
-// body,
-// 'repeat:<n>' for a second description, note or body, 'mark-label:<n>' for a description on a mark, and 'syntax:<n>'
-// for
-// an empty region, a mark that is not its id's first mention (Mermaid keeps the shape of the first), or a note on no
-// state;
-// and 'id-collision' for a transition id t<k> that a state or composite also has.
+// root's or a composite's (a composite's own id to its parent's), and takes the innermost open scope: the current
+// region of the innermost open composite, else that composite; at the root, none. Fails 'scope:<n>' for an id mentioned
+// in another body, 'repeat:<n>' for a second description, note or body, 'mark-label:<n>' for a description on a mark,
+// and 'syntax:<n>' for an empty region, a mark that is not its id's first mention (Mermaid keeps the shape of the
+// first), or a note on no state; and 'id-collision' for a transition id t<k> that a state or composite also has.
 function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'title'> | Fail {
   const nodes = new Map<string, Decl>()
   const descrs = new Map<string, string>()
@@ -526,9 +511,8 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
           return 'repeat'
         }
         // A note mentions its state in source order, as Mermaid reads it: its first mention declares it here. On a
-        // state
-        // mentioned before, it may stand at the root, where Mermaid leaves the state in place, or in the state's own
-        // scope.
+        // state mentioned before, it may stand at the root, where Mermaid leaves the state in place, or in the state's
+        // own scope.
         if (!home.has(s.id) ? !mention(s.id) : here() !== '' && where.get(s.id) !== here()) {
           return 'scope'
         }
@@ -634,8 +618,7 @@ export function parseState(src: Source): StateModel | Fail {
 const empty = (c: GCluster) => c.nodes.length === 0 && c.clusters.length === 0
 
 // A declared state as a graph node, order its index: a mark is a glyph with no rows, a choice a decision; a state draws
-// its
-// description's lines, or else its id, as centered rows.
+// its description's lines, or else its id, as centered rows.
 function node(d: Decl, order: number, descr: string | undefined): GNode {
   const role = d.mark === 'choice' ? 'decision' : 'node'
   const rows = d.mark ? [] : labelLines(descr ?? d.id).map((text): NodeRow => ({ text, role, align: 'center' }))

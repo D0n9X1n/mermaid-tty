@@ -36,8 +36,8 @@ test('A5.errors: explain returns the first Fail of source, lookup, parse and fit
   assert.deepEqual(explain(FC, { columns: 8 }), fitLadder(flowchart, model as never, 8))
 })
 // parseFail is explain without the fit ladder: the first Fail of source, title, lookup and parse, or null. The width
-// plays
-// no part, so a diagram too wide for any terminal still parses; what core rejects (HTML, icons, image nodes) does not.
+// plays no part, so a diagram too wide for any terminal still parses; what core rejects (HTML, icons, image nodes) does
+// not.
 test("A5.errors: parseFail returns explain's first Fail before the fit, or null when the source parses", () => {
   for (const s of [
     'flowchart TD',
@@ -61,8 +61,8 @@ test("A5.errors: parseFail returns explain's first Fail before the fit, or null 
 test("A2: explain draws a sequence diagram: its module registers on import, as flowchart's does", () => {
   assert.equal((explain('sequenceDiagram\nA->>B: hi', O) as { step: string }).step, 'natural')
 })
-// render.ts imports diagrams/all.ts (plan C T40). This file loads no Tier 1 module itself, so lookup finds only what
-// render.ts registered.
+// render.ts imports diagrams/all.ts. This file loads no Tier 1 module itself, so lookup finds only what render.ts
+// registered.
 test('A5.errors: render.ts registers each Tier 1 module on import, so no Tier 1 keyword is unregistered', () => {
   const tier1 = Object.keys(KEYWORDS).filter((k) => TIER1.some((t) => t === KEYWORDS[k]))
   assert.deepEqual(
@@ -285,9 +285,8 @@ test('A8.cache: with no capacity given, a renderer keeps 64 entries, and evicts 
 })
 
 // X3. A text cell's em draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its
-// role;
-// emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only bold
-// role.
+// role; emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only
+// bold role.
 test("X3.emphasis: toRows draws a cell's em as bold and italic, split from unstyled neighbours of its role", () => {
   const x = (ch: string, em?: number): Cell => ({ ...c(ch, 'label', 'text'), ...(em ? { em } : {}) })
   const d: Drawing = { ...D, cells: [[x('a'), x('b', 1), x('c', 2), x('d', 3), x('e')]] }

@@ -1,8 +1,6 @@
-// The er module (plan C T61; matrix, ER): its parser, and the graph ladder. An entity is a pill of its label and its
-// aligned
-// attribute columns; a relation an unheaded line, solid or dotted, with its cardinality at each end. At keyed, comments
-// and
-// relation labels take one key sequence, in source order; cardinality is never keyed. It registers itself on import.
+// The er module: its parser, and the graph ladder. An entity is a pill of its label and its aligned attribute columns;
+// a relation an unheaded line, solid or dotted, with its cardinality at each end. At keyed, comments and relation
+// labels take one key sequence, in source order; cardinality is never keyed. It registers itself on import.
 import { fieldKey, type LegendRow } from '../../charts/legend.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
@@ -15,8 +13,8 @@ import { labelLines } from '../../text.ts'
 import { parseEr, type ErModel } from './parse.ts'
 
 // The model, or 'id-clash' when an entity or subgraph id is an owner id the drawing mints: a relation's r<k>, its end
-// labels,
-// label and chain cells, an attribute column's, or the title. Owners would then be ambiguous, so the fence falls back.
+// labels, label and chain cells, an attribute column's, or the title. Owners would then be ambiguous, so the fence
+// falls back.
 function parse(src: Source): ErModel | Fail {
   const m = parseEr(src)
   if (isFail(m)) {

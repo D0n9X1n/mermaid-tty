@@ -1,7 +1,5 @@
-// The class module (plan C T58): its parser, and the graph ladder (T53) with relation labels and notes keyable. Each
-// class is
-// a rect pill: its «annot» row, its label, then its member rows (members.ts). It registers itself on import, as
-// flowchart's does.
+// The class module: its parser, and the graph ladder with relation labels and notes keyable. Each class is a rect pill:
+// its «annot» row, its label, then its member rows (members.ts). It registers itself on import, as flowchart's does.
 import { fieldKey, type LegendRow } from '../../charts/legend.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
@@ -19,10 +17,8 @@ const rel = (k: number): string => `r${k}`
 const RESERVED = /^(?:r|note)\d+$/
 
 // Every owner id the drawing will use: classes, their annotation and member rows, namespaces, relations, their label
-// and end
-// labels, notes and their links. A class or namespace named as a relation or note could be, or any id twice, makes
-// owners
-// ambiguous: 'id-clash'.
+// and end labels, notes and their links. A class or namespace named as a relation or note could be, or any id twice,
+// makes owners ambiguous: 'id-clash'.
 function clash(m: ClassModel): Fail | null {
   const named = [...m.classes.map((c) => c.id), ...m.namespaces.map((n) => n.id)]
   const ids = [
@@ -53,8 +49,7 @@ function items(m: ClassModel): { item: string; cls: 'label' | 'note'; text: stri
 
 // The graph for a direction and wrapAt: class pills, note nodes (one key row when keyed), relation edges r<k>, a dotted
 // headless link from each `note for` note to its class, and a cluster per namespace. Keyed, each keyable item in order
-// takes
-// fieldKey(k) in place and a legend row; keyable lists every item, so each class is keyed all or none (T87).
+// takes fieldKey(k) in place and a legend row; keyable lists every item, so each class is keyed all or none.
 function build(m: ClassModel): Build {
   return ({ dir, keyed, wrapAt }) => {
     const all = items(m)

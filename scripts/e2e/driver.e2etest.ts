@@ -13,10 +13,9 @@ import { ensureSpawnHelper, ptyCommand, startSession, waitForText, type Driver }
 import { sessionEnv } from './env.ts'
 
 // The program each session runs. It writes its pid to dir/pid; draws its size and env and a colored row; then shows on
-// one
-// line, redrawn, every byte typed so far; on the first enter copies '读 hi' with OSC 52; and on q says bye and exits. A
-// hangup it answers as a program that first saves its state would: it exits 300 ms later, and errors on its closed tty
-// do not end it sooner.
+// one line, redrawn, every byte typed so far; on the first enter copies '读 hi' with OSC 52; and on q says bye and
+// exits. A hangup it answers as a program that first saves its state would: it exits 300 ms later, and errors on its
+// closed tty do not end it sooner.
 const PROG = String.raw`
 import { writeFileSync } from 'node:fs'
 writeFileSync(process.argv[2] + '/pid', String(process.pid))
@@ -163,8 +162,7 @@ for (const driver of ['pty', 'tmux'] as const) {
         await s.stop()
       }
       // stop() resolves once the program has exited, here 300 ms after its hangup. On Windows node-pty's exit is that
-      // of
-      // cmd.exe, which may come first, so there the program is polled for.
+      // of cmd.exe, which may come first, so there the program is polled for.
       assert.equal(process.platform === 'win32' ? await gone(pid()) : !alive(pid()), true)
       // A second stop() resolves too.
       assert.equal(await s.stop(), undefined)

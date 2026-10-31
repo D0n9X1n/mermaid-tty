@@ -1,6 +1,6 @@
 // node scripts/render-picture.ts: remakes each README picture's PNG (images.ts, `picture`) with mermaid-cli, as the
-// plugin's image mode would in kitty or Ghostty: its own mmdc flags, Mermaid's dark look, at the image's columns.
-// Needs mmdc 11 or 12 on PATH. Then run node scripts/render-svg.ts --readme to embed the new PNGs.
+// plugin's image mode would in kitty or Ghostty: its own mmdc flags, Mermaid's dark look, at the image's columns. Needs
+// mmdc 11 or 12 on PATH. Then run node scripts/render-svg.ts --readme to embed the new PNGs.
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

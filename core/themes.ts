@@ -1,7 +1,6 @@
-// Themes: the color of each drawing role and chart series. `default` maps roles to
-// Claude Code theme keys, so it follows the user's CC theme; the curated palettes
-// use their projects' official hex colors; `mono` has no color and tells roles
-// apart by glyphs and caps.
+// Themes: the color of each drawing role and chart series. `default` maps roles to Claude Code theme keys, so it
+// follows the user's CC theme; the curated palettes use their projects' official hex colors; `mono` has no color and
+// tells roles apart by glyphs and caps.
 export type Role = 'node' | 'decision' | 'edge' | 'arrow' | 'label' | 'frame' | 'note' | 'title' | 'value'
 export type SeriesKey = 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7' | 's8'
 export type Ink = Role | SeriesKey
@@ -180,8 +179,8 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   },
 }
 
-// Object.hasOwn, not `in` or a bare lookup: every object inherits names like
-// `constructor`, and those must fall back to default like any unknown name.
+// Object.hasOwn, not `in` or a bare lookup: every object inherits names like `constructor`, and those must fall back to
+// default like any unknown name.
 export function palette(name: string): Palette {
   return Object.hasOwn(THEMES, name) ? THEMES[name as ThemeName] : THEMES.default
 }

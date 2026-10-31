@@ -1,4 +1,4 @@
-// The chart tick rule (plan C §4, T47): a ─ rule with ┬ at each kept tick, and the kept ticks' labels on the row below
+// The chart tick rule: a ─ rule with ┬ at each kept tick, and the kept ticks' labels on the row below
 // it.
 import { createCanvas, type Drawing } from '../canvas.ts'
 import { width } from '../width.ts'
@@ -13,7 +13,7 @@ export type Tick = { cell: number; label: string; align: 'left' | 'right' }
 // each ┬, so a label stays under its tick and no tick moves. Ticks are taken in order: one
 // stays when its label's columns lie in the field and start at least 2 after the last kept label's end, and any other
 // drops
-// with its label, so no label leaves the field or meets another (spec C rule 6). The drawing is columns wide.
+// with its label, so no label leaves the field or meets another. The drawing is columns wide.
 export function axisRows(left: number, w: number, ticks: readonly Tick[], columns: number, owner: string): Drawing {
   const kept: { i: number; t: Tick; start: number }[] = []
   let end = -Infinity // the last cell of the last kept label

@@ -77,8 +77,8 @@ test('A5.errors: a failed fence beside a drawn one joins the prose around it', a
   expect(c.seen).toEqual([`Intro\n${BAD}Mid\n`, 'Outro'])
   expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
 })
-// FAN draws at 80 columns and falls back (row-too-wide) at 40. LR5 draws wider than 40 at 80
-// columns and within 40 at 40. Each is used by one test only, so no cache hit hides a render.
+// FAN draws at 80 columns and falls back (row-too-wide) at 40. LR5 draws wider than 40 at 80 columns and within 40 at
+// 40. Each is used by one test only, so no cache hit hides a render.
 const FAN =
   '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
 const LR5 =

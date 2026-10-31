@@ -35,8 +35,8 @@ test('A6.command: a reply for each mode, changed or not', () => {
   assert.equal(modeReply('diagram', false), 'mermaid-tty mode: diagram')
 })
 
-// $.command.run passes args through as given. Only a string is parsed, and left out (undefined)
-// it reports; anything else is a usage error, never coerced: String(['source']) is 'source'.
+// $.command.run passes args through as given. Only a string is parsed, and left out (undefined) it reports; anything
+// else is a usage error, never coerced: String(['source']) is 'source'.
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
   const usage = { error: 'usage: /mermaid-tty [source|diagram|text]' }
   assert.deepEqual(parseModeArgs(undefined), { report: true })

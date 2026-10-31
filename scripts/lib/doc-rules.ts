@@ -1,5 +1,5 @@
-// Pure acceptance rules on the GFM tree (D15c): B1 README and B6 icon. B3's publish-wiki.yml rules run on the parsed
-// YAML tree in docs/workflow-tree.ts.
+// Pure acceptance rules on the GFM tree: B1 README and B6 icon. B3's publish-wiki.yml rules run on the parsed YAML tree
+// in docs/workflow-tree.ts.
 import { type Node, all, lineOf, parse, section, text, within } from '../docs/markdown.ts'
 import { INSTALL } from './workflow.ts'
 export { INSTALL }
@@ -53,11 +53,10 @@ export const imageErrors = (where: string, md: string, diagrams: string[]) =>
   assetImages(md)
     .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p))
     .map((p) => `${where}: displays ${p}, which is neither a rendered diagram nor allow-listed`)
-// D15b, read from the GFM tree (D15c): every accepted image is displayed and every link target is known.
-// README: one HTML node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs,
-// LICENSE or allowlisted https hosts.
-// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks, reference forms,
-// footnotes, extra table cells and [[wiki links]] fail.
+// D15b, read from the GFM tree: every accepted image is displayed and every link target is known. README: one HTML
+// node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs, LICENSE or
+// allowlisted https hosts. Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks,
+// reference forms, footnotes, extra table cells and [[wiki links]] fail.
 export const HERO = /^<p align="center"><img src="assets\/icon\.svg" alt="[^"<>]*" width="\d+"><\/p>$/
 const SRC = /^assets\/[a-z0-9/_-]+\.svg$/
 const PAGE = /^[A-Za-z0-9-]+$/
@@ -130,8 +129,8 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
       at(n, '[[wiki link]]; link by page name: [Label](Page)')
     }
   }
-  // Defense in depth (D15d): cmark-gfm ends code spans at 1,000 backticks and micromark does not, so long runs fail on
-  // the raw text.
+  // Defense in depth: cmark-gfm ends code spans at 1,000 backticks and micromark does not, so long runs fail on the raw
+  // text.
   md.split('\n').forEach((l, i) => {
     const w = `${where}:${i + 1}`
     const fence = /^ {0,3}(`{3,})[^`]*$/.exec(l)
@@ -144,8 +143,8 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
   return e
 }
 // B1: what the README must hold, read from the GFM tree: the hero (logo, tagline, badges) before the first ##, the
-// install block, every section and FAQ answer, both wiki links, every generated image, and the local commands; and
-// what it must not: hand-drawn diagram glyphs, the ctrl+o claim, or anything grammarErrors rejects.
+// install block, every section and FAQ answer, both wiki links, every generated image, and the local commands; and what
+// it must not: hand-drawn diagram glyphs, the ctrl+o claim, or anything grammarErrors rejects.
 export function readmeErrors(md: string, generated: string[]): string[] {
   const e: string[] = []
   const tree = parse(md)

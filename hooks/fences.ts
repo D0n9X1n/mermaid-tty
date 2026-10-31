@@ -1,9 +1,7 @@
-// Splits a reply at its closed mermaid fences. The segments' texts join back to
-// exactly `reply`; an unclosed fence, or one nested in a longer fence, stays prose.
-// A diagram's body drops only its last line end. As in CommonMark, a line ends at
-// LF, CRLF or a lone CR and nowhere else. U+2028, U+2029 and U+0085 are plain
-// characters: no pattern here uses `.`, and an info string is trimmed of spaces and
-// tabs only.
+// Splits a reply at its closed mermaid fences. The segments' texts join back to exactly `reply`; an unclosed fence, or
+// one nested in a longer fence, stays prose. A diagram's body drops only its last line end. As in CommonMark, a line
+// ends at LF, CRLF or a lone CR and nowhere else. U+2028, U+2029 and U+0085 are plain characters: no pattern here uses
+// `.`, and an info string is trimmed of spaces and tabs only.
 export type Segment = { kind: 'prose'; text: string } | { kind: 'mermaid'; text: string; body: string }
 
 const LINE_END = /(?:\r\n|\r|\n)$/

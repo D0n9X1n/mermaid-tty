@@ -112,8 +112,7 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
     )
   })
   // Refuse CONNECT: a client that uses the mock as a proxy gets no tunnel to a real host. Node closes an unheard
-  // CONNECT
-  // too; this listener makes the refusal the mock's own.
+  // CONNECT too; this listener makes the refusal the mock's own.
   server.on('connect', (_r, s) => s.destroy())
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const { port } = server.address() as AddressInfo

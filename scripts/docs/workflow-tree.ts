@@ -1,8 +1,7 @@
 // Workflow YAML as GitHub reads it (D15c, as markdown.ts is for Markdown): every workflow rule runs on the parsed tree,
-// on real keys and values,
-// never on substrings. What the rules cannot interpret is an error, never a pass: a parse error or warning, an anchor,
-// an alias, a merge key, a
-// tag, a non-string key, or a flow collection where they need block style (jobs, each job, its steps, each step).
+// on real keys and values, never on substrings. What the rules cannot interpret is an error, never a pass: a parse
+// error or warning, an anchor, an alias, a merge key, a tag, a non-string key, or a flow collection where they need
+// block style (jobs, each job, its steps, each step).
 import { LineCounter, isAlias, isMap, isNode, isPair, isScalar, isSeq, parseDocument, visit, type YAMLMap } from 'yaml'
 // A uses value is owner/repo[/path]@<40 hex>. Its # vN comment is read from the source: the rest of the value's own
 // line, right after the value.

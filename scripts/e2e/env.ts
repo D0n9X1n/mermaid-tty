@@ -1,6 +1,5 @@
 // The e2e session's recipe: the env the harness runs a real Claude Code in, built from nothing, and the seed files of
-// its
-// config dir. Node built-ins only, so the main suite tests it with nothing installed.
+// its config dir. Node built-ins only, so the main suite tests it with nothing installed.
 import { win32 } from 'node:path'
 
 export type Color = 'truecolor' | '256'
@@ -17,8 +16,7 @@ export type Recipe = {
 }
 
 // The session's env. It inherits no variable of this process's but, on Windows, SystemRoot, ComSpec and PATHEXT, which
-// a
-// program needs to start there.
+// a program needs to start there.
 export function sessionEnv(r: Recipe): Record<string, string> {
   const env: Record<string, string> = {
     HOME: r.home,

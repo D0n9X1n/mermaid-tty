@@ -292,8 +292,7 @@ test('A5.errors (1): a click, link or callback in any other form falls back', ()
   }
 })
 // Mermaid's lexer reads `.*direction\s+(TB|BT|RL|LR)[^\n]*` as a direction statement wherever a top-level line holds
-// it, and its
-// \s+ crosses a line end; only `direction XX` alone is drawn as one.
+// it, and its \s+ crosses a line end; only `direction XX` alone is drawn as one.
 test('A5.errors (2): a top-level line Mermaid reads as a direction, but for direction XX alone, falls back; inside a block it is text', () => {
   for (const body of [
     'A --> B : go direction LR',
@@ -455,8 +454,8 @@ test('A5.errors (11): style, classDef and cssClass lines outside their grammar f
     ['A'],
   )
 })
-// Each drawn field in the mode Mermaid 12.2.0 shows it in. Label, note and relation
-// label: html, any <br> splits; namespace title, annotation, cardinality and a backtick name: html, no <br>; a member:
+// Each drawn field in the mode Mermaid 12.2.0 shows it in. Label, note and relation label: html, any <br> splits;
+// namespace title, annotation, cardinality and a backtick name: html, no <br>; a member:
 // member.
 test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back', () => {
   for (const [body, why] of [
@@ -498,10 +497,9 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
   )
 })
 // X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels
-// (marked);
-// a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one
-// through
-// icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits breaks it.
+// (marked); a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every
+// one through icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits
+// breaks it.
 test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotation or member, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
   for (const [body, why] of [
     ['class A["**a **b** c**"]', 'markdown'],

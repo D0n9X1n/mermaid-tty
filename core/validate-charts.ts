@@ -1,6 +1,6 @@
 // The validator's checks for the chart and record types: bars draw their exact eighths, class members and keys sit in
-// their rows, items keep source order, glyphs are allowed, titles and row labels are placed, side notes and
-// lifelines stay clear, and node labels sit inside their pills.
+// their rows, items keep source order, glyphs are allowed, titles and row labels are placed, side notes and lifelines
+// stay clear, and node labels sit inside their pills.
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -28,9 +28,8 @@ export function eighthsOf(gs: readonly string[], axis: 'h' | 'v'): number {
 }
 
 // Maximal runs of cells: row runs (h) or column runs (v). A run's lane is its row (h) or column (v); its base, the
-// reading
-// position of its axis-side end, its left column (h) or its bottom row (v); its glyphs, left to right (h) or bottom to
-// top (v).
+// reading position of its axis-side end, its left column (h) or its bottom row (v); its glyphs, left to right (h) or
+// bottom to top (v).
 export type Run = { lane: number; base: number; glyphs: string[] }
 
 export function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
@@ -50,18 +49,12 @@ export function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
 }
 
 // C: each bar draws exactly its eighths, never vacuously. A bar cell is a cap in a bar glyph, so a status cap, a
-// padding space
-// or a ◆ its owner draws is none; a bar's runs are the maximal runs of the bar cells whose owners[0] is its owner. A
-// bar of 0
-// has no cell. A positive bar has exactly lanes ?? 1 runs, one in each of that many adjacent rows (h) or columns (v),
-// all on
-// one baseline, each its full cells then at most one partial, summing to eighths, so each ⌈eighths / 8⌉ cells long.
-// Else
-// bar. A bar with at has its first run's base cell there, its left cell (h) or its bottom cell (v), else bar-misplaced,
-// so
-// a bar cannot leave the row or column of its category, slice or task. A bar cell whose owners[0] is no listed bar's
-// owner
-// is bar-stray.
+// padding space or a ◆ its owner draws is none; a bar's runs are the maximal runs of the bar cells whose owners[0] is
+// its owner. A bar of 0 has no cell. A positive bar has exactly lanes ?? 1 runs, one in each of that many adjacent rows
+// (h) or columns (v), all on one baseline, each its full cells then at most one partial, summing to eighths, so each
+// ⌈eighths / 8⌉ cells long. Else bar. A bar with at has its first run's base cell there, its left cell (h) or its
+// bottom cell (v), else bar-misplaced, so a bar cannot leave the row or column of its category, slice or task. A bar
+// cell whose owners[0] is no listed bar's owner is bar-stray.
 export function bars(d: Drawing, all: readonly Spot[]): Fail | null {
   const cells = all.filter((p) => p.cell.kind === 'cap' && BAR.has(p.cell.ch))
   const listed = d.expect.bars ?? []
@@ -94,15 +87,11 @@ export function bars(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: each listed member is drawn, owned by exactly its own id and its parent's: it has a cell, and every cell whose
-// owners[0]
-// is its id has owners [id, parent]. Else member. With members set, every text or key cell with two distinct owners,
-// the second no
-// edge of expect.edges, is a listed { id: owners[0], parent: owners[1] }, so an omitted row fails member-unlisted. A
-// drawing
-// that sets no members, as no A drawing does, has no row checked. A keyed member's legend key, legend text and their
-// continuation rows are owned by [id] alone, and accepted; its in-place key keeps [id, parent], so its row still needs
-// that
-// cell. A keyed ER comment's text lives only in its legend row.
+// owners[0] is its id has owners [id, parent]. Else member. With members set, every text or key cell with two distinct
+// owners, the second no edge of expect.edges, is a listed { id: owners[0], parent: owners[1] }, so an omitted row fails
+// member-unlisted. A drawing that sets no members, as no A drawing does, has no row checked. A keyed member's legend
+// key, legend text and their continuation rows are owned by [id] alone, and accepted; its in-place key keeps [id,
+// parent], so its row still needs that cell. A keyed ER comment's text lives only in its legend row.
 export function members(d: Drawing): Fail | null {
   const listed = d.expect.members
   if (!listed) {
@@ -133,12 +122,10 @@ export function members(d: Drawing): Fail | null {
 }
 
 // C: each placed member is bound to its place in its own pill, the box of the cap, fill and frame cells its parent
-// draws as
-// owners[0]. Every cell it draws in its row, owners [id, parent], lies in that box, else member-outside; its first, in
-// reading
-// order, is place from the box's top-left, else member-misplaced. place is relative, so compaction, which never cuts a
-// pill's
-// rows or columns, keeps it; and a member on another's row, out of source order, or off its left edge is misplaced.
+// draws as owners[0]. Every cell it draws in its row, owners [id, parent], lies in that box, else member-outside; its
+// first, in reading order, is place from the box's top-left, else member-misplaced. place is relative, so compaction,
+// which never cuts a pill's rows or columns, keeps it; and a member on another's row, out of source order, or off its
+// left edge is misplaced.
 export function memberPlaces(d: Drawing, all: readonly Spot[]): Fail | null {
   for (const { id, parent, place } of d.expect.members ?? []) {
     if (!place) {
@@ -171,9 +158,8 @@ export function memberPlaces(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: a key run is a maximal row run of key cells with one owners[0], its owner, and one legend flag. Its owners are
-// those of
-// all its cells, so a point key that several points own is a run of each. c is its first column, and end the column
-// after it.
+// those of all its cells, so a point key that several points own is a run of each. c is its first column, and end the
+// column after it.
 export type KeyRun = {
   owner: string
   legend: boolean
@@ -209,26 +195,18 @@ export function keyRuns(all: readonly Spot[]): KeyRun[] {
 }
 
 // C: a keyed item's text is replaced in place by its key, and drawn once in its own legend row after that key. Of the
-// runs
-// whose owners include an entry's item, exactly one is in place and one in the legend, else key-missing (fewer) or
-// key-dup
-// (more), and both read its key, else key-mismatch. The legend run is bound to its row: it is the row's first drawn
-// cell,
-// so a row holds one entry, then one empty cell, then a text cell whose owners[0] is the item, its legend text's start,
-// else key-unbound; so the key at an item is the key in its own legend row. An entry's at, its own cell (a quadrant
-// point's), is in its in-place run or beside it on its row, and a run
-// the items of two or more entries own needs at on each, else key-unplaced. No key run touches a key cell on its row,
-// which
-// would read as one key with it, else key-adjacent: runs are maximal, so that cell is another run's. Each legend key
-// row
-// starts a block that runs to the row before the next one, and every text cell whose owners[0] is an entry's item, its
-// wrapped rows included, is in its own legend row's block, else key-unbound; parts other owners draw, such as a value
-// or a
-// separator, are not checked. Then a run whose owner is no entry's item is key-stray; an entry that no keyable item
-// matches
-// by item and class is key-class; and a keyable class with an entry for some of its (item, cls) pairs but not all is
-// key-partial, so keying an item in another class keys none of this one. labels checks the legend text, which the item
-// itself owns.
+// runs whose owners include an entry's item, exactly one is in place and one in the legend, else key-missing (fewer) or
+// key-dup (more), and both read its key, else key-mismatch. The legend run is bound to its row: it is the row's first
+// drawn cell, so a row holds one entry, then one empty cell, then a text cell whose owners[0] is the item, its legend
+// text's start, else key-unbound; so the key at an item is the key in its own legend row. An entry's at, its own cell
+// (a quadrant point's), is in its in-place run or beside it on its row, and a run the items of two or more entries own
+// needs at on each, else key-unplaced. No key run touches a key cell on its row, which would read as one key with it,
+// else key-adjacent: runs are maximal, so that cell is another run's. Each legend key row starts a block that runs to
+// the row before the next one, and every text cell whose owners[0] is an entry's item, its wrapped rows included, is in
+// its own legend row's block, else key-unbound; parts other owners draw, such as a value or a separator, are not
+// checked. Then a run whose owner is no entry's item is key-stray; an entry that no keyable item matches by item and
+// class is key-class; and a keyable class with an entry for some of its (item, cls) pairs but not all is key-partial,
+// so keying an item in another class keys none of this one. labels checks the legend text, which the item itself owns.
 export function keys(d: Drawing, all: readonly Spot[]): Fail | null {
   const runs = keyRuns(all)
   const listed = d.expect.keys ?? []
@@ -294,8 +272,8 @@ export function keys(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: each order list's owners are each drawn on exactly one cell, in strictly increasing rows, and all in one column
-// when
-// column is set, so marks that only their position links (a gitGraph's commits on adjacent rows of a lane) cannot swap.
+// when column is set, so marks that only their position links (a gitGraph's commits on adjacent rows of a lane) cannot
+// swap.
 export function order(d: Drawing, all: readonly Spot[]): Fail | null {
   if (!d.expect.order) {
     return null
@@ -324,12 +302,10 @@ export function order(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: each listed owner with no at draws exactly one cell as owners[0], and it shows exactly its glyph, so a mark whose
-// glyph
-// is its meaning (a gitGraph commit's type) cannot show another's. An owner's entries with at state where it draws a
-// glyph:
+// glyph is its meaning (a gitGraph commit's type) cannot show another's. An owner's entries with at state where it
+// draws a glyph:
 // the non-text cells it draws as owners[0] in that glyph are exactly those cells, else glyph-misplaced, so a tick mark
-// or a
-// point cannot move, and none can be added.
+// or a point cannot move, and none can be added.
 export function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const placed = new Map<string, Set<string>>()
   for (const { owner, ch, at: pos } of d.expect.glyphs ?? []) {
@@ -355,9 +331,8 @@ export function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
 
 // C: each label stated at a cell is drawn there: the first text cell its owner draws as owners[0], in reading order, is
 // that cell. So text that only its place gives meaning (an axis tick, a category, a header, a legend part) cannot move
-// or
-// swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its title
-// first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
+// or swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its
+// title first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
 export function places(d: Drawing, all: readonly Spot[]): Fail | null {
   const first = new Map<string, Spot>()
   for (const p of all) {
@@ -423,13 +398,10 @@ export function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // C: a side note reads as its node's only beside its link, the cap cells `${id}:link` draws. Its text and cont cells,
-// owner
-// id, start on the link's row, each row from one column, and sit against the link: right of it, the first cell just
-// past
-// it; left of it, the widest row's last cell just before it. Else note-unbound. Compaction never cuts a column between
-// them, which the widest row fills. A keyed note, whose text is its legend row's, is bound by keys instead; a link of
-// line
-// cells is an edge's, checked as one.
+// owner id, start on the link's row, each row from one column, and sit against the link: right of it, the first cell
+// just past it; left of it, the widest row's last cell just before it. Else note-unbound. Compaction never cuts a
+// column between them, which the widest row fills. A keyed note, whose text is its legend row's, is bound by keys
+// instead; a link of line cells is an edge's, checked as one.
 export function notes(all: readonly Spot[]): Fail | null {
   const text = new Map<string, Spot[]>()
   const link = new Map<string, Spot[]>()
@@ -464,8 +436,7 @@ export function notes(all: readonly Spot[]): Fail | null {
 }
 
 // A lifeline reads as the participant whose pill heads it, so each lifeline cell lies within its own pill's columns,
-// the
-// cap cells its owner draws: pills of one width swapped over their lifelines would reverse every message.
+// the cap cells its owner draws: pills of one width swapped over their lifelines would reverse every message.
 export function lifelines(all: readonly Spot[]): Fail | null {
   const span = new Map<string, [number, number]>()
   for (const p of all) {
@@ -489,14 +460,10 @@ export function lifelines(all: readonly Spot[]): Fail | null {
 }
 
 // A node's label reads as the node only inside its own pill: each text or cont cell a node draws as owners[0] lies in
-// the
-// box of the cap, fill and frame cells it draws so. Moved off it, the pill is left empty and the label floats beside a
-// line
-// it does not end. A node that draws no such cell (a gitGraph commit's labels are its row's) has no pill to leave; a
-// keyed
-// node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead. A node is an edge's
-// end,
-// or any owner that draws a fill cell, as a pill no edge reaches and a sequence note do.
+// the box of the cap, fill and frame cells it draws so. Moved off it, the pill is left empty and the label floats
+// beside a line it does not end. A node that draws no such cell (a gitGraph commit's labels are its row's) has no pill
+// to leave; a keyed node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead. A
+// node is an edge's end, or any owner that draws a fill cell, as a pill no edge reaches and a sequence note do.
 export function inPills(d: Drawing, all: readonly Spot[]): Fail | null {
   const nodes = new Set([
     ...d.expect.edges.flatMap((e) => [e.from, e.to]),

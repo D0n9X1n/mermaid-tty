@@ -1,7 +1,6 @@
 // check-tangle.ts: report(label, blocks, show) runs the tangle check on each block at 60, 80 and 120 columns, then
-// lists each
-// hit, each id that hit, or only the counts. The CLI reports the goldens, adds --corpus and --private DIR, and exits 1
-// on any hit.
+// lists each hit, each id that hit, or only the counts. The CLI reports the goldens, adds --corpus and --private DIR,
+// and exits 1 on any hit.
 import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'

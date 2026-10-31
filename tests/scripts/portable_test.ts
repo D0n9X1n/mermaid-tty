@@ -77,8 +77,8 @@ const RULES: [string, [string, string[]][]][] = [
       ['const t = `a \\` process \\${ window }`', []],
     ],
   ],
-  // The choice: a regex literal is a pattern, not a use of a global, so its text is blanked like a
-  // string's and /process/ is not flagged. The token before a / tells a regex from a division.
+  // The choice: a regex literal is a pattern, not a use of a global, so its text is blanked like a string's and
+  // /process/ is not flagged. The token before a / tells a regex from a division.
   [
     'a regex literal is blanked like a string, so /process/ is not flagged, and a quote or / in it opens nothing',
     [
@@ -127,8 +127,8 @@ const RULES: [string, [string, string[]][]][] = [
       ["import { p } from './process.ts'", []],
     ],
   ],
-  // A / starts a regex unless it follows a value: a name or number that is not a keyword such as return,
-  // a ) that does not close the head of if, for or while, a ], or the < of a JSX closing tag.
+  // A / starts a regex unless it follows a value: a name or number that is not a keyword such as return, a ) that does
+  // not close the head of if, for or while, a ], or the < of a JSX closing tag.
   [
     'a / after a value divides; after if (…), }, a keyword or an operator it starts a regex literal, whose quotes, backticks and [/] open nothing',
     [
@@ -172,8 +172,8 @@ const RULES: [string, [string, string[]][]][] = [
       ['evaluate(required, myeval, requireX)', []],
     ],
   ],
-  // Code here uses specific function types, so Function is flagged in every use, a type too: in
-  // { make: Function } it is a value after a :.
+  // Code here uses specific function types, so Function is flagged in every use, a type too: in { make: Function } it
+  // is a value after a :.
   [
     'Function is flagged in every use, a type position too',
     [
@@ -203,8 +203,8 @@ const RULES: [string, [string, string[]][]][] = [
       ["const s = 'constructor' // x.constructor", []],
     ],
   ],
-  // After a < a / starts a regex literal, as in a < /x/.test(s), unless it is right after the < and right
-  // before a name or a >: then it is the </ of a JSX closing tag, as in </Text> or </>, and divides.
+  // After a < a / starts a regex literal, as in a < /x/.test(s), unless it is right after the < and right before a name
+  // or a >: then it is the </ of a JSX closing tag, as in </Text> or </>, and divides.
   [
     'a / after a < starts a regex literal, unless right after it and right before a name or >, as in </Text>',
     [
@@ -240,9 +240,9 @@ for (const [rule, cases] of RULES) {
   })
 }
 
-// Ordinary code that mixes regex literals, comparisons, generic calls, arrows, TSX, ?. and templates. Each
-// FLAGGED case ends with process.cwd(), which the scan finds on its last line, and finds nothing else;
-// each CLEAN case names a global only inside a literal or a comment, and the scan finds nothing.
+// Ordinary code that mixes regex literals, comparisons, generic calls, arrows, TSX, ?. and templates. Each FLAGGED case
+// ends with process.cwd(), which the scan finds on its last line, and finds nothing else; each CLEAN case names a
+// global only inside a literal or a comment, and the scan finds nothing.
 const FLAGGED = [
   "const n = parse<Node>(src).items.filter(x => x.size < /'/.source.length).length; process.cwd()",
   `const Badge = ({ s }: Props) => <Text color={s.length < /"/.source.length ? 'red' : 'green'}>{s}</Text>; process.cwd()`,
@@ -323,8 +323,8 @@ test('A8.portability: check-portable.ts prints the problems and exits 1, and exi
   assert.equal(spawnSync(process.execPath, [script], { encoding: 'utf8' }).status, 0)
 })
 
-// A fake claude is a POSIX sh script, as check-sh_test's is. On Windows, check.ts A8.no-build runs
-// fresh-clone.ts, so claude(args, cwd), with the real claude.
+// A fake claude is a POSIX sh script, as check-sh_test's is. On Windows, check.ts A8.no-build runs fresh-clone.ts, so
+// claude(args, cwd), with the real claude.
 const POSIX_ONLY = process.platform === 'win32' && 'needs a POSIX sh fake claude on PATH'
 const writeFakeClaude = (dir: string, script: string) => {
   mkdirSync(join(dir, 'bin'))
@@ -368,8 +368,8 @@ test("A8.no-build: testCount reads the last 'ℹ tests N' line of node --test's 
   assert.equal(testCount('✔ ℹ tests 5 (1ms)\n# tests 5\n'), null)
 })
 
-// fresh-clone.ts on a scratch repo whose committed smoke step exits `smoke`. The fake claude logs its cwd
-// and arguments, and TMPDIR is a dir of the test's own, so the clone's removal can be seen.
+// fresh-clone.ts on a scratch repo whose committed smoke step exits `smoke`. The fake claude logs its cwd and
+// arguments, and TMPDIR is a dir of the test's own, so the clone's removal can be seen.
 const FRESH_CLONE = fileURLToPath(new URL('../../scripts/fresh-clone.ts', import.meta.url))
 for (const smoke of [0, 3]) {
   test(

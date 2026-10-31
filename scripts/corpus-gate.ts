@@ -1,10 +1,8 @@
 // node scripts/corpus-gate.ts DIR [--private DIR2]: draws every block of DIR through explain, which lays it out and
 // validates the drawing, at 80 and 120 columns in the default theme. A block is a .mmd file, or a mermaid fence of a
-// .md
-// file; blocks count from 1 in file-name order. An unclosed fence and an empty block fail at every width, and a DIR
-// with
-// no block fails, so nothing is skipped and 0 blocks never pass. Prints the counts and each failure, and exits 1 when
-// there is any. --private gates DIR2 alike and prints only its counts. No output names a file or quotes a block.
+// .md file; blocks count from 1 in file-name order. An unclosed fence and an empty block fail at every width, and a DIR
+// with no block fails, so nothing is skipped and 0 blocks never pass. Prints the counts and each failure, and exits 1
+// when there is any. --private gates DIR2 alike and prints only its counts. No output names a file or quotes a block.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isFail } from '../core/fail.ts'
@@ -20,8 +18,7 @@ const fences = (text: string): string[] => splitFences(text).flatMap((s) => (s.k
 
 // Whether text ends inside a mermaid fence that never closes. A closing line of either fence character, longer than any
 // run of it in text, closes whatever fence is open there; splitFences then finds one more mermaid fence exactly when
-// the
-// open one is a mermaid fence. An unclosed fence runs to the end of the text, so it is the last fence there.
+// the open one is a mermaid fence. An unclosed fence runs to the end of the text, so it is the last fence there.
 function unclosed(text: string): boolean {
   const n = (text.match(/`+|~+/g) ?? []).reduce((m, run) => Math.max(m, run.length + 1), 3)
   const closed = fences(text).length
@@ -49,8 +46,7 @@ function blocks(dir: string): (string | null)[] {
 
 // The blocks of dir, and each failure: <index>@<cols> <reason>; <index>@- <reason> for an unclosed fence or an empty
 // block, which fail at every width; or -@- no-blocks for a dir with no block. A failure names a block's index, never
-// its
-// source or its file.
+// its source or its file.
 export function gate(dir: string): { total: number; failed: string[] } {
   const all = blocks(dir)
   const failed = all.flatMap((source, i) => {

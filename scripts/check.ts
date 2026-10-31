@@ -1,5 +1,5 @@
-// node scripts/check.ts <ID|all>: runs the steps of one acceptance check ID,
-// or, for `all`, every step check.sh needs beyond validate and the kit.
+// node scripts/check.ts <ID|all>: runs the steps of one acceptance check ID, or, for `all`, every step check.sh needs
+// beyond validate and the kit.
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -7,9 +7,8 @@ import { join } from 'node:path'
 import { claude } from './lib/claude.ts'
 import { isMain } from './lib/is-main.ts'
 
-// A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID;
-// ['@kit'] runs `claude plugin test .`; an '@tmp' argument becomes a fresh temp
-// dir. argv[0] `node` runs this Node; `claude` goes through lib/claude.ts.
+// A step is an argv. ['@nt'] runs the Node tests, filtered to the row's ID; ['@kit'] runs `claude plugin test .`; an
+// '@tmp' argument becomes a fresh temp dir. argv[0] `node` runs this Node; `claude` goes through lib/claude.ts.
 export type Check = { id: string; steps: string[][]; inAll?: false }
 
 const NT = ['@nt']
@@ -64,8 +63,8 @@ export const CHECKS: Check[] = [
   { id: 'VR.in-ci', steps: [GALLERY, TANGLE, node('scripts/check-palettes.ts')] },
 ]
 
-// The steps of `all`: the Node tests once, unfiltered, proving every @nt row's ID, then every other
-// distinct step of the in-all rows, in table order. check.sh runs the kit and validate itself.
+// The steps of `all`: the Node tests once, unfiltered, proving every @nt row's ID, then every other distinct step of
+// the in-all rows, in table order. check.sh runs the kit and validate itself.
 export function allSteps(checks: Check[]): string[][] {
   const seen = new Set([NT, KIT, VALIDATE].map((s) => JSON.stringify(s)))
   const rest = checks
@@ -115,12 +114,12 @@ export function run(step: string[], id?: string): number {
   }
 }
 
-// node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob), filtered
-// to titles that start with id, with lib/assert-count/hooks.ts preloaded into each file's process:
-// a test whose function executes no assertion fails. It fails unless none failed and a real test
-// passed for id or, given no id, for each @nt row's ID: one whose own name, or a suite's or parent
-// test's, matches it. TAP's `ok` lines cannot tell: they count suites, and a file whose tests the
-// filter all skipped as one passing test. lib/passed-tests-reporter.ts lists each real test that passed.
+// node --test over every tests/**/*_test.ts (a readdirSync walk, never a shell glob), filtered to titles that start
+// with id, with lib/assert-count/hooks.ts preloaded into each file's process:
+// a test whose function executes no assertion fails. It fails unless none failed and a real test passed for id or,
+// given no id, for each @nt row's ID: one whose own name, or a suite's or parent test's, matches it. TAP's `ok` lines
+// cannot tell: they count suites, and a file whose tests the filter all skipped as one passing test.
+// lib/passed-tests-reporter.ts lists each real test that passed.
 function nodeTests(id?: string): number {
   const files = readdirSync('tests', { recursive: true, encoding: 'utf8' })
     .filter((f) => f.endsWith('_test.ts'))

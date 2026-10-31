@@ -1,7 +1,6 @@
 // A8 no-build: in a fresh clone, with nothing installed, bare `node --test` must pass; no default-discovered test may
-// need the docs parser.
-// Those tests are named *.docs-spec.ts, outside Node's default patterns; check.sh runs them after `npm ci --prefix
-// scripts/docs`.
+// need the docs parser. Those tests are named *.docs-spec.ts, outside Node's default patterns; check.sh runs them after
+// `npm ci --prefix scripts/docs`.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -27,9 +26,8 @@ test('A8.no-build: every test that reaches scripts/docs is a .docs-spec.ts, and 
   assert.ok(specs.length > 0 && specs.every((f) => reaches(join(here, f))), specs.join())
 })
 // The fresh copy's own run reaches this file too; MTTY_NO_INSTALL_CHILD skips the nested copy there, so it does not
-// recurse.
-// A child of a test run inherits NODE_TEST_CONTEXT and reports to its parent instead of running; drop it, as in a fresh
-// shell.
+// recurse. A child of a test run inherits NODE_TEST_CONTEXT and reports to its parent instead of running; drop it, as
+// in a fresh shell.
 const child = process.env.MTTY_NO_INSTALL_CHILD === '1'
 const env = {
   ...Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== 'NODE_TEST_CONTEXT')),

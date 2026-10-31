@@ -15,10 +15,9 @@ function generate(t: TestContext, text: string) {
   return spawnSync(process.execPath, ['scripts/gen-width-table.ts', file])
 }
 
-// A synthetic file whose data lines are copied from Unicode 16.0.0: W, F, N, Na, A
-// and H lines; single code points and ranges; comments and blank lines; adjacent
-// W and F ranges that merge (3000..3004 across a comment, FF01..FF07, 20000..2A6FF);
-// and 26F2..26F3 and 26F5, one code point apart, which stay separate.
+// A synthetic file whose data lines are copied from Unicode 16.0.0: W, F, N, Na, A and H lines; single code points and
+// ranges; comments and blank lines; adjacent W and F ranges that merge (3000..3004 across a comment, FF01..FF07,
+// 20000..2A6FF); and 26F2..26F3 and 26F5, one code point apart, which stay separate.
 const EAW = `# EastAsianWidth-99.1.2.txt
 # Date: 2099-01-01, 00:00:00 GMT
 # A synthetic test file; its data lines are copied from Unicode 16.0.0.

@@ -1,4 +1,4 @@
-// tests/golden/er_test.ts — ER fixtures (plan C T62): cardinality pairs at their ends, and nord roles.
+// tests/golden/er_test.ts — ER fixtures: cardinality pairs at their ends, and nord roles.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

@@ -1,6 +1,5 @@
-// The quadrant model and its parser (plan C T74; matrix, quadrant): the title, the axis and quadrant texts, and the
-// points
-// in source order, each coordinate kept as written with its exact value.
+// The quadrant model and its parser: the title, the axis and quadrant texts, and the points in source order, each
+// coordinate kept as written with its exact value.
 import { parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
@@ -10,13 +9,11 @@ import { unsupported } from '../../width.ts'
 // A coordinate: its text as written, which prints, and its exact value.
 export type Num = { raw: string; value: Dec }
 // A point, and a quadrant or x-axis text, its owner q1…q4, x0 (left) or x1 (right). n is the statement's source line,
-// which
-// orders the legend.
+// which orders the legend.
 export type Point = { name: string; x: Num; y: Num; n: number }
 export type Field = { owner: string; text: string; n: number }
 // x: left, then right; y: bottom, then top; quads: quadrant-1…4's texts. Each is null when the source gives none.
-// fields
-// lists the quadrant and x-axis texts in source order, an axis's left one first.
+// fields lists the quadrant and x-axis texts in source order, an axis's left one first.
 export type Quadrant = {
   title: string | null
   x: [string, string | null] | null
@@ -27,8 +24,7 @@ export type Quadrant = {
 }
 
 // A text: "…", or unquoted: letters, digits, spaces, non-ASCII and !#$%&'*+,./=?\_-, not starting with - and ending on
-// no
-// space. A coordinate: 0, 1 or 0.<digits>, as Mermaid's point pattern; so 1.0 and .5 are no coordinate.
+// no space. A coordinate: 0, 1 or 0.<digits>, as Mermaid's point pattern; so 1.0 and .5 are no coordinate.
 const CH = String.raw`A-Za-z0-9!#$%&'*+,./=?\\_\u{80}-\u{10FFFF}-`
 const TEXT = String.raw`(?:"[^"]*"|(?!-)[${CH}](?:[ ${CH}]*[${CH}])?)`
 const COORD = String.raw`(0|1|0\.\d+)`
@@ -41,7 +37,7 @@ const QUAD = re(String.raw`quadrant-([1-4])[ \t]+(${TEXT})`)
 const POINT = re(String.raw`(${TEXT})(?::::[\w-]+)?[ \t]*:[ \t]*\[[ \t]*${COORD}[ \t]*,[ \t]*${COORD}[ \t]*\]`)
 // A keyword, in any case, where a run of ASCII letters starts: Mermaid's lexer ignores case, and reads Titled as title.
 const KEYWORD = /(?:^|[^A-Za-z])(?:title|x-axis|y-axis|quadrant-[1-4]|classdef|quadrantchart)/i
-// Parsed and ignored (common rule 4): classDef; accTitle: and accDescr:, to the line's end; accDescr {, to its first }.
+// Parsed and ignored: classDef; accTitle: and accDescr:, to the line's end; accDescr {, to its first }.
 const CLASS_DEF = /^classDef[ \t]+\S/
 const ACC = /^acc(?:Title|Descr)\s*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
@@ -53,13 +49,10 @@ function stop(reason: string): never {
 }
 
 // The model src's statements build, or why it cannot be drawn: 'header' (not quadrantChart alone), 'syntax:<n>' (a line
-// on
-// source line n outside the subset: a point style, a lone -->, a markdown string, another coordinate, a keyword in
-// another
-// case or starting a longer word; or an accDescr { there with no }), 'repeat:<n>' (a second title, from frontmatter or
-// a
-// statement, x-axis, y-axis or quadrant-N), 'entity' or 'html' (text Mermaid shows otherwise) or 'unsupported-char
-// U+XXXX'.
+// on source line n outside the subset: a point style, a lone -->, a markdown string, another coordinate, a keyword in
+// another case or starting a longer word; or an accDescr { there with no }), 'repeat:<n>' (a second title, from
+// frontmatter or a statement, x-axis, y-axis or quadrant-N), 'entity' or 'html' (text Mermaid shows otherwise) or
+// 'unsupported-char U+XXXX'.
 export function parseQuadrant(src: Source): Quadrant | Fail {
   try {
     return walk(src)
@@ -78,7 +71,7 @@ function walk(src: Source): Quadrant {
   }
 
   const q: Quadrant = { title: src.title, x: null, y: null, quads: [null, null, null, null], points: [], fields: [] }
-  // title, x-axis, y-axis and quadrant-N, once each has come: a frontmatter title is the first title (common rule 3).
+  // title, x-axis, y-axis and quadrant-N, once each has come: a frontmatter title is the first title.
   const seen = new Set<string>(src.title === null ? [] : ['title'])
   let descr = 0 // the line of an accDescr { whose } has not come, else 0
   for (const { n, text: raw } of src.lines) {
@@ -183,10 +176,8 @@ function text(s: string, n: number): string {
 }
 
 // t, if it can be drawn. Mermaid sanitizes every quadrant text (quadrantDb's textSanitizer; a title by
-// setDiagramTitle), so
-// text it shows otherwise fails as drawable says for a sanitized field with no <br>: 'entity' for a marker, 'html' for
-// any
-// <. Unquoted text cannot hold a <, as quadrant.jison reads it.
+// setDiagramTitle), so text it shows otherwise fails as drawable says for a sanitized field with no <br>: 'entity' for
+// a marker, 'html' for any <. Unquoted text cannot hold a <, as quadrant.jison reads it.
 function shown(t: string): string {
   const f = drawable(t, 'sanitized', 'none')
   if (f) {

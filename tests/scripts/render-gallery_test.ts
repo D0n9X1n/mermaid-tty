@@ -206,8 +206,7 @@ test(
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 // A copy of the gallery whose glyphCells advances a W/F glyph one cell, not two, so the renderer draws each glyph after
-// a
-// CJK one a cell early. A self-check that shared glyphCells would agree with that renderer and pass it.
+// a CJK one a cell early. A self-check that shared glyphCells would agree with that renderer and pass it.
 test('VR.gallery: the self-check measures columns on its own: a renderer that advances a W/F glyph one cell fails it, by file', (t) => {
   const root = scratch(t)
   for (const p of [

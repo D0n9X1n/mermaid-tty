@@ -1,4 +1,4 @@
-// The gitGraph module (plan C T80; matrix, gitGraph): one row per event, time running down (BT: up, glyphs flipped);
+// The gitGraph module: one row per event, time running down (BT: up, glyphs flipped);
 // branches are lanes 2 cells apart, sorted by order; a fork ├─╮ or ╭─┤ from the parent's lane, a merge ◉─┤ or ├─◉ from
 // the merged lane, ┼ where a connector crosses a lane; one label column right of the lanes. Commits are caps; every
 // link
@@ -44,8 +44,7 @@ type Item = { owner: string; text: string; ink: Ink }
 type Put = Item & { at: number; join?: Piece['join'] }
 
 // e's labels, e the i-th event drawn in ink: a start's branch name; a commit's `id: msg` (whichever exists), a merge's
-// id;
-// then each tag as [t]. Blank text is drawn nowhere, so it is not listed.
+// id; then each tag as [t]. Blank text is drawn nowhere, so it is not listed.
 function items(e: GitEvent, i: number, ink: Ink): Item[] {
   if (e.kind === 'start') {
     return [{ owner: `b:${e.branch}`, text: e.branch, ink }]
@@ -147,9 +146,8 @@ function replay(g: GitGraph): Links | Fail {
   return L
 }
 
-// The graph, labels packed at max. Lanes are stably sorted by order, 2 cells apart; lane k in creation order takes
-// s<k mod 8 + 1>. Each event takes a block of rows, its glyph row first, in display order (BT reversed). A lane runs
-// from
+// The graph, labels packed at max. Lanes are stably sorted by order, 2 cells apart; lane k in creation order takes s<k
+// mod 8 + 1>. Each event takes a block of rows, its glyph row first, in display order (BT reversed). A lane runs from
 // its start row to the end row, the last event's glyph row, drawing only the arms that are there. Nodes c<i> are caps.
 // Each link with a cell between its nodes is an edge: r<i> from node i's first parent, m<i> from a merge's merged head.
 // The order lists keep each lane's nodes, and all nodes, in time order, so adjacent nodes, which no cell joins, cannot
@@ -284,8 +282,7 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
         continue
       }
       // A lane's stretch with no link (after its last node, or before an unforked first one) is no edge but lane:<b>,
-      // which
-      // a crossing cell records beside the connector's edge, so the validator checks every arm its glyph shows.
+      // which a crossing cell records beside the connector's edge, so the validator checks every arm its glyph shows.
       cv.line(y, col.get(b)!, y === e ? back : UP | DOWN, 'light', ink.get(b)!, owner(b, y))
     }
   }
@@ -342,7 +339,7 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
 }
 
 // natural draws labels unwrapped; wrap wraps them to the columns right of the lanes. 'too-wide' if the lanes leave no
-// label column. The title heads the body (common rule 3).
+// label column. The title heads the body.
 function layout(g: GitGraph, step: Step, columns: number): Drawing | Fail {
   if (!STEPS.includes(step)) {
     return fail('step')

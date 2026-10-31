@@ -1,6 +1,5 @@
 // Reads a flowchart link as Mermaid 12.2.0's lexer (flow.jison) and flowDb's destructLink read it: which ends it draws,
-// its
-// stroke and length, and its label's raw text. A link Mermaid cannot lex, or reads as INVALID, is null.
+// its stroke and length, and its label's raw text. A link Mermaid cannot lex, or reads as INVALID, is null.
 import type { End, GEdge } from '../../graph/model.ts'
 import { misread } from './ids.ts'
 
@@ -13,16 +12,14 @@ export type Ends = { style: GEdge['style']; tail: End; head: End; minlen: number
 export type RawLink = Ends & { id?: string; end: number; raw?: string; pipe?: true }
 
 // A basic link at lastIndex, as Mermaid's rules lex it, with the spaces around it: an optional id@, then a line with
-// its
-// marks (-- or ==, then one more of the line or a head mark; or - dots - with an optional head; or three or more ~); an
-// optional |label| (any "…" in it whole). A dotted line needs its first -: Mermaid reads A.-B as one id.
+// its marks (-- or ==, then one more of the line or a head mark; or - dots - with an optional head; or three or more
+// ~); an optional |label| (any "…" in it whole). A dotted line needs its first -: Mermaid reads A.-B as one id.
 const BASIC = new RegExp(
   String.raw`\s*(?:(${NAME})@)?([xo<]?(?:--+[-xo>]|==+[=xo>]|-\.+-[xo>]?)|~~~+)\s*(?:\|((?:"[^"]*"|[^"|])*)\|\s*)?`,
   'uy',
 )
 // Each text form: its opener at lastIndex (an optional id@, a tail mark, -- == or -.), the closer that ends its text,
-// and
-// one character of the text, which can never be the line's own character twice (-- ends it) or once (= and .).
+// and one character of the text, which can never be the line's own character twice (-- ends it) or once (= and .).
 const FORMS = [
   [String.raw`[xo<]?--`, String.raw`[xo<]?--+[-xo>]`, /[^-]|-(?!-)/y],
   [String.raw`[xo<]?==`, String.raw`[xo<]?==+[=xo>]`, /[^=]/y],
@@ -101,8 +98,7 @@ export function readLink(text: string, at: number): RawLink | null {
 }
 
 // A text form's text from i, as edgeText lexes it: one string first, if any, then text characters up to the first
-// closer.
-// Null if no closer comes, the text is empty, or a " comes after the first token.
+// closer. Null if no closer comes, the text is empty, or a " comes after the first token.
 function edgeText(
   text: string,
   i: number,

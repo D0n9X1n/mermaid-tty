@@ -1,7 +1,7 @@
-// Reads a gitGraph (plan C, T79; matrix, gitGraph) into its model: the direction, the title, the branches in creation
-// order, and one event per branch start, commit, merge or cherry-pick, in source order. Each statement runs Mermaid
-// 12.2.0's db rules (gitGraphAst.ts), and whatever the db throws on, or the grammar (gitGraph.langium) rejects or might
-// read another way, fails, so the fence draws as source.
+// Reads a gitGraph into its model: the direction, the title, the branches in creation order, and one event per branch
+// start, commit, merge or cherry-pick, in source order. Each statement runs Mermaid 12.2.0's db rules (gitGraphAst.ts),
+// and whatever the db throws on, or the grammar (gitGraph.langium) rejects or might read another way, fails, so the
+// fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
 import { drawable, type Br, type Mode } from '../../text.ts'
@@ -40,8 +40,7 @@ const TOKEN = /(id|msg|tag|type|order|parent):|"([^"\\]*)"|([^ \t"]+)/y
 // The ends of a line Mermaid's WS terminal skips.
 const ENDS = /^[ \t]+|[ \t]+$/g
 // An unquoted name, as Mermaid's REFERENCE terminal reads it. A keyword, a word Mermaid's INT terminal could take
-// first,
-// or one its title or accessibility terminals could start on lexes as something else, so it fails.
+// first, or one its title or accessibility terminals could start on lexes as something else, so it fails.
 const NAME = /^\w([-./\w]*[-\w])?$/
 const RESERVED = new Set([
   'gitGraph',
@@ -74,9 +73,9 @@ function stop(reason: string): never {
   throw fail(reason)
 }
 
-// t, if it draws as Mermaid shows it in its field, on source line n; else 'entity:<n>', 'html:<n>' or
-// 'unsupported-char U+XXXX'. Ids, tags and branch names are escaped (text ground truth); a message, which Mermaid never
-// draws, is kept as written.
+// t, if it draws as Mermaid shows it in its field, on source line n; else 'entity:<n>', 'html:<n>' or 'unsupported-char
+// U+XXXX'. Ids, tags and branch names are escaped (text ground truth); a message, which Mermaid never draws, is kept as
+// written.
 function checked(t: string, n: number, mode: Mode = 'escaped', br: Br = 'literal'): string {
   const f = drawable(t, mode, br)
   if (f) {

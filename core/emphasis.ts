@@ -1,18 +1,14 @@
 // Markdown bold and italic as Mermaid 12.2.0 shows them. Its markdownToHTML (rendering-util/handle-markdown-text.ts)
-// lexes a
-// markdown label with marked 16.4.2 (gfm) and emits strong as <strong>, em as <em>, text and inline HTML as written.
-// This is
-// a literal port of marked's inline lexer (inlineTokens' masking, emStrong, inlineText) on a fail-closed alphabet: no
-// control character, \, `, [, ], ~, @, ://, www., entity-like &, < or > outside a <br>, nor a leading or trailing
-// space;
-// and no block start (heading, quote, list, rule, HTML). There marked reads nothing but text, <br> tags, strong and em.
-// tests/core/emphasis_test.ts checks it against Mermaid's output.
+// lexes a markdown label with marked 16.4.2 (gfm) and emits strong as <strong>, em as <em>, text and inline HTML as
+// written. This is a literal port of marked's inline lexer (inlineTokens' masking, emStrong, inlineText) on a
+// fail-closed alphabet: no control character, \, `, [, ], ~, @, ://, www., entity-like &, < or > outside a <br>, nor a
+// leading or trailing space; and no block start (heading, quote, list, rule, HTML). There marked reads nothing but
+// text, <br> tags, strong and em. tests/core/emphasis_test.ts checks it against Mermaid's output.
 //
 // A marked string carries its style inline: a marker before each styled character that takes a column, BOLD for bold,
 // ITALIC for italic, BOTH for both; a space or a zero-width character never has one. width() counts a marker 0 columns,
 // so measuring and wrapping work on a marked string as they do on the text it shows, and canvas.text() turns each
-// marker
-// into its cell's em.
+// marker into its cell's em.
 import { width } from './width.ts'
 
 export const BOLD = 1
@@ -98,9 +94,8 @@ type Run = { type: 'strong' | 'em'; raw: string; tokens: Tok[] }
 type Tok = { type: 'text'; text: string } | { type: 'html'; text: string } | Run
 
 // marked's emStrong at src, where masked is the masked text of the run src is the tail of, and prev the character
-// before
-// src (marked's prevChar): its strong or em token, undefined where marked reads none there, or null where its content
-// fails.
+// before src (marked's prevChar): its strong or em token, undefined where marked reads none there, or null where its
+// content fails.
 function emStrong(src: string, masked: string, prev: string): Run | null | undefined {
   let r = LDELIM.exec(src)
   if (!r || (r[3] && ALNUM.test(prev))) {
@@ -203,9 +198,8 @@ function inline(src: string): Tok[] | null {
 
 // The marked string text shows, or null where this port cannot say: text outside the alphabet, or a style nested in
 // itself (<strong> in <strong>, <em> in <em>), which a terminal cannot draw apart from one. breaks: an edge label,
-// where
-// each <br> is a newline to marked (LINE_BREAK); the text must then be one paragraph, and each newline, with the spaces
-// after it (markdownToHTML's /\n */), shows as one <br>.
+// where each <br> is a newline to marked (LINE_BREAK); the text must then be one paragraph, and each newline, with the
+// spaces after it (markdownToHTML's /\n */), shows as one <br>.
 export function emphasize(text: string, breaks = false): string | null {
   if (OUTSIDE.test(text) || ENTITYISH.test(text) || text !== text.trim() || BLOCK.test(text)) {
     return null

@@ -21,8 +21,7 @@ const restyled = (src: string, r: number, c: number, was: string, ch: string): D
 }
 
 // QA: a glyph that shows another line style than its cell records says the wrong thing (a dependency for a realization,
-// a
-// non-identifying relation for an identifying one, a reply for a call), so it fails line-glyph like a wrong arm does.
+// a non-identifying relation for an identifying one, a reply for a call), so it fails line-glyph like a wrong arm does.
 test('line-glyph: a line cell drawn in another style than it records fails', () => {
   for (const [src, r, c, was, ch] of [
     ['classDiagram\nA ..> B', 1, 2, '┆', '│'],

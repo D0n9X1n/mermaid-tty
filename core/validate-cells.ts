@@ -1,5 +1,5 @@
-// The validator's shared reading of a drawing: drawn cells and their sides, owners, label instances, and the
-// walk along an edge's cells. The checks in validate-lines, validate-frames and validate-charts build on these.
+// The validator's shared reading of a drawing: drawn cells and their sides, owners, label instances, and the walk along
+// an edge's cells. The checks in validate-lines, validate-frames and validate-charts build on these.
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -10,8 +10,7 @@ import type { Expect } from './validate.ts'
 export type Spot = { r: number; c: number; cell: Cell }
 
 // A cell's sides: the dirs bit that points there (1 up, 2 right, 4 down, 8 left), the bit of the side facing back, and
-// the
-// step to the neighbor there.
+// the step to the neighbor there.
 export type Side = { bit: number; back: number; dr: number; dc: number }
 
 export const SIDES: readonly Side[] = [
@@ -66,10 +65,8 @@ export function spots(d: Drawing): Spot[] {
 export const norm = (s: string): string => s.replace(/\s+/g, ' ').trim()
 
 // Each text owner's drawn label instances, in reading order. A run is consecutive text and cont cells with one
-// owners[0].
-// A run starts an instance if its first cell has no join or its owner has none yet; any other run joins the owner's
-// last
-// instance by its join. A cell with em reads as its marker (core/emphasis.ts), then its ch.
+// owners[0]. A run starts an instance if its first cell has no join or its owner has none yet; any other run joins the
+// owner's last instance by its join. A cell with em reads as its marker (core/emphasis.ts), then its ch.
 export function instances(d: Drawing): Map<string, string[]> {
   const drawn = new Map<string, string[]>()
   for (const row of d.cells) {
@@ -100,9 +97,9 @@ export function instances(d: Drawing): Map<string, string[]> {
 }
 
 // X3. em is a text cell's emphasis (BOLD, ITALIC or both); no other cell has one. instances reads it back as its
-// marker,
-// so labels compares emphasis as part of the text. No cell's ch holds a control character: a marker there would read as
-// em, and the row would show the character with no style. Source text never holds one (unsupported), nor does a glyph.
+// marker, so labels compares emphasis as part of the text. No cell's ch holds a control character: a marker there would
+// read as em, and the row would show the character with no style. Source text never holds one (unsupported), nor does a
+// glyph.
 export const CONTROL = /\p{Cc}/u
 
 export function emphasis(all: readonly Spot[]): Fail | null {
@@ -173,20 +170,15 @@ export function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
 }
 
 // Whether x is a cell edge id's walk may step through: a line or arrow cell of the edge, or a text, cont or key cell of
-// its
-// own label, owner `${id}:label`. A fill, cap or other text cell never is, even one the edge owns.
+// its own label, owner `${id}:label`. A fill, cap or other text cell never is, even one the edge owns.
 export const connects = (x: Cell, id: string): boolean =>
   ((x.kind === 'line' || x.kind === 'arrow') && owns(x, id)) ||
   ((x.kind === 'text' || x.kind === 'cont' || x.kind === 'key') && x.owners[0] === `${id}:label`)
 
 // Each edge is connected: a walk over the cells that connect it, from its line or arrow cells next to from (a line
-// there
-// must point at from), reaches a cell next to to. Each end mark is its own arrow cell of the edge beside its own node,
-// and
-// none sits on a junction.
-// The cells that connect edge e, and those a walk reaches from its line or arrow cells next to its from (a line there
-// must
-// point at from).
+// there must point at from), reaches a cell next to to. Each end mark is its own arrow cell of the edge beside its own
+// node, and none sits on a junction. The cells that connect edge e, and those a walk reaches from its line or arrow
+// cells next to its from (a line there must point at from).
 export function path(d: Drawing, all: readonly Spot[], e: Expect['edges'][number]): { mine: Spot[]; reached: Spot[] } {
   const mine = all.filter((p) => connects(p.cell, e.id))
   const starts = mine.filter((p) =>

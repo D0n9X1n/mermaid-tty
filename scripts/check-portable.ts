@@ -1,21 +1,19 @@
-// node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
-// which has no Node and no DOM. In each .ts and .tsx file it flags process (but not $.process), Buffer, document,
-// window,
-// globalThis, Reflect, require, eval, Function (a type too), constructor, import( and a \u escape outside
-// literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
-// path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
-// package.json, since nothing is installed. Prints each problem as `file:line token` and exits 1 when
-// there is any.
+// node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox, which has no
+// Node and no DOM. In each .ts and .tsx file it flags process (but not $.process), Buffer, document, window,
+// globalThis, Reflect, require, eval, Function (a type too), constructor, import( and a \u escape outside literals and
+// comments, and each import or export … from specifier that is not a relative .ts or .tsx path; a type-only claude-code
+// import is erased, so it is allowed. It also flags a dependencies key in package.json, since nothing is installed.
+// Prints each problem as `file:line token` and exits 1 when there is any.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isMain } from './lib/is-main.ts'
 
-// Each forbidden token, and the pattern that finds it in lexed code. eval, require and Function are bare
-// words, so (0, eval)(s), const r = require and { make: Function } are found. Function is found in a type
-// position too: code here uses specific function types, and after a : it can be a value. No name in our
-// code needs a \u escape, which can spell any of them. constructor reaches Function without naming it, as in
-// (() => {}).constructor('return process')(), which typecheck allows too, so it is flagged as a bare word.
-// process straight after a bare $. is the engine's own noun ($.process.run), not Node's global.
+// Each forbidden token, and the pattern that finds it in lexed code. eval, require and Function are bare words, so (0,
+// eval)(s), const r = require and { make: Function } are found. Function is found in a type position too: code here
+// uses specific function types, and after a : it can be a value. No name in our code needs a \u escape, which can spell
+// any of them. constructor reaches Function without naming it, as in (() => {}).constructor('return process')(), which
+// typecheck allows too, so it is flagged as a bare word. process straight after a bare $. is the engine's own noun
+// ($.process.run), not Node's global.
 const TOKENS: [string, RegExp][] = [
   ['process', /(?<!(?<![\w$])\$\.)\bprocess\b/g],
   ['Buffer', /\bBuffer\b/g],
@@ -68,11 +66,11 @@ function before(out: string[]): { char: string; word: string } {
   return { char: out[i] ?? '', word }
 }
 
-// Whether a / after out, with next after it, starts a regex literal. It divides after a value: a name or
-// number that is not a keyword such as return; a ) unless it closes the head of if, for or while
-// (headClosed); or a ]. It divides too as the / of a JSX closing tag: right after the < and right before
-// a name or a >, as in </Text> or </>. After any other <, a comparison, it starts one, as in
-// a < /x/.test(s); and anywhere else, after }, an operator, punctuation, a keyword or nothing.
+// Whether a / after out, with next after it, starts a regex literal. It divides after a value: a name or number that is
+// not a keyword such as return; a ) unless it closes the head of if, for or while (headClosed); or a ]. It divides too
+// as the / of a JSX closing tag: right after the < and right before a name or a >, as in </Text> or </>. After any
+// other <, a comparison, it starts one, as in a < /x/.test(s); and anywhere else, after }, an operator, punctuation, a
+// keyword or nothing.
 function regexStarts(out: string[], next: string, headClosed: boolean): boolean {
   const { char, word } = before(out)
   if (word) {
@@ -90,8 +88,8 @@ function regexStarts(out: string[], next: string, headClosed: boolean): boolean 
   return char !== ']'
 }
 
-// The index of the quote that closes the string literal opened at i, or of the line break or end of code
-// that cuts it short. A backslash escapes the next character, a line break included.
+// The index of the quote that closes the string literal opened at i, or of the line break or end of code that cuts it
+// short. A backslash escapes the next character, a line break included.
 function closeQuote(code: string, i: number): number {
   let j = i + 1
   while (j < code.length && code[j] !== code[i] && code[j] !== '\n') {
@@ -101,8 +99,8 @@ function closeQuote(code: string, i: number): number {
   return Math.min(j, code.length)
 }
 
-// The index of the / that closes the regex literal opened at i, or -1 when the line ends first.
-// A backslash escapes the next character, and a / inside a [class] does not close it.
+// The index of the / that closes the regex literal opened at i, or -1 when the line ends first. A backslash escapes the
+// next character, and a / inside a [class] does not close it.
 function closeRegex(code: string, i: number): number {
   let inClass = false
   for (let j = i + 1; j < code.length && code[j] !== '\n'; j++) {
@@ -121,14 +119,13 @@ function closeRegex(code: string, i: number): number {
   return -1
 }
 
-// code with each comment, and the text of each string, regex and template literal, blanked: one space per
-// code unit, line breaks kept, so offsets and lines stay aligned. The code inside each ${…} is kept: depth
-// counts the { open in the current substitution, and subs holds the outer ones' counts, so the } that
-// closes a substitution is told from a nested one. heads holds, for each open (, whether it opens the
-// head of if, for or while, and headClosed whether the last ) closed one. A regex literal is a pattern,
-// not a use of a global, so its text is blanked like a string's: /process/ is not flagged. The
-// specifiers are returned apart, blanked in the text too, to be checked as imports rather than scanned
-// for tokens.
+// code with each comment, and the text of each string, regex and template literal, blanked: one space per code unit,
+// line breaks kept, so offsets and lines stay aligned. The code inside each ${…} is kept: depth counts the { open in
+// the current substitution, and subs holds the outer ones' counts, so the } that closes a substitution is told from a
+// nested one. heads holds, for each open (, whether it opens the head of if, for or while, and headClosed whether the
+// last ) closed one. A regex literal is a pattern, not a use of a global, so its text is blanked like a string's:
+// /process/ is not flagged. The specifiers are returned apart, blanked in the text too, to be checked as imports rather
+// than scanned for tokens.
 function lex(code: string): { text: string; specifiers: Specifier[] } {
   const out: string[] = []
   const specifiers: Specifier[] = []
@@ -214,8 +211,8 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
   return { text: out.join(''), specifiers }
 }
 
-// The lexed text of the import or export statement that holds the specifier at `at`: from the last
-// import or export keyword before it.
+// The lexed text of the import or export statement that holds the specifier at `at`: from the last import or export
+// keyword before it.
 function statement(text: string, at: number): string {
   const head = text.slice(0, at)
   let start = 0
@@ -225,11 +222,11 @@ function statement(text: string, at: number): string {
 
   return head.slice(start)
 }
-// A type-only statement, which TypeScript erases. `import type from 'x'` imports a binding named type,
-// and `import type, { a } from 'x'` a value too: neither is type-only.
+// A type-only statement, which TypeScript erases. `import type from 'x'` imports a binding named type, and `import
+// type, { a } from 'x'` a value too: neither is type-only.
 const TYPE_ONLY = /^(?:import|export)\s+type\b(?!\s*(?:,|from\b))/
-// Whether the sandbox can load a specifier: a relative .ts or .tsx path; or claude-code, which has only
-// types, in a type-only statement.
+// Whether the sandbox can load a specifier: a relative .ts or .tsx path; or claude-code, which has only types, in a
+// type-only statement.
 const allowed = (s: Specifier, text: string) =>
   /^\.\.?\/.*\.tsx?$/.test(s.text) || (s.text === 'claude-code' && TYPE_ONLY.test(statement(text, s.at)))
 
@@ -246,8 +243,8 @@ export function scanSource(code: string): string[] {
   return found.sort((a, b) => a[0] - b[0]).map(([at, what]) => `${lineOf(text, at)} ${what}`)
 }
 
-// The problems in root's core/ and hooks/ .ts and .tsx files, each as `file:line token` with a
-// /-separated path relative to root; then a dependencies key in root's package.json.
+// The problems in root's core/ and hooks/ .ts and .tsx files, each as `file:line token` with a /-separated path
+// relative to root; then a dependencies key in root's package.json.
 export function scanRepo(root: string): string[] {
   const problems: string[] = []
   for (const dir of ['core', 'hooks']) {

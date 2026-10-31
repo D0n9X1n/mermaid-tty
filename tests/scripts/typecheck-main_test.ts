@@ -1,5 +1,5 @@
-// main(spawn), the entry point; and the real CLI, run in a subprocess that finds a fake npx first
-// on its PATH. Neither needs npx or the network.
+// main(spawn), the entry point; and the real CLI, run in a subprocess that finds a fake npx first on its PATH. Neither
+// needs npx or the network.
 import test from 'node:test'
 import type { TestContext } from 'node:test'
 import assert from 'node:assert/strict'
@@ -34,8 +34,8 @@ test('typecheck (no check ID): main returns the status of tsc, and 1 when it has
   }
 })
 
-// A temp dir: bin/ holds a fake npx, for POSIX and for Windows, that writes its cwd to bin/cwd and
-// exits 3; tmp/ is the subprocess's temp dir.
+// A temp dir: bin/ holds a fake npx, for POSIX and for Windows, that writes its cwd to bin/cwd and exits 3; tmp/ is the
+// subprocess's temp dir.
 function fakeNpx(t: TestContext): { bin: string; tmp: string } {
   const base = mkdtempSync(join(tmpdir(), 'mtty-'))
   t.after(() => rmSync(base, { recursive: true, force: true }))

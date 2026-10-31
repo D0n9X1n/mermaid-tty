@@ -44,7 +44,7 @@ test('complete fixtures pass', () => {
   assert.deepEqual([rm(README), publishWikiErrors(WIKI), iconErrors(png(512, 512))], [[], [], []])
   assert.deepEqual(supportedTypes(README), ['flowchart'])
 })
-const LONG = '`'.repeat(1001) // past cmark-gfm's 1,000-backtick code-span limit (D15d)
+const LONG = '`'.repeat(1001) // past cmark-gfm's 1,000-backtick code-span limit
 const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, TAGLINE, 'A renderer', 'tagline'],
   [rm, README, '[![Stars]', '[![Fans]', 'stars badge'],

@@ -44,9 +44,8 @@ test('A setting that changes what Mermaid shows, or one of a type Mermaid reject
     [{ themeVariables: { primaryColor: 'notacolor' } }, 'themeVariables.primaryColor'],
     [{ themeVariables: { primaryColor: 1 } }, 'themeVariables.primaryColor'],
     // The second review's cases: a 0px text size, malformed or transparent colours, a text colour on its own
-    // background,
-    // a tiny quadrant chart, pie labels pushed off the chart. Any colour can match another and hide text, so none
-    // draws.
+    // background, a tiny quadrant chart, pie labels pushed off the chart. Any colour can match another and hide text,
+    // so none draws.
     [{ themeVariables: { pieTitleTextSize: '0px' } }, 'themeVariables.pieTitleTextSize'],
     [{ themeVariables: { pieSectionTextSize: '17px' } }, 'themeVariables.pieSectionTextSize'],
     [{ themeVariables: { primaryColor: 'rgb(1)' } }, 'themeVariables.primaryColor'],
@@ -159,8 +158,8 @@ test('Settings honoured here, or seen to change only pixels with a value Mermaid
   )
 })
 
-// A sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so
-// none of them is allowed, default value or not.
+// A sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so none
+// of them is allowed, default value or not.
 test('A sequence geometry setting around a framed diagram falls back', () => {
   const framed =
     'sequenceDiagram\nbox Team\nparticipant A\nparticipant B\nend\nrect rgb(1, 2, 3)\nA->>B: hi\nend\nloop again\nB->>A: ok\nend'

@@ -265,8 +265,7 @@ test('A4: an end label sits right of a vertical run, above a horizontal one, at 
 const shared = (d: ReturnType<typeof D>, a: string, b: string) =>
   d.cells.flat().some((c) => c !== null && c.owners.includes(a) && c.owners.includes(b))
 // Two labelled ends on one face of a TB node get adjacent ports, so one label meets the other's stem: that drawing
-// fails
-// closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and
+// fails closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and
 // passes.
 test('A4: an end with a label gets its own port, never a shared stem, at a fan-out or a fan-in', () => {
   for (const [specs, k] of [
@@ -327,8 +326,7 @@ test("A4: a compacted drawing keeps every end label beside its end, apart from t
   }
 })
 // [ A ] then e0 along row 0 to ► and [ B ], its channel n cells: '1' runs right from the second cell, '0..*' left to
-// the
-// cell before ►.
+// the cell before ►.
 function channel(n: number) {
   const gr = g('LR', ['A>B'])
   Object.assign(gr.edges[0]!, { tailLabel: '1', headLabel: '0..*' })

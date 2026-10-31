@@ -76,8 +76,8 @@ test('A5.mutation-tests: a crossing that hides a third edge turning inside it jo
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 // A hand-drawn grid: nodes [id, row, col, owners?] drawn as their id; marks [edge, row, col, a line's dirs or a head
-// glyph];
-// edges 'id from to head?'. Any two owners may merge a line or arrow cell, so only the validator judges a meeting.
+// glyph]; edges 'id from to head?'. Any two owners may merge a line or arrow cell, so only the validator judges a
+// meeting.
 type Mark = [string, number, number, number | string]
 const v = (o: string, c: number, r0: number, r1: number): Mark[] =>
   Array.from({ length: r1 - r0 + 1 }, (_, i) => [o, r0 + i, c, 5])
@@ -314,8 +314,8 @@ test('A5.mutation-tests: a crossing cell without per-owner dirs joins its edges 
 })
 
 // merge-ambiguous: edges whose drawn lines join read as one line, so each end without a mark seems to lead to each head
-// on
-// it. A merge that implies an edge the drawing does not have fails, by explain at 80 columns and on hand-built grids.
+// on it. A merge that implies an edge the drawing does not have fails, by explain at 80 columns and on hand-built
+// grids.
 const verdict = (src: string) => {
   const r = explain(src, { columns: 80, theme: 'mono' })
   return 'reason' in r ? r.reason : null
@@ -571,10 +571,8 @@ test('merge-ambiguous: a trunk that A→B and B→A share implies the self-loops
   assert.equal(validate(twoWay(apart2)), null)
 })
 // 3: A, B over C, D: each edge runs down from its source, along row 3 into the trunk down column 3, along row 7 and
-// down into
-// its target's ▼, which it shares. Every pair the trunk implies is an edge, though two pairs of edges share no
-// endpoint; with
-// B→C gone, B seems to lead to C.
+// down into its target's ▼, which it shares. Every pair the trunk implies is an edge, though two pairs of edges share
+// no endpoint; with B→C gone, B seems to lead to C.
 const trunk = (ids: string[]) =>
   marked(
     11,
@@ -608,8 +606,7 @@ test('merge-ambiguous: a complete bipartite trunk passes, as crossings leave a c
   assert.equal(validate(trunk(['AC', 'AD', 'BD']))?.reason, 'merge-ambiguous')
 })
 // 4: A→C (e0) from the left and B's edge e1 from the right meet only in C's ▼. As B<-->C, A seems to lead to B; as B→C,
-// the
-// two make a fan-in.
+// the two make a fan-in.
 const arrowOnly = (twoHeaded: boolean) =>
   marked(
     4,
@@ -723,8 +720,7 @@ test('merge-ambiguous: unmarked edges joined in one line pass only when all leav
   assert.equal(validate(cross())?.reason, 'merge-ambiguous') // A seems linked to C, B to D
 })
 // QA's mixed merge: A, B over C, D, each edge on one trunk along row 2 and, to H, down a stem in column 3 into H's ▼.
-// Open
-// A---B runs along the trunk and open A---C down column 0. Edges are named by their ends: 'AB', 'AH'.
+// Open A---B runs along the trunk and open A---C down column 0. Edges are named by their ends: 'AB', 'AH'.
 const leg = (id: string, n: string): Mark[] => {
   const c = 'AC'.includes(n) ? 0 : 6
   const up = 'AB'.includes(n)
@@ -777,9 +773,8 @@ test('merge-ambiguous: marked and unmarked edges on one line are one network, an
   assert.equal(validate(hub(['AB', 'AH', 'BH', 'DH']))?.reason, 'merge-ambiguous') // D seems linked to A and B
 })
 // QA: A <--> B (e0) and A <--> C (e1) share A's ▲ and one trunk along row 3 to B's and C's ▼, and an open self-loop A
-// --- A
-// (e2) runs round it. Every end is a head or bare, and a two-headed edge's heads may start a link, so B and C seem
-// linked.
+// --- A (e2) runs round it. Every end is a head or bare, and a two-headed edge's heads may start a link, so B and C
+// seem linked.
 const twoHeads = (ids: string[]) =>
   marked(
     8,
@@ -830,8 +825,7 @@ test('merge-ambiguous: heads of two-headed edges on one line imply a link betwee
   assert.equal(validate(twoHeads(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous') // QA: B seems linked to C
   assert.equal(validate(twoHeads(['e0', 'e1']))?.reason, 'merge-ambiguous') // so without the loop
   // A <--> B with a bare loop at A on its line: the loop's bare ends read as A-->A and as A---B's own ends lead to B's
-  // head,
-  // A-->B; the source has neither (a self-loop needs the head kind too).
+  // head, A-->B; the source has neither (a self-loop needs the head kind too).
   assert.deepEqual(falsePairs(twoHeads(['e0', 'e2'])), ['A->A', 'A->B'])
   assert.equal(validate(twoHeads(['e0', 'e2']))?.reason, 'merge-ambiguous')
 })

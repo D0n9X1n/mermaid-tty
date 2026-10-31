@@ -1,18 +1,14 @@
 // Whether Mermaid 12.2.0's lexer (flow.jison) would read an id as that id. Its keyword rules come before an id's own
-// tokens,
-// and it tries them at each token start inside the id: the id's start, after a leading run of ASCII digits (NUM), and
-// after
-// each non-ASCII character (UNICODE_TEXT, one character from a fixed table). A keyword that matches there, given the
-// text
-// after it, re-reads the id; a non-ASCII character outside the table is no token. Either way the id is not read, and
-// its
-// statement falls back. Verified under JSDOM, at a statement's start, after a link and after &.
+// tokens, and it tries them at each token start inside the id: the id's start, after a leading run of ASCII digits
+// (NUM), and after each non-ASCII character (UNICODE_TEXT, one character from a fixed table). A keyword that matches
+// there, given the text after it, re-reads the id; a non-ASCII character outside the table is no token. Either way the
+// id is not read, and its statement falls back. Verified under JSDOM, at a statement's start, after a link and after &.
 export type IdKind = 'node' | 'edge' | 'subgraph'
 
 // The keyword rules each kind of id meets, as the lexer matches them (\b is ASCII, so styleé is style then é). A node
-// id,
-// a :::class or a directive's id is idString, which takes default and the direction words; an edge id's id@ (LINK_ID)
-// comes after default; a subgraph id is textNoTags, which takes most keywords but not these, and reads end only alone.
+// id, a :::class or a directive's id is idString, which takes default and the direction words; an edge id's id@
+// (LINK_ID) comes after default; a subgraph id is textNoTags, which takes most keywords but not these, and reads end
+// only alone.
 const TARGETS = String.raw`interpolate|_self|_blank|_parent|_top`
 const ACC = String.raw`accTitle\s*:|accDescr\s*[:{]|call\s|href\s|click\s`
 const NODE = String.raw`style|linkStyle|classDef|class|flowchart-elk|swimlane-beta|graph|flowchart|subgraph|end|${TARGETS}`
@@ -24,8 +20,7 @@ const KEYWORD: Readonly<Record<IdKind, RegExp>> = {
 
 // Whether the lexer would not read id, of kind, as that id. rest is what follows it to its statement's end, then the
 // character that ends the statement: ';' right after it, else a line break. An edge id is one id@ token (LINK_ID) once
-// no
-// keyword matches at its start, so only its start counts.
+// no keyword matches at its start, so only its start counts.
 export function misread(id: string, rest: string, kind: IdKind): boolean {
   const starts = kind === 'edge' ? [0] : tokenStarts(id)
   return starts === null || starts.some((s) => KEYWORD[kind].test(id.slice(s) + rest))

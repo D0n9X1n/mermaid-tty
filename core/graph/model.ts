@@ -10,9 +10,8 @@ export type Dir = 'TB' | 'BT' | 'LR' | 'RL'
 // drawn in its place.
 export type Col = { text: string; role: Role; id: string; width: number; join?: Piece['join']; key?: string }
 // rows[0] is the header; C's member rows carry their own id (default: the node's). A fixed row, built by members.ts, is
-// never
-// re-wrapped: indent cells, then its text, or its cols a gap cell apart; join attaches it to the row before. key: a key
-// row.
+// never re-wrapped: indent cells, then its text, or its cols a gap cell apart; join attaches it to the row before. key:
+// a key row.
 export type NodeRow = {
   text: string
   role: Role
@@ -42,8 +41,7 @@ export type GNode = {
 // triangle △▽◁▷ by side, diamond ◆, odiamond ◇.
 export type End = 'arrow' | 'circle' | 'cross' | 'none' | 'triangle' | 'diamond' | 'odiamond'
 // reversed: set only by the layout, on a back edge it drew from `to` to `from` with its ends swapped. tailLabel and
-// headLabel
-// label the ends (a cardinality), in endRole, else 'label'; labelKey: the label's key, drawn in its place.
+// headLabel label the ends (a cardinality), in endRole, else 'label'; labelKey: the label's key, drawn in its place.
 export type GEdge = {
   id: string
   from: string

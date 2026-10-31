@@ -1,6 +1,6 @@
 // The validator's line checks: each edge is one connected path from its source to its target, draws in its own style,
-// leaves no dangling or stray cells, crosses only where it hides no junction, and merges only into real links. Also
-// row widths and edge labels.
+// leaves no dangling or stray cells, crosses only where it hides no junction, and merges only into real links. Also row
+// widths and edge labels.
 import type { Cell, Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -10,12 +10,10 @@ import type { Side, Spot } from './validate-cells.ts'
 import { JUNCTION, POINT, SIDES, at, beside, degree, owns, path } from './validate-cells.ts'
 import type { Expect } from './validate.ts'
 
-// The walk from an edge's from reaches every line and arrow cell of the edge, so its glyphs are one path
-// between its ends: a part joined to nothing, a closed loop of them included, is a stray copy of the edge, and could
-// show a
-// style its path does not. A keyed label's legend row lies apart from the line by design; keys binds it. Run after
-// edges
-// and dangling, which name an open spur or a misplaced mark more exactly.
+// The walk from an edge's from reaches every line and arrow cell of the edge, so its glyphs are one path between its
+// ends: a part joined to nothing, a closed loop of them included, is a stray copy of the edge, and could show a style
+// its path does not. A keyed label's legend row lies apart from the line by design; keys binds it. Run after edges and
+// dangling, which name an open spur or a misplaced mark more exactly.
 export function strays(d: Drawing, all: readonly Spot[]): Fail | null {
   for (const e of d.expect.edges) {
     const { mine, reached } = path(d, all, e)
@@ -43,10 +41,8 @@ export function edges(d: Drawing, all: readonly Spot[]): Fail | null {
       return fail('edge-disconnected')
     }
     // Every end claims its own arrow cell first; only then is the cell behind each, opposite the side it meets its node
-    // on,
-    // checked. An end whose glyph the edge draws fewer times than its ends need is missing; any other unclaimed end has
-    // its
-    // mark drawn somewhere else: beside the other node, or pointing away from its own.
+    // on, checked. An end whose glyph the edge draws fewer times than its ends need is missing; any other unclaimed end
+    // has its mark drawn somewhere else: beside the other node, or pointing away from its own.
     const pool = mine.filter((p) => p.cell.kind === 'arrow')
     const claimed: [Spot, Side][] = []
     const drawn = (g: string) => mine.filter((p) => p.cell.kind === 'arrow' && p.cell.ch === g).length
@@ -187,8 +183,7 @@ export function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
       }
     }
     // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so
-    // no
-    // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
+    // no arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
     for (const o of x.owners) {
       const dirs = x.segs?.find((s) => s.owner === o)?.dirs ?? x.dirs
       for (const [i, b] of [1, 2, 4, 8].entries()) {
@@ -312,11 +307,9 @@ export function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 }
 
 // Merged lines imply only real links. Edges on one drawn line, as joined reads them, read as one line, so each end that
-// may
-// start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark), or if
-// it
-// is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such start t
-// and:
+// may start a link seems to lead to every end of another edge on it. An end may start a link if it is bare (no mark),
+// or if it is a mark of an edge marked at every end, as a two-headed edge is, whose heads lead either way. Each such
+// start t and:
 // - each mark h of another edge must be an edge of the drawing from t to h drawing h's mark kind (real), a self-loop
 //   when t = h,
 //   while a head t and a head h at one node are one shared head;
@@ -344,11 +337,9 @@ export function merges(d: Drawing, all: readonly Spot[]): Fail | null {
       ? bare(e).map((n) => ({ n, head: false }))
       : e.ends.map((x) => ({ n: x.node, head: true }))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a
-  // two-headed
-  // edge's do, or those of an edge drawn reversed.
-  // A real link also draws the mark seen at h, by kind: A-->D and B--xD on one line read as A--xD and B-->D,
-  // and a bare start at h's own node reads as a self-loop with that head, so the loop there must draw it (A--xA is no
-  // A-->A).
+  // two-headed edge's do, or those of an edge drawn reversed. A real link also draws the mark seen at h, by kind: A-->D
+  // and B--xD on one line read as A--xD and B-->D, and a bare start at h's own node reads as a self-loop with that
+  // head, so the loop there must draw it (A--xA is no A-->A).
   const real = (t: string, h: string, g: string) =>
     d.expect.edges.some(
       (e) =>
@@ -357,8 +348,8 @@ export function merges(d: Drawing, all: readonly Spot[]): Fail | null {
     )
   const linked = (t: string, n: string) =>
     t === n || d.expect.edges.some((e) => (e.from === t && e.to === n) || (e.from === n && e.to === t))
-  // One line draws one style: a cell whose edges are all of one line, two or more of them on it, takes the
-  // style of every other such cell of that line, so no implied link reads solid where its own edge is dotted.
+  // One line draws one style: a cell whose edges are all of one line, two or more of them on it, takes the style of
+  // every other such cell of that line, so no implied link reads solid where its own edge is dotted.
   const styles = new Map<string, string>()
   for (const p of all) {
     if (p.cell.kind !== 'line') {

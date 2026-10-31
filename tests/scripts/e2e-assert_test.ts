@@ -1,6 +1,5 @@
 // The e2e scenarios' screen check: each drawn diagram's rows on screen, in order, each label in its role's color, and
-// the
-// prose intact. Node built-ins and the repo's own modules only, so the main suite runs this with nothing installed.
+// the prose intact. Node built-ins and the repo's own modules only, so the main suite runs this with nothing installed.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown } from '../../scripts/e2e/assert.ts'

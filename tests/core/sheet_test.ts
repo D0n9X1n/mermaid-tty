@@ -155,7 +155,7 @@ test("A4: stack's columns is the argument, so validate measures every row agains
   })
 })
 
-// A part whose expect lists every field, A's and C's (T86, T87), each with one entry tagged i.
+// A part whose expect lists every field, A's and C's, each with one entry tagged i.
 const full = (i: number): Drawing =>
   ({
     ...part(`p${i}`, 'z'),

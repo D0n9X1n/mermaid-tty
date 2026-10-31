@@ -1,5 +1,4 @@
-// One level laid out along the TB axes (plan A §7): ranks and chains, strip spacers, order, then the cross and main
-// axes.
+// One level laid out along the TB axes: ranks and chains, strip spacers, order, then the cross and main axes.
 import { buildLevel } from './chains.ts'
 import type { Extent, Item, Level, Unit } from './chains.ts'
 import { crossAxis, LEFT, RIGHT } from './cross.ts'
@@ -21,8 +20,7 @@ export type Placement = {
 }
 
 // outer: each strip at this level and the strip around it, or null. fit: a strip's least frame width, for its title.
-// The
-// title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle
+// The title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle
 // band.
 export function place(
   units: readonly Unit[],

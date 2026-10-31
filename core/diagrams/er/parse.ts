@@ -1,9 +1,7 @@
-// Reads an erDiagram (plan C, T60; matrix, ER) into its model: entities with their aliases and attributes, relations
-// with
-// their cardinalities, line and label, and subgraphs. A statement outside the subset fails, so the fence draws as
-// source.
-// Words are read as Mermaid's ER lexer (erDiagram.jison) reads them: in any case, by the first rule that matches, and a
-// rule that ends in a letter or digit only before a word boundary.
+// Reads an erDiagram into its model: entities with their aliases and attributes, relations with their cardinalities,
+// line and label, and subgraphs. A statement outside the subset fails, so the fence draws as source. Words are read as
+// Mermaid's ER lexer (erDiagram.jison) reads them: in any case, by the first rule that matches, and a rule that ends in
+// a letter or digit only before a word boundary.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Attr } from '../../graph/members.ts'
 import type { Dir } from '../../graph/model.ts'
@@ -18,8 +16,7 @@ export type ErEntity = { id: string; label: string; attrs: Attr[]; order: number
 // A cardinality as the matrix prints it.
 export type Card = '0..1' | '1' | '0..*' | '1..*'
 // Relation r<k>, k its index: from its first entity to its second, the left and right ends' cardinalities, a solid line
-// if
-// identifying, else dotted, and its label, '' for "". from and to may name a subgraph.
+// if identifying, else dotted, and its label, '' for "". from and to may name a subgraph.
 export type ErRelation = {
   id: string
   from: string
@@ -45,8 +42,7 @@ export type ErModel = {
 }
 
 // An unquoted name, as Mermaid's lexer reads one: never cut short, so that a cardinality cannot take its last letters.
-// A * or
-// ` in one is read, so that it fails as Markdown. A class name has neither.
+// A * or ` in one is read, so that it fails as Markdown. A class name has neither.
 const WORD = String.raw`[\p{L}\p{N}_*\x60-]+(?![\p{L}\p{N}_*\x60-])`
 const CLASS_WORD = String.raw`[\p{L}\p{N}_-]+(?![\p{L}\p{N}_*\x60-])`
 // A quoted name, as Mermaid's ENTITY_NAME reads one.
@@ -106,10 +102,8 @@ const ACC_BLOCK = /^accDescr\s*\{/
 // rule 5).
 const KEYWORD = /^(?:erDiagram|direction|subgraph|end|style|classDef|class|click|accTitle|accDescr)/i
 // An attribute: type, name, keys and comment. The type may end in ? and hold (…), [] and a comma, as decimal(10,2); the
-// name
-// may start with *. Either may hold ~, which inBlock checks as Mermaid's lexer reads it. Both are narrower than
-// Mermaid's
-// ATTRIBUTE_WORD, so a backtick word fails.
+// name may start with *. Either may hold ~, which inBlock checks as Mermaid's lexer reads it. Both are narrower than
+// Mermaid's ATTRIBUTE_WORD, so a backtick word fails.
 const TYPE = String.raw`[\p{L}_~][\p{L}\p{N}_\-\[\]().,~]*\??`
 const A_NAME = String.raw`\*?[\p{L}_][\p{L}\p{N}_\-\[\]().~]*`
 const KEY = '(?:PK|FK|UK)'
@@ -137,11 +131,10 @@ function stop(reason: string): never {
 }
 
 // The model src's statements build, or why it cannot be drawn: 'header' (not erDiagram), 'syntax:<n>' (a statement on
-// source
-// line n outside the subset, or a block or subgraph opened there and never closed), 'markdown:<n>' (Markdown in a name,
-// alias, label or title there) or 'repeat:<n>' (a second alias, an entity in two subgraphs, or an id for both an entity
-// and a
-// subgraph, there), or 'generic' (an entity label or attribute column whose ~…~ pairs Mermaid shows as a <br>).
+// source line n outside the subset, or a block or subgraph opened there and never closed), 'markdown:<n>' (Markdown in
+// a name, alias, label or title there) or 'repeat:<n>' (a second alias, an entity in two subgraphs, or an id for both
+// an entity and a subgraph, there), or 'generic' (an entity label or attribute column whose ~…~ pairs Mermaid shows as
+// a <br>).
 export function parseEr(src: Source): ErModel | Fail {
   try {
     return walk(src)
@@ -156,8 +149,7 @@ export function parseEr(src: Source): ErModel | Fail {
 
 // The walk's state: the model; each entity by id, and those given an alias; each subgraph by id, and those closed; the
 // subgraph each entity or closed subgraph sits directly in; the open subgraphs, innermost last, with their header
-// lines;
-// and the entity whose block is open, with its line, else null.
+// lines; and the entity whose block is open, with its line, else null.
 type State = {
   m: ErModel
   byId: Map<string, ErEntity>
@@ -234,8 +226,7 @@ function closes(rest: string, n: number): boolean {
 }
 
 // Reads trimmed source line n, outside a block, into st. As in Mermaid's lexer, accTitle: and accDescr: come first,
-// then a
-// direction found anywhere, which must be the whole line.
+// then a direction found anywhere, which must be the whole line.
 function statement(t: string, n: number, st: State): void {
   let m: RegExpExecArray | null
   if (ACC.test(t)) {
@@ -375,8 +366,7 @@ function mention(raw: string, n: number, st: State): ErEntity {
 }
 
 // Puts an entity or closed subgraph in the innermost open subgraph, at its first mention there. One that already sits
-// in
-// another subgraph fails: Mermaid keeps only the first.
+// in another subgraph fails: Mermaid keeps only the first.
 function member(id: string, n: number, st: State): void {
   const sub = st.open.at(-1)?.sub
   if (!sub) {
@@ -448,8 +438,7 @@ const name = (raw: string, n: number, br: Br = 'none', digits = true, shown = fa
   text(word(raw, n, digits), n, br, shown)
 
 // A word's text on line n. An unquoted one must lex as a name. A quoted one must not start or end with a space: Mermaid
-// trims
-// a subgraph id but not an entity name, so " s " would name two things.
+// trims a subgraph id but not an entity name, so " s " would name two things.
 function word(raw: string, n: number, digits: boolean): string {
   const s = unquote(raw)
   if (raw.startsWith('"') ? s !== s.trim() : !plain(s, digits)) {
@@ -460,8 +449,7 @@ function word(raw: string, n: number, digits: boolean): string {
 }
 
 // Whether Mermaid's lexer reads unquoted word s whole as a name: not as a TOKEN, and, if it starts with a digit, as a
-// number
-// (where digits allows one) other than 1, which can be a cardinality.
+// number (where digits allows one) other than 1, which can be a cardinality.
 function plain(s: string, digits: boolean): boolean {
   if (TOKEN.test(s)) {
     return false
@@ -471,9 +459,8 @@ function plain(s: string, digits: boolean): boolean {
 }
 
 // A name, alias, label or title on line n, as it draws. Markdown in a name (an entity's id) fails, since Mermaid
-// renders it.
-// In shown text (an alias, relation label or subgraph title) its bold and italic draw as styled says; Markdown that
-// changes no style there (a code span, say) still fails, as Mermaid shows it otherwise.
+// renders it. In shown text (an alias, relation label or subgraph title) its bold and italic draw as styled says;
+// Markdown that changes no style there (a code span, say) still fails, as Mermaid shows it otherwise.
 function text(s: string, n: number, br: Br = 'none', shown = false): string {
   if (!MARKDOWN.test(s)) {
     return drawn(s, br)
@@ -494,14 +481,12 @@ function text(s: string, n: number, br: Br = 'none', shown = false): string {
 }
 
 // A text that draws as written. Every ER text is a markdown HTML label (labelType 'markdown', and erBox's createText
-// with
-// markdown on for each attribute column), so text Mermaid shows otherwise fails as drawable says ('entity', 'html',
-// 'markdown', 'icon' or 'math'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere, as an
-// entity's label, an attribute's row and a subgraph's title draw on one line. A blank line among two or more, from
-// <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart. With emphasis (shown text and an
-// attribute's comment) its bold and italic draw marked, as styled says. A ~…~ pair is drawn as written here; generic()
-// then
-// shows it as erBox does where it applies.
+// with markdown on for each attribute column), so text Mermaid shows otherwise fails as drawable says ('entity',
+// 'html', 'markdown', 'icon' or 'math'). br: 'any' for a relation label, which splits at each <br>; 'none' elsewhere,
+// as an entity's label, an attribute's row and a subgraph's title draw on one line. A blank line among two or more,
+// from <br><br> or a leading or trailing <br>, fails label-blank-line, as in a flowchart. With emphasis (shown text and
+// an attribute's comment) its bold and italic draw marked, as styled says. A ~…~ pair is drawn as written here;
+// generic() then shows it as erBox does where it applies.
 function drawn(s: string, br: Br = 'none', emphasis = false): string {
   // erBox runs parseGenericTypes before marked; how a ~…~ pair and bold or italic then mix is unverified, so both fail.
   if (emphasis && tildes(s) > 1 && MARKDOWN.test(s)) {

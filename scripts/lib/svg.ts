@@ -1,5 +1,5 @@
-// Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so
-// alignment never depends on the viewer's font metrics (spec B, requirement 1, Images).
+// Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so alignment never depends
+// on the viewer's font metrics (spec B, requirement 1, Images).
 export const CELL = 9
 export const ROW = 18
 export const FONT = 15

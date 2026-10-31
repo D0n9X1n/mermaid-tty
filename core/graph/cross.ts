@@ -1,6 +1,5 @@
-// The cross axis (plan A §7.5): left-pack each rank, its items nodeGap apart, then two median pulls, dummies first,
-// that keep
-// the separation.
+// The cross axis: left-pack each rank, its items nodeGap apart, then two median pulls, dummies first, that keep the
+// separation.
 import type { Item, Seg } from './chains.ts'
 import { longestPath } from './ranks.ts'
 import type { Link } from './ranks.ts'
@@ -17,8 +16,7 @@ const group = (cons: readonly Link[], by: 'from' | 'to'): Map<string, Link[]> =>
 }
 
 // Two median pulls: each item, dummies first and then the rest, rank by rank and right to left in each, moves its
-// centre as
-// near as the constraints allow to the median of its neighbours' centres.
+// centre as near as the constraints allow to the median of its neighbours' centres.
 function pull(ranks: Ranks, segs: readonly Seg[], cons: readonly Link[], x: Map<string, number>): void {
   const into = group(cons, 'to')
   const outOf = group(cons, 'from')
@@ -102,8 +100,7 @@ function separations(
 }
 
 // Each item's and strip border's start on the cross axis, the smallest is 0. fit: a strip's least width, for its title.
-// A
-// strip narrower than that is padded on both sides, so its members stay centred; deepest first, as one widens those
+// A strip narrower than that is padded on both sides, so its members stay centred; deepest first, as one widens those
 // around it.
 export function crossAxis(
   ranks: Ranks,

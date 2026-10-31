@@ -1,4 +1,4 @@
-// core/canvas.ts — a cell grid with owners, a write policy and a conflict log (plan A §6).
+// core/canvas.ts — a cell grid with owners, a write policy and a conflict log.
 import { emOf } from './emphasis.ts'
 import { boxGlyph, junction } from './glyphs.ts'
 import type { Piece } from './text.ts'
@@ -44,8 +44,7 @@ export type Canvas = {
 }
 
 // A dotted cell's arms are all light, since a solid line makes it solid (see line): a straight run draws ┄ or ┆, and a
-// bend or
-// branch the light glyph (rule 12). Any other line draws the glyph of its arms, light and heavy arms meeting in their
+// bend or branch the light glyph. Any other line draws the glyph of its arms, light and heavy arms meeting in their
 // mixed glyph.
 export const lineGlyph = (dirs: number, arms: string, style: NonNullable<Cell['style']>): string =>
   style === 'dotted' ? junction(dirs, 'dotted') : boxGlyph(arms)
@@ -88,8 +87,7 @@ export function createCanvas(
   const cells: (Cell | null)[][] = Array.from({ length: rows }, () => Array<Cell | null>(cols).fill(null))
   const conflicts: Conflict[] = []
   // A write outside [0, rows) × [0, cols), or at a non-integer row or column, is a Conflict and is skipped: it never
-  // throws and
-  // never grows the grid, so validation fails closed and the render falls back.
+  // throws and never grows the grid, so validation fails closed and the render falls back.
   const inGrid = (r: number, c: number, by: string): boolean => {
     if (Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < rows && c >= 0 && c < cols) {
       return true
@@ -167,8 +165,8 @@ export function createCanvas(
       }
     },
     // C: a keyed item's key, in place (legend false) or in its legend row. Exclusive like a cap, one cell per
-    // character, each
-    // owned by every owner given: a member's in-place key by [id, parent], an edge label's by [`${id}:label`, id].
+    // character, each owned by every owner given: a member's in-place key by [id, parent], an edge label's by
+    // [`${id}:label`, id].
     key(r, c, s, role, owner, legend) {
       const owners = [owner].flat()
       let col = c
@@ -184,8 +182,7 @@ export function createCanvas(
       }
     },
     // An arrow on an arrow of the same glyph merges owners when shares holds for an old owner, so edges into one node
-    // end in
-    // one head that each owns. Any other write on an arrow is a Conflict (put).
+    // end in one head that each owns. Any other write on an arrow is a Conflict (put).
     arrow(r, c, ch, owner) {
       const old = cells[r]?.[c]
       if (old?.kind === 'arrow' && old.ch === ch && old.owners.some((o) => shares(o, owner))) {

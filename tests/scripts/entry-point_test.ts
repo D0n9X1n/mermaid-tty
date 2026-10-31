@@ -22,8 +22,7 @@ import { isMain } from '../../scripts/lib/is-main.ts'
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const IS_MAIN = new URL('../../scripts/lib/is-main.ts', import.meta.url).href
 
-// The .ts files under dir, a '/'-separated path from the repo root, in every
-// subdirectory except node_modules.
+// The .ts files under dir, a '/'-separated path from the repo root, in every subdirectory except node_modules.
 function tsFiles(dir: string): string[] {
   return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) => {
     const file = `${dir}/${e.name}`
@@ -35,9 +34,9 @@ function tsFiles(dir: string): string[] {
   })
 }
 
-// import.meta.main arrived in Node 24.2, but package.json allows 24.0, where it is undefined: a
-// script guarded by it skips its body and exits 0, so a check passes without running. Only
-// lib/is-main.ts reads it, and without it falls back to Node's own rule for the main entry.
+// import.meta.main arrived in Node 24.2, but package.json allows 24.0, where it is undefined: a script guarded by it
+// skips its body and exits 0, so a check passes without running. Only lib/is-main.ts reads it, and without it falls
+// back to Node's own rule for the main entry.
 test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.meta.main, except lib/is-main.ts', () => {
   const files = ['scripts', 'core', 'hooks'].flatMap((d) => tsFiles(d))
   for (const f of ['scripts/check-palettes.ts', 'scripts/lib/is-main.ts', 'core/themes.ts', 'hooks/fences.ts']) {
@@ -55,9 +54,8 @@ test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.me
 })
 
 // One shared guard, not a copy per script (an async main() is awaited): the copies compared the paths exactly, so on a
-// Windows
-// UNC path, whose host realpath keeps in its case and the module URL lowercases, each one skipped
-// main() and exited 0 without checking anything.
+// Windows UNC path, whose host realpath keeps in its case and the module URL lowercases, each one skipped main() and
+// exited 0 without checking anything.
 test('A8.portability: every script with a main() guards it with isMain(import.meta) from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
   const mains = ['scripts', 'core', 'hooks']
     .flatMap((d) => tsFiles(d))
@@ -78,9 +76,9 @@ test('A8.portability: every script with a main() guards it with isMain(import.me
   assert.deepEqual(bad, [])
 })
 
-// A module that prints one JSON line: its URL, Node's answer to whether it is the main module,
-// and isMain's fallback, the answer isMain gives on Node 24.0 and 24.1, which lack
-// import.meta.main. It imports the modules at imports first, so their lines come before its own.
+// A module that prints one JSON line: its URL, Node's answer to whether it is the main module, and isMain's fallback,
+// the answer isMain gives on Node 24.0 and 24.1, which lack import.meta.main. It imports the modules at imports first,
+// so their lines come before its own.
 function probe(...imports: string[]): string {
   return [
     ...imports.map((f) => `import ${JSON.stringify(pathToFileURL(f).href)}`),
@@ -90,12 +88,11 @@ function probe(...imports: string[]): string {
   ].join('\n')
 }
 
-// One run of node on entry from cwd, and import.meta.main in each module it loads, in the
-// order they print.
+// One run of node on entry from cwd, and import.meta.main in each module it loads, in the order they print.
 type Run = { cwd: string; entry: string; native: boolean[] }
 
-// The OS refused to create a link: Windows needs admin rights or Developer Mode for a symlink to
-// a file, and some filesystems have no hard links.
+// The OS refused to create a link: Windows needs admin rights or Developer Mode for a symlink to a file, and some
+// filesystems have no hard links.
 class LinkRefused extends Error {}
 function makeLink(make: () => void): void {
   try {
@@ -190,9 +187,9 @@ const LAYOUTS: { name: string; build: (dir: string) => Run[] }[] = [
   },
 ]
 
-// On Node 24.0 and 24.1 isMain falls back to Node's own rule for the main entry, so wherever a
-// module lies, the fallback must give Node's answer: here, from 24.2, import.meta.main. On those
-// two, which lack it, there is no answer to compare with, so only these tests skip.
+// On Node 24.0 and 24.1 isMain falls back to Node's own rule for the main entry, so wherever a module lies, the
+// fallback must give Node's answer: here, from 24.2, import.meta.main. On those two, which lack it, there is no answer
+// to compare with, so only these tests skip.
 const NO_NATIVE =
   typeof import.meta.main !== 'boolean' && 'native import.meta.main unavailable (Node < 24.2): agreement not checkable'
 for (const { name, build } of LAYOUTS) {
@@ -250,8 +247,8 @@ function isMainWith(argv: string[], meta: { url: string; main?: boolean }): bool
   }
 }
 
-// node -e, -p, stdin and the REPL leave argv[1] unset, unless given more arguments. A fallback
-// that resolved a missing argv[1] would get the cwd, and take a module there for the main one.
+// node -e, -p, stdin and the REPL leave argv[1] unset, unless given more arguments. A fallback that resolved a missing
+// argv[1] would get the cwd, and take a module there for the main one.
 test('A8.portability: isMain is false when argv[1] is absent', () =>
   assert.equal(isMainWith([], { url: pathToFileURL(realpathSync(process.cwd())).href }), false))
 
@@ -271,8 +268,8 @@ test('A8.portability: when argv[1] names no file, isMain compares the URL of the
   assert.equal(isMainWith(['no-such-file.ts'], { url: pathToFileURL(resolve('no-such-file.ts')).href }), true)
 })
 
-// Node gives the main module its real path, but argv[1] keeps the path node was given,
-// which on macOS often runs through a symlink: temp dirs live under /var -> /private/var.
+// Node gives the main module its real path, but argv[1] keeps the path node was given, which on macOS often runs
+// through a symlink: temp dirs live under /var -> /private/var.
 test('A8.portability: check-palettes runs main() when argv[1] reaches it through a symlink, as macOS temp paths do', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'mermaid-tty-link-'))
   const link = join(dir, 'scripts')

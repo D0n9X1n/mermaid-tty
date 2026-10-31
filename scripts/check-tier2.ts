@@ -1,4 +1,4 @@
-// The Tier 2 gate (plan C §9): a Tier 2 type may be in TIER2_PASSED only when one vr-C-<type> pass record in
+// The Tier 2 gate: a Tier 2 type may be in TIER2_PASSED only when one vr-C-<type> pass record in
 // ci/reviews lists every ok fixture of the type and its golden, each with the SHA-256 of its bytes now.
 // Usage: node scripts/check-tier2.ts   (exits 1 unless TIER2_PASSED lists exactly the Tier 2 types that pass)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -16,8 +16,8 @@ function readRepo(path: string): Uint8Array | null {
   return statSync(join(ROOT, path), { throwIfNoEntry: false })?.isFile() ? readFileSync(join(ROOT, path)) : null
 }
 
-// Each fixtures/<t>/<t>-ok-NN.mmd, sorted, followed by its goldens/<t>/<t>-ok-NN.golden, present or not, so a
-// missing golden fails the gate. None when the fixture folder is absent.
+// Each fixtures/<t>/<t>-ok-NN.mmd, sorted, followed by its goldens/<t>/<t>-ok-NN.golden, present or not, so a missing
+// golden fails the gate. None when the fixture folder is absent.
 export function tier2Files(t: string): string[] {
   const dir = join(ROOT, 'fixtures', t)
   const ok = new RegExp(`^${t}-ok-\\d{2}\\.mmd$`)
@@ -46,9 +46,9 @@ export function repoRecords(): ReviewRecord[] {
     .filter((p): p is ReviewRecord => !('error' in p))
 }
 
-// Why t fails the gate, or [] when it passes. Each vr-C-<t> pass record is checked alone: it must list every
-// path in files, and every file it lists must hash as recorded. Records never add up. With no passing record,
-// the problems of the record with the fewest, the first on a tie, or with none at all, each unlisted path.
+// Why t fails the gate, or [] when it passes. Each vr-C-<t> pass record is checked alone: it must list every path in
+// files, and every file it lists must hash as recorded. Records never add up. With no passing record, the problems of
+// the record with the fewest, the first on a tie, or with none at all, each unlisted path.
 export function tier2Problems(
   t: string,
   files: string[],

@@ -1,5 +1,5 @@
-// The graph fit ladder (plan C T53): flowchart's, state's, class's and ER's steps, and one step's drawing at the given
-// columns: a graph, its title above and its legend below.
+// The graph fit ladder: flowchart's, state's, class's and ER's steps, and one step's drawing at the given columns: a
+// graph, its title above and its legend below.
 import type { Drawing } from '../canvas.ts'
 import { heading, stack } from '../charts/sheet.ts'
 import { withLegend, type LegendRow } from '../charts/legend.ts'
@@ -37,8 +37,7 @@ const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
 
 // What a diagram builds for a direction and a try's wrapAt: its graph, keyed or not, the legend rows of its keys and
-// the items
-// it may key. A Fail (a member word wider than wrapAt) ends the try.
+// the items it may key. A Fail (a member word wider than wrapAt) ends the try.
 export type Build = (o: {
   dir: Dir
   keyed: boolean
@@ -55,9 +54,8 @@ export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
 }
 
 // One try at wrapAt: build the graph, add its notes, lay it out at 0, then 2, then 4 extra cells of rank and node gap
-// while
-// routing conflicts, draw it, stack the title above, then the legend below. Build runs once per layout, so each retry
-// starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing keyable fails 'step'.
+// while routing conflicts, draw it, stack the title above, then the legend below. Build runs once per layout, so each
+// retry starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing keyable fails 'step'.
 function attempt(
   build: Build,
   dir: Dir,

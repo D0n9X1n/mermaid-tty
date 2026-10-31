@@ -307,8 +307,7 @@ test('A1: a tail mark whose head is not its partner draws only the head, as Merm
   )
 })
 // Mermaid's destructLink: a text form's opener mark pairs with its closer's head: <-- t --> is two-headed; a mark that
-// does
-// not pair, or a stroke that differs, is INVALID.
+// does not pair, or a stroke that differs, is INVALID.
 test('A1: a text form with a tail mark draws both ends when its closer has the partner head: <-- t -->, x-- t --x, o-- t --o', () => {
   const want = [
     ['A <-- t --> B', 'solid arrow arrow t1'],

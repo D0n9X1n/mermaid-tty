@@ -1,9 +1,7 @@
-// The journey module (plan C T65; matrix, journey): under the title, each section's header row in its series ink, then
-// its
-// tasks, indented 2: the name, a 10-cell bar of the score out of 5, the score as written, and the actors. A task's bar
-// and
-// score sit on its first row; its wrapped name and its actor rows run down from there.
-// It registers itself on import, as flowchart's does.
+// The journey module: under the title, each section's header row in its series ink, then its tasks, indented 2: the
+// name, a 10-cell bar of the score out of 5, the score as written, and the actors. A task's bar and score sit on its
+// first row; its wrapped name and its actor rows run down from there. It registers itself on import, as flowchart's
+// does.
 import { createCanvas, type Drawing } from '../../canvas.ts'
 import { hbar } from '../../charts/bars.ts'
 import { dec } from '../../charts/decimal.ts'
@@ -23,8 +21,7 @@ const FIVE = dec(5)
 const widest = (xs: readonly string[]): number => Math.max(0, ...xs.map(width))
 
 // A row of a task's actors, actors[from] up to actors[to]: joined by ', ', with a ',' after its last unless that ends
-// the
-// list. Its span is the cells it draws.
+// the list. Its span is the cells it draws.
 type Range = readonly [from: number, to: number]
 const span = (actors: readonly string[], [from, to]: Range): number =>
   width(actors.slice(from, to).join(', ')) + (to < actors.length ? 1 : 0)
@@ -52,8 +49,7 @@ type Block = { pieces: Piece[]; rows: Range[] }
 const tall = (b: Block): number => Math.max(b.pieces.length, b.rows.length)
 
 // The blocks of tasks at step, with the widest name piece N and score S; 'too-wide' if a piece or a row overflows its
-// field.
-// A task row is N + S + 16 cells, then its actors. natural: names and actor lists whole. wrap: actor lists fill
+// field. A task row is N + S + 16 cells, then its actors. natural: names and actor lists whole. wrap: actor lists fill
 // columns − N − S − 16 cells. oneActor: one actor a row, and names wrap to columns − S − a − 16 cells, a the widest
 // actor, its comma included.
 function plan(tasks: readonly Task[], step: Step, columns: number): { blocks: Block[]; N: number; S: number } | Fail {
@@ -80,12 +76,11 @@ function plan(tasks: readonly Task[], step: Step, columns: number): { blocks: Bl
   return { blocks, N, S }
 }
 
-// A named group's header rows are its name wrapped at columns (common rule 6), in its series ink, owned by sec<k>.
-// Tasks
-// before the first section form a group with no name and no header, which takes s1, so the sections take s2, s3, …
-// (shared rule 3). A task row, indented 2: its name pieces padded to N, its bar as caps in its group's ink padded to 10
-// cells, its score right-aligned to S, two spaces, then its actor rows, each ', ' and a row's last ',' drawn as caps.
-// Any step off the ladder fails 'step'.
+// A named group's header rows are its name wrapped at columns, in its series ink, owned by sec<k>. Tasks before the
+// first section form a group with no name and no header, which takes s1, so the sections take s2, s3, … (shared rule
+// 3). A task row, indented 2: its name pieces padded to N, its bar as caps in its group's ink padded to 10 cells, its
+// score right-aligned to S, two spaces, then its actor rows, each ', ' and a row's last ',' drawn as caps. Any step off
+// the ladder fails 'step'.
 function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
   if (!STEPS.includes(step)) {
     return fail('step')
@@ -108,8 +103,7 @@ function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
   const labels: Expect['labels'][number][] = []
   const bars: NonNullable<Expect['bars']>[number][] = []
   // Draws task i, t, in ink from row r, and returns its row count. The separator after actor k is ', ' within a row,
-  // ','
-  // ending a row that does not end the list, and none after the last actor.
+  // ',' ending a row that does not end the list, and none after the last actor.
   const task = (t: Task, i: number, r: number, ink: SeriesKey): number => {
     const id = `t${i}`
     const b = blocks[i]!

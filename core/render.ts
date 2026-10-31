@@ -1,4 +1,4 @@
-// The render entry point (plan A §6, T19): a fence body to colored rows, or null to fall back to its source.
+// The render entry point: a fence body to colored rows, or null to fall back to its source.
 import type { Cell, Drawing } from './canvas.ts'
 import { BOLD, ITALIC } from './emphasis.ts'
 import type { Fail } from './fail.ts'
@@ -12,8 +12,7 @@ import { drawable as drawableText } from './text.ts'
 import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
 import { palette } from './themes.ts'
 // Imported for their side effect: the flowchart and sequence modules, then each Tier 1 type's (diagrams/all.ts),
-// register
-// themselves once registry.ts has run.
+// register themselves once registry.ts has run.
 import './diagrams/flowchart/layout.ts'
 import './diagrams/sequence/layout.ts'
 import './diagrams/all.ts'
@@ -34,11 +33,9 @@ export type Options = { columns: number; theme?: string }
 const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
 
 // The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail
-// wins,
-// after 'bad-columns' when o.columns is not drawable. A frontmatter title, in every type, is checked as Mermaid's
-// sanitized
-// title text with no <br>, as Mermaid shows a title. explain never throws: a throw below
-// it is a bug, which falls back as 'internal-error'.
+// wins, after 'bad-columns' when o.columns is not drawable. A frontmatter title, in every type, is checked as Mermaid's
+// sanitized title text with no <br>, as Mermaid shows a title. explain never throws: a throw below it is a bug, which
+// falls back as 'internal-error'.
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
   if (!drawable(o.columns)) {
     return fail('bad-columns')
@@ -99,8 +96,7 @@ export function renderMermaid(source: string, o: Options): Rows | null {
 // One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
 // fills, take that color as their background and onFill as their color; caps and C's key cells keep it as their color.
 // Null colors are omitted, so mono's spans carry none. A title is bold; a text cell's em (core/emphasis.ts) sets bold
-// and
-// italic as Mermaid's <strong> and <em> show.
+// and italic as Mermaid's <strong> and <em> show.
 function cellSpan(cell: Cell, p: Palette): Span {
   const ink =
     (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
@@ -168,10 +164,9 @@ export function toRows(d: Drawing, p: Palette): Rows {
 }
 
 // A renderer that caches each source's rows, or its Fail, in an LRU of capacity entries keyed by the source, the
-// columns
-// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit. Columns that are not
-// drawable
-// fail 'bad-columns' uncached, so every key is lossless: JSON.stringify would key ±Infinity and NaN alike, as null.
+// columns and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit. Columns that are
+// not drawable fail 'bad-columns' uncached, so every key is lossless: JSON.stringify would key ±Infinity and NaN alike,
+// as null.
 export function createRenderer(
   capacity = 64,
   inner: typeof explain = explain,

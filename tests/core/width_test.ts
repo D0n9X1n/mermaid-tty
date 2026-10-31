@@ -9,9 +9,8 @@ const cps = (s: string) => [...s].map((c) => hex(c.codePointAt(0)!)).join(' ')
 // unsupported() of a lone code point.
 const alone = (cp: number) => unsupported(String.fromCodePoint(cp))
 
-// 'é' is e + a combining acute; '​' is a zero-width space. F: U+FF21
-// FULLWIDTH LATIN CAPITAL LETTER A, U+3000 IDEOGRAPHIC SPACE, U+FFE5 FULLWIDTH YEN
-// SIGN; U+FF61 HALFWIDTH IDEOGRAPHIC FULL STOP is H. U+20DD COMBINING ENCLOSING
+// 'é' is e + a combining acute; '​' is a zero-width space. F: U+FF21 FULLWIDTH LATIN CAPITAL LETTER A, U+3000
+// IDEOGRAPHIC SPACE, U+FFE5 FULLWIDTH YEN SIGN; U+FF61 HALFWIDTH IDEOGRAPHIC FULL STOP is H. U+20DD COMBINING ENCLOSING
 // CIRCLE is Me.
 test('A4.width-table: widths', () => {
   for (const [s, w] of [
@@ -48,8 +47,8 @@ test('A4.width-table: widths', () => {
   assert.equal(isWide(0x1f680), true)
 })
 
-// Inclusive WIDE ranges in Unicode 16.0.0: the first, a single code point, two
-// ranges one code point apart, the F block FF01..FF60, an astral range and the last.
+// Inclusive WIDE ranges in Unicode 16.0.0: the first, a single code point, two ranges one code point apart, the F block
+// FF01..FF60, an astral range and the last.
 const RANGES = [
   [0x1100, 0x115f],
   [0x23f0, 0x23f0],

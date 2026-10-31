@@ -1,7 +1,7 @@
 // The image path against a real executable: a fake mmdc on PATH, run through a $ backed by node:child_process and
 // node:fs (tests are not bound by the hooks' portability rules). It covers the lookup on PATH, the version probe, the
-// source on stdin, the output file, a nonzero exit, a timeout and the temp dir's removal. POSIX only: images are off
-// on Windows, and the image path runs mktemp and rm.
+// source on stdin, the output file, a nonzero exit, a timeout and the temp dir's removal. POSIX only: images are off on
+// Windows, and the image path runs mktemp and rm.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -230,8 +230,7 @@ test(
 )
 
 // The reviewer's exact repro: a frontmatter themeCSS that drew /tmp/private.svg into the PNG on mmdc 11.17 and 12.0
-// with
-// every isolation flag on. Core parses it; the gate in hooks/safe.ts keeps it from running anything at all.
+// with every isolation flag on. Core parses it; the gate in hooks/safe.ts keeps it from running anything at all.
 test(
   "A5.errors: the reviewer's themeCSS repro runs nothing: no mmdc, no version probe, no mktemp",
   { skip: SKIP },

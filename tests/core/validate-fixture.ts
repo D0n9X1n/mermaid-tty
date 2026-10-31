@@ -2,9 +2,8 @@
 import { createCanvas, type Drawing } from '../../core/canvas.ts'
 
 // Edge A>B from a to b, one cell per step: down column 0, or along row 0 when across. A number is a line's dirs, a
-// string an
-// arrow glyph, null an empty cell, and { text, owners } a label cell, whose owners[0] expect lists with its text.
-// Each of ends names an end mark's node, then its glyph: 'B▼'.
+// string an arrow glyph, null an empty cell, and { text, owners } a label cell, whose owners[0] expect lists with its
+// text. Each of ends names an end mark's node, then its glyph: 'B▼'.
 export type Step = number | string | null | { text: string; owners: string[] }
 export function path(steps: readonly Step[], ends: readonly string[], across = false): Drawing {
   const n = steps.length + 2

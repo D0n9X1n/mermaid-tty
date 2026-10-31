@@ -1,6 +1,5 @@
-// node scripts/check-ids.ts: checks that scripts/check.ts has a row for each A and
-// VR check ID in ci/coverage.json (31 of the 48), and no row for any other ID, so a check
-// CI maps is one check.ts can run by name.
+// node scripts/check-ids.ts: checks that scripts/check.ts has a row for each A and VR check ID in ci/coverage.json (31
+// of the 48), and no row for any other ID, so a check CI maps is one check.ts can run by name.
 import { readFileSync } from 'node:fs'
 import { CHECKS } from './check.ts'
 import { diffIds } from './lib/check-ids.ts'

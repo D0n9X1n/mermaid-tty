@@ -1,6 +1,6 @@
-// Reads a flowchart's header, nodes, shapes, labels, links and subgraphs (plan A, T13, T14, T15 and §7) into the
-// graph model; its styling and accessibility directives draw nothing. A statement it cannot read whole fails, so the
-// fence draws as source.
+// Reads a flowchart's header, nodes, shapes, labels, links and subgraphs (plan A, T13, T14, T15 and §7) into the graph
+// model; its styling and accessibility directives draw nothing. A statement it cannot read whole fails, so the fence
+// draws as source.
 import { ALIASES, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'
@@ -13,8 +13,8 @@ import { NAME, readLink, type Ends } from './links.ts'
 
 // `flowchart` or `graph`, alone (top-down, as in Mermaid) or with a direction.
 const HEADER = /^(flowchart|graph)( (TD|TB|BT|LR|RL))?$/
-// Where Mermaid's lexer finds a direction statement: anywhere in a line, which it then reads whole as that
-// statement; global, for matchAll. DIR_LINE: a line that is only one, with spaces and one ; after it.
+// Where Mermaid's lexer finds a direction statement: anywhere in a line, which it then reads whole as that statement;
+// global, for matchAll. DIR_LINE: a line that is only one, with spaces and one ; after it.
 const DIR_IN = /direction\s+(?:TB|BT|RL|LR|TD)/g
 const DIR_LINE = /^direction\s+(TB|BT|RL|LR|TD)\s*;?$/
 // As Mermaid's lexer reads them: an accTitle: or accDescr: statement, whose value runs to the line's end, and the
@@ -35,8 +35,8 @@ const SUBGRAPH = new RegExp(String.raw`^subgraph +(?:(${NAME}) *(.*)|("[^"]*"))$
 const CLASS = new RegExp(String.raw`:::${NAME}`, 'uy')
 // The & between two nodes of a group, spaces around it: Mermaid reads A&B as one id.
 const AMP = /\s+&\s+/y
-// Each opener with each closer it pairs with, longest opener first. [/ and [\ pair
-// with either slash, and the closer found first decides the shape.
+// Each opener with each closer it pairs with, longest opener first. [/ and [\ pair with either slash, and the closer
+// found first decides the shape.
 const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[] = [
   ['(((', ')))', 'dcircle'],
   ['([', '])', 'stadium'],
@@ -53,9 +53,8 @@ const BRACKETS: readonly (readonly [open: string, close: string, shape: Shape])[
   ['{', '}', 'diamond'],
   ['>', ']', 'asym'],
 ]
-// One key: value pair of an @{…} body, from lastIndex: a key, then a "…" or '…' value, whose
-// , ; { and } are text, or a bare one up to the next , { or }. A quote is one only where a
-// value starts, as in YAML: `it's ok` is a bare value.
+// One key: value pair of an @{…} body, from lastIndex: a key, then a "…" or '…' value, whose , ; { and } are text, or a
+// bare one up to the next , { or }. A quote is one only where a value starts, as in YAML: `it's ok` is a bare value.
 const PAIR = /\s*([\w-]+)\s*:\s+("[^"]*"|'[^']*'|[^"',{}][^,{}]*|)\s*/y
 
 // A node as one mention writes it: shape and lines only if the mention gives them; data if it has an @{…}.
@@ -68,12 +67,9 @@ type Link = Ends & { id?: string; end: number; label: string | null }
 // closed in it.
 type Block = { cluster: GCluster; ids: string[] }
 // What the statements so far declare: nodes by id, in first-mention order; edges in source order; clusters in the order
-// their
-// subgraphs open; the subgraphs still open, innermost last; the cluster that took each id a closed subgraph's block
-// mentions;
-// the line of an accDescr { whose } has not come, else null; and what ends the statement being read: ';' right after
-// its
-// text, else a line break (misread's rest).
+// their subgraphs open; the subgraphs still open, innermost last; the cluster that took each id a closed subgraph's
+// block mentions; the line of an accDescr { whose } has not come, else null; and what ends the statement being read:
+// ';' right after its text, else a line break (misread's rest).
 type State = {
   nodes: Map<string, Decl>
   edges: GEdge[]
@@ -84,11 +80,10 @@ type State = {
   tail: string
 }
 
-// The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph,
-// alone or with a direction), 'syntax:<n>' (a statement on source line n not read
-// whole), 'unclosed-subgraph', 'id-collision' (an edge id that a node, a cluster or an earlier edge also has),
-// 'invisible-label' (a label on a ~~~ link), or a label's 'markdown-string' (an @{ label } in backquotes), 'markdown',
-// 'entity', 'html' or 'unsupported-char U+XXXX'.
+// The graph src declares, or why it cannot be drawn: 'header' (not flowchart or graph, alone or with a direction),
+// 'syntax:<n>' (a statement on source line n not read whole), 'unclosed-subgraph', 'id-collision' (an edge id that a
+// node, a cluster or an earlier edge also has), 'invisible-label' (a label on a ~~~ link), or a label's
+// 'markdown-string' (an @{ label } in backquotes), 'markdown', 'entity', 'html' or 'unsupported-char U+XXXX'.
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
@@ -131,14 +126,10 @@ export function parseFlowchart(src: Source): Graph | Fail {
 
 // Reads trimmed source line n into st: null, or why it fails. In an open accDescr {…} block, the line is text up to its
 // first }, after which it reads on. As Mermaid's lexer reads them, an accTitle: or accDescr: statement runs to the
-// line's
-// end and accDescr { opens a block, wherever a statement starts; and elsewhere, a line where it finds `direction X` is
-// only
-// that statement: there, it sets the innermost open subgraph's direction, TD as TB. Where a block closes, the rest of
-// the
-// line reads as a line of its own. One pass, left to right, from p: no recursion, so a line of many blocks cannot
-// overflow
-// the stack, and time linear in the line's length.
+// line's end and accDescr { opens a block, wherever a statement starts; and elsewhere, a line where it finds `direction
+// X` is only that statement: there, it sets the innermost open subgraph's direction, TD as TB. Where a block closes,
+// the rest of the line reads as a line of its own. One pass, left to right, from p: no recursion, so a line of many
+// blocks cannot overflow the stack, and time linear in the line's length.
 function line(t: string, st: State, n: number): Fail | null {
   // The start of the line's last direction X: the rest of the line from p has one iff lastDir >= p. No match of DIR_IN
   // can overlap another, so matchAll finds every start.
@@ -235,8 +226,8 @@ function stmt(s: string, st: State): Fail | null {
 }
 
 // Whether a styling directive names an id that is no plain name (style --> B), or one the lexer would not read as that
-// id: style's or click's id, classDef's or class's
-// comma-separated ids, and class's class name. Each is read with what follows it; a list's , and the line's end count.
+// id: style's or click's id, classDef's or class's comma-separated ids, and class's class name. Each is read with what
+// follows it; a list's , and the line's end count.
 function directiveMisread(s: string, tail: string): boolean {
   const m = /^(style|classDef|class|click)\s+(\S+)(.*)$/s.exec(s)
   if (!m) {
@@ -254,10 +245,9 @@ function directiveMisread(s: string, tail: string): boolean {
 }
 
 // Whether s is only id@{…}, its body read whole, for an id an edge already has. Mermaid then sets that edge's animation
-// or
-// curve, which this renderer does not draw, and adds no node. At a statement's start Mermaid lexes the id as a node's,
-// so an
-// id it misreads there is left to the node path, which fails it, though `A 1style@--> B` declared the edge.
+// or curve, which this renderer does not draw, and adds no node. At a statement's start Mermaid lexes the id as a
+// node's, so an id it misreads there is left to the node path, which fails it, though `A 1style@--> B` declared the
+// edge.
 function edgeData(s: string, st: State): boolean {
   const id = ID.exec(s)?.[0]
   return (
@@ -321,10 +311,8 @@ function openSubgraph(s: string, st: State): Fail | null {
 }
 
 // Closes the innermost open subgraph. As in Mermaid's flowDb, it takes each id its block mentions that no subgraph
-// closed
-// before it took, but its own; and its id joins the block it closed in. null, or 'syntax' for an `end` with nothing
-// open,
-// or a cluster it would take that holds it.
+// closed before it took, but its own; and its id joins the block it closed in. null, or 'syntax' for an `end` with
+// nothing open, or a cluster it would take that holds it.
 function closeSubgraph(st: State): Fail | null {
   const b = st.open.pop()
   if (!b) {
@@ -351,8 +339,7 @@ function closeSubgraph(st: State): Fail | null {
 }
 
 // The graph st declares. Each id a cluster took is a member cluster if a subgraph has it, else a member node. A node
-// whose
-// id a cluster has is that cluster, as an edge end, and no node; order counts the nodes that remain.
+// whose id a cluster has is that cluster, as an edge end, and no node; order counts the nodes that remain.
 function graph(dir: Dir, title: string | null, st: State): Graph {
   const ids = new Set(st.clusters.map((c) => c.id))
   for (const [m, p] of st.parent) {
@@ -370,8 +357,7 @@ function graph(dir: Dir, title: string | null, st: State): Graph {
 
 // The end of the run that starts at i in line: the index of the ; that closes it, or the line's length. A "…" is one
 // span, and so is a #…; code, and an @{…} whose body reads whole, quotes and all; a " with no partner runs to the end
-// of the line. Only
-// " quotes outside @{…}: A[it's] is an apostrophe.
+// of the line. Only " quotes outside @{…}: A[it's] is an apostrophe.
 function runEnd(line: string, i: number): number {
   for (; i < line.length; i++) {
     if (line[i] === '"') {
@@ -416,13 +402,12 @@ function skipSpace(text: string, i: number): number {
 
 // A character in an @{…} body that YAML reads as no plain text or no separator: a control other than tab, or a space
 // other than U+0020, such as NBSP. JS's \s takes those spaces where YAML does not, and js-yaml rejects most controls. A
-// BOM
-// (U+FEFF) is one too; other format characters fail as the label check reports them.
+// BOM (U+FEFF) is one too; other format characters fail as the label check reports them.
 const DATA_ODD = /(?!\t)[\p{Cc}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u
 
-// The pairs of the @{…} body that starts at i, in source order, and the index just past its
-// }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
-// spaces, then }; each key once; each value one yamlValue reads; and no DATA_ODD character.
+// The pairs of the @{…} body that starts at i, in source order, and the index just past its }. null unless the body
+// reads whole: pairs split by commas, one trailing comma at most, spaces, then }; each key once; each value one
+// yamlValue reads; and no DATA_ODD character.
 function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
   const start = i
   const pairs: [string, string][] = []
@@ -463,9 +448,9 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
   return DATA_ODD.test(body) || body.includes(String.fromCharCode(0xfeff)) ? null : { pairs, end: i + 1 }
 }
 
-// Reads one statement into st and returns how far it read; the caller fails on any text
-// left. A statement is G0 L1 G1 L2 G2 …: each G one node or several joined by &, and each
-// link joins every node of the group before it to every node of the group after it.
+// Reads one statement into st and returns how far it read; the caller fails on any text left. A statement is G0 L1 G1
+// L2 G2 …: each G one node or several joined by &, and each link joins every node of the group before it to every node
+// of the group after it.
 function statement(text: string, st: State): number | Fail {
   let g = group(text, 0, st)
   if (g === null) {
@@ -500,8 +485,8 @@ function statement(text: string, st: State): number | Fail {
   }
 }
 
-// The nodes at `at`, one or several joined by " & ", each declared into st: their ids, and
-// how far they read. null if no node starts there or after an &; a label's Fail if one fails.
+// The nodes at `at`, one or several joined by " & ", each declared into st: their ids, and how far they read. null if
+// no node starts there or after an &; a label's Fail if one fails.
 function group(text: string, at: number, st: State): { ids: string[]; end: number } | Fail | null {
   const ids: string[] = []
   for (;;) {
@@ -546,10 +531,10 @@ function link(text: string, at: number): Link | Fail | null {
   return { ...l, label }
 }
 
-// Adds an edge for each pair of from × to, in source order. As Mermaid gives ids, the link's
-// id@ names the edge from the last of from to the first of to; any other edge is L_<from>_<to>_<n>,
-// n 0 for the pair's first edge, then its count so far plus 1. An id@ is never renamed: where Mermaid
-// renames one that an edge already has, parseFlowchart fails it as id-collision.
+// Adds an edge for each pair of from × to, in source order. As Mermaid gives ids, the link's id@ names the edge from
+// the last of from to the first of to; any other edge is L_<from>_<to>_<n>, n 0 for the pair's first edge, then its
+// count so far plus 1. An id@ is never renamed: where Mermaid renames one that an edge already has, parseFlowchart
+// fails it as id-collision.
 function connect(st: State, from: string[], to: string[], l: Link): void {
   for (const f of from) {
     for (const t of to) {
@@ -571,8 +556,8 @@ function connect(st: State, from: string[], to: string[], l: Link): void {
   }
 }
 
-// A node at `at`: its id, then at most one bracket shape or @{…}; a :::name class may follow the id or its shape.
-// null if no id starts there, or its opener has no closer.
+// A node at `at`: its id, then at most one bracket shape or @{…}; a :::name class may follow the id or its shape. null
+// if no id starts there, or its opener has no closer.
 function mention(text: string, at: number, tail: string): Mention | Fail | null {
   const id = ID.exec(text.slice(at))?.[0]
   if (id === undefined) {
@@ -593,8 +578,7 @@ function mention(text: string, at: number, tail: string): Mention | Fail | null 
     const m: Mention = { id, end: d.end, data: true }
     const v = new Map(d.pairs.map(([k, raw]) => [k, yamlValue(raw)!]))
     // icon and img make Mermaid draw another shape; a shape it does not know, or a typed label or labelType, it rejects
-    // or
-    // reads otherwise (flowDb addVertex).
+    // or reads otherwise (flowDb addVertex).
     if (v.has('icon') || v.has('img')) {
       return fail('syntax')
     }
@@ -689,14 +673,11 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 // A bracket or edge label's text, or a subgraph title, as Mermaid 12.2.0 lexes it: one non-empty "…" or "`…`" first, if
 // any, then text with no ", the two joined and trimmed ("…" keeps punctuation): ["a" b] is a b. Any other " (a space or
 // text before the string, a second string, an empty one, a ` or " inside "`…`") and an empty label are a parse error,
-// so
-// fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis draws as styled
-// says. Its <br>
-// stay: a node splits them into lines, and an edge label keeps them for layout to split with labelLines. br is
-// checked's.
-// token: the text after the string is Mermaid's text token (a node, |…| or subgraph label), which stops at ( ) [ ] { }
-// |
-// and cannot start with ~~~; a text form's edge text (token false) takes any of them.
+// so fail 'syntax'. A "`…`" makes the label Markdown (labelType markdown), checked in that mode: emphasis draws as
+// styled says. Its <br> stay: a node splits them into lines, and an edge label keeps them for layout to split with
+// labelLines. br is checked's. token: the text after the string is Mermaid's text token (a node, |…| or subgraph
+// label), which stops at ( ) [ ] { }
+// | and cannot start with ~~~; a text form's edge text (token false) takes any of them.
 function label(raw: string, br: Br = 'any', token = true, edge = false): string | Fail {
   const md = raw.startsWith('"`')
   const m = (md ? /^"`([^`"]+)`"([^"]*)$/ : /^(?:"([^"]+)")?([^"]*)$/).exec(raw)
@@ -725,24 +706,20 @@ function edgeLabel(raw: string, token: boolean): string | null | Fail {
 }
 
 // A label's lines, split at each <br>. A blank line among two or more, from consecutive <br/> or one leading or
-// trailing
-// the trimmed label, fails label-blank-line: a node would draw a box row with no text, and the router cannot place an
-// inline edge label whose middle line is empty. One blank line is a label blank as a whole, which a node or edge
-// allows.
+// trailing the trimmed label, fails label-blank-line: a node would draw a box row with no text, and the router cannot
+// place an inline edge label whose middle line is empty. One blank line is a label blank as a whole, which a node or
+// edge allows.
 function splitLabel(t: string): string[] | Fail {
   const ls = labelLines(t)
   return ls.length > 1 && ls.some((l) => !l.trim()) ? fail('label-blank-line') : ls
 }
 
 // Label text as Mermaid shows it, if it can be drawn: its #…; codes decoded, as decoded says; text Mermaid's HTML label
-// shows
-// otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where the
-// drawing
-// splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label }, which
-// Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says. edge: an edge label, styled's
-// breaks.
-// In an HTML label where <br> splits, a literal \n is a <br />: Mermaid's nonMarkdownToHTML replaces it before
-// decodeEntities, and draws the same SVG as for <br />. Elsewhere it falls back newline.
+// shows otherwise fails as drawable says ('entity' or 'html'), and so does an unsupported character. br: 'any' where
+// the drawing splits each <br>; 'none' for a subgraph title, which draws on one line. mode: 'markdown' for an @{ label
+// }, which Mermaid's flowDb gives labelType markdown: its bold and italic draw as styled says. edge: an edge label,
+// styled's breaks. In an HTML label where <br> splits, a literal \n is a <br />: Mermaid's nonMarkdownToHTML replaces
+// it before decodeEntities, and draws the same SVG as for <br />. Elsewhere it falls back newline.
 function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html', edge = false): string | Fail {
   if (mode === 'markdown') {
     return styled(text, br, { decode: true, breaks: edge })
@@ -762,8 +739,7 @@ function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html
 }
 
 // Declares m's node at its first mention; a later mention's shape or label replaces the one before. null, or 'syntax'
-// for a
-// mention with a shape, a label or an @{…} of an id a subgraph has.
+// for a mention with a shape, a label or an @{…} of an id a subgraph has.
 function declare(st: State, m: Mention): Fail | null {
   const bare = !m.shape && !m.lines && !m.data
   if (!bare && st.clusters.some((c) => c.id === m.id)) {

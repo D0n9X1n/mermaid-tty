@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 33c5d38516e4904d3414692cb511493307f20b37492a2b7a079af3ac81f2dea2 |
+| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
 | goldens/xychart/xychart-ok-01.golden | b60b85a9c949dd64cb068a1d98907d641fcb6699886f57f7742fa6199278bf0c |
 | goldens/xychart/xychart-ok-02.golden | fa20c07b31a8b0895ea31e5595d333ff2c320318e8780a215e172c8c2a34adc6 |
 | goldens/xychart/xychart-ok-03.golden | cc05760fe1d504c66daf1832a25a1e0cb3c6517fd6d5600de40fb9d794c2e837 |
@@ -22,4 +22,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Notes
 - PM inspected the rendered gallery (PNGs of the largest goldens at 80 columns, plus the CJK sheet): every label readable, not tangled, roles told apart, faithful to the source.
 - The cross-family reviewer (gpt-6-astra) read every xychart golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
-- 2026-10-31: core/themes.ts re-hashed after a formatting-only change (Prettier and braces). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.

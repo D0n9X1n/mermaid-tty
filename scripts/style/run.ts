@@ -1,7 +1,7 @@
 // node scripts/style/run.ts [--write]: the code style gate. Checks that Prettier has formatted every file it owns and
 // that check-style finds nothing, then runs the checker's own tests. With --write it formats first: Prettier, then
-// layout.ts for what Prettier leaves alone, then Prettier again, and checks the result.
-// Needs `npm ci --prefix scripts/style` once.
+// layout.ts for what Prettier leaves alone, then Prettier again, and checks the result. Needs `npm ci --prefix
+// scripts/style` once.
 import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

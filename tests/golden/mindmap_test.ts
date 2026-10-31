@@ -1,4 +1,4 @@
-// tests/golden/mindmap_test.ts — mindmap fixtures (plan C T78): and root, branch and depth inks.
+// tests/golden/mindmap_test.ts — mindmap fixtures: and root, branch and depth inks.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

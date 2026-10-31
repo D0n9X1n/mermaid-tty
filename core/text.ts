@@ -4,8 +4,7 @@ import { isWide, unsupported, width } from './width.ts'
 
 // How a field's text reaches the screen in Mermaid 12.2.0, as rendered in Chrome under securityLevel strict:
 // html, an HTML label; markdown, an HTML label marked renders (labelType 'markdown'); plain, text as written;
-// sanitized,
-// DOMPurify's output; escaped, < and > escaped; member, a class member (an HTML label marked renders, too).
+// sanitized, DOMPurify's output; escaped, < and > escaped; member, a class member (an HTML label marked renders, too).
 export type Mode = 'html' | 'markdown' | 'plain' | 'sanitized' | 'escaped' | 'member'
 // What a <br> does there: any spelling splits; only lowercase <br> splits; each is drawn as written; or none can be
 // drawn.
@@ -15,12 +14,11 @@ export type Br = 'any' | 'lower' | 'literal' | 'none'
 // shows other text.
 const ENTITY = /#\w+;|ﬂ°|¶ß/
 // A <br>, <br/> or <br />, in any case, with only HTML's whitespace (space, tab, newline, form feed, return) before the
-// slash: HTML ends a tag name nowhere else, so <br /> is other markup.
+// slash: HTML ends a tag name nowhere else, so <br /> is other markup.
 const BR = String.raw`<br[ \t\n\f\r]*\/?>`
 const BR_ANY = new RegExp(BR, 'gi')
 // A break Mermaid's own splitter finds (common.ts lineBreakRegex): JS's \s, and </br> too. Where a <br> splits, one
-// that
-// BR_ANY leaves would split there but draw here as written.
+// that BR_ANY leaves would split there but draw here as written.
 const BR_MERMAID = /<\/?br\s*\/?>/i
 // The text each mode shows differently, and why.
 const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
@@ -42,8 +40,7 @@ const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
 }
 
 // Why text, in a field of mode and br, would draw other text than Mermaid shows: 'entity' or 'html'; null if it draws
-// as
-// written. Each <br> that splits becomes a line break first, so the text on either side is checked on its own.
+// as written. Each <br> that splits becomes a line break first, so the text on either side is checked on its own.
 export function drawable(text: string, mode: Mode, br: Br): Fail | null {
   if (ENTITY.test(text)) {
     return fail('entity')
@@ -109,18 +106,15 @@ function codeChar(name: string): string | null {
 }
 
 // X5. The text a field of mode and br shows once Mermaid decodes its #…; codes (encodeEntities, then the browser), or
-// why
-// it cannot be drawn. Text with no code is drawable's. Otherwise every code must show one character, as codeChar says;
-// the
-// text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a decoded
-// &, <,
-// *, fa: or \n counts as the text it shows, and can never make a <br>.
+// why it cannot be drawn. Text with no code is drawable's. Otherwise every code must show one character, as codeChar
+// says; the text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a
+// decoded &, <, *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   if (!/#\w+;/.test(text)) {
     return drawable(text, mode, br) ?? text
   }
-  // Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
-  // edge label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
+  // Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an edge
+  // label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
   if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) {
     return fail('markdown')
   }
@@ -185,10 +179,9 @@ export function styled(
 
 // X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token
 // (/(fa[bklrs]?):fa-([\w-]+)/; fad too, to be safe) for an icon, and a $$…$$ makes the whole label KaTeX. A markdown
-// label
-// goes through marked, which drops a \ before ASCII punctuation and renders * and _ emphasis; a plain one shows a
-// literal
-// \n as a <br />. Code, links, headings and lists marked leaves as written (markdownToHTML emits their raw text).
+// label goes through marked, which drops a \ before ASCII punctuation and renders * and _ emphasis; a plain one shows a
+// literal \n as a <br />. Code, links, headings and lists marked leaves as written (markdownToHTML emits their raw
+// text).
 const ICON = /fa[bdklrs]?:fa-[\w-]/
 const MATH = /\$\$[^]*?\$\$/
 function rendered(text: string, mode: 'html' | 'markdown' | 'member'): Fail | null {
@@ -223,9 +216,9 @@ function marked(text: string): boolean {
   return edge > 1
 }
 
-// One piece of a wrapped line, and how it attaches to the previous piece: '' after
-// a split between W/F characters, ' ' after a split at spaces. The first piece of
-// every label line after the first joins with '\n', which the drawing code sets.
+// One piece of a wrapped line, and how it attaches to the previous piece: '' after a split between W/F characters, ' '
+// after a split at spaces. The first piece of every label line after the first joins with '\n', which the drawing code
+// sets.
 export type Piece = { text: string; join: '' | ' ' | '\n' }
 
 // A label's lines: it breaks at <br>, <br/> or <br />, in any case, with only HTML whitespace before the slash. Two
@@ -234,12 +227,10 @@ export function labelLines(label: string): string[] {
   return label.split(BR_ANY)
 }
 
-// Fills line greedily into pieces at most max columns wide (matrix, common rule 6).
-// A token is a run of non-space characters, split only between two adjacent W/F
-// characters, so a narrow character stays with its neighbors. A run of spaces is
-// one space, and leading and trailing spaces drop. The result is never empty: a blank
-// line is one empty piece, so every label line takes a row. null only if a token is
-// wider than max.
+// Fills line greedily into pieces at most max columns wide. A token is a run of non-space characters, split only
+// between two adjacent W/F characters, so a narrow character stays with its neighbors. A run of spaces is one space,
+// and leading and trailing spaces drop. The result is never empty: a blank line is one empty piece, so every label line
+// takes a row. null only if a token is wider than max.
 export function wrap(line: string, max: number): Piece[] | null {
   // Each token, and whether a space came before it.
   const toks: { t: string; sp: boolean }[] = []

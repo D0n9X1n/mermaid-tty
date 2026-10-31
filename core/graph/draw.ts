@@ -1,4 +1,4 @@
-// core/graph/draw.ts — a placed, routed graph drawn onto the canvas (plan A §6): node rows, frames, routes, labels.
+// core/graph/draw.ts — a placed, routed graph drawn onto the canvas: node rows, frames, routes, labels.
 import { CAPS } from '../caps.ts'
 import { createCanvas } from '../canvas.ts'
 import type { Canvas, Drawing } from '../canvas.ts'
@@ -65,13 +65,10 @@ function mark(cv: Canvas, b: Box, n: GNode, across: boolean): void {
 const WEIGHT = { solid: 'light', thick: 'heavy', dotted: 'dotted' } as const
 
 // A fixed row, never re-wrapped (members.ts): capL, a pad cell and its indent, then its text left-aligned, or each of
-// its
-// cols at its offset, the widths before it plus a gap cell each, owned by [col.id, node], a keyed col its key in its
-// place;
-// then fill to capR. Its fill takes
-// the row's role, its caps the node's; a blank part draws no cell. A part joins as given, else below the first row with
-// '\n'.
-// Each member part's first drawn cell, from b's top-left, goes in places, so the validator binds it there.
+// its cols at its offset, the widths before it plus a gap cell each, owned by [col.id, node], a keyed col its key in
+// its place; then fill to capR. Its fill takes the row's role, its caps the node's; a blank part draws no cell. A part
+// joins as given, else below the first row with '\n'. Each member part's first drawn cell, from b's top-left, goes in
+// places, so the validator binds it there.
 function fixedRow(
   cv: Canvas,
   b: Box,
@@ -115,10 +112,8 @@ function fixedRow(
 }
 
 // A box's lines, each wrapped at the box's content width: the layout sized the box to its widest piece wrapped at
-// wrapAt,
-// and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'. A fixed
-// row,
-// or a row of columns, draws as fixedRow; a key row is its key, unwrapped, drawn as a key.
+// wrapAt, and greedy wrapping at that piece's width gives the same pieces. Line k > 0's first piece joins with '\n'. A
+// fixed row, or a row of columns, draws as fixedRow; a key row is its key, unwrapped, drawn as a key.
 type Line = { text: string; role: Role; owners: readonly string[]; row?: NodeRow }
 function lines(
   cv: Canvas,
@@ -157,13 +152,10 @@ function lines(
 }
 
 // An end label (a cardinality) of true end t, owned by `${edge}:${t}`, at node, its true end's node: on a reversed edge
-// the
-// drawn tail is the true head. It sits beside its end's second cell out from its node, the cell past its mark or past
-// the
-// line cell that touches its node: right of that cell when its node is above or below it, else above it, running away
-// from
-// its node. So it clears its node's own rows and columns, and a neighbouring port there. at, its first cell at layout
-// coordinates, is null with no route; a blank label is none.
+// the drawn tail is the true head. It sits beside its end's second cell out from its node, the cell past its mark or
+// past the line cell that touches its node: right of that cell when its node is above or below it, else above it,
+// running away from its node. So it clears its node's own rows and columns, and a neighbouring port there. at, its
+// first cell at layout coordinates, is null with no route; a blank label is none.
 type EndLabel = { owner: string; node: string; text: string; at: { r: number; c: number } | null }
 function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'head'): EndLabel | null {
   const drawn = e.reversed ? (t === 'tail' ? 'head' : 'tail') : t
@@ -193,8 +185,7 @@ function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'he
 
 // Between two consecutive frameless children of c, a divider of frame-role caps owned by `${c.id}:div<k>`: ┄ across c's
 // inner width on the middle row of the gap between them, or ┆ down its inner height on the gap's middle column, when
-// they
-// sit side by side. Inside c's border; a frameless c has none, so its whole box.
+// they sit side by side. Inside c's border; a frameless c has none, so its whole box.
 function divide(cv: Canvas, c: GCluster, frame: (id: string) => Box | undefined, all: readonly GCluster[]): void {
   const f = frame(c.id)
   const inset = c.frameless ? 0 : 1
@@ -332,10 +323,8 @@ export function drawGraph(
     divide(cv, c, (id: string) => at(p.frames.get(id)), p.graph.clusters)
   }
   // A row's text is owned by [row id ?? node id, node id], deduplicated, and a column's by [col id, node id]. Each
-  // owner's
-  // pieces, each joined by its join, else '\n', are one label. A blank column or fixed row draws no cell and is not
-  // listed.
-  // Each column, and each row with its own id, that draws a cell is a member, in drawing order.
+  // owner's pieces, each joined by its join, else '\n', are one label. A blank column or fixed row draws no cell and is
+  // not listed. Each column, and each row with its own id, that draws a cell is a member, in drawing order.
   const across = p.graph.dir === 'LR' || p.graph.dir === 'RL'
   const members = new Map<string, string>()
   const places = new Map<string, { r: number; c: number }>()
@@ -406,13 +395,11 @@ export function drawGraph(
   for (const e of live) {
     // The layout marks a back edge it drew reversed, its from, to, tail and head swapped, so from and to swap back. Its
     // route's end marks are the drawn tail's, at the drawn from, then the drawn head's, at the drawn to: whichever way
-    // it was
-    // drawn, each sits at the node named here.
+    // it was drawn, each sits at the node named here.
     const route = routes.find((x) => x.edge === e.id)
     const nodes = [...(e.tail === 'none' ? [] : [e.from]), ...(e.head === 'none' ? [] : [e.to])]
     // Each end label is listed by its true end, in endLabels, labels and edgeLabels, and drawn in endRole ?? 'label',
-    // owned by
-    // [its owner, the edge]; one that needs a drawn cell is a Conflict.
+    // owned by [its owner, the edge]; one that needs a drawn cell is a Conflict.
     const tagged = tags.get(e.id)!
     edges.push({
       id: e.id,

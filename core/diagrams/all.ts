@@ -1,5 +1,5 @@
-// Every Tier 1 type's module (plan C §4, T40). Importing this file runs each type's layout.ts, which files its module
-// with register; render.ts imports it after flowchart's and sequence's modules.
+// Every Tier 1 type's module. Importing this file runs each type's layout.ts, which files its module with register;
+// render.ts imports it after flowchart's and sequence's modules.
 import type { DiagramModule } from '../registry.ts'
 import { classDiagram } from './class/layout.ts'
 import { er } from './er/layout.ts'

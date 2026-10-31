@@ -1,5 +1,5 @@
-// Exact decimal arithmetic for chart numbers (matrix common rule 8). A Dec is a BigInt fraction
-// n/d with d > 0n, reduced by its gcd, so each value has one form and 0.1 + 0.2 is exactly 0.3.
+// Exact decimal arithmetic for chart numbers (matrix common rule 8). A Dec is a BigInt fraction n/d with d > 0n,
+// reduced by its gcd, so each value has one form and 0.1 + 0.2 is exactly 0.3.
 export type Dec = { readonly n: bigint; readonly d: bigint }
 
 const abs = (x: bigint): bigint => (x < 0n ? -x : x)
@@ -27,8 +27,8 @@ const pow10 = (k: number): bigint => 10n ** BigInt(k)
 
 export const dec = (i: number): Dec => ({ n: BigInt(i), d: 1n })
 
-// A plain decimal: a sign, digits, and digits after a point. NaN, Infinity, exponents and
-// hex are null, so every Dec is finite (spec C rule 5).
+// A plain decimal: a sign, digits, and digits after a point. NaN, Infinity, exponents and hex are null, so every Dec is
+// finite.
 const DECIMAL = /^[+-]?(\d+(\.\d+)?|\.\d+)$/
 export function parseDec(s: string): Dec | null {
   if (!DECIMAL.test(s)) {
@@ -83,8 +83,8 @@ function strip(x: bigint, p: bigint): [number, bigint] {
 
   return [k, x]
 }
-// The shortest decimal, or null unless d's only prime factors are 2 and 5. A reduced n/d
-// then ends in a nonzero digit after max(twos, fives) decimals, so none can be dropped.
+// The shortest decimal, or null unless d's only prime factors are 2 and 5. A reduced n/d then ends in a nonzero digit
+// after max(twos, fives) decimals, so none can be dropped.
 export function toExact(a: Dec): string | null {
   const [twos, rest] = strip(a.d, 2n)
   const [fives, one] = strip(rest, 5n)

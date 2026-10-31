@@ -1,5 +1,5 @@
-// Markdown as GitHub renders it (D15c): a spec-compliant CommonMark + GFM tree, so every docs rule reads what the
-// renderer reads.
+// Markdown as GitHub renders it: a spec-compliant CommonMark + GFM tree, so every docs rule reads what the renderer
+// reads.
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
 import { gfm } from 'micromark-extension-gfm'

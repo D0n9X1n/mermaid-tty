@@ -164,9 +164,8 @@ test('A6.hook-tests: the terminal is told once per store', async () => {
 })
 
 // Chromium under mmdc must reach no network, loopback included: every request goes to a proxy at the discard port,
-// which
-// loopback does not bypass, and no host name resolves. The page is 12 CSS px a column (defaultViewport, which mmdc 12
-// sizes by; mmdc 11 takes -w).
+// which loopback does not bypass, and no host name resolves. The page is 12 CSS px a column (defaultViewport, which
+// mmdc 12 sizes by; mmdc 11 takes -w).
 test('A6.hook-tests: the puppeteer config cuts Chromium off the network and sets the page width', () => {
   assert.deepEqual(puppeteerConfig(80), {
     args: [

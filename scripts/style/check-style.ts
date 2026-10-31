@@ -3,8 +3,8 @@
 // violation and exits 1 if there is any. The rules, and the closest ESLint rule for each, are listed under "Code style"
 // in wiki/Development-and-Release.md; Prettier, with .prettierrc.json, does the layout.
 //
-// It parses with the TypeScript parser Prettier bundles, so the only package it needs is the one pinned in this
-// folder. TypeScript's own compiler API is not used: the pinned TypeScript 7 exposes no stable one.
+// It parses with the TypeScript parser Prettier bundles, so the only package it needs is the one pinned in this folder.
+// TypeScript's own compiler API is not used: the pinned TypeScript 7 exposes no stable one.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -43,8 +43,8 @@ type Node = {
 }
 type Comment = Node & { value: string }
 
-// Every node of the tree, parents before children. Prettier's nodes carry no parent link, so a walk is how rules see
-// a node's context.
+// Every node of the tree, parents before children. Prettier's nodes carry no parent link, so a walk is how rules see a
+// node's context.
 function* walk(node: unknown, parent: Node | null = null): Generator<{ node: Node; parent: Node | null }> {
   if (!node || typeof node !== 'object') {
     return
@@ -98,8 +98,8 @@ const BLOCK_LIKE = new Set([
   'TSModuleDeclaration',
 ])
 
-// Issue and PR citations in prose: a hash and a number that isn't part of a word, a color or an HTML entity;
-// "issue", "PR" or "pull request" with a number; or a link to an issue or pull request page.
+// Issue and PR citations in prose: a hash and a number that isn't part of a word, a color or an HTML entity; "issue",
+// "PR" or "pull request" with a number; or a link to an issue or pull request page.
 const CITATIONS = [
   /(?<![\w&/#-])#\d{1,5}\b(?!;)(?![0-9a-fA-F])/,
   /\b(?:issues?|PRs?|pull requests?)[ \t]*(?:#|no\.|number)?[ \t]*\d+\b/i,
@@ -236,8 +236,8 @@ export async function check(file: string, source: string): Promise<Violation[]> 
   // A test's opening line: its name, then the callback's head, which Prettier always keeps on the name's line.
   const TEST_OPENER = /^\s*(?:test|it|describe)\((['"`]).*\1, (?:async )?\([^)]*\) =>(?: \{)?$/
 
-  // A line may run past the limit only where a string, template or regex, which can't be broken without changing
-  // it, or a URL crosses the limit.
+  // A line may run past the limit only where a string, template or regex, which can't be broken without changing it, or
+  // a URL crosses the limit.
   let offset = 0
   lines.forEach((text, i) => {
     const start = offset

@@ -19,9 +19,9 @@ export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string 
 
 const ASCII = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i))
 const BOXES = Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x2500 + i))
-// The glyphs C's sections name (rule 12). None has the Emoji property.
+// The glyphs C's sections name. None has the Emoji property.
 const C_GLYPHS = [
-  ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇', // bars: horizontal ▏…█, vertical ▁…█ (spec C rule 5)
+  ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇', // bars: horizontal ▏…█, vertical ▁…█
   ...'✓▸◆·', // gantt: done and active status cells, the milestone, the timing's separator
   ...'■○△□', // xychart: the line markers ●◆▲■○◇△□ not listed above
   ...'▷◁▽«»', // class: triangle ends, with △ above; «annotation»

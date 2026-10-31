@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 33c5d38516e4904d3414692cb511493307f20b37492a2b7a079af3ac81f2dea2 |
+| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
 | goldens/mindmap/mindmap-ok-01.golden | 0fdc6db58d4f48e4f1817a77257cc0b79c4f89cb7af94968aec3a762aecd02d5 |
 | goldens/mindmap/mindmap-ok-02.golden | bb0579b15cb78681a5ef29d6a7061d758cc611a0fa3ecdfc78de28ffa98de144 |
 | goldens/mindmap/mindmap-ok-03.golden | 3d901e7c24672ad44f7709181ac6facaee0733c2fd9e44faf4ed04a1fd89cb80 |
@@ -27,4 +27,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 - PM inspected the rendered gallery (PNGs of the largest goldens at 80 columns, plus the CJK sheet): every label readable, not tangled, roles told apart, faithful to the source.
 - The cross-family reviewer (gpt-6-astra) read every mindmap golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
 - v1.1.1 (#15): the cross-family reviewer (gpt-6-astra) read the new Markdown bold and italic golden, its text, roles and styles, against its source at 60, 80 and 120 columns and against Mermaid 12.2.0, and passed it. No existing golden changed.
-- 2026-10-31: core/themes.ts re-hashed after a formatting-only change (Prettier and braces). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.

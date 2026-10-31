@@ -1,9 +1,7 @@
 // The e2e session driver: runs a program, in the e2e scenarios a real Claude Code, at 100×40, types into it and reads
-// its
-// screen back as cells. The pty driver runs it under node-pty and parses its output into a screen. The tmux driver,
-// E1's
-// fallback on Linux and macOS, runs it in a tmux server of its own and parses each read's capture-pane into a fresh
-// screen.
+// its screen back as cells. The pty driver runs it under node-pty and parses its output into a screen. The tmux driver,
+// E1's fallback on Linux and macOS, runs it in a tmux server of its own and parses each read's capture-pane into a
+// fresh screen.
 import { execFile, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -30,12 +28,9 @@ export type Session = {
   // The last text the program copied with OSC 52, or undefined before any.
   clipboard(): Promise<string | undefined>
   // Hangs the program up and, once it has exited or after 2 s, kills its process group (on Windows, its tree), so that
-  // no
-  // child that ignores hangups outlives it. Resolves once it has exited (on Windows, once cmd.exe has), and at the
-  // latest
-  // 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for kill-server. Never throws, even if the
-  // program
-  // or the server is gone already. Called again, resolves at once.
+  // no child that ignores hangups outlives it. Resolves once it has exited (on Windows, once cmd.exe has), and at the
+  // latest 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for kill-server. Never throws, even if
+  // the program or the server is gone already. Called again, resolves at once.
   stop(): Promise<void>
 }
 // env is the session's whole env, as sessionEnv builds it.
@@ -51,10 +46,8 @@ export async function startSession(o: SessionOptions): Promise<Session> {
 }
 
 // read() polled every 100 ms until re matches the text it resolves to: resolves to that text; after ms, throws with the
-// last
-// text read. The deadline is checked before each read, and a read still pending at it is aborted and abandoned, so that
-// a
-// read that hangs cannot hold waitFor past ms.
+// last text read. The deadline is checked before each read, and a read still pending at it is aborted and abandoned, so
+// that a read that hangs cannot hold waitFor past ms.
 export async function waitForText(
   read: (signal: AbortSignal) => Promise<string>,
   re: RegExp,
@@ -126,9 +119,8 @@ const attempt = (step: () => void) => {
   } catch {}
 }
 // Ends a program as closing its terminal would: hangUp, and wait up to HUP_MS for it to exit. Then kill its process
-// group
-// or tree whether or not it has, as a child that ignores the hangup outlives it there; run each of after; and if it had
-// not exited, wait up to KILL_MS more. Each step runs whatever the ones before it threw.
+// group or tree whether or not it has, as a child that ignores the hangup outlives it there; run each of after; and if
+// it had not exited, wait up to KILL_MS more. Each step runs whatever the ones before it threw.
 async function end(
   hangUp: () => void,
   exited: (ms: number) => Promise<boolean>,
@@ -165,8 +157,7 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   const screen = createScreen(COLS, ROWS)
   const p = spawn(file, args, { name: 'xterm-256color', cols: COLS, rows: ROWS, cwd: o.cwd, env: o.env })
   // The program's process group, recorded now: node-pty makes the program lead a session of its own (on Windows, p.pid
-  // is
-  // the root of its tree).
+  // is the root of its tree).
   const pgid = p.pid
   // parsed resolves once the screen has parsed the output received so far: the screen parses writes in order.
   let parsed = Promise.resolve()
@@ -222,10 +213,9 @@ async function ptySession(o: SessionOptions): Promise<Session> {
 // node-pty's own directory. Its package.json is resolved, not loaded, which works where its native module cannot load.
 const ptyRoot = () => dirname(createRequire(import.meta.url).resolve('node-pty/package.json'))
 // Sets the execute bits of each prebuilt spawn-helper under root's prebuilds that lacks them, and returns those
-// helpers.
-// node-pty 1.1.0 installs its macOS spawn-helper without them, and spawns every program on macOS through it. Nothing on
-// Windows, which has no spawn-helper and no execute bits. A helper built from source, under build/, is executable
-// already.
+// helpers. node-pty 1.1.0 installs its macOS spawn-helper without them, and spawns every program on macOS through it.
+// Nothing on Windows, which has no spawn-helper and no execute bits. A helper built from source, under build/, is
+// executable already.
 export function ensureSpawnHelper(root = ptyRoot(), platform: string = process.platform): string[] {
   const prebuilds = join(root, 'prebuilds')
   const fixed: string[] = []
@@ -253,8 +243,7 @@ export function ensureSpawnHelper(root = ptyRoot(), platform: string = process.p
 
 // The file and args node-pty spawns for argv. On Windows, cmd.exe /d /s /c runs argv, as Node's shell option does: only
 // cmd.exe finds an npm shim such as claude.cmd through PATHEXT (E2). The args are then one command line, which /s
-// strips
-// of its outer quotes; an argument with a space keeps its own, and no other cmd.exe metacharacter is escaped.
+// strips of its outer quotes; an argument with a space keeps its own, and no other cmd.exe metacharacter is escaped.
 export function ptyCommand(
   argv: string[],
   platform: string,
@@ -405,15 +394,11 @@ function tmuxSession(o: SessionOptions): Session {
       }
     },
     // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to its process
-    // group,
-    // which a child of it may outlive it in. Only then does it end the server, as on macOS a Node program whose tty
-    // closes
-    // under it may stall rather than exit: kill-server, then SIGKILL to the server's recorded pid whatever kill-server
-    // did,
-    // since a server that does not answer, or whose socket is gone, outlives kill-server. Last it removes the socket
-    // tmux
-    // leaves behind. Each step runs whatever the ones before it threw: the program, its group or the server may be
-    // gone.
+    // group, which a child of it may outlive it in. Only then does it end the server, as on macOS a Node program whose
+    // tty closes under it may stall rather than exit: kill-server, then SIGKILL to the server's recorded pid whatever
+    // kill-server did, since a server that does not answer, or whose socket is gone, outlives kill-server. Last it
+    // removes the socket tmux leaves behind. Each step runs whatever the ones before it threw: the program, its group
+    // or the server may be gone.
     stop: async () => {
       if (stopped) {
         return

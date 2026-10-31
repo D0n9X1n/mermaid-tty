@@ -1,10 +1,9 @@
 // Layer A against Mermaid's real output. tests/hooks/svg-corpus holds a sample of the SVGs mmdc 11 and 12 draw, with
-// the
-// hook's flags, for the ok fixtures that reach mmdc (core parses them and hooks/safe.ts passes them): the smallest per
-// version and diagram type, then enough more to use every element and attribute name the full set uses. Every sample
-// must pass svgUnsafe, and the names the sample uses must be exactly the allowlist, so the list is Mermaid's own.
-// With MERMAID_TTY_MMDC set (mmdc paths, separated as PATH is), the opt-in test renders every such fixture with each
-// mmdc, in both looks, and checks that every SVG mmdc makes passes: no false rejections across the whole corpus.
+// the hook's flags, for the ok fixtures that reach mmdc (core parses them and hooks/safe.ts passes them): the smallest
+// per version and diagram type, then enough more to use every element and attribute name the full set uses. Every
+// sample must pass svgUnsafe, and the names the sample uses must be exactly the allowlist, so the list is Mermaid's
+// own. With MERMAID_TTY_MMDC set (mmdc paths, separated as PATH is), the opt-in test renders every such fixture with
+// each mmdc, in both looks, and checks that every SVG mmdc makes passes: no false rejections across the whole corpus.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'

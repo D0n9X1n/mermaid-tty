@@ -1,4 +1,4 @@
-// tests/golden/state_test.ts — state fixtures (plan C T56): one start and one end mark per scope, and nord roles.
+// tests/golden/state_test.ts — state fixtures: one start and one end mark per scope, and nord roles.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

@@ -11,8 +11,7 @@ const outLinks = (ids: readonly string[], links: readonly Link[]): Map<string, L
 }
 
 // The links a DFS in source order (ids', then links' order) finds pointing back to a unit on its path: reversing them
-// leaves
-// no cycle. Iterative, so a long chain cannot overflow the stack.
+// leaves no cycle. Iterative, so a long chain cannot overflow the stack.
 export function backLinks(ids: readonly string[], links: readonly Link[]): Set<string> {
   const out = outLinks(ids, links)
   const state = new Map<string, 'open' | 'done'>()

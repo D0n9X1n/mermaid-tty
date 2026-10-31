@@ -1,7 +1,6 @@
 // The version job's CLI. `list PUBLISHED_JSON TESTED_TXT [VERSION]` prints the versions to test as a JSON array;
-// VERSION, from
-// workflow_dispatch, retries just that one. `record LEGS_DIR TESTED_TXT VERSIONS_JSON` writes a result for every
-// selected version:
+// VERSION, from workflow_dispatch, retries just that one. `record LEGS_DIR TESTED_TXT VERSIONS_JSON` writes a result
+// for every selected version:
 // LEGS_DIR/<artifact>/leg.txt holds `VERSION OS STATUS`, and a version with a missing leg is recorded as fail.
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

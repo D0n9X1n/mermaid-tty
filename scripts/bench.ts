@@ -14,8 +14,8 @@ import { isMain } from './lib/is-main.ts'
 
 // The nearest-rank p-th percentile of xs, for p in [0, 100]: the ceil(p/100 · n)-th smallest sample, or the smallest
 // when p is 0. It sorts a copy, so xs is left as it was. No samples have no percentile, so an empty xs throws a
-// RangeError: NaN or undefined would compare as under any ceiling, and a run that timed nothing would pass.
-// p · n is multiplied before the division by 100, so a whole rank stays whole: 7 / 100 · 100 is 7.000000000000001.
+// RangeError: NaN or undefined would compare as under any ceiling, and a run that timed nothing would pass. p · n is
+// multiplied before the division by 100, so a whole rank stays whole: 7 / 100 · 100 is 7.000000000000001.
 export function percentile(xs: readonly number[], p: number): number {
   if (xs.length === 0) {
     throw new RangeError('percentile: no samples')
@@ -26,9 +26,8 @@ export function percentile(xs: readonly number[], p: number): number {
 }
 
 // The p90 ceiling in ms: BENCH_P90_MS when it is set; otherwise 200 in CI and 50 on the reference Mac. A BENCH_P90_MS
-// that
-// is not a positive finite number throws a RangeError: NaN would compare as over no p90, and the benchmark would always
-// pass.
+// that is not a positive finite number throws a RangeError: NaN would compare as over no p90, and the benchmark would
+// always pass.
 export function ceiling(env: Record<string, string | undefined>): number {
   const v = Number(env.BENCH_P90_MS ?? (env.CI ? 200 : 50))
   if (!Number.isFinite(v) || v <= 0) {

@@ -1,5 +1,5 @@
-// The plugin's own work for one reply: its mode, its fences split out and drawn, and the UI to draw them with.
-// No JSX, so node --test can import it.
+// The plugin's own work for one reply: its mode, its fences split out and drawn, and the UI to draw them with. No JSX,
+// so node --test can import it.
 import { isFail } from '../core/fail.ts'
 import { createRenderer, type Rows } from '../core/render.ts'
 import { splitFences } from './fences.ts'
@@ -20,8 +20,8 @@ export async function safePlan($: any, e: any, theme: string, mode: () => Promis
 
 // The reply's parts, prose, drawn rows and pictures, and the UI to draw them with; null when the reply goes through
 // untouched. A fallback's debug log is best-effort: a failing log never stops a drawing. In diagram mode, where the
-// terminal shows pixels, a fence's cached picture stands in for its rows (or for its source, when text cannot draw
-// it); a miss queues its render and draws as before. A failing picture lookup is no picture.
+// terminal shows pixels, a fence's cached picture stands in for its rows (or for its source, when text cannot draw it);
+// a miss queues its render and draws as before. A failing picture lookup is no picture.
 async function planReply($: any, e: any, theme: string, mode: () => Promise<Mode>, store: Pictures) {
   const columns = e.viewport?.columns
   const m = await mode()

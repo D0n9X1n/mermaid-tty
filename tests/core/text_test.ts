@@ -194,8 +194,7 @@ test('A3: <br> splits only with HTML whitespace before its slash', () => {
   )
 })
 // Mermaid's own splitter (common.ts lineBreakRegex, /<\/?br\s*\/?>/gi) splits at those and at </br> too; a field whose
-// <br>
-// splits would draw them as written, so it falls back, as a field with no <br> does.
+// <br> splits would draw them as written, so it falls back, as a field with no <br> does.
 test('A5.errors: drawable: a <br> with another space, or a </br>, fails html where a <br> splits or none may be drawn', () => {
   const odd = [...ODD, 'a</br>b', 'a</BR >b']
   for (const m of MODES) {
@@ -230,10 +229,8 @@ test('X2: a removed <br> joins nothing, so text on either side is checked on its
 })
 
 // X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a
-// markdown
-// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a
-// plain one
-// turns a literal \n into <br />.
+// markdown one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other
+// text; a plain one turns a literal \n into <br />.
 const RENDERED: Mode[] = ['html', 'markdown', 'member']
 test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in every HTML-label mode, and nowhere else', () => {
   const icons = [

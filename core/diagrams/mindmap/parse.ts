@@ -1,6 +1,5 @@
-// Reads a mindmap (plan C, T76; matrix, mindmap) into its model: one root and its children by indentation, each node's
-// shape and label lines, the title and colorBy. Anything Mermaid 12.2.0's mindmap.jison reads otherwise fails, so the
-// fence draws as source.
+// Reads a mindmap into its model: one root and its children by indentation, each node's shape and label lines, the
+// title and colorBy. Anything Mermaid 12.2.0's mindmap.jison reads otherwise fails, so the fence draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Source } from '../../source.ts'
 import { drawable, labelLines, styled } from '../../text.ts'
@@ -40,8 +39,8 @@ function walk(src: Source): Mindmap {
   for (const { n, text } of src.lines) {
     const t = text.trim()
     const indent = text.length - text.trimStart().length
-    // The lexer reads ::icon( in any case at a token's start; mindmapDb draws the icon.
-    // U+2028 and U+2029 end no line for us but break Mermaid's lexer anywhere, a :::class line too.
+    // The lexer reads ::icon( in any case at a token's start; mindmapDb draws the icon. U+2028 and U+2029 end no line
+    // for us but break Mermaid's lexer anywhere, a :::class line too.
     if (/^::icon\(/i.test(t) || /[\u2028\u2029]/.test(t)) {
       stop(`syntax:${n}`)
     }
@@ -78,8 +77,8 @@ const OPENERS: readonly (readonly [string, Shape, string])[] = [
   ['(', 'round', ')'],
   ['[', 'rect', ']'],
 ]
-// The NODE state's closers, in the lexer's order. A closer other than the opener's pair fails: getType reads the
-// opener alone, so Mermaid draws id[x) as a square, and this parser fails closed.
+// The NODE state's closers, in the lexer's order. A closer other than the opener's pair fails: getType reads the opener
+// alone, so Mermaid draws id[x) as a square, and this parser fails closed.
 const CLOSERS = ['))', ')', ']', '}}', '(-', '-)', '((', '(']
 
 // A node line t, trimmed, on source line n: [id]opener text closer, or bare text. The lexer reads a NODE_ID up to the
@@ -142,10 +141,8 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
 const MARKDOWN = /[*\x60]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])|\\[!-/:-@[-`{-~]/u
 
 // A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap), its bold
-// and
-// italic marked (core/emphasis.ts). Fails on line n for other Markdown, a blank line, or text drawable (a markdown HTML
-// label: 'icon' and 'math' for text createText
-// replaces) or unsupported() rejects.
+// and italic marked (core/emphasis.ts). Fails on line n for other Markdown, a blank line, or text drawable (a markdown
+// HTML label: 'icon' and 'math' for text createText replaces) or unsupported() rejects.
 function label(raw: string, n: number): string[] {
   const s = raw.trim()
   let d = s

@@ -1,4 +1,4 @@
-// Chart sheets (plan C §4, T45): a heading's wrapped rows, and parts stacked top to bottom into one drawing.
+// Chart sheets: a heading's wrapped rows, and parts stacked top to bottom into one drawing.
 import { createCanvas, type Cell, type Conflict, type Drawing } from '../canvas.ts'
 import type { Fail } from '../fail.ts'
 import { fail } from '../fail.ts'
@@ -8,8 +8,7 @@ import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
 
 // A label as a chart lists it: its owner and text, and at, its first drawn cell, when pieces ps are drawn one a row
-// down
-// from row r at column c, a later piece at c + indent: the first piece with text. No at if none has text, as none
+// down from row r at column c, a later piece at c + indent: the first piece with text. No at if none has text, as none
 // draws.
 export function placed(
   owner: string,
@@ -25,9 +24,8 @@ export function placed(
 
 // text's <br> lines, each wrapped at columns, drawn one row per piece in ink and owned by owner (matrix common rules 3
 // and 6). The first piece has no join, a later piece its wrap join, and the first piece of each later line '\n', so
-// validate
-// reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br> label.
-// 'word-too-wide' if a word is wider than columns.
+// validate reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br>
+// label. 'word-too-wide' if a word is wider than columns.
 export function heading(text: string, ink: Ink, owner: string, columns: number): Drawing | Fail {
   const lines = labelLines(text)
   const pieces: { text: string; join?: Piece['join'] }[] = []
@@ -68,8 +66,7 @@ export function stack(parts: readonly Drawing[], columns: number): Drawing {
 }
 
 // A part's expect as it sits dr rows down: an entry's at, in any field (a key's, a label's, a bar's, a glyph's), names
-// a
-// cell, so it moves with the part's cells.
+// a cell, so it moves with the part's cells.
 type At = { at?: { r: number; c: number } }
 const shift = (e: Expect, dr: number): Expect =>
   dr === 0
@@ -85,8 +82,8 @@ const shift = (e: Expect, dr: number): Expect =>
 
 // Every array field of the expects, each concatenated in their order by name: A's labels, edges (with their ends and
 // endLabels), edgeLabels and frames, C's bars, members, keys and keyable, and any field a later task adds. A's four
-// start
-// empty, since every Expect lists them; any other field no expect has stays absent, so nothing is invented or dropped.
+// start empty, since every Expect lists them; any other field no expect has stays absent, so nothing is invented or
+// dropped.
 function merge(expects: readonly Expect[]): Expect {
   const out: Record<string, unknown[]> = { labels: [], edges: [], edgeLabels: [], frames: [] }
   for (const e of expects) {

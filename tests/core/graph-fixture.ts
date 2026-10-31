@@ -5,8 +5,8 @@ import type { Dir, GEdge, GNode, Graph } from '../../core/graph/model.ts'
 const STYLES: Readonly<Record<string, GEdge['style']>> = { '>': 'solid', '=>': 'thick', '.>': 'dotted' }
 
 // g('TB', ['A>B', 'A=>C', 'A.>D', 'D>E|label'], { B: 'one<br/>two' }): nodes in first-seen order, rect, role node, rows
-// the
-// label split at <br/> (default the id); edge i is e${i}, tail none, head arrow, minlen 1, its label or null, order i.
+// the label split at <br/> (default the id); edge i is e${i}, tail none, head arrow, minlen 1, its label or null, order
+// i.
 export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}): Graph {
   const nodes = new Map<string, GNode>()
   const see = (id: string) => {
@@ -67,8 +67,8 @@ export function falsePairs(d: Drawing): string[] {
     }
   }
   // Per edge, its bare ends (an endpoint no mark names; a self-loop's node twice) and its marks, each
-  // `-${kind}${node}`: an
-  // arrow `->`, a circle `-o`, a cross `-x`, any other glyph itself. A pair t-kh reads from a bare end t to a mark kh.
+  // `-${kind}${node}`: an arrow `->`, a circle `-o`, a cross `-x`, any other glyph itself. A pair t-kh reads from a
+  // bare end t to a mark kh.
   const kind = (glyph: string) => ('▼▲►◄'.includes(glyph) ? '>' : glyph)
   const marks = (e: Drawing['expect']['edges'][number]) => (e.ends ?? []).map((end) => `-${kind(end.glyph)}${end.node}`)
   const bare = (e: Drawing['expect']['edges'][number]) =>

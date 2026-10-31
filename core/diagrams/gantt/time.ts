@@ -1,8 +1,7 @@
 // Gantt time (plan C T67; matrix gantt section): dateFormat and axisFormat token lists, dates, durations and tick
-// steps.
-// Time is naive wall-clock time: a date is Date.UTC of its fields, so 1d is always 24 h and nothing depends on the
-// host.
-// What Mermaid would not read exactly this way is null or a Fail, so the source is drawn instead; nothing throws.
+// steps. Time is naive wall-clock time: a date is Date.UTC of its fields, so 1d is always 24 h and nothing depends on
+// the host. What Mermaid would not read exactly this way is null or a Fail, so the source is drawn instead; nothing
+// throws.
 import { fail, type Fail } from '../../fail.ts'
 import { dec, div, floor, mul, parseDec } from '../../charts/decimal.ts'
 
@@ -12,8 +11,7 @@ export type DateFmt = readonly string[]
 export type AxisFmt = readonly string[]
 
 // Each dateFormat token, longest first: the Date.UTC field it sets (0 year … 6 ms) and the digits it matches. A
-// one-letter
-// token prints with no leading zero, so it matches 0, or 1–99 without one.
+// one-letter token prints with no leading zero, so it matches 0, or 1–99 without one.
 const ONE = '0|[1-9]\\d?'
 const TOKENS = new Map<string, { field: number; digits: string }>([
   ['YYYY', { field: 0, digits: '\\d{4}' }],
@@ -32,12 +30,9 @@ const TOKENS = new Map<string, { field: number; digits: string }>([
 const LITERALS = '-/.:T '
 
 // f as a token list, read longest token first. A character that is neither a token nor a literal fails format-token,
-// and so
-// do a repeated field (MMM, HH … HH) and a one-letter token right before another token (Hmm): Mermaid's Day.js reads
-// MMM as
-// a month name and each repeat of a field, and takes a one-letter token's 1–2 digits greedily where a pattern
-// backtracks.
-// Year, month and day are all present or all absent, else format-ymd.
+// and so do a repeated field (MMM, HH … HH) and a one-letter token right before another token (Hmm): Mermaid's Day.js
+// reads MMM as a month name and each repeat of a field, and takes a one-letter token's 1–2 digits greedily where a
+// pattern backtracks. Year, month and day are all present or all absent, else format-ymd.
 export function parseDateFormat(f: string): DateFmt | Fail {
   const out: string[] = []
   for (let i = 0; i < f.length; ) {
@@ -63,9 +58,8 @@ export function parseDateFormat(f: string): DateFmt | Fail {
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 // s read under fmt with an anchored pattern, as ms: Date.UTC of its fields, an absent field taken from 1970-01-01
-// 00:00.
-// Null unless s matches and every field reads back from that date, so a field out of range, a day its month lacks
-// (02-30) and a year below 100, which Date.UTC reads as 19xx, are null.
+// 00:00. Null unless s matches and every field reads back from that date, so a field out of range, a day its month
+// lacks (02-30) and a year below 100, which Date.UTC reads as 19xx, are null.
 export function parseDate(s: string, fmt: DateFmt): number | null {
   const pattern = fmt
     .map((p) => {
@@ -154,10 +148,8 @@ const UNIT_MS = new Map([
 ])
 
 // s as exact ms: null unless s is <n><unit> and gives a whole number of ms below 2^53, so the number is exact. Only ms,
-// s,
-// m and h take a decimal point (1.5h): Mermaid's Day.js rounds a fractional d or w to whole days (matrix amendment),
-// and
-// the subset gives d and w none.
+// s, m and h take a decimal point (1.5h): Mermaid's Day.js rounds a fractional d or w to whole days (matrix amendment),
+// and the subset gives d and w none.
 export function parseDuration(s: string): number | null {
   const [, num = '', unit = ''] = /^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$/.exec(s) ?? []
   const n = parseDec(num)
@@ -171,8 +163,8 @@ export function parseDuration(s: string): number | null {
   return ms.d === 1n && Number.isSafeInteger(whole) ? whole : null
 }
 
-// The matrix's tick steps, ms: 1 5 10 50 100 500 ms; 1 5 15 30 s; 1 5 15 30 min; 1 3 6 12 h;
-// 1 2 7 14 30 90 180 365 730 1825 3650 7300 18250 36500 d.
+// The matrix's tick steps, ms: 1 5 10 50 100 500 ms; 1 5 15 30 s; 1 5 15 30 min; 1 3 6 12 h; 1 2 7 14 30 90 180 365 730
+// 1825 3650 7300 18250 36500 d.
 const STEPS = [
   1,
   5,
@@ -186,8 +178,8 @@ const STEPS = [
   ...[1, 2, 7, 14, 30, 90, 180, 365, 730, 1825, 3650, 7300, 18250, 36500].map((n) => n * 86_400_000),
 ]
 
-// The first step whose ticks, at cells ⌊w·k·step/m⌋ of a w-cell field spanning m ms, sit at least l + 1 cells apart,
-// so a label l cells wide fits between them: ⌊w·step/m⌋ ≥ l + 1, exact, as the matrix's cells are. Null when no step
+// The first step whose ticks, at cells ⌊w·k·step/m⌋ of a w-cell field spanning m ms, sit at least l + 1 cells apart, so
+// a label l cells wide fits between them: ⌊w·step/m⌋ ≥ l + 1, exact, as the matrix's cells are. Null when no step
 // qualifies, and then only t0 is labeled; null too when m or w is not an integer, since dec takes only integers.
 export function tickStep(m: number, w: number, l: number): number | null {
   if (!Number.isInteger(m) || !Number.isInteger(w)) {

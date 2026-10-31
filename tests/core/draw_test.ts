@@ -1,4 +1,4 @@
-// drawGraph (plan A §6, T18): a placed, routed graph drawn onto the canvas.
+// drawGraph: a placed, routed graph drawn onto the canvas.
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { CAPS } from '../../core/caps.ts'

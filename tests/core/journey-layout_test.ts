@@ -49,8 +49,8 @@ test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a se
 const bar = (e: number) => ('█'.repeat(Math.floor(e / 8)) + (e % 8 ? '▏▎▍▌▋▊▉'[(e % 8) - 1] : '')).padEnd(10)
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]
 // Tasks before the first section form a group with no header row, which takes s1, so the sections take s2, s3, …
-// (shared
-// rule 3); with no such tasks, the first section takes s1. Owners follow the task's index, and a section's its own.
+// (shared rule 3); with no such tasks, the first section takes s1. Owners follow the task's index, and a section's its
+// own.
 test('A4: tasks before the first section take s1 and shift each section ink by one; owners and bars follow the task index', () => {
   const d = X('journey\nA: 5: Me\nsection S\nB: 3: Me, Cat\nsection T\nC: 1: Cat', 80).drawing
   assert.deepEqual(text(d), [
@@ -82,8 +82,7 @@ test('A4: tasks before the first section take s1 and shift each section ink by o
   ])
 })
 // The ladder's drawings: wrap keeps names whole and breaks an actor list after a comma, which stays on its row;
-// oneActor
-// draws one actor a row and wraps the names. The bar and score sit on the task's first row.
+// oneActor draws one actor a row and wraps the names. The bar and score sit on the task's first row.
 test('A4.fit-ladder: wrap breaks actor lists after a comma; oneActor draws one actor a row and wraps names', () => {
   const head = ['My working day', 'Go to work']
   assert.deepEqual(text(X(DAY, 34).drawing), [
@@ -126,11 +125,8 @@ test('A4.fit-ladder: the ladder is natural, wrap, oneActor; any other step fails
   assert.deepEqual(journey.layout(m, 'tight', 80), { reason: 'step' })
 })
 // Matrix journey-reject-09, -10 and -11; a keyword in another case or starting a longer word, journey's own included,
-// which
-// Mermaid's case-insensitive lexer reads as that keyword (common rule 5); a score outside 1–5 or no plain decimal; a
-// %%,
-// which Mermaid's lexer reads as a comment though it is quoted, since journey has no strings (common rule 2); and text
-// that cannot be drawn.
+// which Mermaid's case-insensitive lexer reads as that keyword; a score outside 1–5 or no plain decimal; a %%, which
+// Mermaid's lexer reads as a comment though it is quoted, since journey has no strings; and text that cannot be drawn.
 test('A5.errors: actor lists, colons, keywords, scores, %% and characters outside the subset fall back', () => {
   for (const [body, why] of [
     ['A: 3:', 'syntax:3'],
@@ -171,8 +167,7 @@ test('A5.errors: another header, a second title, no task, an accDescr block left
   }
 })
 // Common rule 4: accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment
-// (matrix
-// journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
+// (matrix journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
 test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are skipped; a frontmatter title draws', () => {
   const rows = ['My day', 'Go', '  A ' + bar(48) + ' 3  Me']
   for (const src of [

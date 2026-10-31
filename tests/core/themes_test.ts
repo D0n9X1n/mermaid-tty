@@ -76,8 +76,8 @@ test('A7: palette() returns the named theme; any other name, inherited ones too,
   }
 })
 
-// WCAG 2 references: each channel alone on black, the 4.5:1 grey #767676 on white, and the sRGB knee
-// (a channel of 0x0A is on the linear segment, 0x0B on the curve).
+// WCAG 2 references: each channel alone on black, the 4.5:1 grey #767676 on white, and the sRGB knee (a channel of 0x0A
+// is on the linear segment, 0x0B on the curve).
 test('VR.in-ci: contrast is the WCAG 2 ratio, in either order', () => {
   const cases = [
     ['#FF0000', '#000000', '5.2520'],

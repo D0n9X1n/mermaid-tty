@@ -11,8 +11,7 @@ import type { GNode, NodeRow } from './model.ts'
 export type Size = { rows: number; cols: number }
 
 // lines' pieces, the widest plus extra wide, or word-too-wide when a word is wider than wrapAt. A line given as a
-// number is
-// one piece that wide.
+// number is one piece that wide.
 function size(lines: readonly (string | number)[], wrapAt: number | null, extra: number): Size | Fail {
   const widths: number[] = []
   for (const line of lines) {

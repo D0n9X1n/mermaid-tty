@@ -351,8 +351,7 @@ test('A2: a box label drops a leading CSS color: any of the 148 named colors in 
   ])
 })
 // Mermaid 12.2.0's parseBoxData takes the color from the label's first run of word characters (\w*), wherever it ends,
-// and
-// keeps the whole label as the title unless the browser reads that run as a color.
+// and keeps the whole label as the title unless the browser reads that run as a color.
 test('A2: a box label keeps a leading word that is not a CSS color, and drops one that is wherever the word ends', () => {
   const kept = [
     'Another Group',
@@ -368,8 +367,7 @@ test('A2: a box label keeps a leading word that is not a CSS color, and drops on
   assert.deepEqual(['Red-team', 'red,team', 'Aqua: x'].map(boxLabelOf), ['-team', ',team', ': x'])
 })
 // Beyond the named colors, a browser reads currentColor, the CSS-wide keywords and the system colors (Canvas,
-// Highlight,
-// Menu, …) as colors, each to its own support. Not in the plan: a box label led by one falls back.
+// Highlight, Menu, …) as colors, each to its own support. Not in the plan: a box label led by one falls back.
 test('A5.errors: a box label led by currentColor, a CSS-wide keyword or a system color fails box-color', () => {
   const bad = [
     'currentColor Team',
@@ -389,9 +387,8 @@ test('A5.errors: a box label led by currentColor, a CSS-wide keyword or a system
   )
 })
 // Mermaid takes a box's color from a lowercase rgb(, rgba(, hsl( or hsla( to the label's last ), and drops it only if
-// the
-// browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is dropped;
-// any other falls back.
+// the browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is
+// dropped; any other falls back.
 test('A2: a box label drops a leading rgb(), rgba(), hsl() or hsla() color in the strict subset, up to its ), with or without a space after', () => {
   const ok: [string, string][] = [
     ['rgb(1,2,3) Team', 'Team'],

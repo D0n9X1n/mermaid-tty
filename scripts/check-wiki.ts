@@ -1,7 +1,6 @@
-// B2 wiki rules on the GFM tree (D15c), ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity,
-// links) plus
-// B2's exact openers, page-name links only, per-unit language rules with no exemption, and the wiki grammar (D15b).
-// Exit 1 lists every failure.
+// B2 wiki rules on the GFM tree, ported from SonicTerm scripts/check-wiki.py (pairs, nesting, heading parity, links)
+// plus B2's exact openers, page-name links only, per-unit language rules with no exemption, and the wiki grammar. Exit
+// 1 lists every failure.
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -86,7 +85,7 @@ for (const [page, md] of pages) {
   for (const l of all(tree, 'link')) {
     if (!/^[A-Za-z0-9-]+$/.test(l.url!)) {
       continue
-    } // any other target is checked by grammarErrors (D15b)
+    } // any other target is checked by grammarErrors
 
     if (!pages.has(l.url!)) {
       errors.push(`${f}:${l.position!.start.line}: link target does not exist: ${l.url}`)

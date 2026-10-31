@@ -67,8 +67,8 @@ test('A6.command: setting the mode in force replies with the mode, not a change'
   expect(await reply($, 'diagram')).toBe('mermaid-tty: drawing diagrams')
 })
 
-// The test's own $ has no state noun; a hook beneath the plugins sees each state.get and
-// what the host answers, so the remount must read source back: a closure-held mode fails.
+// The test's own $ has no state noun; a hook beneath the plugins sees each state.get and what the host answers, so the
+// remount must read source back: a closure-held mode fails.
 test('A6.command: the mode is kept in $.state, so a remounted reply still shows source', async ($, on) => {
   const read: unknown[] = []
   echo(on)
@@ -92,8 +92,8 @@ test('A6.command: a bare run with args left out reports the mode', async ($: any
   expect((await $.command.run({ command: 'mermaid-tty' })).text).toBe('mermaid-tty mode: diagram')
 })
 
-// $.command.run passes args as given. Each non-string gets the usage and leaves the mode as it
-// was, checked from both modes; a run that rejects is recorded as its message.
+// $.command.run passes args as given. Each non-string gets the usage and leaves the mode as it was, checked from both
+// modes; a run that rejects is recorded as its message.
 test('A6.command: an argument that is not a string replies with the usage and keeps the mode', async ($, on) => {
   echo(on)
   const ui = await mount($)

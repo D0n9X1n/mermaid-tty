@@ -1,6 +1,5 @@
-// The flowchart diagram module (plan A §6, T19): its parser, and its fit ladder, the graph ladder (plan C T53). It
-// registers
-// itself on import, after registry.ts has run, so MODULES is initialized when register runs.
+// The flowchart diagram module: its parser, and its fit ladder, the graph ladder. It registers itself on import, after
+// registry.ts has run, so MODULES is initialized when register runs.
 import type { Step } from '../../fit.ts'
 import { drawAt, graphSteps } from '../../graph/ladder.ts'
 import type { Graph } from '../../graph/model.ts'

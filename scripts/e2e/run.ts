@@ -120,9 +120,8 @@ async function showDiagrams(s: Session): Promise<void> {
 
 // One run of one scenario, in a sandbox of its own: a temp HOME, config dir and cwd, the mock, and the seeded config.
 // Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp
-// leaves
-// a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the session's: the
-// seeds are merged into its files, and the session starts without --plugin-dir.
+// leaves a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the
+// session's: the seeds are merged into its files, and the session starts without --plugin-dir.
 async function runOne(
   claude: string,
   run: Run,
@@ -201,8 +200,7 @@ const SOURCE = splitFences(REPLY)
   .slice(0, 2)
   .flatMap((f) => (f.kind === 'mermaid' ? f.body.split('\n') : []))
 // The width the expected rows are drawn at: the session's (driver.ts's COLS). The replies' diagrams draw the same at
-// any
-// width from it down to well under it, so Claude Code's margins do not change them.
+// any width from it down to well under it, so Claude Code's margins do not change them.
 const DRAW_COLUMNS = 100
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
 const colorOf = (r: Run): ColorCheck => (r.theme === 'mono' ? 'none' : r.color)
@@ -284,8 +282,8 @@ async function sourceView(c: Ctx): Promise<string[]> {
   return [...problems, ...(await drawnScreen(c))]
 }
 
-// lead (D5): a reply that opens on its diagram draws it, not its source, and draws its bullet on no row of its own: no
-// row between the prompt line and the diagram's first row holds only the bullet.
+// lead: a reply that opens on its diagram draws it, not its source, and draws its bullet on no row of its own: no row
+// between the prompt line and the diagram's first row holds only the bullet.
 async function lead({ s, run }: Ctx): Promise<string[]> {
   await submit(s, 'lead')
   await s.waitFor(/After the diagram\./, 30000)
@@ -366,10 +364,9 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
   const screen = await s.waitFor(/Select content to copy|Copied/, 5000).catch(() => '')
   if (screen.includes('Select content to copy')) {
     // One entry at a time, each move seen on screen before the next press: on a slow ConPTY a fixed pause let the
-    // presses
-    // run past flowchart LR to "Always copy full response", which Enter then saved as a preference. The selection is
-    // read
-    // only below the picker's header; a move not seen, or a header gone, stops with Escape rather than a guessed Enter.
+    // presses run past flowchart LR to "Always copy full response", which Enter then saved as a preference. The
+    // selection is read only below the picker's header; a move not seen, or a header gone, stops with Escape rather
+    // than a guessed Enter.
     const at = (t: string) => {
       const h = t.lastIndexOf('Select content to copy')
       return h < 0 ? undefined : /❯\s+(.*?)\s*$/m.exec(t.slice(h))?.[1]

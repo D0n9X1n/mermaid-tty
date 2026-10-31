@@ -1,8 +1,7 @@
-// The sequence diagram module (plan A §6, T24): its parser, its fit ladder, and each step's layout at the given
-// columns.
-// One lifeline per participant, in declaration order, under a header of pills; then rows per statement. Frames draw
-// first, then lifelines, then lines, arrows, text and caps, so each layer replaces the one below it without a conflict.
-// It registers itself on import, after registry.ts has run, so MODULES is initialized when register runs.
+// The sequence diagram module: its parser, its fit ladder, and each step's layout at the given columns. One lifeline
+// per participant, in declaration order, under a header of pills; then rows per statement. Frames draw first, then
+// lifelines, then lines, arrows, text and caps, so each layer replaces the one below it without a conflict. It
+// registers itself on import, after registry.ts has run, so MODULES is initialized when register runs.
 import type { Canvas, Drawing } from '../../canvas.ts'
 import { createCanvas } from '../../canvas.ts'
 import { CAPS } from '../../caps.ts'
@@ -95,8 +94,7 @@ function drawPill(cv: Canvas, row: number, c: number, p: Participant): void {
 
 // Numbers each message, note and frame among its kind in source order, a frame before its contents, wraps each
 // message's and note's label, a message's after its autonumber, and finds each frame's run and each box's borders. A
-// Fail
-// for a box with no participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe
+// Fail for a box with no participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe
 // integer.
 function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (seq.boxes.some((b) => b.ids.length === 0)) {
@@ -177,8 +175,7 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
     return extent
   }
   // A box's borders stand 2 columns beyond its pills, and a blank column beyond the frame borders stacked at its ends,
-  // 2
-  // columns each; a one-member box's right one beyond its title too, as draw puts it.
+  // 2 columns each; a one-member box's right one beyond its title too, as draw puts it.
   const rb = pills.map(() => 0)
   const lb = pills.map(() => 0)
   for (const b of seq.boxes) {
@@ -245,15 +242,12 @@ function stretch(c: Ctx, f: number, t: number, cap: number): [Bound, Bound] {
 
 // Each lifeline's column. The gap between neighbours is the largest of their pill halves + 2, the widest label of a
 // message spanning only that gap + pad, 2 × the frame borders between them + 1, and, where a box border stands between
-// them, what stands each side of the gap (that box's border, or a pill half or 2 × the frame borders) + 2; a
-// message spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 +
-// its
-// width + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right
-// of a
+// them, what stands each side of the gap (that box's border, or a pill half or 2 × the frame borders) + 2; a message
+// spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 + its width
+// + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right of a
 // lifeline needs its box + 3 on that side; a message to a created participant needs the half of its pill facing the
 // sender too; a message crossing a box border needs its label's stretch to hold it + 2 blanks; a frame or box title
-// fits
-// between its borders.
+// fits between its borders.
 function measure(c: Ctx): number[] {
   const { pills, at, pad } = c
   const last = pills.length - 1

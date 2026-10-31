@@ -20,8 +20,7 @@ test('A5.errors: a trailing %% falls back; %% { is a comment', () => {
 // Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
 // merging them in order; a %%{wrap}%% sets wrap true after them; then cleanAndMerge lays the lot over the frontmatter
 // config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM. D reads with the
-// scanner;
-// which settings then draw is the config allowlist's (source-allow_test.ts).
+// scanner; which settings then draw is the config allowlist's (source-allow_test.ts).
 const D = (t: string) => scanSource(t) as Source
 test('A whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
   assert.deepEqual(D("%%{init: {'theme':'dark'}}%%\nflowchart TD\nA"), {
@@ -110,8 +109,8 @@ test('A1: the header is the first kept line, trimmed, with only a trailing ; rem
   })
 })
 // F1 (pie QA): Mermaid's TITLE terminal keeps a trailing ;, so `pie title Fruit;` is titled "Fruit;". Only A's headers,
-// whose
-// grammars take a ; as a statement end, lose it; every other header keeps it, so its own parser reads or rejects it.
+// whose grammars take a ; as a statement end, lose it; every other header keeps it, so its own parser reads or rejects
+// it.
 test('A1: a trailing ; is removed only from a flowchart, graph or sequenceDiagram header', () => {
   for (const [h, want] of [
     ['flowchart TD;', 'flowchart TD'],
@@ -225,8 +224,8 @@ test('A5.errors: a frontmatter title with an unsupported character fails unsuppo
   assert.equal((readSource('---\ntitle: 读取配置\n---\nflowchart TD\nA') as Source).title, '读取配置')
 })
 
-// T41b: config scalars are typed as Mermaid's frontmatter.ts reads them, with js-yaml's JSON_SCHEMA.
-// The value read for `config:` / `  a: <v>`, or the Fail.
+// T41b: config scalars are typed as Mermaid's frontmatter.ts reads them, with js-yaml's JSON_SCHEMA. The value read for
+// `config:` / ` a: <v>`, or the Fail.
 const one = (v: string) => {
   const s = scanSource(`---\nconfig:\n  a: ${v}\n---\ngitGraph\ncommit`)
   return 'reason' in s ? s : s.config['a']
@@ -358,9 +357,8 @@ test('A5.errors: any other numeric-looking plain config scalar fails config:<dot
   }
 })
 
-// T41b: the top-level title is one scalar, read by the same rules, and printed as Mermaid's
-// frontmatter.ts prints it: `if (parsed.title) metadata.title = parsed.title.toString()`.
-// The title read from `title: <v>`, or the Fail.
+// T41b: the top-level title is one scalar, read by the same rules, and printed as Mermaid's frontmatter.ts prints it:
+// `if (parsed.title) metadata.title = parsed.title.toString()`. The title read from `title: <v>`, or the Fail.
 const titled = (v: string) => {
   const s = readSource(`---\ntitle: ${v}\n---\nflowchart TD\nA`)
   return 'reason' in s ? s : s.title
@@ -433,8 +431,8 @@ test('A5.errors: a frontmatter title outside the strict YAML subset falls back a
   assert.deepEqual(readSource('---\ntitle:x\n---\nflowchart TD\nA'), { reason: 'frontmatter' })
 })
 
-// T41b: a title that js-yaml would read as another title falls back. The Source or
-// Fail read from frontmatter written one YAML line per argument.
+// T41b: a title that js-yaml would read as another title falls back. The Source or Fail read from frontmatter written
+// one YAML line per argument.
 const front = (...ls: string[]) => scanSource(`---\n${ls.join('\n')}\n---\nflowchart TD\nA`)
 
 test('A5.errors: a top-level title key with spaces or a tab before its colon falls back as title', () => {

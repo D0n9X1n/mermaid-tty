@@ -1,10 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readSource, scanSource, type Source } from '../../core/source.ts'
-// Source-reader fix cycle 1: frontmatter that Mermaid 12.2.0 reads otherwise is read as it reads it, or falls back.
-// The Source or Fail for frontmatter written one YAML line per argument, before `pie` / `"A" : 1`.
-// Read by the scanner, before readSource checks each setting against its allowlist, so that any key tests the YAML
-// subset.
+// Source-reader fix cycle 1: frontmatter that Mermaid 12.2.0 reads otherwise is read as it reads it, or falls back. The
+// Source or Fail for frontmatter written one YAML line per argument, before `pie` / `"A" : 1`. Read by the scanner,
+// before readSource checks each setting against its allowlist, so that any key tests the YAML subset.
 const fm = (...ls: string[]) => scanSource(`---\n${ls.join('\n')}\n---\npie\n"A" : 1`)
 const titleOf = (...ls: string[]) => {
   const s = fm(...ls)

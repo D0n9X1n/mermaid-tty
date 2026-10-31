@@ -2,9 +2,8 @@
 // renders every non-reject fixture of every fixtures/<type> folder but corpus to SVG at 80 and 60 columns under nord,
 // stacks A's CJK fixtures in cjk.svg and each Tier 1 type's in cjk-<type>.svg, puts A's two fixtures and each Tier 1
 // type's first ok fixture under all 6 themes in palettes.svg, and links them all from index.html. Every SVG is B's
-// toSvg
-// page, the README assets' serializer. It self-checks every SVG, with B's misplaced and with offGrid, which measures
-// columns on its own, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
+// toSvg page, the README assets' serializer. It self-checks every SVG, with B's misplaced and with offGrid, which
+// measures columns on its own, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

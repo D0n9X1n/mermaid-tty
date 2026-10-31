@@ -1,6 +1,5 @@
-// The cluster tree (plan A §7.3, §7.7): what holds each node and cluster, which clusters are sealed (no edge crosses
-// their
-// border) and a sealed cluster's subgraph.
+// The cluster tree: what holds each node and cluster, which clusters are sealed (no edge crosses their border) and a
+// sealed cluster's subgraph.
 import type { GCluster, Graph } from './model.ts'
 
 export type Tree = {

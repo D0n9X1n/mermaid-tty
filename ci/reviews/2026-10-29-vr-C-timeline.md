@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 33c5d38516e4904d3414692cb511493307f20b37492a2b7a079af3ac81f2dea2 |
+| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
 | goldens/timeline/timeline-ok-01.golden | 14393f7010f75a887285a5a0bcb7b4086b5c83d22d9fa38594127d9229650c6d |
 | goldens/timeline/timeline-ok-02.golden | a60fb9399424ceb2ddd8ec4feb7307f8c90916f41d9564005f6079f4b6dcc4e7 |
 | goldens/timeline/timeline-ok-03.golden | 11bce74b8aa6b3562614f016dcd8a8068fab46b2905b97d97c163b70048302ed |
@@ -25,4 +25,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Notes
 - PM inspected the rendered gallery (PNGs of the largest goldens at 80 columns, plus the CJK sheet): every label readable, not tangled, roles told apart, faithful to the source.
 - The cross-family reviewer (gpt-6-astra) read every timeline golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
-- 2026-10-31: core/themes.ts re-hashed after a formatting-only change (Prettier and braces). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.

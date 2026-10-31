@@ -1,11 +1,8 @@
 // A cell-level honesty fuzz. Each seeded graph the pipeline draws and the validator passes is read back from its cells
 // alone, by a checker that shares no code with core/validate.ts: (i) each edge's own cells form one simple path from
-// beside
-// its from node to its head or heads, (ii) where two edges that share no endpoint meet in a line cell, every edge there
-// runs
-// straight through it, (iii) every arrow cell is owned only by edges that end there, and (iv) lines that join imply no
-// edge
-// the source does not have.
+// beside its from node to its head or heads, (ii) where two edges that share no endpoint meet in a line cell, every
+// edge there runs straight through it, (iii) every arrow cell is owned only by edges that end there, and (iv) lines
+// that join imply no edge the source does not have.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { Cell, Drawing } from '../../core/canvas.ts'
@@ -32,10 +29,9 @@ function pick<T>(next: (n: number) => number, xs: readonly T[]): T {
 }
 
 // Graph i: TB, LR, BT or RL in turn, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a
-// back edge to the
-// parent or the root, a repeat of an earlier pair, or a self-loop. A quarter of the edges are labelled; some ends are
-// circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the graphs frame a run of
-// nodes.
+// back edge to the parent or the root, a repeat of an earlier pair, or a self-loop. A quarter of the edges are
+// labelled; some ends are circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the
+// graphs frame a run of nodes.
 function graphFor(i: number, next: (n: number) => number): Graph {
   const count = 2 + next(8)
   const name = (k: number) => `N${k}`
@@ -105,9 +101,8 @@ function graphFor(i: number, next: (n: number) => number): Graph {
 }
 
 // The pipeline at explain's natural step, rankGap 3, nodeGap 4 and no wrap, on a grid wide enough that no row fails;
-// null
-// if it cannot draw. Retrying a route conflict wider, as A1 does, would cost more time than it adds drawings. finish is
-// drawGraph's, compact unless given.
+// null if it cannot draw. Retrying a route conflict wider, as A1 does, would cost more time than it adds drawings.
+// finish is drawGraph's, compact unless given.
 function drawn(graph: Graph, finish?: (d: Drawing) => Drawing): Drawing | null {
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
   if ('reason' in p) {
@@ -143,12 +138,9 @@ function kindOf(ch: string): End {
 }
 
 // e's cells as a graph. A vertex is a line or arrow cell of e. A link joins two lines of e whose dirs point at each
-// other,
-// or a line of e and an arrow of e it points at, next to each other or across e's own label, which a route runs
-// straight
-// through. An end is a line's arm into a cell of e's from or to node, F, T or FT, or an arrow's point at one; o and x
-// point
-// at whichever side touches one. A side is an index into SIDES, or -1 on an arrow, which has no dirs.
+// other, or a line of e and an arrow of e it points at, next to each other or across e's own label, which a route runs
+// straight through. An end is a line's arm into a cell of e's from or to node, F, T or FT, or an arrow's point at one;
+// o and x point at whichever side touches one. A side is an index into SIDES, or -1 on an arrow, which has no dirs.
 type Vertex = { arrow: string | null; links: { to: string; side: number }[]; ends: { at: string; side: number }[] }
 function graphOf(d: Drawing, e: Src, mine: readonly Spot[]): Map<string, Vertex> {
   const key = (r: number, c: number) => `${r},${c}`
@@ -207,10 +199,8 @@ function graphOf(d: Drawing, e: Src, mine: readonly Spot[]): Map<string, Vertex>
 }
 
 // One simple path through all of e's vertices: from e's from node, through its tail glyph if it has one, to its to
-// node,
-// through its head glyph if it has one, with arrows only at its ends. Each vertex's sides on it as dirs bits, or null
-// if
-// there is none. A shared cell's dirs may hold arms of other edges, so the search tries each way on.
+// node, through its head glyph if it has one, with arrows only at its ends. Each vertex's sides on it as dirs bits, or
+// null if there is none. A shared cell's dirs may hold arms of other edges, so the search tries each way on.
 function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number> | null {
   const bit = (s: number) => (s >= 0 ? SIDES[s]![0] : 0)
   const fits = (v: Vertex, end: End, at: string) =>
@@ -362,10 +352,9 @@ function falsePairs(
 }
 
 // Each way d's cells mislead about src's edges: (i) an edge that is not one simple path between its ends, (ii) an edge
-// that
-// turns in a line cell where two unrelated edges meet, (iii) an arrow cell owned by an edge that does not end there,
-// (iv) a
-// merged line that seems to draw an edge src does not have, (v) an edge between nodes of one frame that leaves it.
+// that turns in a line cell where two unrelated edges meet, (iii) an arrow cell owned by an edge that does not end
+// there, (iv) a merged line that seems to draw an edge src does not have, (v) an edge between nodes of one frame that
+// leaves it.
 function honesty(d: Drawing, src: readonly Src[]): string[] {
   const byId = new Map(src.map((e) => [e.id, e]))
   const cells = new Map(src.map((e) => [e.id, [] as Spot[]]))
@@ -423,8 +412,7 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
 
   out.push(...falsePairs(src, cells, paths))
   // (v): a frame's box, from its own frame cells, holds a node when every cell owned by the node is strictly inside it;
-  // an
-  // edge between two nodes one frame holds draws no line or arrow cell on that frame's border or past it.
+  // an edge between two nodes one frame holds draws no line or arrow cell on that frame's border or past it.
   for (const f of d.expect.frames) {
     const own: [number, number][] = []
     const drawnFor = (id: string) => {
@@ -464,9 +452,8 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
 }
 
 // 1,500 seeded graphs. Each the pipeline draws and the validator passes must read honestly from its cells. implied
-// counts
-// the ones that seem to draw an edge the source does not have, (iv); the floor of validated drawings keeps the check
-// meaningful.
+// counts the ones that seem to draw an edge the source does not have, (iv); the floor of validated drawings keeps the
+// check meaningful.
 test('A1: every seeded drawing the validator passes reads honestly from its cells', async (t) => {
   const next = random(0x5eed2)
   const bad: string[] = []
@@ -523,8 +510,7 @@ test('A1: every seeded drawing the validator passes reads honestly from its cell
 
 // Compaction (Q2a) changes no verdict but width. On a grid wide enough that no row fails, each seeded drawing validates
 // compacted exactly when it validates at layout coordinates, for the same reason. At 40 columns, where many are too
-// wide,
-// compaction may fit one that failed only for width, and never breaks or passes any other.
+// wide, compaction may fit one that failed only for width, and never breaks or passes any other.
 test("A1: Q2a compaction keeps every seeded drawing's verdict but width", (t) => {
   const next = random(0xc0a1a)
   const bad: string[] = []
@@ -554,7 +540,6 @@ test("A1: Q2a compaction keeps every seeded drawing's verdict but width", (t) =>
   t.diagnostic(`drawn ${count}, fitted at 40 columns by compaction ${fitted}, other verdicts changed ${bad.length}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} verdicts changed`)
   // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back (V6); V8 draws a back
-  // edge
-  // between nodes of one open frame inside it, 1002 drawn.
+  // edge between nodes of one open frame inside it, 1002 drawn.
   assert.ok(count >= 1000 && fitted > 0, `drawn ${count}, fitted ${fitted}`)
 })

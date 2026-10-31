@@ -1,8 +1,7 @@
 // A node:test reporter for check.ts's @nt: one JSON line per real test that passed, the names of its suites and parent
 // tests, outermost first, then its own name. Not a real test: a suite, a skip, a todo, an expected failure, which
-// passes
-// when its function throws, or the record that node reports, named by the file's path, for a test file that reported no
-// test of its own.
+// passes when its function throws, or the record that node reports, named by the file's path, for a test file that
+// reported no test of its own.
 import { resolve } from 'node:path'
 
 type TestEvent = {
@@ -19,8 +18,8 @@ type TestEvent = {
 }
 
 export default async function* passedTests(events: AsyncIterable<TestEvent>): AsyncGenerator<string> {
-  // node reports one file at a time, and each test's start after its parents' starts and
-  // before its result, so names[0..nesting-1] then hold the passing test's ancestors.
+  // node reports one file at a time, and each test's start after its parents' starts and before its result, so
+  // names[0..nesting-1] then hold the passing test's ancestors.
   const names: string[] = []
   for await (const { type, data } of events) {
     if (type === 'test:start') {

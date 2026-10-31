@@ -1,7 +1,6 @@
 // scripts/lib/tangle.ts — the independent tangle check (VR.tangled): a second reviewer over each golden. It looks for a
 // drawing that passes core/validate.ts but would confuse a reader. It reads only the drawing's cells and expect, and
-// shares
-// no logic with the validator, so one bug cannot hide in both.
+// shares no logic with the validator, so one bug cannot hide in both.
 import type { Cell, Drawing } from '../../core/canvas.ts'
 
 export type Rule = 'through-node' | 'shared-segment' | 'ambiguous-head' | 'label-detached'
@@ -11,8 +10,7 @@ const cellAt = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c
 const ownedBy = (x: Cell | null, id: string): boolean => x?.owners.includes(id) ?? false
 
 // The nodes: label owners that are neither an edge label nor a frame. A frame owns a frame cell, or a line cell drawn
-// for
-// no edge: a sequence frame's divider.
+// for no edge: a sequence frame's divider.
 function nodes(d: Drawing, all: readonly Drawn[]): string[] {
   const edges = new Set(d.expect.edges.map((e) => e.id))
   const frames = new Set(
@@ -54,9 +52,8 @@ const marks = (d: Drawing): Set<string> => new Set((d.expect.rows ?? []).map((x)
 const isLine = (x: Cell | null): boolean => x?.kind === 'line'
 
 // The commit a fork's corner at (r, c) starts from: along its side arm to the tee on the parent's lane, then back up
-// that
-// lane, against the corner's forward arm, to the first cap's mark. None if the corner has no such arms or no cap is
-// there.
+// that lane, against the corner's forward arm, to the first cap's mark. None if the corner has no such arms or no cap
+// is there.
 function fork(d: Drawing, r: number, c: number): string[] {
   const x = cellAt(d, r, c)!
   const side = x.dirs & 10
@@ -94,8 +91,7 @@ const rowMarks = (d: Drawing, y: number): string[] =>
   )
 
 // The commits lane run o through (r, c) connects: up and down its column while the cells are o's, to the cap that ends
-// it
-// or, where it stops open (a lane's tail, or its start at a fork corner), to the row it stops in.
+// it or, where it stops open (a lane's tail, or its start at a fork corner), to the row it stops in.
 function laneEnds(d: Drawing, r: number, c: number, o: string): string[] {
   return [-1, 1].flatMap((dr) => {
     let y = r

@@ -1,5 +1,5 @@
-// The search router: each edge in turn tries its candidate port slots and searches a path between them around
-// what is already placed. The fallback when the channel router fails, and the router for edges beside reserved lanes.
+// The search router: each edge in turn tries its candidate port slots and searches a path between them around what is
+// already placed. The fallback when the channel router fails, and the router for edges beside reserved lanes.
 import { fail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
 import { width } from '../width.ts'
