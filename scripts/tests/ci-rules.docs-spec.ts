@@ -15,7 +15,9 @@ const CI = 'on:\n  pull_request:\n  push:\npermissions:\n  contents: read\nconcu
   `  e2e:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - if: runner.os == 'Linux'\n        run: sudo apt-get update && sudo apt-get install -y tmux\n      - if: runner.os == 'macOS'\n        run: brew install tmux\n      - id: e2e-tooling\n        run: npm ci --prefix scripts/e2e\n      - id: e2e\n        env:\n          LC_ALL: \${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}\n        run: node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all\n` +
   `  gallery:\n    runs-on: ubuntu-latest\n    steps:\n      - id: gallery\n        run: node scripts/render-gallery.ts gallery\n${PIN('upload-artifact', 'v7.0.2')}`;
 const REL = "on:\n  push:\n    tags: ['v*']\npermissions:\n  contents: read\njobs:\n  release:\n    permissions:\n      contents: write\n      actions: read\n    steps:\n" + PIN('checkout', 'v7.0.1') +
-  '      - id: release-tag\n        run: node scripts/check-release.ts tag "$GITHUB_REF_NAME"\n      - id: release-notes-published\n        run: gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -\n' +
+  '        with:\n          fetch-depth: 0\n          fetch-tags: true\n' +
+  '      - id: release-tag\n        run: node scripts/check-release.ts tag "$GITHUB_REF_NAME"\n' +
+  '      - id: release-notes\n        run: python3 scripts/release-notes.py "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"\n      - id: release-notes-published\n        run: gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -\n' +
   '      - id: release-wiki-run\n        run: |\n          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-wiki.yml/runs?branch=main&head_sha=${GITHUB_SHA}&per_page=1" -q \'.workflow_runs[0].conclusion\')"\n          test "$conclusion" = success\n' +
   '      - id: release-install\n        run: claude plugin marketplace add D0n9X1n/mermaid-tty\n      - id: release-e2e\n        run: node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.308 --scenario all\n';
 test('complete CI and release fixtures pass', () => assert.deepEqual([ciErrors(CI), releaseErrors(REL)], [[], []]));
@@ -44,6 +46,8 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [ciErrors, CI, 'contents: read', 'contents: read\n  actions: write', 'read-only workflow token'],
   [releaseErrors, REL, 'contents: read', 'contents: write', 'read-only workflow token'],
   [releaseErrors, REL, 'scripts/check-release.ts tag', 'scripts/other.ts tag', 'tag check'],
+  [releaseErrors, REL, 'python3 scripts/release-notes.py', 'cat docs/release-notes/v1.md #', 'notes generated'],
+  [releaseErrors, REL, '          fetch-depth: 0\n', '', 'full history'],
   [releaseErrors, REL, '| node scripts/check-release.ts notes -', '', 'notes check on the published release'],
   [releaseErrors, REL, 'marketplace add D0n9X1n/mermaid-tty', 'marketplace add ./', 'GitHub marketplace install'],
   [releaseErrors, REL, 'head_sha=${GITHUB_SHA}', 'head_sha=other', 'publish-wiki run for the tagged commit'],

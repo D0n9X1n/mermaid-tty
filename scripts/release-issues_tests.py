@@ -1,0 +1,757 @@
+#!/usr/bin/env python3
+# Origin: D0n9X1n/SonicTerm scripts/release-issues_tests.py; see LICENSE-SonicTerm.
+"""Offline release provenance tests use real Git histories and a fake gh process."""
+import errno
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent
+SPEC = importlib.util.spec_from_file_location("release_issues", ROOT / "release-issues.py")
+release = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = release
+SPEC.loader.exec_module(release)
+
+# The transport is a real child process: malformed output, exit status, and pagination
+# exercise the same bounded gh boundary as production rather than mocking its parser.
+FAKE_GH = r'''
+import json, os, pathlib, sys, time
+args = sys.argv[1:]
+fixture = json.loads(pathlib.Path(os.environ["FAKE_GH_FIXTURE"]).read_text())
+fields = {}
+for i, arg in enumerate(args):
+    if arg in ("-f", "-F"):
+        key, value = args[i+1].split("=", 1)
+        fields[key] = value
+endpoint = args[1]
+if endpoint == "graphql":
+    kind = "pr" if "ReleasePullRequest" in fields["query"] else "issue"
+    key = kind + ":" + fields["owner"] + "/" + fields["name"] + ":" + fields["number"] + ":" + fields.get("cursor", "")
+else:
+    key = endpoint
+log = pathlib.Path(os.environ["FAKE_GH_LOG"])
+prior = log.read_text().splitlines() if log.exists() else []
+with log.open("a") as out:
+    out.write(key + "\n")
+response = fixture.get(key, {"status": 404, "body": {"message":"missing fixture " + key}})
+if isinstance(response, list):
+    response = response[min(prior.count(key), len(response)-1)]
+if response.get("sleep"):
+    time.sleep(response["sleep"])
+if "raw" in response:
+    print(response["raw"])
+else:
+    status = response.get("status", 200)
+    print("HTTP/2.0", status)
+    if response.get("next"):
+        print('Link: <https://api.github.com/next>; rel="next"')
+    print()
+    print(json.dumps(response.get("body")))
+sys.exit(response.get("exit", int(response.get("status", 200) >= 400)))
+'''
+
+
+def connection(nodes, cursor=None):
+    return {"nodes": nodes, "pageInfo": {"hasNextPage": cursor is not None, "endCursor": cursor}}
+
+
+def commit_closer(sha, repo="owner/repo"):
+    return {"__typename": "Commit", "oid": sha, "repository": {"nameWithOwner": repo}}
+
+
+def pr_closer(number, sha, repo="owner/repo"):
+    return {"__typename": "PullRequest", "number": number, "merged": True,
+            "mergeCommit": {"oid": sha}, "repository": {"nameWithOwner": repo}}
+
+
+class ProvenanceTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="release-issues-")
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name)
+        config = self.path / "empty-git-config"
+        config.write_text("", encoding="utf-8")
+        isolated_git = patch.dict(os.environ, GIT_CONFIG_GLOBAL=str(config), GIT_CONFIG_NOSYSTEM="1")
+        isolated_git.start()
+        self.addCleanup(isolated_git.stop)
+        self.git("init", "-q")
+        self.base = self.commit("initial")
+        self.fixture = {}
+        self.fake = self.path / "fake_gh.py"
+        self.fake.write_text(FAKE_GH)
+        self.fixture_path = self.path / "fixture.json"
+        self.log = self.path / "gh.log"
+        self.env = {"FAKE_GH_FIXTURE": str(self.fixture_path), "FAKE_GH_LOG": str(self.log)}
+        self.old = {key: os.environ.get(key) for key in self.env}
+        os.environ.update(self.env)
+        self.addCleanup(self.restore_env)
+
+    def restore_env(self):
+        for key, value in self.old.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def git(self, *args):
+        env = dict(os.environ, GIT_AUTHOR_NAME="Test", GIT_AUTHOR_EMAIL="test@example.invalid",
+                   GIT_COMMITTER_NAME="Test", GIT_COMMITTER_EMAIL="test@example.invalid")
+        return subprocess.check_output(["git", *args], cwd=self.path, env=env, text=True).strip()
+
+    def commit(self, message):
+        self.git("commit", "--allow-empty", "-qm", message)
+        return self.git("rev-parse", "HEAD")
+
+    def association(self, sha, numbers=(), page=1, next_page=False):
+        self.fixture[f"repos/owner/repo/commits/{sha}/pulls?per_page=100&page={page}"] = {
+            "body": [{"number": n} for n in numbers], "next": next_page}
+
+    def pr(self, number, sha, issues, cursor="", next_cursor=None, merged=True, title=None):
+        self.fixture[f"pr:owner/repo:{number}:{cursor}"] = {"body": {"data": {"repository": {
+            "pullRequest": {"number": number, "title": title or f"PR {number}", "merged": merged, "mergeCommit": {"oid": sha},
+                            "repository": {"nameWithOwner": "owner/repo"},
+                            "closingIssuesReferences": connection([
+                                {"number": n, "repository": {"nameWithOwner": "owner/repo"}}
+                                for n in issues], next_cursor)}}}}}
+
+    def issue(self, number, closers, title=None, cursor="", next_cursor=None, typename="Issue"):
+        self.fixture[f"issue:owner/repo:{number}:{cursor}"] = {"body": {"data": {"repository": {
+            "issueOrPullRequest": {"__typename": typename, "number": number,
+                "title": title or f"Issue {number}", "repository": {"nameWithOwner": "owner/repo"},
+                "timelineItems": connection([{"__typename": "ClosedEvent", "closer": c} for c in closers], next_cursor)}}}}}
+
+    def collect(self, head=None, base=None, limits=None, shipped=None):
+        self.fixture_path.write_text(json.dumps(self.fixture))
+        api = release.Api(command=[sys.executable, str(self.fake)], limits=limits)
+        return release.collect("owner/repo", head or self.git("rev-parse", "HEAD"),
+                               self.base if base is None else base, api=api, cwd=self.path, shipped=shipped)
+
+    def test_merge_multiple_dedup_and_graphql_closer(self):
+        # Merge commits, not just displayed nonmerge subjects, carry shipped closure.
+        self.git("checkout", "-qb", "topic")
+        feature = self.commit("fix: feature")
+        self.git("checkout", "-q", "-")
+        self.commit("main advance")
+        self.git("merge", "--no-ff", "-qm", "merge", "topic")
+        head = self.git("rev-parse", "HEAD")
+        for sha in self.git("rev-list", f"{self.base}..{head}").splitlines():
+            self.association(sha, [1342])
+        self.pr(1342, head, [1339, 1340, 1341])
+        for n in (1339, 1340, 1341):
+            self.issue(n, [pr_closer(1342, head)])
+        notes = self.collect()
+        for n in (1339, 1340, 1341):
+            self.assertEqual(notes.count(f"[#{n}]"), 1)
+        self.assertIn("/owner/repo/issues/1339", notes)
+        self.assertEqual(self.log.read_text().splitlines().count("pr:owner/repo:1342:"), 1)
+        self.assertIn(feature, self.git("rev-list", head))
+
+    def test_squash_and_rebase(self):
+        # Actual squash/rebase histories close through mergeCommit, not old topic SHAs.
+        main_branch = self.git("branch", "--show-current")
+        for mode in ("squash", "rebase"):
+            with self.subTest(mode=mode):
+                boundary = self.git("rev-parse", "HEAD")
+                self.git("checkout", "-qb", mode)
+                self.commit(f"{mode} part one")
+                self.commit(f"{mode} part two")
+                self.git("checkout", "-q", main_branch)
+                if mode == "squash":
+                    self.git("merge", "--squash", mode)
+                    last = self.commit("squashed feature")
+                else:
+                    self.commit("advance main")
+                    self.git("checkout", "-q", mode)
+                    self.git("rebase", "--empty=keep", main_branch)
+                    self.git("checkout", "-q", main_branch)
+                    self.git("merge", "--ff-only", mode)
+                    last = self.git("rev-parse", "HEAD")
+                for sha in self.git("rev-list", f"{boundary}..{last}").splitlines():
+                    self.association(sha, [42])
+                self.pr(42, last, [7])
+                self.issue(7, [pr_closer(42, last)])
+                self.assertIn("[#7]", self.collect(base=boundary))
+
+    def test_direct_keywords_mentions_identity_and_prior(self):
+        # A keyword nominates a candidate; only a same-range closing event proves it.
+        head = self.commit("Fixes #1, closes #2; resolves owner/repo#3\nRefs #4\nCloses #5\nFixes #6")
+        self.association(head)
+        self.issue(1, [commit_closer(head)])
+        self.issue(2, [commit_closer(head)])
+        self.issue(3, [commit_closer(head)])
+        self.issue(5, [], typename="PullRequest")
+        self.issue(6, [commit_closer(self.base)])
+        notes = self.collect()
+        for n in (1, 2, 3):
+            self.assertIn(f"[#{n}]", notes)
+        for n in (4, 5, 6):
+            self.assertNotIn(f"[#{n}]", notes)
+
+    def test_pr_merges_outside_range_and_prior_reclosures_are_not_new(self):
+        # An association is only a hint, including later merges and repeated closures.
+        head = self.commit("Fixes #1")
+        self.association(head, [42, 43])
+        self.pr(42, self.base, [2])
+        self.pr(43, "f" * 40, [3])
+        self.issue(1, [commit_closer(self.base), commit_closer(head)])
+        self.assertIn("No linked issues", self.collect())
+        log = self.log.read_text()
+        self.assertNotIn("issue:owner/repo:2:", log)
+        self.assertNotIn("issue:owner/repo:3:", log)
+
+    def test_mutable_pr_links_do_not_prove_closure(self):
+        # Editing a merged PR's links or closing an issue later cannot backdate a fix.
+        head = self.commit("fix")
+        self.association(head, [42])
+        self.pr(42, head, [1, 2])
+        self.issue(1, [commit_closer(self.base)])
+        self.issue(2, [commit_closer("f" * 40)])
+        self.assertIn("No linked issues", self.collect())
+
+    def test_canonical_revert_and_revert_of_revert(self):
+        # Canonical Git markers cancel fixes; reversing that revert restores them.
+        fix = self.commit("Fixes #1")
+        revert = self.commit(f'Revert "fix"\n\nThis reverts commit {fix}.')
+        self.association(fix)
+        self.association(revert)
+        self.issue(1, [commit_closer(fix)])
+        self.assertIn("No linked issues", self.collect())
+        restore = self.commit(f'Revert "revert"\n\nThis reverts commit {revert}.')
+        self.association(restore)
+        self.assertIn("[#1]", self.collect())
+
+    def test_merge_revert_cancels_introduced_commits(self):
+        # Reverting a merge also removes direct-closing commits introduced by it.
+        self.git("checkout", "-qb", "topic")
+        fix = self.commit("Fixes #1")
+        self.git("checkout", "-q", "-")
+        self.git("merge", "--no-ff", "-qm", "merge", "topic")
+        merge = self.git("rev-parse", "HEAD")
+        revert = self.commit(f"revert merge\n\nThis reverts commit {merge}, reversing\nchanges made to {self.base}.")
+        for sha in (fix, merge, revert):
+            self.association(sha)
+        self.issue(1, [commit_closer(fix)])
+        self.assertIn("No linked issues", self.collect())
+
+    def test_merge_revert_uses_recorded_mainline(self):
+        # Git's reversing marker names the retained parent; it need not be parent one.
+        fix = self.commit("Fixes #1")
+        self.git("checkout", "-qb", "side", self.base)
+        side = self.commit("side change")
+        self.git("checkout", "-q", "-")
+        self.git("merge", "--no-ff", "-qm", "merge", "side")
+        merge = self.git("rev-parse", "HEAD")
+        revert = self.commit(f"undo merge\n\nThis reverts commit {merge}, reversing\nchanges made to {side}.")
+        for sha in (fix, side, merge, revert):
+            self.association(sha)
+        self.issue(1, [commit_closer(fix)])
+        self.assertIn("No linked issues", self.collect())
+
+    def test_two_reverts_of_one_commit_keep_it_reverted(self):
+        # Reverting a commit, then the merge that brought it in, undoes it twice; it stays undone.
+        self.git("checkout", "-qb", "topic")
+        first = self.commit("Fixes #1")
+        second = self.commit("Fixes #2")
+        self.git("checkout", "-q", "-")
+        self.git("merge", "--no-ff", "-qm", "merge", "topic")
+        merge = self.git("rev-parse", "HEAD")
+        undo_first = self.commit(f"undo first\n\nThis reverts commit {first}.")
+        undo_merge = self.commit(f"undo merge\n\nThis reverts commit {merge}, reversing\nchanges made to {self.base}.")
+        for sha in (first, second, merge, undo_first, undo_merge):
+            self.association(sha)
+        self.issue(1, [commit_closer(first)])
+        self.issue(2, [commit_closer(second)])
+        self.assertIn("No linked issues", self.collect())
+
+    def test_a_failing_ancestry_lookup_stops_instead_of_reading_as_no(self):
+        # Only exit 1 means "not an ancestor"; any other Git failure leaves provenance unknown.
+        fix = self.commit("Fixes #1")
+        self.association(fix)
+        self.issue(1, [commit_closer(fix)])
+        real = release.capture
+
+        def broken(command, *args, **kwargs):
+            if command[1:3] == ["merge-base", "--is-ancestor"]:
+                return 128, "", "fatal: bad object"
+            return real(command, *args, **kwargs)
+
+        with patch.object(release, "capture", side_effect=broken):
+            with self.assertRaisesRegex(release.Failure, "ancestry"):
+                self.collect()
+
+    def test_a_failing_object_lookup_stops_instead_of_reading_as_missing(self):
+        # A prior closure Git fails to read would let an already shipped issue be listed again.
+        shipped = self.base
+        fix = self.commit("Fixes #1")
+        self.association(fix)
+        self.issue(1, [commit_closer(shipped), commit_closer(fix)])
+        self.assertIn("No linked issues", self.collect())
+        real = release.capture
+
+        def broken(command, *args, **kwargs):
+            if "--quiet" in command and command[-1] == f"{shipped}^{{commit}}":
+                return 128, "", "fatal: unable to read object: Input/output error"
+            return real(command, *args, **kwargs)
+
+        with patch.object(release, "capture", side_effect=broken):
+            with self.assertRaisesRegex(release.Failure, "ancestry"):
+                self.collect()
+
+    def test_partial_pr_revert_is_not_reported_as_shipped(self):
+        # Reverting a rebased constituent must not leave the PR's final SHA claiming its fix.
+        first = self.commit("feature first")
+        last = self.commit("feature last")
+        revert = self.commit(f"undo first\n\nThis reverts commit {first}.")
+        self.association(first, [42])
+        self.association(last, [42])
+        self.association(revert)
+        self.pr(42, last, [1])
+        self.issue(1, [pr_closer(42, last)])
+        self.assertIn("No linked issues", self.collect())
+
+    def test_pulls_lists_merged_pull_requests_whose_merge_commit_ships(self):
+        # A merged PR whose merge commit is active ships; unmerged, out-of-range and reverted ones do not.
+        shipped = self.commit("shipped feature")
+        unmerged = self.commit("unmerged work")
+        undone = self.commit("undone feature")
+        revert = self.commit(f"undo\n\nThis reverts commit {undone}.")
+        self.association(shipped, [1])
+        self.association(unmerged, [2])
+        self.association(undone, [3])
+        self.association(revert)
+        self.pr(1, shipped, [], title="Draw the thing")
+        self.pr(2, unmerged, [], merged=False)
+        self.pr(3, undone, [])
+        shipped = {}
+        self.collect(shipped=shipped)
+        self.assertEqual(shipped, {1: "Draw the thing"})
+
+    def test_semantic_revert_is_not_inferred(self):
+        # A prose-only revert title cannot identify which change was undone.
+        fix = self.commit("Fixes #1")
+        head = self.commit("Revert the thing because it broke")
+        self.association(fix)
+        self.association(head)
+        self.issue(1, [commit_closer(fix)])
+        self.assertIn("[#1]", self.collect())
+
+    def test_first_release_and_empty_associations(self):
+        # First-release selection includes every ancestor, without a 200-commit cutoff.
+        self.association(self.base)
+        self.assertIn("No linked issues", self.collect(base=""))
+
+    def test_pagination_all_connections_and_hostile_titles(self):
+        # All three connections page explicitly; titles never become links or shell code.
+        head = self.commit("fix")
+        self.association(head, [], next_page=True)
+        self.association(head, [42], page=2)
+        self.pr(42, head, [], next_cursor="next")
+        self.pr(42, head, [1], cursor="next")
+        title = '[evil](https://bad.invalid) `$(touch PWNED)` <img>\n## injected & \\ |'
+        self.issue(1, [], title, next_cursor="later")
+        self.issue(1, [pr_closer(42, head)], title, cursor="later")
+        notes = self.collect()
+        self.assertIn("[#1]", notes)
+        self.assertNotIn("[evil](", notes)
+        self.assertNotIn("<img>", notes)
+        self.assertNotIn("\n## injected", notes)
+        self.assertFalse((self.path / "PWNED").exists())
+        self.assertEqual(len(self.log.read_text().splitlines()), 6)
+
+    def test_manual_closure_is_disclosed_separately_within_release_dates(self):
+        # A human close is date-bounded disclosure, never commit-linked resolution proof.
+        with patch.dict(os.environ, GIT_COMMITTER_DATE="2026-09-01T00:00:00Z"):
+            base = self.commit("release boundary")
+        with patch.dict(os.environ, GIT_COMMITTER_DATE="2026-09-10T00:00:00Z"):
+            head = self.commit("Fixes #1, closes #2, closes #3, closes #4")
+        self.association(head)
+        for n, date in [(1, "2026-09-05T00:00:00Z"), (2, "2026-08-31T00:00:00Z"),
+                        (3, "2026-09-11T00:00:00Z")]:
+            self.issue(n, [None], title="Manual [closure]")
+            item = self.fixture[f"issue:owner/repo:{n}:"]["body"]["data"]["repository"]["issueOrPullRequest"]
+            item.update(state="CLOSED", closedAt=date)
+            item["timelineItems"]["nodes"][0]["createdAt"] = date
+        self.issue(4, [commit_closer(head)])
+        notes = self.collect(head=head, base=base)
+        verified, disclosed = notes.split("## Manually closed issues (unverified release linkage)")
+        self.assertIn("[#4]", verified)
+        self.assertNotIn("[#1]", verified)
+        self.assertIn("[#1]", disclosed)
+        self.assertIn("2026-09-05T00:00:00Z", disclosed)
+        self.assertIn(r"Manual \[closure\]", disclosed)
+        self.assertNotIn("[#2]", notes)
+        self.assertNotIn("[#3]", notes)
+
+    def test_manual_closure_needs_valid_metadata_and_current_closed_event(self):
+        # Missing dates remain errors; reopened, prior-shipped, or non-current manual closures are not new disclosures.
+        head = self.commit("Fixes #1")
+        self.association(head)
+        date = self.git("show", "-s", "--format=%cI", head)
+        self.association(self.base)
+        for state, closed, event_date, expected in [
+            ("OPEN", None, date, False),
+            ("CLOSED", date, "2000-01-01T00:00:00Z", False),
+            ("CLOSED", date, date, True),
+        ]:
+            self.issue(1, [None])
+            item = self.fixture["issue:owner/repo:1:"]["body"]["data"]["repository"]["issueOrPullRequest"]
+            item.update(state=state, closedAt=closed)
+            item["timelineItems"]["nodes"][0]["createdAt"] = event_date
+            self.assertEqual("[#1]" in self.collect(base=""), expected)
+        self.issue(1, [commit_closer(self.base), None])
+        item = self.fixture["issue:owner/repo:1:"]["body"]["data"]["repository"]["issueOrPullRequest"]
+        item.update(state="CLOSED", closedAt=date)
+        item["timelineItems"]["nodes"][-1]["createdAt"] = date
+        self.assertNotIn("[#1]", self.collect())
+        for invalid in [None, "not-a-date", "2026-09-05T00:00:00"]:
+            item["closedAt"] = invalid
+            with self.assertRaises(release.Failure):
+                self.collect()
+
+    def test_manual_closure_timestamp_precision_and_ambiguity(self):
+        # GitHub can stamp closedAt one second before the event, but multiple matches are ambiguous.
+        with patch.dict(os.environ, GIT_COMMITTER_DATE="2026-09-10T00:00:00Z"):
+            head = self.commit("Fixes #1")
+        self.association(head)
+        self.association(self.base)
+        self.issue(1, [None])
+        item = self.fixture["issue:owner/repo:1:"]["body"]["data"]["repository"]["issueOrPullRequest"]
+        item.update(state="CLOSED", closedAt="2026-09-05T00:00:00Z")
+        events = item["timelineItems"]["nodes"]
+        events[0]["createdAt"] = "2026-09-05T00:00:01Z"
+        self.assertIn("[#1]", self.collect(base=""))
+        events.append(dict(events[0]))
+        with self.assertRaisesRegex(release.Failure, "ambiguous"):
+            self.collect(base="")
+
+    def test_metadata_auth_schema_and_null_closer_fail(self):
+        # Missing metadata and unknown provenance are errors, never empty successes.
+        head = self.commit("Fixes #1")
+        self.association(head)
+        key = "issue:owner/repo:1:"
+        for response in ({"status": 401, "body": {"message": "Bad credentials"}},
+                         {"status": 404, "body": {"message": "Not Found"}},
+                         {"body": {"data": {"repository": {"issueOrPullRequest": None}}}},
+                         {"body": {"errors": [{"type": "FORBIDDEN", "message": "no access"}]}},
+                         {"raw": "not JSON"}):
+            with self.subTest(response=response):
+                self.fixture[key] = response
+                with self.assertRaises(release.Failure):
+                    self.collect()
+        self.issue(1, [None])
+        with self.assertRaisesRegex(release.Failure, "provenance"):
+            self.collect()
+
+    def test_transient_retries_only_and_exhaustion(self):
+        # HTTP throttling/server errors retry within bounds; auth fails immediately.
+        head = self.commit("unlinked")
+        key = f"repos/owner/repo/commits/{head}/pulls?per_page=100&page=1"
+        limits = release.Limits(retry_delay=0)
+        for status in (429, 500, 503):
+            self.log.unlink(missing_ok=True)
+            self.fixture[key] = [{"status": status, "body": {"message": "temporary"}}, {"body": []}]
+            self.assertIn("No linked issues", self.collect(limits=limits))
+            self.assertEqual(len(self.log.read_text().splitlines()), 2)
+        self.fixture[key] = {"status": 403, "body": {"message": "API rate limit exceeded"}}
+        self.log.unlink()
+        with self.assertRaises(release.Failure):
+            self.collect(limits=limits)
+        self.assertEqual(len(self.log.read_text().splitlines()), 3)
+        self.fixture[key] = {"status": 403, "body": {"message": "Forbidden"}}
+        self.log.unlink()
+        with self.assertRaises(release.Failure):
+            self.collect(limits=limits)
+        self.assertEqual(len(self.log.read_text().splitlines()), 1)
+
+    def test_caps_timeout_and_repeated_cursor_fail(self):
+        # Every resource ceiling aborts instead of publishing a partial issue list.
+        head = self.commit("fix")
+        key = f"repos/owner/repo/commits/{head}/pulls?per_page=100&page=1"
+        self.association(head)
+        for limits in (release.Limits(max_requests=0), release.Limits(max_output=8),
+                       release.Limits(deadline=0), release.Limits(max_commits=0)):
+            with self.subTest(limits=limits):
+                with self.assertRaises(release.Failure):
+                    self.collect(limits=limits)
+        self.fixture[key] = {"sleep": 0.2, "body": []}
+        with self.assertRaisesRegex(release.Failure, "timeout"):
+            self.collect(limits=release.Limits(request_timeout=0.03, retry_delay=0))
+        self.association(head, [42])
+        self.pr(42, head, [], next_cursor="same")
+        self.pr(42, head, [], cursor="same", next_cursor="same")
+        with self.assertRaisesRegex(release.Failure, "cursor"):
+            self.collect()
+
+    def test_http_server_error_with_non_json_body_retries(self):
+        # Gateways often return HTML for 5xx; retry classification must precede JSON parsing.
+        head = self.commit("fix")
+        key = f"repos/owner/repo/commits/{head}/pulls?per_page=100&page=1"
+        self.fixture[key] = [{"raw": "HTTP/2.0 502 Bad Gateway\n\n<html>gateway down</html>", "exit": 1},
+                             {"body": []}]
+        self.assertIn("No linked issues", self.collect(limits=release.Limits(retry_delay=0)))
+        self.assertEqual(len(self.log.read_text().splitlines()), 2)
+
+    def test_direct_url_and_case_insensitive_dedup(self):
+        # GitHub supports full issue URLs and repository names are case insensitive.
+        head = self.commit("Fixes #1, OWNER/REPO#1\nCloses https://github.com/owner/repo/issues/2")
+        self.association(head)
+        self.issue(1, [commit_closer(head)])
+        self.issue(2, [commit_closer(head)])
+        notes = self.collect()
+        self.assertEqual(notes.count("[#1]"), 1)
+        self.assertIn("[#2]", notes)
+
+    def test_every_page_and_aggregate_byte_cap(self):
+        # Truncating any metadata connection must fail rather than hide its later items.
+        head = self.commit("fix")
+        self.association(head, [], next_page=True)
+        with self.assertRaisesRegex(release.Failure, "page cap"):
+            self.collect(limits=release.Limits(max_pages=1))
+        self.association(head, [42])
+        self.pr(42, head, [], next_cursor="next")
+        with self.assertRaisesRegex(release.Failure, "page cap"):
+            self.collect(limits=release.Limits(max_pages=1))
+        self.pr(42, head, [1])
+        self.issue(1, [], next_cursor="next")
+        with self.assertRaisesRegex(release.Failure, "page cap"):
+            self.collect(limits=release.Limits(max_pages=1))
+        with self.assertRaisesRegex(release.Failure, "aggregate output"):
+            self.collect(limits=release.Limits(max_total_output=1))
+
+    def test_graphql_rate_limit_only_retries_rate_limit_errors(self):
+        # GraphQL can report throttling in a successful HTTP response.
+        head = self.commit("fix")
+        self.association(head, [42])
+        key = "pr:owner/repo:42:"
+        self.fixture[key] = {"body": {"errors": [{"type": "RATE_LIMITED", "message": "rate limited"}]}}
+        with self.assertRaisesRegex(release.Failure, "retries exhausted"):
+            self.collect(limits=release.Limits(retry_delay=0))
+        self.assertEqual(self.log.read_text().splitlines().count(key), 3)
+        self.log.unlink()
+        self.fixture[key] = {"body": {"errors": [{"type": "FORBIDDEN", "message": "denied"}]}}
+        with self.assertRaises(release.Failure):
+            self.collect(limits=release.Limits(retry_delay=0))
+        self.assertEqual(self.log.read_text().splitlines().count(key), 1)
+
+    def test_capture_cleanup_distinguishes_completed_from_failed_commands(self):
+        terminate = release.terminate
+        cases = [
+            ("print('complete')", 5, 4096, None),
+            ("import time; time.sleep(5)", 0.1, 4096, TimeoutError),
+            ("print('x' * 8192)", 5, 16, release.Failure),
+            ("import sys; sys.stdout.buffer.write(bytes([255]))", 5, 4096, UnicodeDecodeError),
+        ]
+        for source, timeout, cap, error in cases:
+            with self.subTest(source=source), patch.object(release, "terminate", wraps=terminate) as cleanup:
+                if error is None:
+                    code, stdout, stderr = release.capture([sys.executable, "-c", source], timeout, cap)
+                    self.assertEqual((code, stdout.splitlines(), stderr), (0, ["complete"], ""))
+                else:
+                    with self.assertRaises(error):
+                        release.capture([sys.executable, "-c", source], timeout, cap)
+                self.assertEqual(cleanup.call_count, 0 if error is None and os.name == "nt" else 1)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group cleanup")
+    def test_cleanup_ignores_eperm_once_the_child_has_exited(self):
+        # The child is reaped first, so EPERM can only mean the group has nothing left to signal.
+        child = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
+        child.wait()
+        refused = PermissionError(errno.EPERM, "Operation not permitted")
+
+        with patch.object(release.os, "killpg", side_effect=refused):
+            release.terminate(child)
+
+        self.assertEqual(child.returncode, 0)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group cleanup")
+    def test_cleanup_reraises_eperm_while_the_child_runs(self):
+        # A live child that cannot be signalled is a real failure, not one to ignore.
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True)
+        self.addCleanup(child.wait)
+        self.addCleanup(child.kill)
+        refused = PermissionError(errno.EPERM, "Operation not permitted")
+
+        with patch.object(release.os, "killpg", side_effect=refused):
+            with self.assertRaises(PermissionError):
+                release.terminate(child)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group cleanup")
+    def test_capture_keeps_its_error_when_cleanup_meets_eperm(self):
+        # capture() decodes only after the child has exited; cleanup must not replace that error.
+        source = "import sys; sys.stdout.buffer.write(bytes([255]))"
+        refused = PermissionError(errno.EPERM, "Operation not permitted")
+
+        with patch.object(release.os, "killpg", side_effect=refused):
+            with self.assertRaises(UnicodeDecodeError):
+                release.capture([sys.executable, "-c", source], 5, 4096)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group cleanup")
+    def test_cleanup_waits_for_a_leader_that_exits_after_eperm(self):
+        # macOS can refuse the group signal before poll() sees the leader exit. The leader
+        # stays blocked through the refused killpg and any immediate poll(), and is released only
+        # when terminate() begins its bounded wait.
+        source = "import sys; print('ready', flush=True); sys.stdin.read()"
+        child = subprocess.Popen([sys.executable, "-c", source], start_new_session=True,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        real_wait = child.wait
+        # A failed test must not leave the child running.
+        self.addCleanup(real_wait)
+        self.addCleanup(child.kill)
+        self.addCleanup(child.stdout.close)
+        self.addCleanup(child.stdin.close)
+        self.assertEqual(child.stdout.readline(), b"ready\n")
+        refused = []
+        releases = []
+
+        def refuse(pid, signum):
+            refused.append((pid, signum))
+            raise PermissionError(errno.EPERM, "Operation not permitted")
+
+        def gated_wait(timeout=None):
+            # Only a wait that follows the refused signal releases the child.
+            if refused and not releases:
+                releases.append(timeout)
+                child.stdin.close()
+
+            return real_wait(timeout=timeout)
+
+        with patch.object(release.os, "killpg", side_effect=refuse):
+            with patch.object(child, "wait", gated_wait):
+                release.terminate(child)
+
+        self.assertEqual(refused, [(child.pid, release.signal.SIGKILL)])
+        self.assertEqual(len(releases), 1)
+        self.assertEqual(child.returncode, 0)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group cleanup")
+    def test_capture_keeps_its_failure_when_the_leader_exits_after_eperm(self):
+        # A CI failure on macOS: the output cap is exceeded, then cleanup meets EPERM while the leader
+        # is still running. The child waits for a marker that only terminate()'s bounded wait
+        # creates, so it stays blocked through the refused killpg and any immediate poll().
+        marker = self.path / "cleanup-released"
+        source = ("import os, sys, time\n"
+                  "sys.stdout.write('x' * 8192)\n"
+                  "sys.stdout.flush()\n"
+                  "while not os.path.exists(sys.argv[1]):\n"
+                  "    time.sleep(0.01)\n")
+        real_popen = subprocess.Popen
+        children = []
+        refused = []
+        releases = []
+
+        def refuse(pid, signum):
+            refused.append((pid, signum))
+            raise PermissionError(errno.EPERM, "Operation not permitted")
+
+        def recording_popen(*args, **kwargs):
+            child = real_popen(*args, **kwargs)
+            real_wait = child.wait
+
+            def gated_wait(timeout=None):
+                # Only a wait that follows the refused signal releases the child.
+                if refused and not releases:
+                    releases.append(timeout)
+                    marker.touch()
+
+                return real_wait(timeout=timeout)
+
+            child.wait = gated_wait
+            children.append(child)
+            return child
+
+        def stop_children():
+            # Runs before setUp's cleanup removes the marker's directory: release the child, give
+            # it a bounded time to exit, then kill and reap it.
+            marker.touch()
+            for child in children:
+                try:
+                    real_popen.wait(child, timeout=5)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    real_popen.wait(child)
+
+                child.stdout.close()
+                child.stderr.close()
+
+        self.addCleanup(stop_children)
+        with patch.object(release.subprocess, "Popen", recording_popen):
+            with patch.object(release.os, "killpg", side_effect=refuse):
+                with self.assertRaisesRegex(release.Failure, "^child output cap exceeded$"):
+                    release.capture([sys.executable, "-c", source, str(marker)], 5, 16)
+
+        self.assertEqual(len(children), 1)
+        self.assertEqual(refused, [(children[0].pid, release.signal.SIGKILL)])
+        self.assertEqual(len(releases), 1)
+
+    @unittest.skipUnless(sys.platform == "darwin" and hasattr(os, "waitid"), "macOS group signalling after exit")
+    def test_cleanup_tolerates_an_exited_unreaped_group_on_macos(self):
+        # macOS answers EPERM, not ESRCH, when the group's only member has exited but is not yet
+        # reaped: the window that failed a macOS CI leg. waitid(WNOWAIT) holds that state open.
+        child = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
+        os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOWAIT)
+
+        release.terminate(child)
+
+        self.assertEqual(child.returncode, 0)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group lifecycle assertion")
+    def test_timeout_reaps_descendant_holding_pipe(self):
+        # A exited parent must not leave a grandchild holding the capture open forever.
+        import time
+        marker = self.path / "child-survived"
+        child = "import time,pathlib;time.sleep(0.4);pathlib.Path(" + repr(str(marker)) + ").touch()"
+        parent = "import subprocess,sys;subprocess.Popen([sys.executable,'-c'," + repr(child) + "])"
+        with self.assertRaises(TimeoutError):
+            release.capture([sys.executable, "-c", parent], 0.1, 4096)
+        time.sleep(0.45)
+        self.assertFalse(marker.exists())
+
+    def test_first_release_selects_issue_beyond_display_limit(self):
+        # The first-release 200-commit display bound is not an issue-selection cutoff.
+        early = self.commit("Fixes #1")
+        # Keep the same real history without starting commit/rev-parse for every
+        # empty fixture commit. Byte input avoids Windows newline conversion.
+        branch = self.git("symbolic-ref", "HEAD")
+        timestamp = int(self.git("show", "-s", "--format=%ct", early))
+        baseline_status = self.git("status", "--porcelain")
+        commands = []
+        for i in range(200):
+            message = f"unlinked {i}\n".encode("utf-8")
+            parent = early if i == 0 else f":{i}"
+            commands.append((f"commit {branch}\nmark :{i + 1}\n"
+                             f"author Test <test@example.invalid> {timestamp + i + 1} +0000\n"
+                             f"committer Test <test@example.invalid> {timestamp + i + 1} +0000\n"
+                             f"data {len(message)}\n").encode("utf-8") + message
+                            + f"from {parent}\n\n".encode("utf-8"))
+        subprocess.run(["git", "fast-import", "--quiet", "--done"], cwd=self.path,
+                       input=b"".join(commands) + b"done\n", check=True)
+        self.assertEqual(self.git("rev-list", "--count", "HEAD"), "202")
+        self.assertEqual(self.git("rev-parse", "HEAD~200"), early)
+        self.assertEqual(self.git("log", "-200", "--format=%s").splitlines(),
+                         [f"unlinked {i}" for i in reversed(range(200))])
+        self.assertEqual(self.git("status", "--porcelain"), baseline_status)
+        for sha in self.git("rev-list", "HEAD").splitlines():
+            self.association(sha)
+        self.issue(1, [commit_closer(early)])
+        self.assertIn("[#1]", self.collect(base=""))
+
+    def test_invalid_repo_and_nonancestor_base_fail_before_network(self):
+        # User-supplied ref and repository strings cannot turn into command options/URLs.
+        head = self.commit("fix")
+        self.git("checkout", "--orphan", "unrelated")
+        other = self.commit("other")
+        with self.assertRaises(release.Failure):
+            self.collect(head=head, base=other)
+        with self.assertRaises(release.Failure):
+            release.collect("owner/repo/../../evil", head, self.base, cwd=self.path)
+        self.assertFalse(self.log.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

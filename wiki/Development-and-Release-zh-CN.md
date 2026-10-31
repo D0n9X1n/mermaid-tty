@@ -70,7 +70,7 @@ node scripts/check-ci-coverage.ts
 
 `.github/workflows/ci.yml` 在每次 push 和 pull request 时运行。`check` 和 `e2e` 使用 `ubuntu-latest`、`macos-latest`、`windows-latest`，配置 Node 24，并从 npm 安装 Claude Code 2.1.308。
 
-- **check** 在三个系统上运行：裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。
+- **check** 在三个系统上运行：裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
 - **e2e** 在三个系统上运行真实 Claude Code 框架，使用 `--scenario all`，覆盖源码视图、存储文本、包括 `mono` 的主题和 256 色输出。Windows 使用 ConPTY，macOS 和 Linux 使用 tmux。
 - **gallery** 仅在 Ubuntu 上运行：渲染 SVG 图库并上传为构建产物，供视觉评审。
 - **claude-code-versions** 每四小时运行一次：针对每个新发布的 Claude Code 版本运行 A9 端到端框架，新版本一旦破坏插件，几小时内即可发现。
@@ -78,6 +78,16 @@ node scripts/check-ci-coverage.ts
 所有运行 `.sh` 脚本的步骤都使用 `shell: bash`，在 Windows 上即 Git Bash；脚本使用 `set -euo pipefail`。任一命令失败都会使作业失败，包括 Windows 原生的 `claude plugin validate .` 和 `claude plugin test .`。Actions 均固定到提交 SHA。
 
 `.github/workflows/release.yml` 在 `v*` 标签上运行发布检查，详见下方“发布”。
+
+## 发布说明
+
+`scripts/release-notes.py` 根据一次发布所交付的 issue 和 pull request 生成发布说明，因此仓库中不保存变更日志。其溯源代码 `scripts/release-issues.py` 及其测试来自 SonicTerm，经 copilot-relay 引入（MIT 许可，见 `scripts/LICENSE-SonicTerm`）。
+
+- **范围：** 从上一个 `v*` 标签到本标签；上一个标签由 `git describe --match 'v*'` 在本标签的父提交上查找。需要完整历史，浅克隆会失败。
+- **已解决的 issue：** 若范围内的提交，或合并提交位于范围内的已合并 PR 关闭了某个 issue（通过提交中的 `Fixes #N` 或 PR 的关闭引用），该 issue 即被列出。在范围期间被手动关闭的 issue 单独列出，并标为未经核实。
+- **Pull request：** 列出合并提交位于范围内的每个已合并 PR，标题为 `mermaid-tty v<version>` 的发布 PR 除外。
+- **回滚：** 标准的 `This reverts commit <sha>` 会抵消其目标提交；再回滚该回滚则恢复目标。含有被回滚提交的 PR 不会列出，它关闭的 issue 也不会列出。
+- **失败：** 任何 Git 或 GitHub 错误、标签与 `plugin.json` 不符，或找不到上一个标签时，脚本不输出任何内容并以 1 退出，因此发布会中止，而不会发布不完整的说明。
 
 ## 图片与图标
 
@@ -130,16 +140,11 @@ flowchart LR
 ## 发布
 
 1. 确认 `main` 在三个系统上的 CI 均通过，`.claude-plugin/plugin.json` 的 `version` 与待发布版本一致，且 `bash scripts/check.sh` 通过。评审步骤要求 `docs/reviews/required.json` 的每个路径都有通过结论，所有已评审文件仍匹配记录的 SHA-256。文件变化后应重新评审；百科检查器不能替代翻译评审。
-2. 手写 `docs/release-notes/v<version>.md`，并在打标签前合并。说明中必须包含两条安装命令：
-
-   ```sh
-   claude plugin marketplace add D0n9X1n/mermaid-tty
-   claude plugin install mermaid-tty@mermaid-tty
-   ```
+2. 不要手写发布说明：标签工作流会自动生成。每项改动都通过 PR 合并，PR 标题要适合放进列表，提交正文为它解决的每个 issue 写上 `Fixes #N`。发布 PR 的标题为 `mermaid-tty v<version>`，只更新版本号，不会出现在说明中。可用 `python3 scripts/release-notes.py v<version>` 预览某个标签的说明（设置 `PREVIOUS_TAG` 可与另一个标签比较）。
 
 3. **先发布百科。** 等待待打标签的那个 `main` 提交完成 `publish-wiki`，并确认发布的页面。GitHub 只有在网页界面保存第一个百科页面后才创建百科仓库；若克隆失败，先保存一页，再重跑工作流。
 4. 在该提交上推送等于 `v` 加插件版本的标签，如 `v1.0.0`。不要手动创建 GitHub Release，标签工作流会创建。
-5. `.github/workflows/release.yml` 检查标签和已提交的发布说明，要求该 SHA 的百科发布成功，并比较已发布百科与 `wiki/`。全部通过后才创建 GitHub Release，再检查发布后的说明。
+5. `.github/workflows/release.yml` 检查标签，生成发布说明并检查它，要求该 SHA 的百科发布成功，并比较已发布百科与 `wiki/`。全部通过后才创建 GitHub Release，再检查发布后的说明。
 6. 工作流从 GitHub 插件市场安装到全新配置，核验列出的版本，再针对该副本运行 A9，使用 `--installed`、`--claude-version 2.1.308` 和 `--scenario all`。Release 已发布不代表最后的验证一定通过。
 
 不要使用 `claude plugin tag` 创建发布标签：它生成 `mermaid-tty--v1.0.0` 这样的名称，不以 `v` 开头，因此不会触发 `release.yml`。

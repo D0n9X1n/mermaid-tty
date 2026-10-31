@@ -14,12 +14,18 @@ jobs:
     permissions:
       contents: write
       actions: read
+      issues: read
+      pull-requests: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # The runner context is not allowed in job-level env, so the config dir is set from the first step.
       - run: echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-config" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Notes read the whole range since the previous v* tag.
+          fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -27,7 +33,10 @@ jobs:
       - id: release-tag
         run: node scripts/check-release.ts tag "$GITHUB_REF_NAME"
       - id: release-notes
-        run: node scripts/check-release.ts notes "docs/release-notes/$GITHUB_REF_NAME.md"
+        name: Generate notes from the issues and pull requests the tag ships
+        run: |
+          python3 scripts/release-notes.py "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"
+          node scripts/check-release.ts notes "$RUNNER_TEMP/release-notes.md"
       - id: release-wiki-run
         name: publish-wiki concluded success for the tagged commit on main (B3)
         run: |
@@ -40,7 +49,7 @@ jobs:
           git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"
           diff -r --exclude=.git wiki "$RUNNER_TEMP/wiki"
       - id: release-publish
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "mermaid-tty $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "mermaid-tty $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
       - id: release-notes-published
         run: gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -
       - id: release-install

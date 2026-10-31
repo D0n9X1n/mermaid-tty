@@ -70,7 +70,7 @@ For a faster loop:
 
 `.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.308 installed from npm.
 
-- **check**, on all three OSes: bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version.
+- **check**, on all three OSes: bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
 - **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
 - **gallery**, on Ubuntu only: renders the SVG gallery and uploads it as a build artifact for visual review.
 - **claude-code-versions**, every four hours: runs the A9 end-to-end harness against each newly published Claude Code version, so a release that breaks the plugin shows up within hours.
@@ -78,6 +78,16 @@ For a faster loop:
 Every step that runs a `.sh` script uses `shell: bash`, which is Git Bash on Windows, and every script runs under `set -euo pipefail`. So any failing command fails the job, the native Windows `claude plugin validate .` and `claude plugin test .` included. Actions are pinned by commit SHA.
 
 `.github/workflows/release.yml` runs the release checks on a `v*` tag. See Release below.
+
+## Release notes
+
+`scripts/release-notes.py` writes a release's notes from the issues and pull requests it ships, so the repo keeps no changelog. Its provenance code, `scripts/release-issues.py` and its tests, comes from SonicTerm by way of copilot-relay (MIT, `scripts/LICENSE-SonicTerm`).
+
+- **Range:** from the previous `v*` tag, found with `git describe --match 'v*'` on the tag's parent, to the tag. It needs full history: a shallow clone fails.
+- **Resolved issues:** an issue counts when a commit in range or a merged PR whose merge commit is in range closed it, by `Fixes #N` in a commit or by the PR's closing references. An issue closed by hand during the range is listed apart as unverified.
+- **Pull requests:** each merged PR whose merge commit is in range, except release PRs titled `mermaid-tty v<version>`.
+- **Reverts:** a canonical `This reverts commit <sha>` cancels its target; reverting the revert restores it. A PR with a reverted commit is left out, with the issues it closed.
+- **Failures:** any Git or GitHub error, a tag that doesn't match `plugin.json`, or a missing predecessor prints nothing and exits 1, so the release stops rather than publishing partial notes.
 
 ## Images and icon
 
@@ -130,16 +140,11 @@ flowchart LR
 ## Release
 
 1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `docs/reviews/required.json`, and every reviewed file must still match its recorded SHA-256. Re-review changed files; translation review is not replaced by the wiki checker.
-2. Write `docs/release-notes/v<version>.md` by hand and merge it before tagging. It must contain both install commands:
-
-   ```sh
-   claude plugin marketplace add D0n9X1n/mermaid-tty
-   claude plugin install mermaid-tty@mermaid-tty
-   ```
+2. Don't write release notes: the tag workflow generates them. Every change goes through a PR whose title reads well in a list and whose commit body says `Fixes #N` for each issue it resolves. The release PR, titled `mermaid-tty v<version>`, only bumps the version and is left out of the notes. Preview the notes for a tag with `python3 scripts/release-notes.py v<version>` (set `PREVIOUS_TAG` to compare with another tag).
 
 3. **Publish the wiki first.** Wait for `publish-wiki` to succeed on the exact `main` commit to be tagged, and check the published pages. GitHub creates a wiki's repository only after its first page is saved in the web UI. If cloning fails, save one page there, then re-run the workflow.
 4. Push a tag equal to `v` plus the plugin version, such as `v1.0.0`, on that commit. Do not create the GitHub Release manually: the tag workflow creates it.
-5. `.github/workflows/release.yml` checks the tag and committed notes, requires a successful wiki-publish run for that SHA, and compares the published wiki with `wiki/`. Only then does it create the GitHub Release and check the published notes.
+5. `.github/workflows/release.yml` checks the tag, generates the notes and checks them, requires a successful wiki-publish run for that SHA, and compares the published wiki with `wiki/`. Only then does it create the GitHub Release and check the published notes.
 6. The workflow installs from the GitHub marketplace into a fresh config, checks the listed version, and runs A9 with `--installed`, `--claude-version 2.1.308` and `--scenario all` against that installed copy. A published release alone does not mean this final verification passed.
 
 Don't make the tag with `claude plugin tag`: it makes a tag such as `mermaid-tty--v1.0.0`, which doesn't start with `v`, so `release.yml` doesn't run.
