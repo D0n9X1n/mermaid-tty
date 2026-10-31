@@ -205,13 +205,13 @@ def should_wrap(env, interactive, ask=ask_multiplexer):
 
 
 def client_terminal(command, ask):
-    """The terminal the multiplexer draws on: the attached client's XTVERSION reply, or, where the multiplexer keeps
-    none, the session's TERM_PROGRAM when `update-environment` refreshes it from each client that attaches."""
+    """The terminal the multiplexer draws on: the attached client's XTVERSION reply. RMUX keeps none, so there it is the
+    session's TERM_PROGRAM, when the session's own `update-environment` refreshes it from each client that attaches."""
     termtype = ask(command, ["display-message", "-p", "#{client_termtype}"])
-    if termtype:
+    if termtype or command != "rmux":
         return termtype
 
-    refreshed = ask(command, ["show-options", "-gv", "update-environment"]).split()
+    refreshed = ask(command, ["show-options", "-Av", "update-environment"]).split()
     if "TERM_PROGRAM" not in refreshed:
         return ""
 
@@ -280,8 +280,8 @@ class Session:
         tty.setraw(self.stdin)
         try:
             self.relay()
-        finally:
             write_all(self.stdout, self.output.finish())
+        finally:
             termios.tcsetattr(self.stdin, termios.TCSAFLUSH, self.saved)
 
         while self.status is None:
@@ -306,9 +306,9 @@ class Session:
                 if data:
                     write_all(self.master, data)
                 else:
-                    # Input ended: say so to Claude Code as a terminal would, then show its output until it exits.
+                    # The terminal went away: hang up on Claude Code as the terminal would, then drain its output.
                     watched.remove(self.stdin)
-                    write_all(self.master, end_of_input(self.master))
+                    self.forward(signal.SIGHUP)
 
             if self.master in ready:
                 try:
@@ -336,22 +336,16 @@ class Session:
             self.status = status
             return
 
-        write_all(self.stdout, self.output.finish())
+        # A kitty command half read stays held, so the rest that comes after fg still ends it and it is wrapped.
         if self.saved is not None:
             termios.tcsetattr(self.stdin, termios.TCSAFLUSH, self.saved)
 
         os.kill(os.getpid(), signal.SIGTSTP)
-        tty.setraw(self.stdin)
-        self.resize()
+        if self.saved is not None:
+            tty.setraw(self.stdin)
+            self.resize()
+
         os.kill(self.pid, signal.SIGCONT)
-
-
-def end_of_input(master):
-    """The pty's end-of-file character, which a reader in canonical mode takes as end of input."""
-    try:
-        return termios.tcgetattr(master)[6][termios.VEOF]
-    except termios.error:
-        return b"\x04"
 
 
 def exit_like(status):

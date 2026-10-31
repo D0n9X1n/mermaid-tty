@@ -108,7 +108,7 @@ class ShouldWrapTests(unittest.TestCase):
         replies = {
             ("display-message", "-p", "#{allow-passthrough}"): passthrough,
             ("display-message", "-p", "#{client_termtype}"): client,
-            ("show-options", "-gv", "update-environment"): refreshed,
+            ("show-options", "-Av", "update-environment"): refreshed,
             ("show-environment", "TERM_PROGRAM"): session,
         }
 
@@ -157,6 +157,12 @@ class ShouldWrapTests(unittest.TestCase):
         ask, _ = self.answers(client="iTerm2 3.5.4", refreshed=refreshed, session="TERM_PROGRAM=SonicTerm")
         self.assertFalse(launcher.should_wrap(rmux, True, ask))
 
+    def test_tmux_never_falls_back_to_the_session_terminal(self):
+        # tmux 3.3 and later always report the client; an empty report is an unknown client, never a stale guess.
+        tmux = {"TMUX": "/private/tmp/tmux-501/default,1,0"}
+        ask, _ = self.answers(client="", refreshed="TERM_PROGRAM", session="TERM_PROGRAM=SonicTerm")
+        self.assertFalse(launcher.should_wrap(tmux, True, ask))
+
     def test_asks_rmux_for_an_rmux_session(self):
         ask, asked = self.answers()
         self.assertTrue(launcher.should_wrap({"TMUX": "/private/tmp/rmux-501/default,37545,0"}, True, ask))
@@ -170,13 +176,17 @@ class ShouldWrapTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
-    def relay(self, script, input_data=b""):
+    def relay(self, script, input_data=None):
         # The session's own relay, over pipes, around a real child in a pty; signal handlers are put back after.
+        # Input stays open unless input_data is given, which is written and then ended.
         saved = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)}
         stdin_read, stdin_write = os.pipe()
         stdout_read, stdout_write = os.pipe()
-        os.write(stdin_write, input_data)
-        os.close(stdin_write)
+        if input_data is not None:
+            os.write(stdin_write, input_data)
+            os.close(stdin_write)
+            stdin_write = None
+
         try:
             session = launcher.Session([sys.executable, "-c", script], stdin=stdin_read, stdout=stdout_write)
             session.relay()
@@ -188,6 +198,9 @@ class SessionTests(unittest.TestCase):
             with os.fdopen(stdout_read, "rb") as output:
                 return session.status, output.read()
         finally:
+            if stdin_write is not None:
+                os.close(stdin_write)
+
             signal.set_wakeup_fd(-1)
             for number, handler in saved.items():
                 signal.signal(number, handler)
@@ -197,14 +210,39 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(os.waitstatus_to_exitcode(status), 0)
         self.assertTrue(output.endswith(b"tail\x1b_Gunfinished"), output)
 
-    def test_end_of_input_reaches_a_child_waiting_to_read(self):
-        # Without the pty's EOF character the child would wait for input that can no longer come.
-        status, output = self.relay("import sys; sys.stdin.read(); print('done')")
-        self.assertEqual(os.waitstatus_to_exitcode(status), 0)
-        self.assertIn(b"done", output)
+    def test_end_of_input_hangs_up_on_a_child_waiting_to_read(self):
+        # Whatever the child already read and whatever mode its terminal is in, the end of input hangs it up.
+        for script in ("import sys; sys.stdin.read()", "import sys, tty; tty.setraw(0); sys.stdin.read()"):
+            status, _ = self.relay(script, input_data=b"hello")
+            self.assertTrue(os.WIFSIGNALED(status), script)
+            self.assertEqual(os.WTERMSIG(status), signal.SIGHUP, script)
 
     def test_a_kitty_command_from_the_child_comes_out_wrapped(self):
         _, output = self.relay("import os; os.write(1, b'\\x1b_Ga=T;QUJD\\x1b\\\\')")
+        self.assertIn(launcher.passthrough(b"\x1b_Ga=T;QUJD\x1b\\"), output)
+
+
+class SuspendTests(SessionTests):
+    def test_a_command_split_by_a_stop_is_still_wrapped(self):
+        # The stop hands the terminal back but keeps the half-read command, so its end after fg completes it. The
+        # launcher's own stop is recorded instead of taken, standing in for the shell's fg.
+        script = (
+            "import os, signal; os.write(1, b'\\x1b_Ga=T;QU'); os.kill(os.getpid(), signal.SIGSTOP); "
+            "os.write(1, b'JD\\x1b\\\\')"
+        )
+        stops = []
+        kill = os.kill
+
+        def kill_except_self(pid, number):
+            if pid == os.getpid() and number == signal.SIGTSTP:
+                stops.append(number)
+            else:
+                kill(pid, number)
+
+        with patch.object(launcher.os, "kill", kill_except_self):
+            _, output = self.relay(script)
+
+        self.assertEqual(stops, [signal.SIGTSTP])
         self.assertIn(launcher.passthrough(b"\x1b_Ga=T;QUJD\x1b\\"), output)
 
 
