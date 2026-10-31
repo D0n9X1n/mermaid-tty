@@ -15,14 +15,24 @@ export type Member = { text: string; method: boolean }
 // wider than that fails word-too-wide.
 export function classRows(id: string, members: readonly Member[], wrapAt: number | null): NodeRow[] | Fail {
   const keys = [...members.keys()]
-const  order = [...keys.filter(k => !members[k]!.method), ...keys.filter(k => members[k]!.method)]
+  const order = [...keys.filter((k) => !members[k]!.method), ...keys.filter((k) => members[k]!.method)]
   const rows: NodeRow[] = []
   for (const k of order) {
     const text = members[k]!.text
     const pieces: Piece[] | null = wrapAt === null ? [{ text, join: '' }] : wrap(text, wrapAt - 1)
-    if (!pieces) { return fail('word-too-wide') }
-    pieces.forEach((p, i) => rows.push({ text: p.text, role: 'label', align: 'left', id: `${id}.m${k}`, fixed: true,
-      ...(i > 0 ? { indent: 1, join: p.join } : {}) }))
+    if (!pieces) {
+      return fail('word-too-wide')
+    }
+    pieces.forEach((p, i) =>
+      rows.push({
+        text: p.text,
+        role: 'label',
+        align: 'left',
+        id: `${id}.m${k}`,
+        fixed: true,
+        ...(i > 0 ? { indent: 1, join: p.join } : {}),
+      }),
+    )
   }
   return rows
 }
@@ -31,7 +41,12 @@ const  order = [...keys.filter(k => !members[k]!.method), ...keys.filter(k => me
 export type Attr = { type: string; name: string; keys: string; comment: string }
 
 // The attribute columns, in order, and their roles.
-const FIELDS = [['type', 'label'], ['name', 'label'], ['keys', 'label'], ['comment', 'note']] as const
+const FIELDS = [
+  ['type', 'label'],
+  ['name', 'label'],
+  ['keys', 'label'],
+  ['comment', 'note'],
+] as const
 
 // s, then spaces to w cells.
 const pad = (s: string, w: number): string => s + ' '.repeat(w - width(s))
@@ -42,19 +57,40 @@ const pad = (s: string, w: number): string => s + ' '.repeat(w - width(s))
 // is dropped. A row's text is its columns padded, a cell apart, right-trimmed. A comment word wider than wrapAt fails
 // word-too-wide.
 export function erRows(id: string, attrs: readonly Attr[], wrapAt: number | null): NodeRow[] | Fail {
-  const fields = FIELDS.filter(([f]) => attrs.some(a => a[f].trim() !== ''))
+  const fields = FIELDS.filter(([f]) => attrs.some((a) => a[f].trim() !== ''))
   // Each row's attribute k, its text in each field, and its comment piece's join: null on an attribute's first row.
   const lines: { k: number; text: Attr; join: Piece['join'] | null }[] = []
   for (const [k, a] of attrs.entries()) {
     const pieces: Piece[] | null = wrapAt === null ? [{ text: a.comment, join: '' }] : wrap(a.comment, wrapAt)
-    if (!pieces) { return fail('word-too-wide') }
-    pieces.forEach((p, i) => lines.push(i === 0 ? { k, text: { ...a, comment: p.text }, join: null }
-      : { k, text: { type: '', name: '', keys: '', comment: p.text }, join: p.join }))
+    if (!pieces) {
+      return fail('word-too-wide')
+    }
+    pieces.forEach((p, i) =>
+      lines.push(
+        i === 0
+          ? { k, text: { ...a, comment: p.text }, join: null }
+          : { k, text: { type: '', name: '', keys: '', comment: p.text }, join: p.join },
+      ),
+    )
   }
-  const widths = fields.map(([f]) => Math.max(...lines.map(l => width(l.text[f]))))
+  const widths = fields.map(([f]) => Math.max(...lines.map((l) => width(l.text[f]))))
   return lines.map(({ k, text, join }): NodeRow => {
-    const cols = fields.map(([f, role], j) => ({ text: text[f], role, id: `${id}.a${k}.${f}`, width: widths[j]!,
-      ...(f === 'comment' && join !== null ? { join } : {}) }))
-    return { text: cols.map(c => pad(c.text, c.width)).join(' ').trimEnd(), role: 'label', align: 'left', fixed: true, cols }
+    const cols = fields.map(([f, role], j) => ({
+      text: text[f],
+      role,
+      id: `${id}.a${k}.${f}`,
+      width: widths[j]!,
+      ...(f === 'comment' && join !== null ? { join } : {}),
+    }))
+    return {
+      text: cols
+        .map((c) => pad(c.text, c.width))
+        .join(' ')
+        .trimEnd(),
+      role: 'label',
+      align: 'left',
+      fixed: true,
+      cols,
+    }
   })
 }

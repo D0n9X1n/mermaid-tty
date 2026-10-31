@@ -8,8 +8,12 @@ export type Scalar = string | number | boolean | null
 // header line, the frontmatter title, the frontmatter config scalars under
 // dotted keys ('gitGraph.mainBranchName'), and the remaining lines as written,
 // with their 1-based source line numbers.
-export type Source = { header: string; title: string | null; config: Readonly<Record<string, Scalar>>
-  lines: readonly { n: number; text: string }[] }
+export type Source = {
+  header: string
+  title: string | null
+  config: Readonly<Record<string, Scalar>>
+  lines: readonly { n: number; text: string }[]
+}
 
 // Fails with 'directive' (a `%%{` line that is not a whole directive() reads, or
 // `%%` after text outside double quotes), 'frontmatter' (a block frontmatter() rejects, frontmatter readConfig
@@ -22,19 +26,25 @@ export type Source = { header: string; title: string | null; config: Readonly<Re
 // Mermaid's encodeEntities (utils.ts), before any diagram parses, drops the last ; of whatever matches style…:…#…; or
 // classDef…:…#…; on a line, wherever it sits, label text included. Each kept line is read as Mermaid's parser reads it.
 const encodeColours = (t: string): string =>
-  t.replace(/style.*:\S*#.*;/g, s => s.slice(0, -1)).replace(/classDef.*:\S*#.*;/g, s => s.slice(0, -1))
+  t.replace(/style.*:\S*#.*;/g, (s) => s.slice(0, -1)).replace(/classDef.*:\S*#.*;/g, (s) => s.slice(0, -1))
 
 // Mermaid's cleanupText (preprocess.ts), over the whole text before anything else: CRLF and lone CR become LF, and
 // each tag's double-quoted attribute values become single-quoted, frontmatter included. Neither changes the line count.
-const cleanup = (t: string): string => t.replace(/\r\n?/g, '\n')
-  .replace(/<(\w+)([^>]*)>/g, (_, tag: string, attrs: string) => `<${tag}${attrs.replace(/="([^"]*)"/g, "='$1'")}>`)
+const cleanup = (t: string): string =>
+  t
+    .replace(/\r\n?/g, '\n')
+    .replace(/<(\w+)([^>]*)>/g, (_, tag: string, attrs: string) => `<${tag}${attrs.replace(/="([^"]*)"/g, "='$1'")}>`)
 
 export function readSource(text: string): Source | Fail {
   const src = scanSource(text)
-  if (isFail(src)) { return src }
+  if (isFail(src)) {
+    return src
+  }
   for (const [key, value] of Object.entries(src.config)) {
     const why = allowed(key, value)
-    if (why) { return fail(why) }
+    if (why) {
+      return fail(why)
+    }
   }
   return src
 }
@@ -51,22 +61,32 @@ export function scanSource(text: string): Source | Fail {
   // block are read; every other key is ignored.
   if (/^\s*---\s*$/.test(all[0]!)) {
     const block = frontmatter(all)
-    if (isFail(block)) { return block }
+    if (isFail(block)) {
+      return block
+    }
     const { front, end } = block
     const found = readTitle(front)
-    if (isFail(found)) { return found }
+    if (isFail(found)) {
+      return found
+    }
     title = found
     const read = readConfig(front)
-    if (!read) { return fail('frontmatter') }
+    if (!read) {
+      return fail('frontmatter')
+    }
     // Typed only once the whole block reads, so a block T41 rejects still falls back as frontmatter.
     for (const [key, raw] of Object.entries(read)) {
       const value = raw.quoted ? raw.text : typed(raw.text)
-      if (value === undefined) { return fail(`config:${key}`) }
+      if (value === undefined) {
+        return fail(`config:${key}`)
+      }
       put(config, key, value)
     }
     // processFrontmatter sets a top-level displayMode as gantt.displayMode, over the config block's.
-    const mode = front.find(l => /^displayMode[ \t]*:/.test(l))
-    if (mode !== undefined) { put(config, 'gantt.displayMode', mode.slice(mode.indexOf(':') + 1).trim()) }
+    const mode = front.find((l) => /^displayMode[ \t]*:/.test(l))
+    if (mode !== undefined) {
+      put(config, 'gantt.displayMode', mode.slice(mode.indexOf(':') + 1).trim())
+    }
     start = end + 1
   }
   const kept: { n: number; text: string }[] = []
@@ -80,30 +100,45 @@ export function scanSource(text: string): Source | Fail {
     // line that is one whole directive is read; Mermaid removes it, leaving a blank line.
     if (line.includes('%%{')) {
       const d = directive(line)
-      if (!d) { return fail('directive') }
-      if (d === 'wrap') { wrap = true }
-      else { inits.push(d) }
+      if (!d) {
+        return fail('directive')
+      }
+      if (d === 'wrap') {
+        wrap = true
+      } else {
+        inits.push(d)
+      }
       all[i] = ''
       continue
     }
-    if (t === '' || t.startsWith('%%')) { continue }
-    if (t.replace(/"[^"]*"/g, '').includes('%%')) { return fail('directive') }
+    if (t === '' || t.startsWith('%%')) {
+      continue
+    }
+    if (t.replace(/"[^"]*"/g, '').includes('%%')) {
+      return fail('directive')
+    }
     kept.push({ n: i + 1, text: encodeColours(line) })
   }
   // processDirectives sets wrap after merging the inits, and cleanAndMerge lays the lot over the frontmatter config.
   for (const d of [...inits, ...(wrap ? [{ wrap: true }] : [])]) {
     for (const [key, value] of Object.entries(d)) {
-      if (Object.keys(config).some(k => k.startsWith(`${key}.`) || key.startsWith(`${k}.`))) { return fail('directive') }
+      if (Object.keys(config).some((k) => k.startsWith(`${key}.`) || key.startsWith(`${k}.`))) {
+        return fail('directive')
+      }
       put(config, key, value)
     }
   }
   const [head, ...lines] = kept
-  if (!head || lines.length === 0) { return fail('empty') }
-  if (oddWhitespace([all[head.n - 1]!.trimStart(), ...all.slice(head.n)])) { return fail('whitespace') }
+  if (!head || lines.length === 0) {
+    return fail('empty')
+  }
+  if (oddWhitespace([all[head.n - 1]!.trimStart(), ...all.slice(head.n)])) {
+    return fail('whitespace')
+  }
   // A's grammars end a statement at ;, so their headers lose a trailing one. Any other type keeps it: Mermaid's TITLE
   // terminal reads `pie title Fruit;` as "Fruit;", and a header that takes no ; then fails its own parser.
   const h = head.text.trim()
-const  header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
+  const header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/, '') : h
   return { header, title, config, lines }
 }
 
@@ -113,7 +148,9 @@ const  header = /^(flowchart|graph|sequenceDiagram)\b/.test(h) ? h.replace(/;$/,
 // (getEffectiveHtmlLabels); any value but true draws SVG text through markdownToLines, which drops tokens every drawn-text
 // mode keeps, so any *.htmlLabels but those two set true falls back 'config:htmlLabels'.
 function allowed(key: string, value: Scalar): string | null {
-  if (/(?:^|\.)htmlLabels$/.test(key)) { return (key === 'htmlLabels' || key === 'flowchart.htmlLabels') && value === true ? null : 'config:htmlLabels' }
+  if (/(?:^|\.)htmlLabels$/.test(key)) {
+    return (key === 'htmlLabels' || key === 'flowchart.htmlLabels') && value === true ? null : 'config:htmlLabels'
+  }
   const ok = Object.hasOwn(ALLOW, key) && ALLOW[key]!(value)
   return ok ? null : `config:${key}`
 }
@@ -121,28 +158,42 @@ function allowed(key: string, value: Scalar): string | null {
 const bool = (v: Scalar): boolean => typeof v === 'boolean'
 const any = (): boolean => true
 // A number in [lo, hi].
-const range = (lo: number, hi: number) => (v: Scalar): boolean => typeof v === 'number' && v >= lo && v <= hi
+const range =
+  (lo: number, hi: number) =>
+  (v: Scalar): boolean =>
+    typeof v === 'number' && v >= lo && v <= hi
 // A px length in [lo, hi], as a string.
-const px = (lo: number, hi: number) => (v: Scalar): boolean =>
-  typeof v === 'string' && /^\d+(?:\.\d+)?px$/.test(v) && parseFloat(v) >= lo && parseFloat(v) <= hi
+const px =
+  (lo: number, hi: number) =>
+  (v: Scalar): boolean =>
+    typeof v === 'string' && /^\d+(?:\.\d+)?px$/.test(v) && parseFloat(v) >= lo && parseFloat(v) <= hi
 // Each setting by its dotted key, and the values it may take.
 const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
   // Read here: the gitGraph, mindmap and timeline parsers check and use these as Mermaid does.
-  'gitGraph.mainBranchName': any, 'gitGraph.mainBranchOrder': any, 'mindmap.colorBy': any, 'timeline.disableMulticolor': any,
+  'gitGraph.mainBranchName': any,
+  'gitGraph.mainBranchOrder': any,
+  'mindmap.colorBy': any,
+  'timeline.disableMulticolor': any,
   // Mermaid's defaults, which these drawings show: branch names, commit labels. showDataLabel only toggles text over
   // Mermaid's bars; xychart's value rows print what Mermaid encodes as bar heights and line points either way (PM ruling,
   // vr-C-xychart), so any boolean draws.
-  'gitGraph.showBranches': v => v === true, 'gitGraph.showCommitLabel': v => v === true, 'xyChart.showDataLabel': bool,
+  'gitGraph.showBranches': (v) => v === true,
+  'gitGraph.showCommitLabel': (v) => v === true,
+  'xyChart.showDataLabel': bool,
   // Seen to change only pixels: theme colours and gradients, and log output. Any other theme name, or a number, Mermaid
   // ignores, so it falls back.
-  theme: v => ['default', 'base', 'dark', 'forest', 'neutral'].includes(v as string),
-  logLevel: v => (typeof v === 'number' ? Number.isInteger(v) && v >= 0 && v <= 5 : ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(v as string)),
+  theme: (v) => ['default', 'base', 'dark', 'forest', 'neutral'].includes(v as string),
+  logLevel: (v) =>
+    typeof v === 'number'
+      ? Number.isInteger(v) && v >= 0 && v <= 5
+      : ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(v as string),
   // Pie slice labels sit at textPosition of the radius: at 0 they all meet at the centre, past 1 they leave the chart.
   // From 0.5 (two thirds of the default 0.75's distance) to 1 none was seen to meet another or leave the viewBox.
   'pie.textPosition': range(0.5, 1),
   // Below Mermaid's default 500 more quadrant texts overlap (5 pairs at 400, 19 at 200, 100 at 100, against 3); from 500 to
   // 2000 no more than at 500, and every text stays in the viewBox.
-  'quadrantChart.chartWidth': range(500, 2000), 'quadrantChart.chartHeight': range(500, 2000),
+  'quadrantChart.chartWidth': range(500, 2000),
+  'quadrantChart.chartHeight': range(500, 2000),
   // &nbsp; for a Markdown label's spaces: only where a line breaks, which the drawing chooses anyway. A wrapping width
   // (flowchart.wrappingWidth, mindmap.maxNodeWidth) falls back: JSDOM lays out no text, so what a narrow one hides is
   // unverified.
@@ -152,7 +203,8 @@ const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
   // at 20px, where the ring also reaches the title). Every colour falls back: any one can match the colour drawn under or over it
   // (base's primaryTextColor equal to its primaryColor; a mainBkg of #333 under the default's #28253D text), so text
   // vanishes. Text sizes fall back too: 0px hides text, and wrapLabel measures with them.
-  'themeVariables.pieStrokeWidth': px(0.5, 2), 'themeVariables.pieOuterStrokeWidth': px(0.5, 2),
+  'themeVariables.pieStrokeWidth': px(0.5, 2),
+  'themeVariables.pieOuterStrokeWidth': px(0.5, 2),
 }
 
 // A line that is one whole directive as Mermaid 12.2.0 reads it (detectDirective, detectInit, processDirectives):
@@ -164,29 +216,51 @@ const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
 // each setting as frontmatter config's.
 function directive(line: string): Record<string, Scalar> | 'wrap' | null {
   const t = line.trim()
-  if (/^%%\{\s*wrap\s*\}%%$/.test(t)) { return 'wrap' }
+  if (/^%%\{\s*wrap\s*\}%%$/.test(t)) {
+    return 'wrap'
+  }
   const m = /^%%\{\s*(?:init|initialize)\s*:\s*(\{.*\})\s*\}%%$/.exec(t)
-  if (!m || m[1]!.includes('%%')) { return null }
+  if (!m || m[1]!.includes('%%')) {
+    return null
+  }
   let body: unknown
-  try { body = JSON.parse(m[1]!.replaceAll("'", '"')) } catch { return null }
-  if (!plainObject(body) || Object.hasOwn(body, 'config')) { return null }
+  try {
+    body = JSON.parse(m[1]!.replaceAll("'", '"'))
+  } catch {
+    return null
+  }
+  if (!plainObject(body) || Object.hasOwn(body, 'config')) {
+    return null
+  }
   const out: Record<string, Scalar> = {}
   return flat(body, '', out) ? out : null
 }
 
-const plainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+const plainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
 
 // Puts each leaf of o into out under its dotted key, prefix first. False for a key that is not a plain name (or is
 // __proto__), an empty object, an array, null (which sanitizeDirective deletes), or a number that is not finite.
 function flat(o: Record<string, unknown>, prefix: string, out: Record<string, Scalar>): boolean {
   const keys = Object.keys(o)
-  if (keys.length === 0 && prefix) { return false }
+  if (keys.length === 0 && prefix) {
+    return false
+  }
   for (const k of keys) {
-    if (!/^[A-Za-z_][\w-]*$/.test(k) || k === '__proto__') { return false }
+    if (!/^[A-Za-z_][\w-]*$/.test(k) || k === '__proto__') {
+      return false
+    }
     const key = prefix + k
-const  v = o[k]
-    if (plainObject(v)) { if (!flat(v, `${key}.`, out)) { return false; } continue }
-    if (typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isFinite(v))) { return false }
+    const v = o[k]
+    if (plainObject(v)) {
+      if (!flat(v, `${key}.`, out)) {
+        return false
+      }
+      continue
+    }
+    if (typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isFinite(v))) {
+      return false
+    }
     put(out, key, v)
   }
   return true
@@ -196,8 +270,21 @@ const  v = o[k]
 const ODD_WS = /[^\S \t\n]/
 // Headers whose Jison grammar skips ODD_WS in the header line, blank lines and indents as \s, verified against Mermaid
 // 12.2.0 in Chrome.
-const JISON_WS = new Set(['flowchart', 'graph', 'sequenceDiagram', 'stateDiagram', 'stateDiagram-v2', 'classDiagram',
-  'classDiagram-v2', 'erDiagram', 'gantt', 'journey', 'timeline', 'xychart', 'xychart-beta'])
+const JISON_WS = new Set([
+  'flowchart',
+  'graph',
+  'sequenceDiagram',
+  'stateDiagram',
+  'stateDiagram-v2',
+  'classDiagram',
+  'classDiagram-v2',
+  'erDiagram',
+  'gantt',
+  'journey',
+  'timeline',
+  'xychart',
+  'xychart-beta',
+])
 // Langium grammars (gitGraph, pie) hide only [ \t]+ and newlines, so their lexer rejects ODD_WS anywhere outside a
 // string.
 const LANGIUM = new Set(['gitGraph', 'pie'])
@@ -207,8 +294,12 @@ const LANGIUM = new Set(['gitGraph', 'pie'])
 // type outside JISON_WS (mindmap, quadrantChart reject it), any in the header line or a blank line.
 function oddWhitespace(body: readonly string[]): boolean {
   const kw = (/\S+/.exec(body[0]!)?.[0] ?? '').replace(/:$/, '')
-  if (JISON_WS.has(kw)) { return false }
-  if (LANGIUM.has(kw)) { return body.some(l => ODD_WS.test(l.replace(/"[^"]*"/g, ''))) }
+  if (JISON_WS.has(kw)) {
+    return false
+  }
+  if (LANGIUM.has(kw)) {
+    return body.some((l) => ODD_WS.test(l.replace(/"[^"]*"/g, '')))
+  }
   return body.some((l, i) => (i === 0 || l.trim() === '') && ODD_WS.test(l))
 }
 
@@ -223,19 +314,26 @@ function frontmatter(all: readonly string[]): { front: string[]; end: number } |
   // Mermaid's closing fence must be followed by a line break, so the last line never closes.
   const fence = (i: number) => i < all.length - 1 && /^---\s*$/.test(all[i]!)
   const end = all.findIndex((_, i) => i >= 2 && fence(i))
-  if (!/^---\s*$/.test(all[0]!) || end < 0) { return fail('frontmatter') }
+  if (!/^---\s*$/.test(all[0]!) || end < 0) {
+    return fail('frontmatter')
+  }
   const from = all.findIndex((l, i) => i >= 1 && !/^\s*$/.test(l))
-  if (from === end && all.some((_, i) => i > end && fence(i))) { return fail('frontmatter') }
+  if (from === end && all.some((_, i) => i > end && fence(i))) {
+    return fail('frontmatter')
+  }
   const front = all.slice(from, end)
-const  [first = ''] = front
-  if (first.startsWith('﻿')) { front[0] = first.slice(1) }
+  const [first = ''] = front
+  if (first.startsWith('﻿')) {
+    front[0] = first.slice(1)
+  }
   const bad = (l: string) => /^(?:---|\.\.\.)(?:\s|$)/.test(l) || NON_PRINTABLE.test(l) || opens(l)
   return front.some(bad) ? fail('frontmatter') : { front, end }
 }
 
 // js-yaml 4.3.0's PATTERN_NON_PRINTABLE (loader.js): C0 and C1 controls but tab, LF, CR and NEL, U+FFFE, U+FFFF, and
 // a lone surrogate. A NUL anywhere is rejected too.
-const NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/
+const NON_PRINTABLE =
+  /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/
 
 // Whether a frontmatter line leaves a quoted scalar or a flow collection open at its end, so that js-yaml reads the
 // next lines, `title:` ones included, inside it. A quote or bracket counts only where a node starts: at the line's
@@ -244,21 +342,36 @@ const NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F￾￿]|[\uD
 function opens(line: string): boolean {
   const sep = (j: number) => j >= line.length || line[j] === ' ' || line[j] === '\t'
   let depth = 0
-let  node = true
+  let node = true
   for (let i = 0; i < line.length; i++) {
     const c = line[i]!
-    if (c === ' ' || c === '\t') { continue }
-    if (c === '#' && (i === 0 || sep(i - 1))) { break }
+    if (c === ' ' || c === '\t') {
+      continue
+    }
+    if (c === '#' && (i === 0 || sep(i - 1))) {
+      break
+    }
     if (node && (c === '"' || c === "'")) {
       i = quoteEnd(line, i)
-      if (i < 0) { return true }
+      if (i < 0) {
+        return true
+      }
       node = false
     } else if (node && (c === '!' || c === '&')) {
-      while (!sep(i + 1)) { i++ }
-    } else if ((node || depth > 0) && (c === '[' || c === '{')) { depth++; node = true }
-    else if (depth > 0 && (c === ']' || c === '}')) { depth--; node = false }
-    else if (c === ':' ? depth > 0 || sep(i + 1) : depth > 0 && c === ',') { node = true }
-    else { node = node && (c === '-' || c === '?') && sep(i + 1) }
+      while (!sep(i + 1)) {
+        i++
+      }
+    } else if ((node || depth > 0) && (c === '[' || c === '{')) {
+      depth++
+      node = true
+    } else if (depth > 0 && (c === ']' || c === '}')) {
+      depth--
+      node = false
+    } else if (c === ':' ? depth > 0 || sep(i + 1) : depth > 0 && c === ',') {
+      node = true
+    } else {
+      node = node && (c === '-' || c === '?') && sep(i + 1)
+    }
   }
   return depth > 0
 }
@@ -268,9 +381,13 @@ let  node = true
 function quoteEnd(line: string, i: number): number {
   const q = line[i]
   for (let j = i + 1; j < line.length; j++) {
-    if (q === '"' && line[j] === '\\') { j++ }
-    else if (line[j] === q && q === "'" && line[j + 1] === "'") { j++ }
-    else if (line[j] === q) { return j }
+    if (q === '"' && line[j] === '\\') {
+      j++
+    } else if (line[j] === q && q === "'" && line[j + 1] === "'") {
+      j++
+    } else if (line[j] === q) {
+      return j
+    }
   }
   return -1
 }
@@ -286,17 +403,29 @@ function quoteEnd(line: string, i: number): number {
 // for a value scalar() rejects, or 'unsupported-char U+XXXX'. A tab may separate
 // the value from `title:`, as in js-yaml.
 function readTitle(front: readonly string[]): string | null | Fail {
-  const [line, second] = front.filter(l => /^title[ \t]*:/.test(l))
-  if (second !== undefined) { return fail('title') }
-  if (line === undefined) { return null }
-  const next = front.slice(front.indexOf(line) + 1).find(l => !/^[ \t]*(?:#|$)/.test(l))
-  if (!line.startsWith('title:') || next?.startsWith(' ')) { return fail('title') }
+  const [line, second] = front.filter((l) => /^title[ \t]*:/.test(l))
+  if (second !== undefined) {
+    return fail('title')
+  }
+  if (line === undefined) {
+    return null
+  }
+  const next = front.slice(front.indexOf(line) + 1).find((l) => !/^[ \t]*(?:#|$)/.test(l))
+  if (!line.startsWith('title:') || next?.startsWith(' ')) {
+    return fail('title')
+  }
   const rest = line.slice('title:'.length).replace(/[ \t]+$/, '')
-  if (rest === '') { return null }
+  if (rest === '') {
+    return null
+  }
   const raw = /^[ \t]/.test(rest) ? scalar(rest.replace(/^[ \t]+/, '')) : null
-  if (raw === null) { return fail('frontmatter') }
+  if (raw === null) {
+    return fail('frontmatter')
+  }
   const value = raw.quoted ? raw.text : typed(raw.text)
-  if (value === undefined || value === true || typeof value === 'number') { return fail('title') }
+  if (value === undefined || value === true || typeof value === 'number') {
+    return fail('title')
+  }
   const bad = value ? unsupported(value) : null
   return bad ? fail(`unsupported-char ${bad}`) : value || null
 }
@@ -326,48 +455,85 @@ function readConfig(front: readonly string[]): Record<string, Raw> | null {
   let pending: { indent: number; path: string[] } | null = null
   // Inside the block; a config: line seen; an unindented line seen.
   let inBlock = false
-let  opened = false
-let  top = false
+  let opened = false
+  let top = false
   for (const raw of front) {
     const line = raw.replace(/[ \t]+$/, '')
-    if (line === '') { continue }
+    if (line === '') {
+      continue
+    }
     const indent = line.search(/[^ ]/)
-    if (line[indent] === '\t') { return null }
+    if (line[indent] === '\t') {
+      return null
+    }
     const body = line.slice(indent)
-    if (body.startsWith('#')) { continue }
+    if (body.startsWith('#')) {
+      continue
+    }
     // The top-level mapping starts unindented, or a `config:` could hide inside it.
-    if (indent > 0 && !top) { return null }
+    if (indent > 0 && !top) {
+      return null
+    }
     // An unindented line ends the block, and only the first `config:` opens it. One
     // that could spell config another way (`config :`, `config: {}`, or a quoted,
     // tagged, anchored or explicit key, a flow collection, a sequence) falls back.
     if (indent === 0) {
-      if (pending) { return null }
+      if (pending) {
+        return null
+      }
       top = true
       inBlock = body === 'config:'
-      if (inBlock && opened) { return null }
-      if (inBlock) { opened = true; pending = { indent, path: [] } }
-      else if (NOT_PLAIN.test(body) || /^config[ \t]*:/.test(body) || !keyOk(/^(.*?):(?:[ \t]|$)/.exec(body)?.[1] ?? '')) { return null }
+      if (inBlock && opened) {
+        return null
+      }
+      if (inBlock) {
+        opened = true
+        pending = { indent, path: [] }
+      } else if (
+        NOT_PLAIN.test(body) ||
+        /^config[ \t]*:/.test(body) ||
+        !keyOk(/^(.*?):(?:[ \t]|$)/.exec(body)?.[1] ?? '')
+      ) {
+        return null
+      }
       continue
     }
-    if (!inBlock) { continue }
+    if (!inBlock) {
+      continue
+    }
     const m = /^([A-Za-z_][\w-]*):/.exec(body)
-    if (!m) { return null }
+    if (!m) {
+      return null
+    }
     const [head, key = ''] = m
-    if (!keyOk(key)) { return null }
+    if (!keyOk(key)) {
+      return null
+    }
     if (pending) {
-      if (indent <= pending.indent) { return null }
+      if (indent <= pending.indent) {
+        return null
+      }
       frames.push({ indent, path: pending.path, keys: new Set() })
       pending = null
     }
-    while (frames.length > 0 && frames.at(-1)!.indent > indent) { frames.pop() }
+    while (frames.length > 0 && frames.at(-1)!.indent > indent) {
+      frames.pop()
+    }
     const frame = frames.at(-1)
-    if (!frame || frame.indent !== indent || frame.keys.has(key)) { return null }
+    if (!frame || frame.indent !== indent || frame.keys.has(key)) {
+      return null
+    }
     frame.keys.add(key)
     const path = [...frame.path, key]
-const  rest = body.slice(head.length)
-    if (rest === '') { pending = { indent, path }; continue }
+    const rest = body.slice(head.length)
+    if (rest === '') {
+      pending = { indent, path }
+      continue
+    }
     const value = rest.startsWith(' ') ? scalar(rest.replace(/^[ \t]+/, '')) : null
-    if (value === null) { return null }
+    if (value === null) {
+      return null
+    }
     put(config, path.join('.'), value)
   }
   return pending ? null : config
@@ -377,7 +543,9 @@ const  rest = body.slice(head.length)
 // `~`, `1`, `.inf`) could repeat another that resolves to the same value (`true`), which js-yaml rejects as a
 // duplicated mapping key. A key that only looks like a number (`1a`) falls back too, which fails closed. `__proto__`
 // falls back so that it can never reach config.
-const keyOk = (k: string): boolean => k !== '__proto__' && !/^(?:~|null|Null|NULL|true|True|TRUE|false|False|FALSE)$/.test(k) &&
+const keyOk = (k: string): boolean =>
+  k !== '__proto__' &&
+  !/^(?:~|null|Null|NULL|true|True|TRUE|false|False|FALSE)$/.test(k) &&
   !/^[-+]?\.?\d|^[-+]?\.(?:inf|Inf|INF)$|^\.(?:nan|NaN|NAN)$/.test(k)
 
 // Sets an own property, so that no key can reach a setter on Object.prototype.
@@ -396,10 +564,14 @@ function scalar(v: string): Raw | null {
   const quoted = /^"((?:[^"\\]|\\["\\])*)"|^'((?:[^']|'')*)'/.exec(v)
   if (quoted) {
     const [whole, dq, sq = ''] = quoted
-    if (!/^(?:[ \t]+#|$)/.test(v.slice(whole.length))) { return null }
+    if (!/^(?:[ \t]+#|$)/.test(v.slice(whole.length))) {
+      return null
+    }
     return { quoted: true, text: dq !== undefined ? dq.replace(/\\(["\\])/g, '$1') : sq.replace(/''/g, "'") }
   }
-  if (NOT_PLAIN.test(v)) { return null }
+  if (NOT_PLAIN.test(v)) {
+    return null
+  }
   const cut = v.search(/[ \t]#/)
   const plain = (cut < 0 ? v : v.slice(0, cut)).replace(/[ \t]+$/, '')
   return /:(?:[ \t]|$)/.test(plain) ? null : { quoted: false, text: plain }
@@ -416,10 +588,18 @@ function scalar(v: string): Raw | null {
 // fails closed on some it reads as strings, such as `-x`, `1.2.3` and `1_000`
 // (a string in js-yaml 4.3.0, 1000 in 4.1.0). `2024 Roadmap` and `50%` stay strings.
 function typed(text: string): Scalar | undefined {
-  if (/^(?:~|null|Null|NULL)$/.test(text)) { return null }
-  if (/^(?:true|True|TRUE|false|False|FALSE)$/.test(text)) { return text.toLowerCase() === 'true' }
+  if (/^(?:~|null|Null|NULL)$/.test(text)) {
+    return null
+  }
+  if (/^(?:true|True|TRUE|false|False|FALSE)$/.test(text)) {
+    return text.toLowerCase() === 'true'
+  }
   const n = Number(text)
-  if (/^-?(?:0|[1-9]\d*)$/.test(text) && Number.isSafeInteger(n)) { return n || 0 }
-  if (/^-?(?:0|[1-9]\d*)\.\d+(?:[eE][-+]?\d+)?$/.test(text) && Number.isFinite(n)) { return n }
+  if (/^-?(?:0|[1-9]\d*)$/.test(text) && Number.isSafeInteger(n)) {
+    return n || 0
+  }
+  if (/^-?(?:0|[1-9]\d*)\.\d+(?:[eE][-+]?\d+)?$/.test(text) && Number.isFinite(n)) {
+    return n
+  }
   return /^[-+.\d][\w.+-]*$/.test(text) ? undefined : text
 }

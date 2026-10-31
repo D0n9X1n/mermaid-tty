@@ -13,5 +13,16 @@ import { state } from './state/layout.ts'
 import { timeline } from './timeline/layout.ts'
 import { xychart } from './xychart/layout.ts'
 
-export const TIER1_MODULES: readonly DiagramModule<any>[] =
-  [state, classDiagram, er, mindmap, gantt, pie, gitGraph, timeline, journey, xychart, quadrant]
+export const TIER1_MODULES: readonly DiagramModule<any>[] = [
+  state,
+  classDiagram,
+  er,
+  mindmap,
+  gantt,
+  pie,
+  gitGraph,
+  timeline,
+  journey,
+  xychart,
+  quadrant,
+]

@@ -74,13 +74,13 @@ export const WIDE: readonly number[] = [
 ]
 `
 
-test('A4.width-table: the generator keeps W and F, merges adjacent ranges and names the version', t => {
+test('A4.width-table: the generator keeps W and F, merges adjacent ranges and names the version', (t) => {
   const r = generate(t, EAW)
   assert.equal(r.status, 0, r.stderr.toString())
   assert.equal(r.stdout.toString(), WANT)
 })
 
-test('A4.width-table: the generator throws on a malformed line', t => {
+test('A4.width-table: the generator throws on a malformed line', (t) => {
   for (const line of ['1100..115F     ; X  # an unknown class', '1100..115F       W', '11G0           ; W']) {
     const r = generate(t, `# EastAsianWidth-99.1.2.txt\n\n${line}\n`)
     assert.notEqual(r.status, 0, line)

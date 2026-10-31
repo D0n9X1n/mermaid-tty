@@ -101,7 +101,8 @@ function normal(node: unknown): unknown {
     for (const child of node.map(normal)) {
       // An exported declaration splits into exported declarations: read each as its declaration, marked exported.
       const unwrap = (n: Record<string, unknown> | undefined | null) =>
-        n?.type === 'ExportNamedDeclaration' && (n.declaration as Record<string, unknown> | null)?.type === 'VariableDeclaration'
+        n?.type === 'ExportNamedDeclaration' &&
+        (n.declaration as Record<string, unknown> | null)?.type === 'VariableDeclaration'
           ? { ...(n.declaration as Record<string, unknown>), exported: true }
           : n
       const previous = unwrap(out.at(-1) as Record<string, unknown> | undefined)

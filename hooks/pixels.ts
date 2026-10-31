@@ -5,11 +5,24 @@
 // pass no pixels through, and Windows has no terminal that shows them. A failing env read is a no.
 export async function showsPixels($: any): Promise<boolean> {
   try {
-    if (await $.env.get('TMUX') || await $.env.get('STY') || await $.env.get('ZELLIJ') || await $.env.get('OS') === 'Windows_NT') { return false }
-    const term = await $.env.get('TERM') ?? ''
-const  program = (await $.env.get('TERM_PROGRAM') ?? '').toLowerCase()
-    if (term === 'xterm-kitty') { return program === '' || program === 'kitty' }
-    if (term === 'xterm-ghostty') { return program === '' || program === 'ghostty' }
+    if (
+      (await $.env.get('TMUX')) ||
+      (await $.env.get('STY')) ||
+      (await $.env.get('ZELLIJ')) ||
+      (await $.env.get('OS')) === 'Windows_NT'
+    ) {
+      return false
+    }
+    const term = (await $.env.get('TERM')) ?? ''
+    const program = ((await $.env.get('TERM_PROGRAM')) ?? '').toLowerCase()
+    if (term === 'xterm-kitty') {
+      return program === '' || program === 'kitty'
+    }
+    if (term === 'xterm-ghostty') {
+      return program === '' || program === 'ghostty'
+    }
     return false
-  } catch { return false }
+  } catch {
+    return false
+  }
 }

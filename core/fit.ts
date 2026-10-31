@@ -7,19 +7,39 @@ import type { DiagramModule } from './registry.ts'
 import { validate } from './validate.ts'
 
 // A's four steps, then C's (plan C §4, T40). A type's ladder lists only the steps its layout draws.
-export type Step = 'natural' | 'tight' | 'wrap' | 'lrToTd' | 'keyed' | 'keyedWrap' | 'horizontal' | 'oneActor' | 'compact' | 'outline'
+export type Step =
+  | 'natural'
+  | 'tight'
+  | 'wrap'
+  | 'lrToTd'
+  | 'keyed'
+  | 'keyedWrap'
+  | 'horizontal'
+  | 'oneActor'
+  | 'compact'
+  | 'outline'
 
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a wider
 // claim would pass it), or when validate rejects its drawing. If every step is skipped, the last one's reason; 'too-wide'
 // when the ladder has no step.
-export function fitLadder<M>(mod: DiagramModule<M>, model: M, columns: number): { step: Step; drawing: Drawing } | Fail {
+export function fitLadder<M>(
+  mod: DiagramModule<M>,
+  model: M,
+  columns: number,
+): { step: Step; drawing: Drawing } | Fail {
   let last = fail('too-wide')
   for (const step of mod.steps(model)) {
     const drawing = mod.layout(model, step, columns)
-    if (isFail(drawing)) { last = drawing; continue }
+    if (isFail(drawing)) {
+      last = drawing
+      continue
+    }
     const rejected = drawing.columns !== columns ? fail('columns-mismatch') : validate(drawing)
-    if (rejected) { last = rejected; continue }
+    if (rejected) {
+      last = rejected
+      continue
+    }
     return { step, drawing }
   }
   return last

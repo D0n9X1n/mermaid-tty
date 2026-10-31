@@ -34,8 +34,12 @@ const PASS: Row[] = [
   ['test', 'getBuiltinModule', "() => { process.getBuiltinModule('node:assert').ok(1) }"],
   ['test', 't.assert', 't => { t.assert.ok(1) }'],
   ['test', 'rejects', "async () => { await assert.rejects(Promise.reject(new Error('x'))) }"],
-  ['test', 'one object however reached', "() => { assert.deepEqual([assert.strict, require('assert'), process.getBuiltinModule('node:assert'), " +
-    "require('node:test'), testNs.default], [strictDefault, assert, assert, test, test]) }"],
+  [
+    'test',
+    'one object however reached',
+    "() => { assert.deepEqual([assert.strict, require('assert'), process.getBuiltinModule('node:assert'), " +
+      "require('node:test'), testNs.default], [strictDefault, assert, assert, test, test]) }",
+  ],
   ['test', 'callback', '(t, done) => { setTimeout(() => { assert.ok(1); done() }, 1) }'],
   ['test', 'a parent of an asserting child', "async t => { await t.test('child', () => { assert.ok(1) }) }"],
   ['it', 'it', '() => { assert.ok(1) }'],
@@ -44,8 +48,14 @@ const PASS: Row[] = [
   ["require('node:test')", 'required test', '() => { assert.ok(1) }'],
   ["process.getBuiltinModule('node:test')", 'getBuiltinModule test', '() => { assert.ok(1) }'],
   // node:assert's Assert, from Node 24.6, however reached: its instances' assertions count.
-  ...(typeof assert.Assert === 'function' ? [['test', 'Assert', '() => { new Assert().ok(1) }'], ['test', 'assert.Assert', '() => { new assert.Assert().ok(1) }'],
-    ['test', 'assert.strict.Assert', '() => { new assert.strict.Assert().ok(1) }'], ['test', 'strict Assert', '() => { new strictNs.Assert().ok(1) }']] as Row[] : []),
+  ...(typeof assert.Assert === 'function'
+    ? ([
+        ['test', 'Assert', '() => { new Assert().ok(1) }'],
+        ['test', 'assert.Assert', '() => { new assert.Assert().ok(1) }'],
+        ['test', 'assert.strict.Assert', '() => { new assert.strict.Assert().ok(1) }'],
+        ['test', 'strict Assert', '() => { new strictNs.Assert().ok(1) }'],
+      ] as Row[])
+    : []),
 ]
 const FAIL: Row[] = [
   ['test', 'none', '() => {}'],
@@ -62,20 +72,38 @@ const FAIL: Row[] = [
   ["process.getBuiltinModule('node:test')", 'getBuiltinModule, none', '() => {}'],
 ]
 const call = ([how, name, rest]: Row) => `${how}('${name}'${rest ? `, ${rest}` : ''})`
-const FIXTURE = ["import test, { describe, it } from 'node:test'", "import * as testNs from 'node:test'",
-  "import assert, { ok, equal, strict, Assert } from 'node:assert'", "import * as assertNs from 'node:assert'",
-  "import strictDefault, { deepEqual as strictDeepEqual } from 'node:assert/strict'", "import * as strictNs from 'node:assert/strict'",
-  "import bare from 'assert'", "import bareStrict from 'assert/strict'", "import { createRequire } from 'node:module'",
-  'const require = createRequire(import.meta.url)', ...PASS.map(call), ...FAIL.map(call), ''].join('\n')
+const FIXTURE = [
+  "import test, { describe, it } from 'node:test'",
+  "import * as testNs from 'node:test'",
+  "import assert, { ok, equal, strict, Assert } from 'node:assert'",
+  "import * as assertNs from 'node:assert'",
+  "import strictDefault, { deepEqual as strictDeepEqual } from 'node:assert/strict'",
+  "import * as strictNs from 'node:assert/strict'",
+  "import bare from 'assert'",
+  "import bareStrict from 'assert/strict'",
+  "import { createRequire } from 'node:module'",
+  'const require = createRequire(import.meta.url)',
+  ...PASS.map(call),
+  ...FAIL.map(call),
+  '',
+].join('\n')
 
-test('A8.validation: under the preload a test passes iff its function executes an assertion, however it reaches node:assert, node:test or t.assert', t => {
+test('A8.validation: under the preload a test passes iff its function executes an assertion, however it reaches node:assert, node:test or t.assert', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'mtty-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   writeFileSync(join(dir, 'fixture_test.ts'), FIXTURE)
   // A node --test that inherits NODE_TEST_CONTEXT from this run skips its files.
   const { NODE_TEST_CONTEXT: _, ...env } = process.env
-  const r = spawnSync(process.execPath, [`--import=${HOOKS}`, '--test', '--test-reporter=tap', 'fixture_test.ts'], { cwd: dir, encoding: 'utf8', env })
-  const results = Object.fromEntries([...r.stdout.matchAll(/^(not ok|ok) \d+ - (.+)$/gm)].map(m => [m[2], m[1]]))
-  assert.deepEqual(results, Object.fromEntries([...PASS.map(([, name]) => [name, 'ok']), ...FAIL.map(([, name]) => [name, 'not ok'])]), r.stderr)
+  const r = spawnSync(process.execPath, [`--import=${HOOKS}`, '--test', '--test-reporter=tap', 'fixture_test.ts'], {
+    cwd: dir,
+    encoding: 'utf8',
+    env,
+  })
+  const results = Object.fromEntries([...r.stdout.matchAll(/^(not ok|ok) \d+ - (.+)$/gm)].map((m) => [m[2], m[1]]))
+  assert.deepEqual(
+    results,
+    Object.fromEntries([...PASS.map(([, name]) => [name, 'ok']), ...FAIL.map(([, name]) => [name, 'not ok'])]),
+    r.stderr,
+  )
   assert.equal(r.stdout.match(/error: 'no assertion executed'/g)?.length, FAIL.length)
 })

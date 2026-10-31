@@ -1,5 +1,7 @@
-import test from 'node:test'; import assert from 'node:assert/strict'
-import { explain } from '../../core/render.ts'; import { validate } from '../../core/validate.ts'
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { explain } from '../../core/render.ts'
+import { validate } from '../../core/validate.ts'
 import { isFail } from '../../core/fail.ts'
 import { text } from './graph-fixture.ts'
 
@@ -7,8 +9,10 @@ import { text } from './graph-fixture.ts'
 const REPROS = {
   'flowchart TD two-node cycle': 'flowchart TD\nsubgraph S\n  a --> b\n  b --> a\nend',
   'state composite cycle': 'stateDiagram-v2\nstate P {\n  A --> B\n  B --> A\n}\n[*] --> P',
-  'flowchart LR three-node cycle, edge to the frame': 'flowchart LR\nsubgraph S\n  a --> b --> c\n  c --> a\nend\nx --> S',
-  'nested frames, the cycle in the inner one': 'flowchart TD\nsubgraph O\n  subgraph I\n    a --> b\n    b --> a\n  end\n  c\nend\nc --> I',
+  'flowchart LR three-node cycle, edge to the frame':
+    'flowchart LR\nsubgraph S\n  a --> b --> c\n  c --> a\nend\nx --> S',
+  'nested frames, the cycle in the inner one':
+    'flowchart TD\nsubgraph O\n  subgraph I\n    a --> b\n    b --> a\n  end\n  c\nend\nc --> I',
 }
 for (const [name, src] of Object.entries(REPROS)) {
   test(`V7: ${name} draws at 80 columns with the back edge inside the frame`, () => {

@@ -7,7 +7,7 @@ const PART = { h: [...'▏▎▍▌▋▊▉'], v: [...'▁▂▃▄▅▆▇'] 
 // The cells of e ≥ 0 eighths on axis, from the bar's base out: its full cells, then its partial, if any.
 function run(e: number, axis: 'h' | 'v'): string[] {
   const full = Array<string>(Math.floor(e / 8)).fill(FULL)
-const  part = PART[axis][(e % 8) - 1]
+  const part = PART[axis][(e % 8) - 1]
   return part ? [...full, part] : full
 }
 

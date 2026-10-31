@@ -1,9 +1,28 @@
 // End caps: the glyphs drawn left and right of a pill's label. They show the
 // shape when there is no color (matrix, Common rules, "End caps").
 export type Shape =
-  | 'rect' | 'round' | 'stadium' | 'subroutine' | 'cylinder' | 'hcyl' | 'circle' | 'dcircle'
-  | 'diamond' | 'hexagon' | 'leanR' | 'leanL' | 'trap' | 'trapInv' | 'asym' | 'bang' | 'cloud'
-  | 'arrowR' | 'arrowL' | 'arrowU' | 'arrowD' | 'plain'
+  | 'rect'
+  | 'round'
+  | 'stadium'
+  | 'subroutine'
+  | 'cylinder'
+  | 'hcyl'
+  | 'circle'
+  | 'dcircle'
+  | 'diamond'
+  | 'hexagon'
+  | 'leanR'
+  | 'leanL'
+  | 'trap'
+  | 'trapInv'
+  | 'asym'
+  | 'bang'
+  | 'cloud'
+  | 'arrowR'
+  | 'arrowL'
+  | 'arrowU'
+  | 'arrowD'
+  | 'plain'
 
 export const CAPS: Readonly<Record<Shape, readonly [string, string]>> = {
   rect: ['[', ']'],
@@ -54,7 +73,8 @@ const NAMES: readonly (readonly [Shape, readonly string[]])[] = [
 
 // A Map, not an object: an object lookup returns inherited members for names
 // like `constructor`, and those must fall back to rect like any unknown name.
-export const ALIASES: ReadonlyMap<string, Shape> =
-  new Map(NAMES.flatMap(([shape, names]) => names.map(n => [n, shape] as const)))
+export const ALIASES: ReadonlyMap<string, Shape> = new Map(
+  NAMES.flatMap(([shape, names]) => names.map((n) => [n, shape] as const)),
+)
 
 export const shapeFromName = (n: string): Shape => ALIASES.get(n.trim()) ?? 'rect'

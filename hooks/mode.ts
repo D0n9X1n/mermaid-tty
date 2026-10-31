@@ -13,13 +13,23 @@ export type ModeArgs = { set: Mode } | { report: true } | { error: string }
 const USAGE = 'usage: /mermaid-tty [source|diagram|text]'
 
 export const parseModeArgs = (a: unknown): ModeArgs => {
-  if (a === undefined) { return { report: true } }
-  if (typeof a !== 'string') { return { error: USAGE } }
+  if (a === undefined) {
+    return { report: true }
+  }
+  if (typeof a !== 'string') {
+    return { error: USAGE }
+  }
   const w = a.trim().toLowerCase()
-  if (w === '') { return { report: true } }
+  if (w === '') {
+    return { report: true }
+  }
   return w === 'source' || w === 'diagram' || w === 'text' ? { set: w } : { error: USAGE }
 }
 
 // The command's reply: what changed, or the mode in force when nothing did.
-const CHANGED: Record<Mode, string> = { source: 'mermaid-tty: showing diagrams as source', diagram: 'mermaid-tty: drawing diagrams', text: 'mermaid-tty: drawing diagrams as text' }
-export const modeReply = (m: Mode, changed: boolean) => !changed ? `mermaid-tty mode: ${m}` : CHANGED[m]
+const CHANGED: Record<Mode, string> = {
+  source: 'mermaid-tty: showing diagrams as source',
+  diagram: 'mermaid-tty: drawing diagrams',
+  text: 'mermaid-tty: drawing diagrams as text',
+}
+export const modeReply = (m: Mode, changed: boolean) => (!changed ? `mermaid-tty mode: ${m}` : CHANGED[m])

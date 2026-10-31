@@ -4,8 +4,16 @@ import { test, expect } from 'claude-code/testing'
 // that opens on a diagram sends next() an empty block first (D5), which a hook beneath answers.
 // The $.state round-trip through the mermaid-tty command moved to T22.
 test('A8.no-build: hooks import core with .ts suffixes', async ($, on) => {
-  on('ui.render', { component: 'AssistantMessage' }, async ($, e) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
-  const ui = await $.ui.mount({ plugin: 'mermaid-tty', surface: 'terminal', component: 'AssistantMessage',
-    props: { text: '```mermaid\nflowchart TD\nA-->B\n```', isFirstOfReply: true }, viewport: { columns: 80, rows: 24 } })
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.text}</Text>
+  })
+  const ui = await $.ui.mount({
+    plugin: 'mermaid-tty',
+    surface: 'terminal',
+    component: 'AssistantMessage',
+    props: { text: '```mermaid\nflowchart TD\nA-->B\n```', isFirstOfReply: true },
+    viewport: { columns: 80, rows: 24 },
+  })
   expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('A')
 })

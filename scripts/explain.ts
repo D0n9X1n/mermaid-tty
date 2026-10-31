@@ -18,12 +18,16 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
     console.log(`reason: ${r.reason}`)
     return 1
   }
-  const rows = toRows(r.drawing, palette('default')).map(row => row.map(s => s.text).join(''))
+  const rows = toRows(r.drawing, palette('default')).map((row) => row.map((s) => s.text).join(''))
   console.log(`step: ${r.step}`)
-  console.log(`width: ${Math.max(0, ...rows.map(row => width(row)))}`)
-  for (const row of rows) { console.log(row) }
+  console.log(`width: ${Math.max(0, ...rows.map((row) => width(row)))}`)
+  for (const row of rows) {
+    console.log(row)
+  }
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) { process.exitCode = main() }
+if (isMain(import.meta)) {
+  process.exitCode = main()
+}

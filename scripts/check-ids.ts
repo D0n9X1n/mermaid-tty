@@ -7,12 +7,20 @@ import { diffIds } from './lib/check-ids.ts'
 import { isMain } from './lib/is-main.ts'
 
 function main(): number {
-  const doc = Object.keys(JSON.parse(readFileSync('ci/coverage.json', 'utf8'))).filter(id => /^(A\d|VR\.)/.test(id))
-  const diff = diffIds(doc, CHECKS.map(c => c.id))
-  if (diff.missing.length || diff.extra.length) { console.error(`check-ids: ${JSON.stringify(diff)}`); return 1 }
+  const doc = Object.keys(JSON.parse(readFileSync('ci/coverage.json', 'utf8'))).filter((id) => /^(A\d|VR\.)/.test(id))
+  const diff = diffIds(
+    doc,
+    CHECKS.map((c) => c.id),
+  )
+  if (diff.missing.length || diff.extra.length) {
+    console.error(`check-ids: ${JSON.stringify(diff)}`)
+    return 1
+  }
   console.log(`check-ids: CHECKS matches the ${doc.length} A and VR IDs`)
   return 0
 }
 
 // main() runs only when node runs this file, not when another module imports it.
-if (isMain(import.meta)) { process.exitCode = main() }
+if (isMain(import.meta)) {
+  process.exitCode = main()
+}

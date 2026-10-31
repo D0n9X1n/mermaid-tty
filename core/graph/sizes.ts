@@ -15,9 +15,14 @@ export type Size = { rows: number; cols: number }
 function size(lines: readonly (string | number)[], wrapAt: number | null, extra: number): Size | Fail {
   const widths: number[] = []
   for (const line of lines) {
-    if (typeof line === 'number') { widths.push(line); continue }
-    const ps = wrapAt === null ? [line] : wrap(line, wrapAt)?.map(p => p.text)
-    if (!ps) { return fail('word-too-wide') }
+    if (typeof line === 'number') {
+      widths.push(line)
+      continue
+    }
+    const ps = wrapAt === null ? [line] : wrap(line, wrapAt)?.map((p) => p.text)
+    if (!ps) {
+      return fail('word-too-wide')
+    }
     widths.push(...ps.map(width))
   }
   return { rows: widths.length, cols: Math.max(0, ...widths) + extra }
@@ -26,15 +31,26 @@ function size(lines: readonly (string | number)[], wrapAt: number | null, extra:
 // A row of columns is its indent, then each column's width, a gap cell apart; a fixed row is its indent, then its text.
 // null for a row that wraps.
 const fixedWidth = (r: NodeRow): number | null =>
-  r.cols ? (r.indent ?? 0) + r.cols.reduce((s, c) => s + c.width, 0) + r.cols.length - 1
-    : r.fixed ? (r.indent ?? 0) + width(r.text) : null
+  r.cols
+    ? (r.indent ?? 0) + r.cols.reduce((s, c) => s + c.width, 0) + r.cols.length - 1
+    : r.fixed
+      ? (r.indent ?? 0) + width(r.text)
+      : null
 
 // A mark is one glyph cell, whatever its rows. A bar is span cells across the flow: a row of them, or a column when the
 // ranks go across, so layered's cross extent is always span. A bar with no span is one cell.
 export function nodeSize(n: GNode, wrapAt: number | null, across = false): Size | Fail {
-  if (n.mark === 'bar') { return across ? { rows: n.span ?? 1, cols: 1 } : { rows: 1, cols: n.span ?? 1 } }
-  if (n.mark) { return { rows: 1, cols: 1 } }
-  return size(n.rows.map(r => fixedWidth(r) ?? r.text), wrapAt, 2 + width(CAPS[n.shape][0]) + width(CAPS[n.shape][1]))
+  if (n.mark === 'bar') {
+    return across ? { rows: n.span ?? 1, cols: 1 } : { rows: 1, cols: n.span ?? 1 }
+  }
+  if (n.mark) {
+    return { rows: 1, cols: 1 }
+  }
+  return size(
+    n.rows.map((r) => fixedWidth(r) ?? r.text),
+    wrapAt,
+    2 + width(CAPS[n.shape][0]) + width(CAPS[n.shape][1]),
+  )
 }
 
 // An edge label's lines break at <br/> as a node's rows do.

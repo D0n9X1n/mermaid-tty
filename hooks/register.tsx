@@ -15,13 +15,19 @@ const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 // The loader follows $ only into top-level functions, so mode lives here. A read while a
 // ui.render hook draws subscribes that drawing, so a later set draws it again.
 // The value is true for source, 'text' for text, and anything else for diagram.
-async function mode($: StateDollar): Promise<Mode> { const v = (await $.state.get(SOURCE)).value; return v === true ? 'source' : v === 'text' ? 'text' : 'diagram' }
+async function mode($: StateDollar): Promise<Mode> {
+  const v = (await $.state.get(SOURCE)).value
+  return v === true ? 'source' : v === 'text' ? 'text' : 'diagram'
+}
 
 export const register: Register = (on, options) => {
   const theme = String(options.theme ?? 'default')
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'mermaid-tty', description: 'Show Mermaid diagrams as source or diagram: /mermaid-tty [source|diagram]' })
+    await $.command.register({
+      name: 'mermaid-tty',
+      description: 'Show Mermaid diagrams as source or diagram: /mermaid-tty [source|diagram]',
+    })
     return next(e)
   })
 
@@ -29,10 +35,15 @@ export const register: Register = (on, options) => {
   // (undefined when left out); parseModeArgs coerces none of them.
   on('command.run', { command: 'mermaid-tty' }, async ($, e) => {
     const a = parseModeArgs(e.args)
-const  cur = await mode($)
-    if ('error' in a) { return { text: a.error } }
-    if ('report' in a) { return { text: modeReply(cur, false) } }
-    await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false); $.ui.invalidate('ui.render')
+    const cur = await mode($)
+    if ('error' in a) {
+      return { text: a.error }
+    }
+    if ('report' in a) {
+      return { text: modeReply(cur, false) }
+    }
+    await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false)
+    $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
   })
 
@@ -40,17 +51,42 @@ const  cur = await mode($)
   // sends the reply through next(e) unchanged, so Claude Code draws it as it would without the plugin.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     const plan = await safePlan($, e, theme, () => mode($))
-    if (!plan) { return next(e) }
+    if (!plan) {
+      return next(e)
+    }
     const { parts, Box, Text, Image } = plan
-const  kids: RenderElement[] = []
+    const kids: RenderElement[] = []
     let first = e.props.isFirstOfReply
-let  n = 0
+    let n = 0
     for (const p of parts) {
-      if (!('prose' in p) && first) { kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } })) }  // D5: keep the bullet
-      if ('picture' in p) { kids.push(<Image key={`mermaid-${n++}`} source={{ png: p.picture.png }} columns={p.picture.columns} rows={p.picture.rows} alt="mermaid diagram" />) }
-      else if ('rows' in p) { kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
-        <Text wrap="truncate-end">{row.map(({ text, role: _r, ...style }) => <Text {...style}>{text}</Text>)}</Text>)}</Box>) }
-      else { kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } })) }
+      if (!('prose' in p) && first) {
+        kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))
+      } // D5: keep the bullet
+      if ('picture' in p) {
+        kids.push(
+          <Image
+            key={`mermaid-${n++}`}
+            source={{ png: p.picture.png }}
+            columns={p.picture.columns}
+            rows={p.picture.rows}
+            alt="mermaid diagram"
+          />,
+        )
+      } else if ('rows' in p) {
+        kids.push(
+          <Box key={`mermaid-${n++}`} flexDirection="column">
+            {p.rows.map((row) => (
+              <Text wrap="truncate-end">
+                {row.map(({ text, role: _r, ...style }) => (
+                  <Text {...style}>{text}</Text>
+                ))}
+              </Text>
+            ))}
+          </Box>,
+        )
+      } else {
+        kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } }))
+      }
       first = false
     }
     return <Box flexDirection="column">{kids}</Box>

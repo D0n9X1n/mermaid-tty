@@ -31,9 +31,13 @@ function fill(actors: readonly string[], max: number): Range[] | null {
   const rows: Range[] = []
   for (let k = 0; k < actors.length; k++) {
     const last = rows.at(-1)
-    if (last && span(actors, [last[0], k + 1]) <= max) { rows[rows.length - 1] = [last[0], k + 1] }
-    else if (span(actors, [k, k + 1]) <= max) { rows.push([k, k + 1]) }
-    else { return null }
+    if (last && span(actors, [last[0], k + 1]) <= max) {
+      rows[rows.length - 1] = [last[0], k + 1]
+    } else if (span(actors, [k, k + 1]) <= max) {
+      rows.push([k, k + 1])
+    } else {
+      return null
+    }
   }
   return rows
 }
@@ -48,17 +52,21 @@ const tall = (b: Block): number => Math.max(b.pieces.length, b.rows.length)
 // columns − N − S − 16 cells. oneActor: one actor a row, and names wrap to columns − S − a − 16 cells, a the widest
 // actor, its comma included.
 function plan(tasks: readonly Task[], step: Step, columns: number): { blocks: Block[]; N: number; S: number } | Fail {
-  const S = widest(tasks.map(t => t.raw))
+  const S = widest(tasks.map((t) => t.raw))
   const solo = (t: Task) => t.actors.map((_, k): Range => [k, k + 1])
-  const a = Math.max(...tasks.flatMap(t => solo(t).map(x => span(t.actors, x))))
-  const names = tasks.map(t => wrap(t.name, step === 'oneActor' ? columns - S - a - 16 : Infinity))
-  if (names.some(p => !p)) { return fail('too-wide') }
-  const N = widest(names.flatMap(p => p!.map(x => x.text)))
-const  F = columns - N - S - 16
-const  blocks: Block[] = []
+  const a = Math.max(...tasks.flatMap((t) => solo(t).map((x) => span(t.actors, x))))
+  const names = tasks.map((t) => wrap(t.name, step === 'oneActor' ? columns - S - a - 16 : Infinity))
+  if (names.some((p) => !p)) {
+    return fail('too-wide')
+  }
+  const N = widest(names.flatMap((p) => p!.map((x) => x.text)))
+  const F = columns - N - S - 16
+  const blocks: Block[] = []
   for (const [i, t] of tasks.entries()) {
     const rows = step === 'oneActor' ? solo(t) : fill(t.actors, step === 'wrap' ? F : Infinity)
-    if (!rows || rows.some(x => span(t.actors, x) > F)) { return fail('too-wide') }
+    if (!rows || rows.some((x) => span(t.actors, x) > F)) {
+      return fail('too-wide')
+    }
     blocks.push({ pieces: names[i]!, rows })
   }
   return { blocks, N, S }
@@ -70,33 +78,43 @@ const  blocks: Block[] = []
 // cells, its score right-aligned to S, two spaces, then its actor rows, each ', ' and a row's last ',' drawn as caps.
 // Any step off the ladder fails 'step'.
 function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
-  if (!STEPS.includes(step)) { return fail('step') }
-  const tasks = journey.groups.flatMap(g => g.tasks)
-const  p = plan(tasks, step, columns)
-  if (isFail(p)) { return p }
-  const heads = journey.groups.map(g => (g.name === null ? [] : wrap(g.name, columns)))
-  if (heads.some(h => !h)) { return fail('too-wide') }
+  if (!STEPS.includes(step)) {
+    return fail('step')
+  }
+  const tasks = journey.groups.flatMap((g) => g.tasks)
+  const p = plan(tasks, step, columns)
+  if (isFail(p)) {
+    return p
+  }
+  const heads = journey.groups.map((g) => (g.name === null ? [] : wrap(g.name, columns)))
+  if (heads.some((h) => !h)) {
+    return fail('too-wide')
+  }
   const { blocks, N, S } = p
   const height = heads.reduce((n, h) => n + h!.length, 0) + blocks.reduce((n, b) => n + tall(b), 0)
   const cv = createCanvas(height, columns, columns)
   const labels: Expect['labels'][number][] = []
-const  bars: NonNullable<Expect['bars']>[number][] = []
+  const bars: NonNullable<Expect['bars']>[number][] = []
   // Draws task i, t, in ink from row r, and returns its row count. The separator after actor k is ', ' within a row, ','
   // ending a row that does not end the list, and none after the last actor.
   const task = (t: Task, i: number, r: number, ink: SeriesKey): number => {
     const id = `t${i}`
-const  b = blocks[i]!
-const  e = eighths(t.score, FIVE, 10)
+    const b = blocks[i]!
+    const e = eighths(t.score, FIVE, 10)
     b.pieces.forEach((x, j) => cv.text(r + j, 2, x.text, 'label', id, j > 0 ? x.join : undefined))
     cv.cap(r, N + 3, hbar(e).padEnd(10), ink, id)
     cv.text(r, N + S + 14 - width(t.raw), t.raw, 'value', `${id}.v`)
-    labels.push(placed(id, t.name, b.pieces, r, 2), { owner: `${id}.v`, text: t.raw, at: { r, c: N + S + 14 - width(t.raw) } })
+    labels.push(placed(id, t.name, b.pieces, r, 2), {
+      owner: `${id}.v`,
+      text: t.raw,
+      at: { r, c: N + S + 14 - width(t.raw) },
+    })
     bars.push({ owner: id, eighths: e, axis: 'h', at: { r, c: N + 3 } })
     b.rows.forEach(([from, to], j) => {
       let c = N + S + 16
       for (let k = from; k < to; k++) {
         const owner = `${id}.a${k}`
-const  sep = k === t.actors.length - 1 ? '' : k < to - 1 ? ', ' : ','
+        const sep = k === t.actors.length - 1 ? '' : k < to - 1 ? ', ' : ','
         labels.push({ owner, text: t.actors[k]!, at: { r: r + j, c } })
         c += cv.text(r + j, c, t.actors[k]!, 'label', owner)
         cv.cap(r + j, c, sep, 'label', owner)
@@ -106,19 +124,25 @@ const  sep = k === t.actors.length - 1 ? '' : k < to - 1 ? ', ' : ','
     return tall(b)
   }
   let r = 0
-let  i = 0
-let  sec = 0
+  let i = 0
+  let sec = 0
   journey.groups.forEach((g, gi) => {
-    const ink = `s${gi % 8 + 1}` as SeriesKey
+    const ink = `s${(gi % 8) + 1}` as SeriesKey
     if (g.name !== null) {
       const id = `sec${sec++}`
       heads[gi]!.forEach((x, j) => cv.text(r + j, 0, x.text, ink, id, j > 0 ? x.join : undefined))
-      labels.push(placed(id, g.name, heads[gi]!, r, 0)); r += heads[gi]!.length
+      labels.push(placed(id, g.name, heads[gi]!, r, 0))
+      r += heads[gi]!.length
     }
-    for (const t of g.tasks) { r += task(t, i, r, ink); i++ }
+    for (const t of g.tasks) {
+      r += task(t, i, r, ink)
+      i++
+    }
   })
   const body = cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], bars })
-  if (journey.title === null) { return body }
+  if (journey.title === null) {
+    return body
+  }
   const head = heading(journey.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
 }

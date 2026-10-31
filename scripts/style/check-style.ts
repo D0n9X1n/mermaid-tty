@@ -170,9 +170,10 @@ export async function check(file: string, source: string): Promise<Violation[]> 
       }
     }
 
-    const body = (node.type === 'Program' || node.type === 'BlockStatement' || node.type === 'SwitchCase')
-      ? ((node.type === 'SwitchCase' ? node.consequent : node.body) as Node[])
-      : null
+    const body =
+      node.type === 'Program' || node.type === 'BlockStatement' || node.type === 'SwitchCase'
+        ? ((node.type === 'SwitchCase' ? node.consequent : node.body) as Node[])
+        : null
     for (const [i, statement] of (body ?? []).entries()) {
       const next = body![i + 1]
       const multiLine = statement.loc.end.line > statement.loc.start.line

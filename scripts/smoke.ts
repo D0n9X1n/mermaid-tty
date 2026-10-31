@@ -13,9 +13,13 @@ export function main(source: string = readFileSync(FIXTURE, 'utf8')): number {
     console.error('smoke: renderMermaid returned null, so the source falls back')
     return 1
   }
-  for (const row of rows) { console.log(row.map(s => s.text).join('')) }
+  for (const row of rows) {
+    console.log(row.map((s) => s.text).join(''))
+  }
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) { process.exitCode = main() }
+if (isMain(import.meta)) {
+  process.exitCode = main()
+}

@@ -21,7 +21,12 @@ export type Screen = {
 }
 
 // xterm's color modes, as getFgColorMode and getBgColorMode return them (its Attributes.CM_DEFAULT, CM_P16, CM_P256, CM_RGB).
-const MODES = new Map<number, Color['mode']>([[0, 'default'], [0x1000000, 'p16'], [0x2000000, 'p256'], [0x3000000, 'rgb']])
+const MODES = new Map<number, Color['mode']>([
+  [0, 'default'],
+  [0x1000000, 'p16'],
+  [0x2000000, 'p256'],
+  [0x3000000, 'rgb'],
+])
 const color = (mode: number, value: number): Color => {
   const m = MODES.get(mode)!
   return { mode: m, value: m === 'default' ? 0 : value }
@@ -31,9 +36,11 @@ export function createScreen(cols: number, rows: number): Screen {
   const term = new xterm.Terminal({ cols, rows, allowProposedApi: true })
   let copied: string | undefined
   // OSC 52 ; Pc ; Pd. Pd is the base64 of the copied text, or ? for a query of the clipboard, which copies nothing.
-  term.parser.registerOscHandler(52, data => {
+  term.parser.registerOscHandler(52, (data) => {
     const pd = data.slice(data.indexOf(';') + 1)
-    if (pd !== '?') { copied = Buffer.from(pd, 'base64').toString('utf8') }
+    if (pd !== '?') {
+      copied = Buffer.from(pd, 'base64').toString('utf8')
+    }
     return true
   })
   // The active buffer's lines on the screen: those after the baseY lines scrolled off it.
@@ -42,13 +49,24 @@ export function createScreen(cols: number, rows: number): Screen {
     return Array.from({ length: rows }, (_, y) => b.getLine(b.baseY + y)!)
   }
   return {
-    write: data => new Promise(resolve => term.write(data, resolve)),
-    cells: () => lines().map(line => Array.from({ length: cols }, (_, x) => {
-      const c = line.getCell(x)!
-const  width = c.getWidth()
-      return { ch: c.getChars() || (width ? ' ' : ''), width, fg: color(c.getFgColorMode(), c.getFgColor()), bg: color(c.getBgColorMode(), c.getBgColor()) }
-    })),
-    text: () => lines().map(line => line.translateToString(true)).join('\n'),
+    write: (data) => new Promise((resolve) => term.write(data, resolve)),
+    cells: () =>
+      lines().map((line) =>
+        Array.from({ length: cols }, (_, x) => {
+          const c = line.getCell(x)!
+          const width = c.getWidth()
+          return {
+            ch: c.getChars() || (width ? ' ' : ''),
+            width,
+            fg: color(c.getFgColorMode(), c.getFgColor()),
+            bg: color(c.getBgColorMode(), c.getBgColor()),
+          }
+        }),
+      ),
+    text: () =>
+      lines()
+        .map((line) => line.translateToString(true))
+        .join('\n'),
     clipboard: () => copied,
   }
 }

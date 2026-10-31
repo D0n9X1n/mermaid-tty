@@ -16,25 +16,39 @@ export const running = () => als.getStore()
 
 // Adds one to store and to each of its ancestors'.
 function bump(store?: Store): void {
-  for (let s = store; s; s = s.parent) { s.count++ }
+  for (let s = store; s; s = s.parent) {
+    s.count++
+  }
 }
 // Whether the property key, of descriptor d, is an assertion: a function under a lowercase name.
-const isAssertion = (key: string | symbol, d: PropertyDescriptor) => typeof d.value === 'function' && typeof key === 'string' && /^[a-z]/.test(key)
+const isAssertion = (key: string | symbol, d: PropertyDescriptor) =>
+  typeof d.value === 'function' && typeof key === 'string' && /^[a-z]/.test(key)
 // A copy of value, an assertion function or object, whose assertions, at any depth, bump storeOf() when called, and whose
 // Assert is countingAssert's. seen keeps what value shares shared: the copy of assert.strict.strict is the copy of
 // assert.strict, and assert.strict.Assert is assert.Assert.
 function counting<T extends object>(value: T, storeOf: () => Store | undefined, seen = new Map<object, object>()): T {
   const known = seen.get(value)
-  if (known) { return known as T }
-  const copy = typeof value === 'function'
-    ? function (this: unknown, ...args: unknown[]) { bump(storeOf()); return Reflect.apply(value, this, args) }
-    : Object.create(Object.getPrototypeOf(value))
+  if (known) {
+    return known as T
+  }
+  const copy =
+    typeof value === 'function'
+      ? function (this: unknown, ...args: unknown[]) {
+          bump(storeOf())
+          return Reflect.apply(value, this, args)
+        }
+      : Object.create(Object.getPrototypeOf(value))
   seen.set(value, copy)
   for (const key of Reflect.ownKeys(value)) {
-    if (key === 'prototype') { continue }
+    if (key === 'prototype') {
+      continue
+    }
     const d = Object.getOwnPropertyDescriptor(value, key)!
-    if (isAssertion(key, d)) { d.value = counting(d.value, storeOf, seen) }
-    else if (key === 'Assert' && typeof d.value === 'function') { d.value = countingAssert(d.value, storeOf, seen) }
+    if (isAssertion(key, d)) {
+      d.value = counting(d.value, storeOf, seen)
+    } else if (key === 'Assert' && typeof d.value === 'function') {
+      d.value = countingAssert(d.value, storeOf, seen)
+    }
     Object.defineProperty(copy, key, d)
   }
   return copy
@@ -42,14 +56,22 @@ function counting<T extends object>(value: T, storeOf: () => Store | undefined, 
 // A subclass of node:assert's Assert (Node 24.6+), its options passed on, whose prototype's assertions bump storeOf() when
 // called. An instance's own assertions count too, once: a strict one's equal, deepEqual, notEqual and notDeepEqual are
 // what Assert's constructor read from this, the copies of strictEqual and the rest.
-function countingAssert(Base: new (...args: any[]) => object, storeOf: () => Store | undefined, seen: Map<object, object>): Function {
+function countingAssert(
+  Base: new (...args: any[]) => object,
+  storeOf: () => Store | undefined,
+  seen: Map<object, object>,
+): Function {
   const known = seen.get(Base)
-  if (known) { return known as Function }
+  if (known) {
+    return known as Function
+  }
   const Counted = class Assert extends Base {}
   seen.set(Base, Counted)
   for (const key of Reflect.ownKeys(Base.prototype)) {
     const d = Object.getOwnPropertyDescriptor(Base.prototype, key)!
-    if (key === 'constructor' || !isAssertion(key, d)) { continue }
+    if (key === 'constructor' || !isAssertion(key, d)) {
+      continue
+    }
     d.value = counting(d.value, storeOf, seen)
     Object.defineProperty(Counted.prototype, key, d)
   }
@@ -68,8 +90,16 @@ function counted(fn: Function, parent: Store | undefined): Function {
     const none = () => (store.count === 0 ? new Error('no assertion executed') : undefined)
     return als.run(store, () => {
       const done = rest[0]
-      if (typeof done === 'function') { return Reflect.apply(fn, this, [t, (err: unknown) => done(err || none())]) }
-      const settle = (value: unknown) => { const e = none(); if (e) { throw e; } return value }
+      if (typeof done === 'function') {
+        return Reflect.apply(fn, this, [t, (err: unknown) => done(err || none())])
+      }
+      const settle = (value: unknown) => {
+        const e = none()
+        if (e) {
+          throw e
+        }
+        return value
+      }
       const result = Reflect.apply(fn, this, [t, ...rest])
       // node:test awaits any thenable fn returns, which instanceof Promise misses unless it is this realm's promise.
       return typeof result?.then === 'function' ? Promise.resolve(result).then(settle) : settle(result)
@@ -92,12 +122,20 @@ function adopt(t: Context, store: Store): void {
 // executes no assertion. Its only, skip, todo and expectFailure, where it has them, register the same way.
 export function registrar(register: Function, parentOf: () => Store | undefined): Function {
   const wrapped = (...args: unknown[]) => {
-    const at = typeof args[0] === 'function' ? 0 : (typeof args[0] === 'object' && args[0] !== null) || typeof args[1] === 'function' ? 1 : 2
+    const at =
+      typeof args[0] === 'function'
+        ? 0
+        : (typeof args[0] === 'object' && args[0] !== null) || typeof args[1] === 'function'
+          ? 1
+          : 2
     const fn = args[at]
     args[at] = counted(typeof fn === 'function' ? fn : () => {}, parentOf())
     return Reflect.apply(register, undefined, args)
   }
-  for (const key of ['only', 'skip', 'todo', 'expectFailure'])
-    { if (typeof (register as any)[key] === 'function') { (wrapped as any)[key] = registrar((register as any)[key], parentOf) } }
+  for (const key of ['only', 'skip', 'todo', 'expectFailure']) {
+    if (typeof (register as any)[key] === 'function') {
+      ;(wrapped as any)[key] = registrar((register as any)[key], parentOf)
+    }
+  }
   return wrapped
 }

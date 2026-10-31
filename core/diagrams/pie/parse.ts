@@ -26,7 +26,9 @@ const POSITIVE = /^(?:[1-9]\d*|\d+\.\d+)$/
 // does an unsupported character. A slice is plain, each <br> drawn as written; a title is sanitized, with no <br>.
 function undrawable(text: string, mode: Mode, br: Br): Fail | null {
   const f = drawable(text, mode, br)
-  if (f) { return f }
+  if (f) {
+    return f
+  }
   const bad = unsupported(text)
   return bad ? fail(`unsupported-char ${bad}`) : null
 }
@@ -38,44 +40,62 @@ function undrawable(text: string, mode: Mode, br: Br): Fail | null {
 // 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no slice).
 export function parsePie(src: Source): Pie | Fail {
   const head = HEADER.exec(src.header)
-  if (!head) { return fail('header') }
+  if (!head) {
+    return fail('header')
+  }
   // A frontmatter title is no body text, so Mermaid does not encode it; readSource has checked its characters.
   const pie: Pie = { title: src.title, slices: [] }
   const f = head[3] === undefined ? null : titled(pie, head[3], 'header')
-  if (f) { return f }
-  let open = 0                                                      // the line an open accDescr { block starts on, or 0
+  if (f) {
+    return f
+  }
+  let open = 0 // the line an open accDescr { block starts on, or 0
   for (const { n, text } of src.lines) {
     const t = text.trim()
-const  block = open ? t : ACC_BLOCK.exec(t)?.[1]
+    const block = open ? t : ACC_BLOCK.exec(t)?.[1]
     if (block === undefined) {
       const g = statement(pie, t, n)
-      if (g) { return g }
+      if (g) {
+        return g
+      }
       continue
     }
     // Accessibility text is not drawn.
     const end = block.indexOf('}')
-    if (end >= 0 && block.slice(end + 1).trim()) { return fail(`syntax:${n}`) }
+    if (end >= 0 && block.slice(end + 1).trim()) {
+      return fail(`syntax:${n}`)
+    }
     open = end >= 0 ? 0 : open || n
   }
-  if (open) { return fail(`syntax:${open}`) }
+  if (open) {
+    return fail(`syntax:${open}`)
+  }
   return pie.slices.length > 0 ? pie : fail('empty')
 }
 
 // Reads the statement t on line n into pie: null, or why it fails.
 function statement(pie: Pie, t: string, n: number): Fail | null {
   const title = TITLE.exec(t)
-  if (title) { return titled(pie, title[1]!, n) }
-  if (ACC.test(t)) { return null }                                      // accessibility text is not drawn
+  if (title) {
+    return titled(pie, title[1]!, n)
+  }
+  if (ACC.test(t)) {
+    return null
+  } // accessibility text is not drawn
   const m = SLICE.exec(t)
   return m ? slice(pie, m, n) : fail(`syntax:${n}`)
 }
 
 // Sets pie's title to text, trimmed, read at where: its line, or 'header'. Fails 'repeat:<where>' if pie has a title.
 function titled(pie: Pie, text: string, where: number | 'header'): Fail | null {
-  if (pie.title !== null) { return fail(`repeat:${where}`) }
+  if (pie.title !== null) {
+    return fail(`repeat:${where}`)
+  }
   const t = text.trim()
-const  bad = undrawable(t, 'sanitized', 'none')
-  if (bad) { return bad }
+  const bad = undrawable(t, 'sanitized', 'none')
+  if (bad) {
+    return bad
+  }
   pie.title = t
   return null
 }
@@ -83,13 +103,21 @@ const  bad = undrawable(t, 'sanitized', 'none')
 // Adds the slice m reads on line n to pie: null, or why it fails.
 function slice(pie: Pie, m: RegExpExecArray, n: number): Fail | null {
   const label = m[1] ?? m[2]!
-const  raw = m[3]!
-  if (label.includes('\\') || !TOKEN.test(raw)) { return fail(`syntax:${n}`) }
+  const raw = m[3]!
+  if (label.includes('\\') || !TOKEN.test(raw)) {
+    return fail(`syntax:${n}`)
+  }
   const value = POSITIVE.test(raw) ? parseDec(raw) : null
-  if (!value || value.n <= 0n) { return fail(`domain:${n}`) }
-  if (pie.slices.some(s => s.label === label)) { return fail(`repeat:${n}`) }
+  if (!value || value.n <= 0n) {
+    return fail(`domain:${n}`)
+  }
+  if (pie.slices.some((s) => s.label === label)) {
+    return fail(`repeat:${n}`)
+  }
   const bad = undrawable(label, 'plain', 'literal')
-  if (bad) { return bad }
+  if (bad) {
+    return bad
+  }
   pie.slices.push({ label, raw, value, order: pie.slices.length })
   return null
 }

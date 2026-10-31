@@ -14,7 +14,8 @@ export const flowchart: DiagramModule<Graph> = {
   type: 'flowchart',
   parse: parseFlowchart,
   steps: (g: Graph): readonly Step[] => graphSteps(g.dir, false),
-  layout: (g, step, columns) => drawAt(({ dir }) => ({ graph: { ...g, dir }, legend: [], keyable: [] }), g.dir, step, columns, null),
+  layout: (g, step, columns) =>
+    drawAt(({ dir }) => ({ graph: { ...g, dir }, legend: [], keyable: [] }), g.dir, step, columns, null),
 }
 
 register(flowchart as DiagramModule)

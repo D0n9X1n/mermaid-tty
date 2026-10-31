@@ -10,7 +10,7 @@ test('A6.command: session.start registers the mermaid-tty command', async ($, on
     return { value: { command: e.name } }
   })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const mermaidTty = registered.filter(r => r.name === 'mermaid-tty')
+  const mermaidTty = registered.filter((r) => r.name === 'mermaid-tty')
   expect(mermaidTty).toHaveLength(1)
   expect(mermaidTty[0]?.description.trim()).not.toBe('')
 })

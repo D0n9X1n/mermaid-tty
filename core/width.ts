@@ -11,19 +11,25 @@ const FORMAT = /\p{Cf}/u
 
 export function isWide(cp: number): boolean {
   let lo = 0
-let  hi = WIDE.length / 2 - 1
+  let hi = WIDE.length / 2 - 1
   while (lo <= hi) {
     const m = (lo + hi) >> 1
-    if (cp < WIDE[2 * m]!) { hi = m - 1 }
-    else if (cp > WIDE[2 * m + 1]!) { lo = m + 1 }
-    else { return true }
+    if (cp < WIDE[2 * m]!) {
+      hi = m - 1
+    } else if (cp > WIDE[2 * m + 1]!) {
+      lo = m + 1
+    } else {
+      return true
+    }
   }
   return false
 }
 
 export function width(s: string): number {
   let w = 0
-  for (const ch of s) { w += ZERO.test(ch) ? 0 : isWide(ch.codePointAt(0)!) ? 2 : 1 }
+  for (const ch of s) {
+    w += ZERO.test(ch) ? 0 : isWide(ch.codePointAt(0)!) ? 2 : 1
+  }
   return w
 }
 
@@ -31,7 +37,9 @@ export function width(s: string): number {
 // characters (Cf) other than the zero-width ones are unsupported too.
 export function unsupported(s: string): string | null {
   for (const ch of s) {
-    if (BAD.test(ch) || (FORMAT.test(ch) && !ZERO.test(ch))) { return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0') }
+    if (BAD.test(ch) || (FORMAT.test(ch) && !ZERO.test(ch))) {
+      return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')
+    }
   }
   return null
 }

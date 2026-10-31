@@ -34,4 +34,6 @@ export const REPLY = [
 ].join('\n')
 
 // REPLY_LEAD (D5): a reply that opens with its diagram, prose after it.
-export const REPLY_LEAD = ['```mermaid', 'flowchart TD', 'S[开始] --> E[结束]', '```', '', 'After the diagram.'].join('\n')
+export const REPLY_LEAD = ['```mermaid', 'flowchart TD', 'S[开始] --> E[结束]', '```', '', 'After the diagram.'].join(
+  '\n',
+)
