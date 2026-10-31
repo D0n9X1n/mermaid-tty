@@ -13,7 +13,7 @@ const OS3 =
   '    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, macos-latest, windows-latest]\n    runs-on: ${{ matrix.os }}\n    steps:\n'
 const CI =
   'on:\n  pull_request:\n  push:\npermissions:\n  contents: read\nconcurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\njobs:\n' +
-  `  check:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - id: check\n        shell: bash\n        run: bash scripts/check.sh\n        env:\n          GH_TOKEN: \${{ github.token }}\n` +
+  `  check:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - id: style-tooling\n        run: npm ci --prefix scripts/style\n      - id: style\n        run: node scripts/style/run.ts\n      - id: check\n        shell: bash\n        run: bash scripts/check.sh\n        env:\n          GH_TOKEN: \${{ github.token }}\n` +
   `  e2e:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - if: runner.os == 'Linux'\n        run: sudo apt-get update && sudo apt-get install -y tmux\n      - if: runner.os == 'macOS'\n        run: brew install tmux\n      - id: e2e-tooling\n        run: npm ci --prefix scripts/e2e\n      - id: e2e\n        env:\n          LC_ALL: \${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}\n        run: node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all\n` +
   `  gallery:\n    runs-on: ubuntu-latest\n    steps:\n      - id: gallery\n        run: node scripts/render-gallery.ts gallery\n${PIN('upload-artifact', 'v7.0.2')}`
 const REL =
@@ -32,6 +32,7 @@ test('unreadable null steps report parser errors rather than throwing', () => {
 })
 const cases: [(s: string) => string[], string, string, string, string][] = [
   [ciErrors, CI, '  pull_request:\n', '', 'pull_request'],
+  [ciErrors, CI, 'run: node scripts/style/run.ts', 'run: true', 'the code style gate'],
   [ciErrors, CI, '  push:\n', '  push:\n    branches: [main]\n', 'push trigger on every branch'],
   [ciErrors, CI, 'cancel-in-progress: true', 'cancel-in-progress: false', 'concurrency'],
   [ciErrors, CI, 'claude-code@2.1.308', 'claude-code@latest', 'pinned Claude Code'],
@@ -100,7 +101,7 @@ for (const [rule, base, from, to, want] of cases) {
 }
 
 test('step ids come from real step keys, not comments, job ids or shell content', () => {
-  assert.deepEqual([...stepIds(CI)], ['check', 'e2e-tooling', 'e2e', 'gallery'])
+  assert.deepEqual([...stepIds(CI)], ['style-tooling', 'style', 'check', 'e2e-tooling', 'e2e', 'gallery'])
   assert.deepEqual(
     [
       ...stepIds(

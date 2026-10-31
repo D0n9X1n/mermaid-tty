@@ -69,6 +69,10 @@ export function ciErrors(yml: string): string[] {
     ]),
     ...need('ci.yml check job', check, [
       ...MATRIX,
+      [
+        'the code style gate after its tooling',
+        (j) => hasRun(j, 'npm ci --prefix scripts/style') && hasRun(j, 'node scripts/style/run.ts'),
+      ],
       ['check.sh under bash', (j) => steps(j).some((s) => s.run === 'bash scripts/check.sh' && s.shell === 'bash')],
       [
         'GH_TOKEN for the GitHub render cross-check (D15d)',
@@ -115,7 +119,8 @@ export function ciErrors(yml: string): string[] {
             /\bnpm ci\b/.test(s.run ?? '') &&
             !(
               (name === 'e2e' && s.run === 'npm ci --prefix scripts/e2e') ||
-              (name === 'check' && s.run === 'npm ci --prefix scripts/docs')
+              (name === 'check' && s.run === 'npm ci --prefix scripts/docs') ||
+              (name === 'check' && s.run === 'npm ci --prefix scripts/style')
             ),
         )
         .map(() => 'ci.yml: npm ci outside its tooling job'),
