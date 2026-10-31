@@ -1,4 +1,4 @@
-// tests/golden/pie_test.ts — pie fixtures: the matrix's bar eighths and series/value inks.
+// tests/golden/pie_test.ts — pie fixtures: bar eighths and series/value inks.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

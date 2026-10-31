@@ -21,8 +21,8 @@ export function bodyWidth(cells: readonly (readonly (Cell | null)[])[], rows: re
 // is as wide as the drawing or wider.
 export const titleColumn = (body: number, shown: number): number => Math.max(0, Math.floor((body - shown) / 2))
 
-// d with each title row moved right to its centered column, and the title's stated place in expect moved with it.
-// A row the title shares with any other cell is left as it is, so nothing else moves; d itself if nothing moves.
+// d with each title row moved right to its centered column, and the title's stated place in expect moved with it. A row
+// the title shares with any other cell is left as it is, so nothing else moves; d itself if nothing moves.
 export function centerTitle(d: Drawing): Drawing {
   const rows = titleRows(d.cells)
   if (rows.length === 0) {

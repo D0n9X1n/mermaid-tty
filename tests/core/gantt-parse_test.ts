@@ -68,7 +68,7 @@ test('A5.errors: unsupported statements and bad dates, durations, ids, reference
   assert.deepEqual(P('dateFormat HH:mm\nA :17:49, 2m'), { reason: 'axis-format' })
 })
 
-// Beyond the plan's three: the rest of the task's rules and the matrix's gantt subset.
+// the rest of the supported gantt syntax.
 test('A5: every field is set, none undefined; a task before any section is in section -1; the formats and todayMarker off are read', () => {
   const t = Date.UTC(2024, 1, 1, 9, 5)
   const MIN = 60_000

@@ -159,7 +159,9 @@ function lines(
 // first cell at layout coordinates, is null with no route; a blank label is none.
 type EndLabel = { owner: string; node: string; text: string; at: { r: number; c: number } | null }
 function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'head'): EndLabel | null {
-  const drawn = e.reversed ? (t === 'tail' ? 'head' : 'tail') : t
+  // A reversed edge is drawn from its target, so its tail label sits at the drawn head, and the other way round.
+  const flipped = t === 'tail' ? 'head' : 'tail'
+  const drawn = e.reversed ? flipped : t
   const text = drawn === 'tail' ? e.tailLabel : e.headLabel
   const node = drawn === 'tail' ? e.from : e.to
   const owner = `${e.id}:${t}`
@@ -205,7 +207,9 @@ function divide(cv: Canvas, c: GCluster, frame: (id: string) => Box | undefined,
 
     const owner = `${c.id}:div${k++}`
     const stacked = a.row + a.rows <= b.row || b.row + b.rows <= a.row
-    const [lo, hi] = stacked ? (a.row < b.row ? [a, b] : [b, a]) : a.col < b.col ? [a, b] : [b, a]
+    // The two parts in reading order: the upper one first when they're stacked, else the left one.
+    const aFirst = stacked ? a.row < b.row : a.col < b.col
+    const [lo, hi] = aFirst ? [a, b] : [b, a]
     const mid = stacked ? (lo.row + lo.rows + hi.row - 1) >> 1 : (lo.col + lo.cols + hi.col - 1) >> 1
     const n = (stacked ? f.cols : f.rows) - 2 * inset
     for (let j = 0; j < n; j++) {

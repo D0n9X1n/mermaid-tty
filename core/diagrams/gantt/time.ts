@@ -147,8 +147,8 @@ const UNIT_MS = new Map([
 ])
 
 // s as exact ms: null unless s is <n><unit> and gives a whole number of ms below 2^53, so the number is exact. Only ms,
-// s, m and h take a decimal point (1.5h): Mermaid's Day.js rounds a fractional d or w to whole days (matrix amendment),
-// and the subset gives d and w none.
+// s, m and h take a decimal point (1.5h): Mermaid's Day.js rounds a fractional d or w to whole days, and the subset
+// gives d and w none.
 export function parseDuration(s: string): number | null {
   const [, num = '', unit = ''] = /^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$/.exec(s) ?? []
   const n = parseDec(num)
@@ -162,8 +162,8 @@ export function parseDuration(s: string): number | null {
   return ms.d === 1n && Number.isSafeInteger(whole) ? whole : null
 }
 
-// The matrix's tick steps, ms: 1 5 10 50 100 500 ms; 1 5 15 30 s; 1 5 15 30 min; 1 3 6 12 h; 1 2 7 14 30 90 180 365 730
-// 1825 3650 7300 18250 36500 d.
+// The tick steps, ms: 1 5 10 50 100 500 ms; 1 5 15 30 s; 1 5 15 30 min; 1 3 6 12 h; 1 2 7 14 30 90 180 365 730 1825
+// 3650 7300 18250 36500 d.
 const STEPS = [
   1,
   5,
@@ -178,8 +178,8 @@ const STEPS = [
 ]
 
 // The first step whose ticks, at cells ⌊w·k·step/m⌋ of a w-cell field spanning m ms, sit at least l + 1 cells apart, so
-// a label l cells wide fits between them: ⌊w·step/m⌋ ≥ l + 1, exact, as the matrix's cells are. Null when no step
-// qualifies, and then only t0 is labeled; null too when m or w is not an integer, since dec takes only integers.
+// a label l cells wide fits between them: ⌊w·step/m⌋ ≥ l + 1, exact, in whole cells. Null when no step qualifies, and
+// then only t0 is labeled; null too when m or w is not an integer, since dec takes only integers.
 export function tickStep(m: number, w: number, l: number): number | null {
   if (!Number.isInteger(m) || !Number.isInteger(w)) {
     return null

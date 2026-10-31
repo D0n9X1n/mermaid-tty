@@ -119,6 +119,8 @@ const SPEC_LABELS = [
   /(?<![\w.#-])[DVXS]\d{1,2}[a-z]?\b(?![\w-]|\.\w)/,
   // A rule of Mermaid's own grammar (flow.jison rule 108) is a real place to look; a spec's numbered rule is not.
   /(?<!jison )\b(?:common )?rules? \d+\b/,
+  // A diagram table or task list from a document outside the code, named as a comment's source.
+  /\b(?:the |diagram[ -])?matrix\b|\bthe plan's\b|\bBeyond the plan\b/i,
 ]
 
 export function citesSpec(prose: string): boolean {

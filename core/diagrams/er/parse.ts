@@ -13,7 +13,7 @@ import { unsupported } from '../../width.ts'
 // An entity: its id, the alias or else the id it draws, its attributes from all its blocks in order, and its first
 // mention's index.
 export type ErEntity = { id: string; label: string; attrs: Attr[]; order: number }
-// A cardinality as the matrix prints it.
+// A cardinality as it is drawn.
 export type Card = '0..1' | '1' | '0..*' | '1..*'
 // Relation r<k>, k its index: from its first entity to its second, the left and right ends' cardinalities, a solid line
 // if identifying, else dotted, and its label, '' for "". from and to may name a subgraph.

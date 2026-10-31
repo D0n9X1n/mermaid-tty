@@ -40,7 +40,7 @@ test('A4.fit-ladder: at 40 the timings move into a keyed legend (W = 30)', () =>
 test('A5.errors: a lone 0d milestone has M = 0 and falls back', () =>
   assert.deepEqual(X('M :milestone, 2024-01-01, 0d', 80), { reason: 'domain' }))
 
-// Beyond the plan's tests. A row's distinct cells as `kind ink owners`, in reading order.
+// A row's distinct cells as `kind ink owners`, in reading order.
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]
 // Ink: crit is arrow, else done is note, else active is decision, else the section's series. Tasks before the first
 // section take s1, so the sections take s2, s3, …; with no such tasks the first section takes s1.

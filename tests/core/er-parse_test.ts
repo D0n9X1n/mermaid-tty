@@ -87,7 +87,7 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
   assert.deepEqual(P('A ||--o{ B : x %% note'), { reason: 'directive' })
 })
 
-// Beyond the plan's three: the shared rules as ER reads them.
+// the shared rules as ER reads them.
 test('A5.common: entities, unsupported characters and blank label lines fall back; a lone # is text', () => {
   for (const body of [
     '"I #9829; you"',

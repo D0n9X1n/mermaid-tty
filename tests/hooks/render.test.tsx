@@ -160,8 +160,8 @@ test(
   },
 )
 
-// A diagram's title reaches the engine bold and underlined, and centered: underline shows on every terminal, where
-// bold alone may only brighten the color.
+// A diagram's title reaches the engine bold and underlined, and centered: underline shows on every terminal, where bold
+// alone may only brighten the color.
 for (const theme of ['default', 'mono'] as const) {
   test(
     `a title draws bold and underlined, centered over the diagram (${theme})`,

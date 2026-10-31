@@ -100,7 +100,7 @@ test('A4.fit-ladder: expect lines parse', () =>
       { cols: 58, step: 'fallback' },
     ],
   ))
-// The plan's list, written out entry by entry, so a changed, dropped or added width fails without fixtures.
+// The expected ladder widths, written out entry by entry, so a changed, dropped or added width fails without fixtures.
 test("A4.fit-ladder: LADDER is the plan's 44 ladder fixtures, each with exactly its widths", () =>
   assert.deepEqual(LADDER, {
     'state-ok-18': [59, 60, 61],

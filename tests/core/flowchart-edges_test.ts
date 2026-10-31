@@ -62,7 +62,7 @@ const L = (from: string, to: string, order: number, o: object = {}) => ({
 const G = (nodes: object[], edges: object[]) => ({ dir: 'TB', title: null, nodes, edges, clusters: [] })
 const ends = (l: string) => E(l).map((e: any) => e.from + e.to)
 
-// One input per flowchart-ok row of the diagram matrix whose links this file covers, with the graph it should parse to.
+// One input per supported flowchart link form, with the graph it should parse to.
 test('A1: matrix rows flowchart-ok-23…33, -46 and -47 parse to their graphs', () => {
   const [a, b, c, d] = ['A', 'B', 'C', 'D'].map((id, i) => N(id, 'rect', 'node', i, id))
   assert.deepEqual(

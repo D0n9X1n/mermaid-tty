@@ -29,7 +29,7 @@ test('A4.fit-ladder: gap 2, then gap 1; a word wider than every capped column sk
     ['natural', 'tight', 'lrToTd', 'lrToTd', 'fallback'],
   ))
 
-// Beyond the plan's tests. A cell's kind, ink and owners, per row.
+// A cell's kind, ink and owners, per row.
 import { timeline } from '../../core/diagrams/timeline/layout.ts'
 import { readSource } from '../../core/source.ts'
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]

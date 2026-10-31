@@ -1,5 +1,4 @@
-// End caps: the glyphs drawn left and right of a pill's label. They show the shape when there is no color (matrix,
-// Common rules, "End caps").
+// End caps: the glyphs drawn left and right of a pill's label. They show the shape when there is no color.
 export type Shape =
   | 'rect'
   | 'round'

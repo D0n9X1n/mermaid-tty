@@ -29,8 +29,8 @@ const NUM = String.raw`[+-]?(?:\d+(?:\.\d+)?|\.\d+)`
 // no digit: in an axis statement, Mermaid's lexer reads one as a number.
 const TEXT = String.raw`(?:"[^"]*"|[A-Za-z0-9&+=*.#_-]+)`
 const AXIS_TEXT = String.raw`(?:"[^"]*"|[A-Za-z&+=*.#_-]+)`
-// A keyword, in any case, where a run of letters starts (matrix, xychart: barley falls back). Mermaid's lexer ignores
-// case and can read a keyword there, as bar in a1bar.
+// A keyword, in any case, where a run of letters starts (so `barley` falls back). Mermaid's lexer ignores case and can
+// read a keyword there, as bar in a1bar.
 const KEYWORD = /(?:^|[^A-Za-z])(?:bar|line|title|x-axis|y-axis|vertical|horizontal|xychart)/i
 // A [a, b, …] list; its items, without the brackets, are a group.
 const list = (item: string) => String.raw`\[\s*(${item}(?:\s*,\s*${item})*)\s*\]`

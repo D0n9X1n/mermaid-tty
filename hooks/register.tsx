@@ -68,7 +68,7 @@ export const register: Register = (on, options) => {
     for (const p of parts) {
       if (!('prose' in p) && first) {
         kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))
-      } // D5: keep the bullet
+      } // an empty prose part first keeps the reply's bullet, which Claude Code draws before its first part
 
       if ('picture' in p) {
         kids.push(

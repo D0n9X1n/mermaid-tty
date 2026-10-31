@@ -333,8 +333,8 @@ export function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
 // C: each label stated at a cell is drawn there: the first text cell its owner draws as owners[0], in reading order, is
 // that cell. So text that only its place gives meaning (an axis tick, a category, a header, a legend part) cannot move
 // or swap with another of its width. A blank label draws no cell, so its at is not checked. Every diagram draws its
-// Whether each row the title draws on alone starts at its centered column: half the room the rest of the drawing
-// leaves beside it. A row the title shares with another cell is not checked, as it isn't moved.
+// Whether each row the title draws on alone starts at its centered column: half the room the rest of the drawing leaves
+// beside it. A row the title shares with another cell is not checked, as it isn't moved.
 function titleCentered(d: Drawing): boolean {
   const rows = titleRows(d.cells)
   const body = bodyWidth(d.cells, rows)

@@ -97,7 +97,11 @@ function attempt(
 
     const d = drawGraph(placed, routes, columns)
     const head = title === null ? null : heading(title, 'title', 'title', columns)
-    const titled = head === null ? d : isFail(head) ? head : stack([head, d], columns)
+    let titled: Drawing | Fail = d
+    if (head !== null) {
+      titled = isFail(head) ? head : stack([head, d], columns)
+    }
+
     // Nothing to key (flowchart): no legend pass, so the drawing's expect stays exactly A's, with no empty keys or
     // keyable.
     return b.legend.length === 0 && b.keyable.length === 0 ? titled : withLegend(titled, b.legend, columns, b.keyable)
@@ -115,7 +119,9 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
 
   const { row, wraps } = PLAN[step]
   const turn = step === 'lrToTd' || step === 'keyed'
-  const drawn: Dir = !turn ? dir : dir === 'LR' ? 'TB' : dir === 'RL' ? 'BT' : dir
+  // A step that turns the graph draws a left-to-right graph top to bottom, and right-to-left bottom to top.
+  const TURNED: Partial<Record<Dir, Dir>> = { LR: 'TB', RL: 'BT' }
+  const drawn: Dir = turn ? (TURNED[dir] ?? dir) : dir
   const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
   let last: Drawing | Fail = fail('too-wide')
   for (const wrapAt of wraps) {

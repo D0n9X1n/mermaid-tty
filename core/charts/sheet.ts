@@ -23,10 +23,10 @@ export function placed(
   return j < 0 ? { owner, text } : { owner, text, at: { r: r + j, c: c + (j > 0 ? indent : 0) } }
 }
 
-// text's <br> lines, each wrapped at columns, drawn one row per piece in ink and owned by owner (matrix common rules 3
-// and 6). The first piece has no join, a later piece its wrap join, and the first piece of each later line '\n', so
-// validate reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br>
-// label. 'word-too-wide' if a word is wider than columns.
+// text's <br> lines, each wrapped at columns, drawn one row per piece in ink and owned by owner (each <br> a line, a
+// word wider than columns a failure). The first piece has no join, a later piece its wrap join, and the first piece of
+// each later line '\n', so validate reads the rows back as one label. Its expect is the text as drawn, each <br> a
+// '\n', as draw lists a <br> label. 'word-too-wide' if a word is wider than columns.
 export function heading(text: string, ink: Ink, owner: string, columns: number): Drawing | Fail {
   const lines = labelLines(text)
   const pieces: { text: string; join?: Piece['join'] }[] = []
@@ -36,7 +36,14 @@ export function heading(text: string, ink: Ink, owner: string, columns: number):
       return fail('word-too-wide')
     }
 
-    ps.forEach((p, j) => pieces.push(j > 0 ? p : i > 0 ? { ...p, join: '\n' } : { text: p.text }))
+    // A later wrap piece keeps its wrap join; a later line's first piece joins with '\n'; the very first, with none.
+    ps.forEach((p, j) => {
+      if (j > 0) {
+        pieces.push(p)
+      } else {
+        pieces.push(i > 0 ? { ...p, join: '\n' } : { text: p.text })
+      }
+    })
   }
 
   const c = createCanvas(pieces.length, Math.max(0, ...pieces.map((p) => width(p.text))), columns)

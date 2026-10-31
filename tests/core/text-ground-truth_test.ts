@@ -314,8 +314,8 @@ test('A5.errors: ground truth: a journey task, section, actor and title draw as 
   )
 })
 
-// Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T for
-// quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
+// Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: the title
+// column, for quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
 test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text keep each case as Mermaid shows it, or fall back', () => {
   const Q =
     (body: string, pick: (m: Quadrant) => string | null | undefined) =>
@@ -339,7 +339,7 @@ test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text k
   )
 })
 
-// A gantt title, statement or frontmatter, is sanitized with no <br>, as a pie title is (column T).
+// A gantt title, statement or frontmatter, is sanitized with no <br>, as a pie title is.
 test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it, or falls back', () => {
   const fields: Field[] = [
     {

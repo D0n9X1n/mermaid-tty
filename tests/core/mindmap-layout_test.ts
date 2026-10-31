@@ -30,7 +30,7 @@ test('A4.fit-ladder: narrowing takes natural, compact, wrapped labels, the outli
   assert.deepEqual(text(X(T, 23).drawing), [' Root', '├─ Bigger node', '│  └─ Leaf', '└─ A', '   └─ Long leaf name'])
 })
 
-// Beyond the plan's tests.
+// More cases.
 const T = 'Root\n  Bigger node\n    Leaf\n  A\n    Long leaf name'
 test('A3: siblings stack in source order, each after the subtrees above it; natural stretches connectors to the depth column', () => {
   const r = X('Root\n  A\n    A1\n    A2\n  Bee\n    B1', 80)

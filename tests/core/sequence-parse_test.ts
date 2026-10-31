@@ -66,9 +66,9 @@ test('A5.errors: malformed, order, box and ZWJ rejections', () => {
   }
 })
 
-// Beyond the plan's three: each matrix row this task covers, checked whole, then each rule's edges.
+// each supported statement checked whole, then each rule's edges.
 
-// [matrix row, fence body after the header, the exact model].
+// [fixture id, fence body after the header, the exact model].
 const OK: [string, string, object][] = [
   ['sequence-ok-01', 'participant B\nparticipant A\nA->>B: hi', seq([part('B'), part('A')], [msg('A', 'B', 'hi')])],
   [
@@ -270,7 +270,7 @@ const OK: [string, string, object][] = [
   ],
   ['sequence-ok-46', 'rect\nA->>B: hi\nend', seq(AB, [frame('rect', [null, [msg('A', 'B', 'hi')]])])],
 ]
-// [matrix row, whole fence body, the exact reason].
+// [fixture id, whole fence body, the exact reason].
 const REJECT: [string, string, string][] = [
   ['sequence-reject-01', 'sequenceDiagram\nA->>: hi', 'syntax:2'],
   ['sequence-reject-02', 'sequenceDiagram\nloop every s\nA->>B: hi', 'unclosed-frame'],
@@ -387,8 +387,8 @@ test('A5.errors: a box label led by currentColor, a CSS-wide keyword or a system
   )
 })
 // Mermaid takes a box's color from a lowercase rgb(, rgba(, hsl( or hsla( to the label's last ), and drops it only if
-// the browser reads it as a color; else the whole label is the title. Beyond the plan: one in a strict subset is
-// dropped; any other falls back.
+// the browser reads it as a color; else the whole label is the title. one in a strict subset is dropped; any other
+// falls back.
 test('A2: a box label drops a leading rgb(), rgba(), hsl() or hsla() color in the strict subset, up to its ), with or without a space after', () => {
   const ok: [string, string][] = [
     ['rgb(1,2,3) Team', 'Team'],

@@ -47,7 +47,7 @@ test('A8.validation: an unknown ID fails', () => {
   assert.match(r.stderr, /^unknown check A99$/m)
 })
 
-// Beyond the plan's four: every branch and boundary of the parser, the runner and both CLIs.
+// every branch and boundary of the parser, the runner and both CLIs.
 
 // Writes files into a fresh mtty- temp dir, calls body with it, then removes it.
 function scratch(files: Record<string, string>, body: (dir: string) => void): void {

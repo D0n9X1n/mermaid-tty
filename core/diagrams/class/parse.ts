@@ -62,9 +62,9 @@ const CLASS = re(
 const NAMESPACE = re(`namespace\\s+(${ID})(?:\\[${QUOTED}\\])?\\s*\\{`)
 const NOTE = re(`note(?:\\s+for\\s+(${ID}))?\\s+${QUOTED}`)
 const ANNOTATION = re(`<<\\s*(${WORD})\\s*>>\\s*(${ID})`)
-// X ["c"] <end><line><end> ["c"] Y [: label]: each end <|, |>, *, o, < or > (matrix: on either side), and -- or ..
-// between. As Mermaid's lexer reads it, o is an end only before a word boundary (\\w is ASCII there too): --orange is
-// -- then orange.
+// X ["c"] <end><line><end> ["c"] Y [: label]: each end <|, |>, *, o, < or > (on either side), and -- or .. between. As
+// Mermaid's lexer reads it, o is an end only before a word boundary (\\w is ASCII there too): --orange is -- then
+// orange.
 const END_RE = '(<\\||\\|>|\\*|o(?!\\w)|<|>)?'
 const RELATION = re(
   `(${ID})\\s*(?:${QUOTED}\\s*)?${END_RE}(--|\\.\\.)${END_RE}\\s*(?:${QUOTED}\\s*)?(${ID})(?:\\s*:(${TEXT}))?`,

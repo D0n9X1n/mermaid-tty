@@ -114,7 +114,7 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
   }
 })
 
-// Beyond the plan's three: each rule's edges.
+// each rule's edges.
 test("A5: a direction sets its own scope (root, composite or region); a nested composite is its parent scope's member cluster", () => {
   const g = P(
     [

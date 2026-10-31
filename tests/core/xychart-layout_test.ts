@@ -81,8 +81,7 @@ test('A5.mutation-tests: expect.bars lists every xychart bar; a deleted or one-l
   assert.deepEqual(validate(cut((k) => k !== cols.at(-1))), { reason: 'bar' }) // drawn one lane narrow
 })
 
-// Beyond the plan's tests. inks: each `${kind} ${role}` of d's cells, with the sorted owners that draw it. texts and
-// labelled:
+// inks: each `${kind} ${role}` of d's cells, with the sorted owners that draw it. texts and labelled:
 // the sorted owners of d's text cells, each once, and of its expect.labels. undef: whether a field, at any depth, is
 // undefined.
 const inks = (d: any) => {

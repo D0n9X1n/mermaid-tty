@@ -52,7 +52,7 @@ test('A5.errors: point labels, a numeric x range, unquoted-text limits, repeats,
   }
 })
 
-// Beyond the plan's two: the rest of the matrix's xychart rules. Q: the result for a body under an xychart-beta header.
+// the rest of the supported xychart syntax. Q: the result for a body under an xychart-beta header.
 const Q = (body: string) => P(`xychart-beta\n${body}`)
 test('A5: a title alone on either axis; every field set, none undefined; values exact as written', () =>
   assert.deepEqual(P('xychart vertical\nx-axis "Month of year"\ny-axis Units\nbar [0, 2.50]'), {

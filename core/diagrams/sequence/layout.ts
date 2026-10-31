@@ -209,11 +209,18 @@ function join(a: Span | null, b: Span | null): Span | null {
     r: Math.max(a.hi === hi ? a.r : 0, b.hi === hi ? b.r : 0),
   }
 }
+// A frame's title: none for a rect, else its type, with its first section's condition when it has one.
+function frameTitle(f: Frame): string {
+  if (f.type === 'rect') {
+    return ''
+  }
+
+  const cond = f.sections[0]!.cond
+  return cond ? `${f.type} [${cond}]` : f.type
+}
+
 // A frame's title, then each later section's divider text: '' for none.
-const titles = (f: Frame): string[] => [
-  f.type === 'rect' ? '' : f.sections[0]!.cond ? `${f.type} [${f.sections[0]!.cond}]` : f.type,
-  ...f.sections.slice(1).map((s) => (s.cond ? `[${s.cond}]` : '')),
-]
+const titles = (f: Frame): string[] => [frameTitle(f), ...f.sections.slice(1).map((s) => (s.cond ? `[${s.cond}]` : ''))]
 // A box's first and last member lifelines, or null if it has none.
 const members = (c: Ctx, ids: readonly string[]): [number, number] | null =>
   ids.length ? [Math.min(...ids.map((id) => c.at.get(id)!)), Math.max(...ids.map((id) => c.at.get(id)!))] : null
@@ -305,8 +312,9 @@ function measure(c: Ctx): number[] {
     const t = at.get(it.to)!
     const w = widest(c.pcs.get(it)!)
     // A created target's pill: the half facing the sender, or a self-message's right half, which its loop starts
-    // beyond.
-    const cap = born.delete(it.to) ? (t > f ? pills[t]!.left : pills[t]!.right) : 0
+    // beyond. A create message stops at the new participant's pill: its near side, left when the message runs right.
+    const nearSide = t > f ? pills[t]!.left : pills[t]!.right
+    const cap = born.delete(it.to) ? nearSide : 0
     if (f === t) {
       if (f < last) {
         spread(f, f + 1, w + 2 + cap + pad / 2)
@@ -413,15 +421,28 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     const right = xt > xf
     const make = pending.delete(m.to)
     const head = HEAD[m.head]?.[right ? 0 : 1] ?? null
-    const tail = m.tail === 'arrow' ? (xt < xf ? '►' : '◄') : null
+    // A two-headed message's tail points back at the sender.
+    const back = xt < xf ? '►' : '◄'
+    const tail = m.tail === 'arrow' ? back : null
     const seg = (r: number, col: number, dirs: number, end: string | null): Op =>
       end ? (cv, dx) => cv.arrow(r, col + dx, end, id) : (cv, dx) => cv.line(r, col + dx, dirs, weight, 'edge', id)
-    const cap = make ? (right ? c.pills[t]!.left : c.pills[t]!.right) : 0
+    const nearSide = right ? c.pills[t]!.left : c.pills[t]!.right
+    const cap = make ? nearSide : 0
     if (xf !== xt) {
       const a = right ? xf + 1 : xt + cap + 1
       const b = right ? xt - cap - 1 : xf - 1
+      // The head sits at the target's end of the stretch, the tail at the sender's; every other cell is line.
+      const headAt = right ? b : a
+      const tailAt = right ? a : b
       for (let col = a; col <= b; col++) {
-        fore.push(seg(line, col, 10, col === (right ? b : a) ? head : col === (right ? a : b) ? tail : null))
+        let end = null
+        if (col === headAt) {
+          end = head
+        } else if (col === tailAt) {
+          end = tail
+        }
+
+        fore.push(seg(line, col, 10, end))
       }
 
       touch(a - 1, b + 1)
@@ -496,12 +517,11 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     const xa = Math.min(...n.ids.map((p) => xs[c.at.get(p)!]!))
     const xb = Math.max(...n.ids.map((p) => xs[c.at.get(p)!]!))
     const span = n.side === 'over' ? Math.max(w, xb - xa + 3) : w
-    const left =
-      n.side === 'left of'
-        ? xa - 1 - span
-        : n.side === 'right of'
-          ? xa + 2
-          : xa - Math.floor((span - 1 - (xb - xa)) / 2)
+    // A side note stands one column clear of its lifeline; a note over lifelines centers on them.
+    const LEFT_OF = xa - 1 - span
+    const RIGHT_OF = xa + 2
+    const OVER = xa - Math.floor((span - 1 - (xb - xa)) / 2)
+    const left = { 'left of': LEFT_OF, 'right of': RIGHT_OF, over: OVER }[n.side]
     ps.forEach((p, k) => {
       const pw = width(p.text)
       const at = left + Math.floor((span - pw) / 2)

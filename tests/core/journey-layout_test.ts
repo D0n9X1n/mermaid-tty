@@ -46,7 +46,7 @@ test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a se
   assert.deepEqual(X('journey\nsection Morning: early\nA: 1: Me', 80), { reason: 'syntax:2' })
 })
 
-// Beyond the plan's tests. A bar of e eighths, padded to the 10-cell field; a cell's kind, ink and owners.
+// A bar of e eighths, padded to the 10-cell field; a cell's kind, ink and owners.
 const bar = (e: number) => ('█'.repeat(Math.floor(e / 8)) + (e % 8 ? '▏▎▍▌▋▊▉'[(e % 8) - 1] : '')).padEnd(10)
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]
 // Tasks before the first section form a group with no header row, which takes s1, so the sections take s2, s3, … With
@@ -110,7 +110,7 @@ test('A4.fit-ladder: a section header wraps at columns; a word wider than column
   ])
   assert.deepEqual(X('journey\nsection Supercalifragilistically\nA: 3: Me', 20), { reason: 'too-wide' })
 })
-// Matrix journey-ok-04: a CJK character takes two columns, and oneActor wraps a name between two of them.
+// journey-ok-04: a CJK character takes two columns, and oneActor wraps a name between two of them.
 test('A4.fit-ladder: CJK task, section and actor names take two columns a character; oneActor wraps a name between them', () => {
   const S = 'journey\nsection 通勤\n泡茶喝水: 5: 我, 猫'
   assert.deepEqual(
@@ -124,8 +124,8 @@ test('A4.fit-ladder: the ladder is natural, wrap, oneActor; any other step fails
   assert.deepEqual(journey.steps(m), ['natural', 'wrap', 'oneActor'])
   assert.deepEqual(journey.layout(m, 'tight', 80), { reason: 'step' })
 })
-// Matrix journey-reject-09, -10 and -11; a keyword in another case or starting a longer word, journey's own included,
-// which Mermaid's case-insensitive lexer reads as that keyword; a score outside 1–5 or no plain decimal; a %%, which
+// journey-reject-09, -10 and -11: a keyword in another case or starting a longer word, journey's own included, which
+// Mermaid's case-insensitive lexer reads as that keyword; a score outside 1–5 or no plain decimal; a %%, which
 // Mermaid's lexer reads as a comment though it is quoted, since journey has no strings; and text that cannot be drawn.
 test('A5.errors: actor lists, colons, keywords, scores, %% and characters outside the subset fall back', () => {
   for (const [body, why] of [
@@ -166,8 +166,8 @@ test('A5.errors: another header, a second title, no task, an accDescr block left
     assert.deepEqual(X(src, 80), { reason: why }, src)
   }
 })
-// accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment (matrix
-// journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
+// accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment (journey-ok-08). Task
+// names and actors may repeat across tasks (journey-ok-07).
 test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are skipped; a frontmatter title draws', () => {
   const rows = ['My day', 'Go', '  A ' + bar(48) + ' 3  Me']
   for (const src of [

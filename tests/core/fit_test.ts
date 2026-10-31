@@ -26,7 +26,7 @@ test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () =>
   assert.equal((fitLadder(fake as never, {}, 10) as { step: string }).step, 'tight')
   assert.ok('reason' in fitLadder(fake as never, {}, 4))
 })
-// The A1 test below also covers matrix row flowchart-reject-05: a flowchart-elk TD header falls back.
+// The A1 test below also covers flowchart-reject-05: a flowchart-elk TD header falls back.
 test('A1: registry keywords; ENABLED is A, Tier 1 and the passed Tier 2 types', () => {
   assert.deepEqual([...ENABLED].sort(), ['flowchart', 'sequence', ...TIER1, ...TIER2_PASSED].sort())
   assert.equal(KEYWORDS['graph'], 'flowchart')

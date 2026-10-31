@@ -19,7 +19,7 @@ export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string 
 
 const ASCII = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i))
 const BOXES = Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x2500 + i))
-// The glyphs C's sections name. None has the Emoji property.
+// The glyphs the chart and record types draw. None has the Emoji property.
 const C_GLYPHS = [
   ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇', // bars: horizontal ▏…█, vertical ▁…█
   ...'✓▸◆·', // gantt: done and active status cells, the milestone, the timing's separator

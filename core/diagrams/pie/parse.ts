@@ -19,7 +19,7 @@ const TITLE = /^title[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 const SLICE = /^(?:"([^"]*)"|'([^']*)')[ \t]*:[ \t]*(.*)$/
-// A value token; the matrix's subset of them, positive with no sign and no leading 0 on an integer.
+// A value token; the subset Mermaid and this reader agree on, positive with no sign and no leading 0 on an integer.
 const TOKEN = /^[+-]?\d+(\.\d+)?$/
 const POSITIVE = /^(?:[1-9]\d*|\d+\.\d+)$/
 

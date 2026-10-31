@@ -76,8 +76,8 @@ test('A5.errors: point styles, bad coordinates, a lone -->, repeats and a keywor
   }
 })
 
-// Beyond the plan's tests. q = 30 at 80 columns: the left half is columns 1…30, the cross 31, the right half 32…61, the
-// frame 62; with no title or y-axis, the top half's point rows are 2…6 and the bottom half's 9…13.
+// q = 30 at 80 columns: the left half is columns 1…30, the cross 31, the right half 32…61, the frame 62; with no title
+// or y-axis, the top half's point rows are 2…6 and the bottom half's 9…13.
 test('A4: a point sits at min(2q − 1, ⌊2q·x⌋), min(9, ⌊10·y⌋) from the bottom; coordinates print as written', () => {
   const t = text(X('A: [0.50, 1]\nB: [0, 0]\nC: [1, 0.5]', 80).drawing)
   assert.deepEqual([t[2]![32], t[13]![1], t[6]![61], t[6]![62]], ['1', '2', '3', '│'])

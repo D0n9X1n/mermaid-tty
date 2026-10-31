@@ -1,4 +1,4 @@
-// tests/golden/gantt_test.ts — gantt fixtures: the matrix's bar, ◆ and tick numbers, keyed legends and inks.
+// tests/golden/gantt_test.ts — gantt fixtures: bar eighths, ◆ and tick numbers, keyed legends and inks.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'

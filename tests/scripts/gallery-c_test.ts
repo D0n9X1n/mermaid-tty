@@ -74,7 +74,7 @@ test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   }
 })
 
-// Beyond the plan's tests: the stub module is gone, and no source names it.
+// the stub module is gone, and no source names it.
 test('A4: core/diagrams/stub.ts is deleted and no .ts file imports it', () => {
   assert.ok(!existsSync('core/diagrams/stub.ts'))
   // The repo's own files: a node_modules, or a local worktree under .claude/, is not the repo. No git call, so the test

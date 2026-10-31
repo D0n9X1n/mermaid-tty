@@ -67,7 +67,7 @@ const N = (id: string, shape: string, role: string, order: number, ...lines: str
 // The graph a node-only flowchart with no frontmatter title should give.
 const G = (dir: string, ...nodes: object[]) => ({ dir, title: null, nodes, edges: [], clusters: [] })
 
-// One node-only input per row of the diagram matrix's flowchart tables; rows with links are in flowchart-edges_test.ts.
+// One node-only input per supported flowchart node form; rows with links are in flowchart-edges_test.ts.
 test('A1: matrix rows flowchart-ok-01…22 and -49 parse to their graphs', () => {
   const rows: [string, string, object][] = [
     ['flowchart-ok-01', 'flowchart TD\nA[Start]', G('TB', N('A', 'rect', 'node', 0, 'Start'))],

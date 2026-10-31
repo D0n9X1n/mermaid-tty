@@ -299,7 +299,7 @@ test('A5.errors: a participant in two boxes is a box-split', () => {
   )
 })
 
-// Beyond the plan: where Mermaid would fail, or draw other text, the diagram falls back.
+// where Mermaid would fail, or draw other text, the diagram falls back.
 
 // Mermaid 12.2.0's TXT and LINE tokens stop at a #, and the rest of the line is a comment, ; and all: a message whose
 // text is item, then a # and a number, draws as "item"; alt case, then a # and a number, as [case]; and else, then a #

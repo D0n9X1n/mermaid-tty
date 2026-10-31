@@ -104,7 +104,7 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
   }
 })
 
-// Beyond the plan's four: the Common rules, each drawn text checked, and the rest of the matrix's class rules.
+// the Common rules, each drawn text checked, and the rest of the class rules.
 const R = (src: string) => {
   const s = readSource(src)
   return ('reason' in s ? s : parseClass(s)) as any
@@ -352,7 +352,7 @@ test('A5 (6): a "none" cardinality, trimmed, is hidden as Mermaid hides it; anot
       ['None', null],
     ],
   ))
-// The matrix (class, supported subset): `A [e]--[e] B`, e is <| |> * o < > or nothing, on either side.
+// The supported relation syntax: `A [e]--[e] B`, e is <| |> * o < > or nothing, on either side.
 test('A5 (7, 8): either end takes each of <| |> * o < >, each mapped as Mermaid maps it', () => {
   const ends = [
     ['<|', 'triangle'],

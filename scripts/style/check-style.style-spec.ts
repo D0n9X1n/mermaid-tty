@@ -99,7 +99,18 @@ test('Python: one statement per line, no compound statements, no citations, same
 
 test('spec-reference: comments state the fact, not a label of a spec or task the reader cannot open', async () => {
   assert.deepEqual(await rules('// the tick rule (plan C §4, T47)\nf()\n'), ['1 spec-reference'])
-  for (const text of ['plan A', 'spec C rule 5', '§6', 'T17', 'D15c', 'X3.', 'V6:', 'common rule 5']) {
+  for (const text of [
+    'plan A',
+    'spec C rule 5',
+    '§6',
+    'T17',
+    'D15c',
+    'X3.',
+    'V6:',
+    'common rule 5',
+    "the matrix's tick steps",
+    "Beyond the plan's tests",
+  ]) {
     assert.ok(citesSpec(text), text)
   }
 

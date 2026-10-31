@@ -273,8 +273,7 @@ test('A1: default L_… edge ids differ from each other and from every node id i
   )
 })
 
-// One input per diagram-matrix row of subgraphs and directives, with the graph it should parse to. W parses a whole
-// fence.
+// One input per supported subgraph and directive form, with the graph it should parse to. W parses a whole fence.
 const W = (t: string) => parseFlowchart(readSource(t) as Source) as any
 test('A1: matrix rows flowchart-ok-34…39, -47 and -48 parse to their graphs, and common rule 4 directives change nothing', () => {
   const ab = [Box('A', 0), Box('B', 1)]
