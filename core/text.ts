@@ -63,7 +63,7 @@ function codeChar(name: string): string | null {
 // *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   if (!/#\w+;/.test(text)) return drawable(text, mode, br) ?? text
-  // #26. Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
+  // Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
   // edge label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
   if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) return fail('markdown')
   let bad = false

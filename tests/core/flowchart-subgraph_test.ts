@@ -131,7 +131,7 @@ test('A5.errors: matrix row flowchart-reject-02, a subgraph with no end, falls b
 // An LR chart with two subgraphs. Case 1 (flowchart-reject-06) can reach Data tier only by crossing it more than once
 // or not at all, so it falls back at every width. Case 2 draws left to right at 120, each edge crossing a frame once; at 80
 // and 60 every step crosses Data tier wrongly or conflicts, so it falls back rather than draw a broken frame.
-test('#13: case 2 draws at 120 columns and falls back at 80 and 60', () => {
+test('An LR chart with two subgraphs, case 2, draws at 120 columns and falls back at 80 and 60', () => {
   const src = 'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
     '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
   const wide = explain(src, { columns: 120 })

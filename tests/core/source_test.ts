@@ -12,12 +12,12 @@ test('A5.errors: a trailing %% falls back; %% { is a comment', () => {
   assert.deepEqual(readSource('flowchart TD\n%% {not a directive}\nA'), { header: 'flowchart TD', title: null, config: {}, lines: [{ n: 3, text: 'A' }] })
 })
 
-// #16. Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
+// Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
 // merging them in order; a %%{wrap}%% sets wrap true after them; then cleanAndMerge lays the lot over the frontmatter
 // config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM. D reads with the scanner;
-// which settings then draw is #25's (source-allow_test.ts).
+// which settings then draw is the config allowlist's (source-allow_test.ts).
 const D = (t: string) => scanSource(t) as Source
-test('#16: a whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
+test('A whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
   assert.deepEqual(D("%%{init: {'theme':'dark'}}%%\nflowchart TD\nA"), { header: 'flowchart TD', title: null, config: { theme: 'dark' }, lines: [{ n: 3, text: 'A' }] })
   assert.deepEqual(D('%%{ initialize : { "theme" : "forest", "htmlLabels": true } }%%\nflowchart TD\nA').config, { theme: 'forest', htmlLabels: true })
   assert.deepEqual(D('flowchart TD\nA\n  %%{init: {"themeVariables": {"primaryColor": "#f00"}}}%%  \nB').lines, [{ n: 2, text: 'A' }, { n: 4, text: 'B' }])
@@ -29,7 +29,7 @@ test('#16: a whole-line init, initialize or wrap directive sets config as frontm
   assert.deepEqual(D('---\nconfig:\n  gitGraph:\n    mainBranchName: x\n    showBranches: true\n---\n%%{init: {"gitGraph": {"mainBranchName": "y", "mainBranchOrder": 1e1}}}%%\ngitGraph\ncommit').config,
     { 'gitGraph.mainBranchName': 'y', 'gitGraph.showBranches': true, 'gitGraph.mainBranchOrder': 10 })
 })
-test('#16: a directive Mermaid reads otherwise, or one that sets what changes the drawing, falls back', () => {
+test('A directive Mermaid reads otherwise, or one that sets what changes the drawing, falls back', () => {
   const bad = ['%%{init: {theme: dark}}%%', `%%{init: {"theme": "it's"}}%%`,
     '%%{INIT: {"theme": "dark"}}%%', '%%{init: {"theme": "dark"}}%% A', '%%{init: {"theme": "dark"}', '%%{init: {"config": {"x": 1}}}%%',
     '%%{init: {"mindmap": {"colorBy": null}}}%%', '%%{init: {"a": [1]}}%%', '%%{init: {"a": {}}}%%', '%%{init: {"a": 1e400}}%%', '%%{init: ["x"]}%%',

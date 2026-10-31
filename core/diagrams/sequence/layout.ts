@@ -255,7 +255,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     } else {
       // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline. With a head
       // at its start too (<<->>), each row runs one cell further, ◄─┐ over ◄─┘, so a straight cell shows its style: ◄┄┐ for
-      // a dotted one, which ◄┐ would draw as solid (#27 re-review).
+      // a dotted one, which ◄┐ would draw as solid.
       const k = tail ? 1 : 0, turn = xf + cap + 2 + k
       fore.push(seg(line, xf + cap + 1, 10, tail), ...(k ? [seg(line, xf + cap + 2, 10, null)] : []), seg(line, turn, 12, null), seg(line + 1, turn, 9, null))
       for (let col = xf + 1; col < turn; col++) fore.push(seg(line + 1, col, 10, col === xf + 1 ? head : null))

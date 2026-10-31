@@ -109,7 +109,7 @@ function labels(d: Drawing): Fail | null {
 
 // The cells of mine a walk from starts reaches. A step into or out of a line cell needs that cell's arm on that side: two
 // line cells step only where their dirs point at each other, and a line cell and an arrow or label cell only where the line
-// points at it (#27 re-review: a ┌ under a label, its arms away from it, is not joined to it). Arrow and label cells step to
+// points at it (a ┌ under a label, its arms away from it, is not joined to it). Arrow and label cells step to
 // each other freely, as a label's rows do.
 function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   const byPos = new Map(mine.map(p => [`${p.r},${p.c}`, p]))
@@ -138,7 +138,7 @@ function path(d: Drawing, all: readonly Spot[], e: Expect['edges'][number]): { m
   return { mine, reached: walk(mine, starts) }
 }
 
-// #27 re-review: the walk from an edge's from reaches every line and arrow cell of the edge, so its glyphs are one path
+// The walk from an edge's from reaches every line and arrow cell of the edge, so its glyphs are one path
 // between its ends: a part joined to nothing, a closed loop of them included, is a stray copy of the edge, and could show a
 // style its path does not. A keyed label's legend row lies apart from the line by design; keys binds it. Run after edges
 // and dangling, which name an open spur or a misplaced mark more exactly.
@@ -207,7 +207,7 @@ const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '�
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
   const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : []))), hidden = new Set(d.expect.hidden ?? [])
-  // #27 review: an invisible edge draws no cell of any kind: no line, head or label.
+  // An invisible edge draws no cell of any kind: no line, head or label.
   if (all.some(({ cell: x }) => x.owners.some(o => hidden.has(o) || hidden.has(o.replace(/:(label|tail|head)$/, ''))))) return fail('line-glyph')
   // Each listed edge's line cells, and those of a dotted or thick edge that show its style: any cell but a straight crossing.
   const lines = new Map<string, number>(), shown = new Set<string>()
@@ -216,7 +216,7 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
     if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
     // A cell joins its arms in one weight unless it is a straight crossing, ┼ of one │ and one ─ by the dirs it records for
-    // each owner: a corner or tee of two weights shows a thick branch on a thin line (#18 re-review).
+    // each owner: a corner or tee of two weights shows a thick branch on a thin line.
     const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
     if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
     // An edge draws in its own style. Each arm it draws has its weight, heavy for thick and light otherwise, and a cell
@@ -246,9 +246,9 @@ function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
     const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
     if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
   }
-  // #27 review: every edge draws at least one line cell, so a head alone (A►B) cannot hide its style; the router never
+  // Every edge draws at least one line cell, so a head alone (A►B) cannot hide its style; the router never
   // draws one. A dotted edge draws a straight ┄ or ┆, and a thick edge a heavy cell that is not a crossing: a corner shows no
-  // dash, and ┼ shows neither dash nor weight. edges keeps every cell on the path, so this cell is on it too (#27 re-review).
+  // dash, and ┼ shows neither dash nor weight. edges keeps every cell on the path, so this cell is on it too.
   for (const e of d.expect.edges) {
     if (!lines.get(e.id)) return fail('line-glyph')
     if ((e.style === 'dotted' || e.style === 'thick') && !shown.has(e.id)) return fail('line-glyph')
@@ -319,12 +319,12 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   const starts = (e: Edge) => (bare(e).length > 0 || e.ends.length === 0 ? bare(e).map(n => ({ n, head: false })) : e.ends.map(x => ({ n: x.node, head: true })))
   // Whether an edge leads from t to h: one listed from t to h, or one listed from h to t whose ends mark h, as a two-headed
   // edge's do, or those of an edge drawn reversed.
-  // A real link also draws the mark seen at h, by kind (#18 review): A-->D and B--xD on one line read as A--xD and B-->D,
+  // A real link also draws the mark seen at h, by kind: A-->D and B--xD on one line read as A--xD and B-->D,
   // and a bare start at h's own node reads as a self-loop with that head, so the loop there must draw it (A--xA is no A-->A).
   const real = (t: string, h: string, g: string) => d.expect.edges.some(e => ((e.from === t && e.to === h) || (e.from === h && e.to === t)) &&
     e.ends.some(x => x.node === h && headKind(x.glyph) === headKind(g)))
   const linked = (t: string, n: string) => t === n || d.expect.edges.some(e => (e.from === t && e.to === n) || (e.from === n && e.to === t))
-  // One line draws one style (#18 review): a cell whose edges are all of one line, two or more of them on it, takes the
+  // One line draws one style: a cell whose edges are all of one line, two or more of them on it, takes the
   // style of every other such cell of that line, so no implied link reads solid where its own edge is dotted.
   const styles = new Map<string, string>()
   for (const p of all) {
@@ -455,7 +455,7 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
 // end, as inFrames reads holding, and never when it holds neither (or both, which inFrames checks). A crossing is a line cell
 // of the edge on the border; frames lets only a straight one sit there. An edge that runs through a frame holding neither
 // end, or leaves and re-enters it, reads as reaching into it. A frame never holds itself, so an edge ending at the frame
-// crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays outside (#19 review: a
+// crosses it never: its mark, an arrow cell, meets the border from outside, and its line stays outside (a
 // self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
 function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const drawn = new Map<string, Spot[]>()

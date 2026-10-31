@@ -32,7 +32,7 @@ test('line-glyph: a line cell drawn in another style than it records fails', () 
 
 // An edge draws in its own line style. Each line cell of `A --> B` redrawn whole in another style, its arms, style and
 // glyph all agreeing, reads as another arrow: ━━ as Mermaid's thick ==>, ┄┄ as dotted -.->. expect records the style.
-test('#27: a whole edge redrawn heavy or dotted fails line-glyph', () => {
+test('A whole edge redrawn heavy or dotted fails line-glyph', () => {
   const r = explain('flowchart LR\nA --> B', { columns: 60, theme: 'mono' }) as { drawing: Drawing }
   const lines = r.drawing.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'line' ? [[y, c] as const] : [])))
   assert.equal(lines.length, 2)
@@ -47,7 +47,7 @@ test('#27: a whole edge redrawn heavy or dotted fails line-glyph', () => {
 
 // An invisible edge (~~~) draws nowhere. Listed as hidden, a line cell drawn for it, self-consistent, fails line-glyph:
 // before, its owner was in no list, so nothing checked the cell.
-test('#27: a line cell drawn for an invisible edge fails line-glyph', () => {
+test('A line cell drawn for an invisible edge fails line-glyph', () => {
   const r = explain('flowchart LR\nA --> B\nB ~~~ C', { columns: 60, theme: 'mono' }) as { drawing: Drawing }
   const [id] = r.drawing.expect.hidden ?? []
   assert.ok(id, 'the ~~~ edge is listed as hidden')
@@ -59,7 +59,7 @@ test('#27: a line cell drawn for an invisible edge fails line-glyph', () => {
   assert.equal(validate(d)?.reason, 'line-glyph')
 })
 // Every edge a fixture draws states its style, so the check above is never skipped for want of one.
-test('#27: every drawn edge of every ok fixture records its line style', () => {
+test('Every drawn edge of every ok fixture records its line style', () => {
   const missing: string[] = []
   for (const dir of readdirSync('fixtures').filter(x => x !== 'corpus')) for (const f of readdirSync(`fixtures/${dir}`).filter(f => f.includes('-ok-'))) {
     const r = explain(readFileSync(`fixtures/${dir}/${f}`, 'utf8'), { columns: 80, theme: 'mono' })
@@ -77,7 +77,7 @@ const lineCell = (ch: string, segs: { owner: string; dirs: number }[], style: 'l
 }
 // Hole 1: a dotted edge whose every cell is a crossing shows no dash. C---D, rerouted up through both of A-.-B's cells,
 // draws [ A ]┼┼[ B ]: A-.-B reads as solid.
-test('#27 review: a dotted edge drawn only as crossings fails line-glyph', () => {
+test('A dotted edge drawn only as crossings fails line-glyph', () => {
   const d = drawn('flowchart LR\nA -.- B\nC --- D\nE --- F'), [ab, cd] = d.expect.edges.map(e => e.id) as [string, string]
   d.cells.unshift(Array(d.cells[0]!.length).fill(null))   // a row above A-.-B for C---D to turn in
   d.cells[3]![5] = lineCell('┘', [{ owner: cd, dirs: 9 }]); d.cells[2]![5] = lineCell('│', [{ owner: cd, dirs: 5 }])
@@ -88,14 +88,14 @@ test('#27 review: a dotted edge drawn only as crossings fails line-glyph', () =>
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
 // Hole 2: an edge drawn as its head alone has no line to show its style. A-.->B with its two ┄ columns cut: [ A ]►[ B ].
-test('#27 review: an edge drawn with no line cell fails line-glyph', () => {
+test('An edge drawn with no line cell fails line-glyph', () => {
   const d = drawn('flowchart LR\nA -.-> B')
   for (const row of d.cells) row.splice(5, 2)
   assert.equal(rows(d)[0], '[ A ]►[ B ]')
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
 // Hole 3: an invisible edge draws no cell of any kind, a head included. A ~~~ B with a ► owned by it between them.
-test('#27 review: a head drawn for an invisible edge fails line-glyph', () => {
+test('A head drawn for an invisible edge fails line-glyph', () => {
   const d = drawn('flowchart LR\nA ~~~ B'), [id] = d.expect.hidden ?? []
   assert.equal(d.cells[0]![5], null)
   d.cells[0]![5] = { ch: '►', role: 'arrow', kind: 'arrow', owners: [id!], dirs: 0 }
@@ -113,13 +113,13 @@ function cornerCross(ring = false): Drawing {
   return c.toDrawing({ labels: ['A', 'B', 'C', 'D'].map(o => ({ owner: o, text: o.toLowerCase() })), edgeLabels: [], frames: [],
     edges: [{ id: 'AB', from: 'A', to: 'B', ends: [], style: 'dotted' }, { id: 'CD', from: 'C', to: 'D', ends: [], style: 'solid' }] })
 }
-test('#27 re-review: a dotted edge drawn only as a corner and a crossing fails line-glyph', () => {
+test('A dotted edge drawn only as a corner and a crossing fails line-glyph', () => {
   const d = cornerCross()
   assert.deepEqual(d.conflicts, []); assert.deepEqual(rows(d), ['', 'a┐', 'c┼d', ' b'])
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
 // The renderer did this: a dotted two-headed self-message's line was only ┐┘, as a solid one's is. It must draw a ┄ or fall back.
-test('#27 re-review: a dotted two-headed self-message draws a dotted straight cell, or falls back', () => {
+test('A dotted two-headed self-message draws a dotted straight cell, or falls back', () => {
   for (const columns of [60, 80, 120]) {
     const r = explain('sequenceDiagram\nA<<-->>A: x', { columns, theme: 'mono' })
     if (!('drawing' in r)) continue
@@ -129,7 +129,7 @@ test('#27 re-review: a dotted two-headed self-message draws a dotted straight ce
   }
 })
 // An edge's cells form one connected path between its ends: a closed ┄ ring of A-.-B's own, off its path, is a stray part.
-test('#27 re-review: an edge with a part joined to nothing fails edge-disconnected', () => {
+test('An edge with a part joined to nothing fails edge-disconnected', () => {
   const d = cornerCross(true)
   assert.deepEqual(d.conflicts, []); assert.equal(rows(d)[6], '    ┆ ┆')
   assert.equal(validate(d)?.reason, 'edge-disconnected', rows(d).join('\n'))
@@ -138,7 +138,7 @@ test('#27 re-review: an edge with a part joined to nothing fails edge-disconnect
 // A walk through an edge label into a line cell needs that cell to point at the label, as
 // line to line does. A -.-|x| B drawn as [ A ]┼┼x[ B ], C---D and E---F crossing its two cells, plus a closed ┄ ring of
 // A-.-B's own whose ┌ sits right under x: ┌ has no arm toward x, so the ring is joined to nothing, and it is no witness.
-test('#27 re-review: a stray ring beside an edge label is not reached through the label, and fails edge-disconnected', () => {
+test('A stray ring beside an edge label is not reached through the label, and fails edge-disconnected', () => {
   const c = createCanvas(5, 13, 13)
   c.text(1, 0, '[ A ]', 'node', 'A'); c.text(1, 8, '[ B ]', 'node', 'B')
   c.text(0, 5, 'c', 'node', 'C'); c.text(2, 5, 'd', 'node', 'D'); c.text(0, 6, 'e', 'node', 'E'); c.text(2, 6, 'f', 'node', 'F')

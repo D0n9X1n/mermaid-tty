@@ -216,10 +216,10 @@ test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls
   assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
 })
 
-// #16. Mermaid 12.2.0's nonMarkdownToHTML replaces /\\n|\n/ with <br /> in every HTML label before decodeEntities, so a
+// Mermaid 12.2.0's nonMarkdownToHTML replaces /\\n|\n/ with <br /> in every HTML label before decodeEntities, so a
 // literal \n in a node, |…| or text-form edge label, or an @{ labelType: text } label, renders exactly as <br /> does
 // (byte-identical SVG under JSDOM, wrapping included); \\n shows \ then a break. A Markdown label shows it as written.
-test('#16: a literal \\n in an HTML flowchart label is a line break, as Mermaid draws it', () => {
+test('A literal \\n in an HTML flowchart label is a line break, as Mermaid draws it', () => {
   const rows = (s: string) => F(s).nodes.map((n: any) => n.rows.map((r: any) => r.text))
   assert.deepEqual(rows('A["a\\nb"]'), [['a', 'b']])
   assert.deepEqual(rows('A(a\\nb)'), [['a', 'b']])
@@ -345,9 +345,9 @@ test('X3.emphasis: a flowchart edge label reads each <br> as a newline: a block 
   assert.deepEqual(P('flowchart TD\nA["`a<br>- **b**`"]').nodes[0].rows.map((r: any) => r.text), emphasize('a<br>- **b**')!.split('<br>'))
 })
 
-// #26. Mermaid 12.2.0 (JSDOM): A["`a\#110;b`"] shows anb (marked drops the \), but the edge label "`c\#110;d`" shows c\nd.
+// Mermaid 12.2.0 (JSDOM): A["`a\#110;b`"] shows anb (marked drops the \), but the edge label "`c\#110;d`" shows c\nd.
 // A \ right before a #…; code in a Markdown field is read two ways, so it falls back.
-test('A5.errors: a backslash before a #…; code in a Markdown string or @{ label } falls back as markdown (#26)', () => {
+test('A5.errors: a backslash before a #…; code in a Markdown string or @{ label } falls back as markdown', () => {
   const bad = ['A["`a\\#110;b`"]', 'A -->|"`c\\#110;d`"| B', 'subgraph s ["`e\\#35;f`"]\nend', "A@{ label: 'a\\#110;b' }"]
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'markdown' }]))
 })

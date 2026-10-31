@@ -106,7 +106,7 @@ export function scanSource(text: string): Source | Fail {
   return { header, title, config, lines }
 }
 
-// #25. Why setting key, value cannot be drawn, or null. A setting draws only if a renderer here honours it, or if Mermaid
+// Why setting key, value cannot be drawn, or null. A setting draws only if a renderer here honours it, or if Mermaid
 // 12.2.0 was seen (JSDOM, every ok fixture type but mindmap) to change only pixels with it, its value of a type Mermaid
 // takes; any other falls back as 'config:<key>'. X4: Mermaid reads htmlLabels and flowchart.htmlLabels
 // (getEffectiveHtmlLabels); any value but true draws SVG text through markdownToLines, which drops tokens every drawn-text
@@ -154,7 +154,7 @@ const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
   'themeVariables.pieStrokeWidth': px(0.5, 2), 'themeVariables.pieOuterStrokeWidth': px(0.5, 2),
 }
 
-// #16. A line that is one whole directive as Mermaid 12.2.0 reads it (detectDirective, detectInit, processDirectives):
+// A line that is one whole directive as Mermaid 12.2.0 reads it (detectDirective, detectInit, processDirectives):
 // `%%{wrap}%%` gives 'wrap'; `%%{init: {…}}%%` or `%%{initialize: {…}}%%`, in lowercase, its JSON object's settings
 // under dotted keys, as frontmatter config gives them. Mermaid makes every ' a " before JSON.parse, as here, and drops every
 // init when one fails to parse ({"a": "it's"} among them). Null, so that the source falls back, for any other line:

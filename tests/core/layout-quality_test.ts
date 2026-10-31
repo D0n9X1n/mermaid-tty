@@ -15,7 +15,7 @@ function touchingMarks(d: any): string[] {
   return out
 }
 
-test('#8: inheritance heads meeting one face stand at least a column apart', () => {
+test('Inheritance heads meeting one face stand at least a column apart', () => {
   for (const id of ['class-ok-01', 'class-ok-02']) for (const w of W) {
     const r = X(id, w); assert.ok(!('reason' in r), `${id}@${w}`); assert.equal(validate(r.drawing), null)
     assert.deepEqual(touchingMarks(r.drawing), [], `${id}@${w}\n${text(r.drawing).join('\n')}`)
@@ -25,7 +25,7 @@ test('#8: inheritance heads meeting one face stand at least a column apart', () 
 // The rows (or, when cols, the columns) of the cells owner draws.
 const extent = (d: any, owner: string, cols = false): number[] => d.cells.flatMap((row: any[], r: number) =>
   row.flatMap((x, c) => x && x.kind !== 'cont' && (x.owner === owner || x.owners?.includes(owner) || x.segs?.some((g: any) => g.owner === owner)) ? [cols ? c : r] : []))
-test('#8: a long back edge keeps its label beside the turn at one of its ends, not mid-span', () => {
+test('A long back edge keeps its label beside the turn at one of its ends, not mid-span', () => {
   for (const w of W) {
     const r = X('er-ok-19', w); assert.ok(!('reason' in r), `er-ok-19@${w}`); assert.equal(validate(r.drawing), null)
     const ends = ['A', 'C'].map(n => extent(r.drawing, n)), body = Math.max(...ends.flat())  // the legend lies below the body
@@ -36,7 +36,7 @@ test('#8: a long back edge keeps its label beside the turn at one of its ends, n
   }
 })
 
-test('#8: a 2-cycle draws as two parallel edges between its nodes, the back edge in the nearest free column', () => {
+test('A 2-cycle draws as two parallel edges between its nodes, the back edge in the nearest free column', () => {
   for (const w of W) {
     const r = X('state-ok-01', w); assert.ok(!('reason' in r), `state-ok-01@${w}`); assert.equal(validate(r.drawing), null)
     const still = extent(r.drawing, 'Still'), moving = extent(r.drawing, 'Moving'), back = extent(r.drawing, 't3')
@@ -47,7 +47,7 @@ test('#8: a 2-cycle draws as two parallel edges between its nodes, the back edge
 })
 
 const BENDS = new Set([...'┌┐└┘'])
-test('#8: an exit into a crowded end mark comes in from the side nearer its source, not around it', () => {
+test('An exit into a crowded end mark comes in from the side nearer its source, not around it', () => {
   for (const w of W) {
     const r = X('state-ok-01', w); assert.ok(!('reason' in r), `state-ok-01@${w}`); assert.equal(validate(r.drawing), null)
     const bends = r.drawing.cells.flat().filter((x: any) => x?.kind === 'line' && BENDS.has(x.ch) && x.segs?.some((g: any) => g.owner === 't5'))

@@ -14,7 +14,7 @@ test('A3: edge-owned one-arm spurs fail line-dangling even when the edge connect
   d.cells[1]![0] = { ch: '╶', kind: 'line', role: 'edge', owners: ['A>B'], dirs: 2 }
   assert.equal(validate(d)?.reason, 'line-dangling')
   // The │ cut to ╵ under A: it no longer points at its ▼, so the walk stops there, the head is not reached, and the edge
-  // fails edge-disconnected before its one arm is read as dangling (#27 re-review: a step into a head needs the line's arm).
+  // fails edge-disconnected before its one arm is read as dangling (a step into a head needs the line's arm).
   const connected = two()
   connected.cells[1]![2] = { ...connected.cells[1]![2]!, dirs: 1 }
   assert.equal(validate(connected)?.reason, 'edge-disconnected')
@@ -37,7 +37,7 @@ test('A3: every edge line arm has an owned reciprocal neighbour or endpoint', ()
   const loop = two()
   const line = (dirs: number, owners = ['A>B']) => ({ ch: junction(dirs, 'light'), kind: 'line' as const, role: 'edge' as const, owners, dirs })
   // A disconnected loop has two arms per cell: valid arms first, then one missing reciprocal bit. Closed, no arm dangles,
-  // but it is a stray part of A>B joined to nothing, so it fails edge-disconnected (#27 re-review); open, it dangles first.
+  // but it is a stray part of A>B joined to nothing, so it fails edge-disconnected; open, it dangles first.
   loop.cells[0]![4] = line(6)
   loop.cells[0]![5] = line(12)
   loop.cells[1]![4] = line(3)
@@ -521,7 +521,7 @@ test('merge-ambiguous: heads of two-headed edges on one line imply a link betwee
   assert.equal(validate(twoHeads(['e0', 'e1', 'e2']))?.reason, 'merge-ambiguous')  // QA: B seems linked to C
   assert.equal(validate(twoHeads(['e0', 'e1']))?.reason, 'merge-ambiguous')        // so without the loop
   // A <--> B with a bare loop at A on its line: the loop's bare ends read as A-->A and as A---B's own ends lead to B's head,
-  // A-->B; the source has neither (#18 re-review: a self-loop needs the head kind too).
+  // A-->B; the source has neither (a self-loop needs the head kind too).
   assert.deepEqual(falsePairs(twoHeads(['e0', 'e2'])), ['A->A', 'A->B'])
   assert.equal(validate(twoHeads(['e0', 'e2']))?.reason, 'merge-ambiguous')
 })
@@ -572,14 +572,14 @@ function bipartite(): Drawing {
   return c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
     edges: Object.entries(ends).map(([id, [from, to]]) => ({ id, from, to, ends: [node(to)] })), edgeLabels: [], frames: [] })
 }
-test('#18: a complete-bipartite trunk crossed straight by an unrelated edge passes', () => {
+test('A complete-bipartite trunk crossed straight by an unrelated edge passes', () => {
   const d = bipartite()
   assert.deepEqual(d.conflicts, []); assert.equal(text(d)[2], 'p─┼─►q')
   assert.equal(validate(d), null, text(d).join('\n'))
 })
 // A trunk edge that turns inside that ┼ instead, onto P→Q's arm, joins the two lines there: read as one line, P's bare tail
 // seems to lead to c and d, so it still fails, now for merges to judge.
-test('#18: at that crossing, a trunk edge turning onto the crossing edge still fails', () => {
+test('At that crossing, a trunk edge turning onto the crossing edge still fails', () => {
   const d = bipartite(), x = d.cells[2]![2]!
   d.cells[2]![2] = { ...x, segs: x.segs!.map(s => (s.owner === 'e1' ? { ...s, dirs: 6 } : s)) }   // e1 turns right inside the ┼
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
@@ -611,14 +611,14 @@ function mixedHeads(): Drawing {
   return c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
     edges: [e('AC', 'A', 'C', '▼'), e('AD', 'A', 'D', '►'), e('BC', 'B', 'C', '▼'), e('BD', 'B', 'D', 'x'), e('PQ', 'P', 'Q', '►')], edgeLabels: [], frames: [] })
 }
-test('#18 review: a trunk whose heads differ implies links the source lacks, and fails merge-ambiguous', () => {
+test('A trunk whose heads differ implies links the source lacks, and fails merge-ambiguous', () => {
   const d = mixedHeads()
   assert.deepEqual(falsePairs(d), ['A-xD', 'B->D'], text(d).join('\n'))
   assert.equal(validate(d)?.reason, 'merge-ambiguous', text(d).join('\n'))
 })
 // The same trunk with B-->D dotted instead: its own cells ┄ beside the trunk's solid ones read as the merged line changing
 // style, so any of its implied links may be dotted or solid. One line draws one style.
-test('#18 review: a trunk whose edges draw different line styles fails merge-ambiguous', () => {
+test('A trunk whose edges draw different line styles fails merge-ambiguous', () => {
   const c = createCanvas(7, 8, 8, () => true)
   for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
   drawPath(c, 'AC', [[0, 0], [1, 0], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
@@ -637,7 +637,7 @@ test('#18 review: a trunk whose edges draw different line styles fails merge-amb
 // A self-loop needs the head kind too. A-->B and B-->A share column 3; read as one line, A's bare
 // end leads to B-->A's ▶ at A (A->A) and B's to A-->B's at B (B->B). The loops at A and B are --x and --o, so neither
 // pair is in the source.
-test('#18 re-review: a merged line implying a self-loop whose head the loop lacks fails merge-ambiguous', () => {
+test('A merged line implying a self-loop whose head the loop lacks fails merge-ambiguous', () => {
   const c = createCanvas(14, 8, 8, () => true)
   c.text(3, 3, 'a', 'node', 'A'); c.text(11, 3, 'b', 'node', 'B')
   drawPath(c, 'AB', [[3, 3], [11, 3]], '▼')
@@ -654,7 +654,7 @@ test('#18 re-review: a merged line implying a self-loop whose head the loop lack
 // Hole 2: one edge draws one weight in every arm, not just one cell style. A-->C leaves A-->B's light stem at (0,2) with a
 // heavy arm down, ┰, then runs on light: style 'light' everywhere, but the junction shows a thick branch. Its glyph shows a
 // weight its edge does not draw, so it fails line-glyph.
-test('#18 re-review: a merged junction with a heavy arm on a light line fails line-glyph', () => {
+test('A merged junction with a heavy arm on a light line fails line-glyph', () => {
   const c = createCanvas(4, 6, 6, () => true)
   c.text(0, 0, 'a', 'node', 'A'); c.text(0, 5, 'b', 'node', 'B'); c.text(3, 2, 'c', 'node', 'C')
   for (const col of [1, 2, 3]) c.line(0, col, 10, 'light', 'edge', 'AB')
