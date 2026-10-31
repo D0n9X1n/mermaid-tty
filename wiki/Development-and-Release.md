@@ -18,8 +18,8 @@ The repository root is the plugin root: the marketplace entry in `.claude-plugin
 | `fixtures/` | Mermaid sources for tests and scripts. |
 | `scripts/` | Checks, generators, the end-to-end harness and the docs tooling. |
 | `assets/` | `icon.svg` and the README images. |
-| `docs/` | Specs, plans, decisions and review verdicts. |
-| `wiki/` | This wiki. |
+| `ci/` | `coverage.json`, which maps each check ID to its CI step, and `reviews/`, the recorded verdicts of the golden reviews. |
+| `wiki/` | This wiki: the only documentation. There is no `docs/` folder, and `check-docs` fails if one appears. |
 | `.github/workflows/` | CI, the wiki publisher and the release workflow. |
 
 There is no build step and no runtime dependency. The root `package.json` has no dependencies, and Claude Code and Node 24 or later run the TypeScript as it is. Only the docs tooling (`scripts/docs/`) and the end-to-end harness (`scripts/e2e/`) install packages, each from its own lockfile.
@@ -57,7 +57,7 @@ For a faster loop:
 |---|---|
 | `node --test` | All automatically discovered Node tests, including `scripts/tests/*_test.ts`; no install needed. Docs specs use a separate command. |
 | `node scripts/typecheck.ts` | Checks `core/` with pinned TypeScript; includes hooks when the generated Claude Code types are present. Uses the npx cache, not a build step. |
-| `node scripts/check-review-hashes.ts` | Verifies recorded review hashes; add `--require-pass` to require passing coverage of `docs/reviews/required.json`. |
+| `node scripts/check-review-hashes.ts` | Verifies recorded review hashes; add `--require-pass` to require passing coverage of `ci/reviews/required.json`. |
 | `node --test 'scripts/tests/*.docs-spec.ts'` | Docs-tooling tests, after installing `scripts/docs` dependencies. |
 | `node scripts/check.ts <ID>` | One acceptance check's steps, such as `A4` or `A8.portability`. |
 | `node scripts/explain.ts FILE COLS` | How the fit ladder draws `FILE`'s diagram at `COLS` columns: the step it took and the rows, or the reason it falls back. |
@@ -139,7 +139,7 @@ flowchart LR
 
 ## Release
 
-1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `docs/reviews/required.json`, and every reviewed file must still match its recorded SHA-256. Re-review changed files; translation review is not replaced by the wiki checker.
+1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `ci/reviews/required.json`, and every reviewed file must still match its recorded SHA-256. Re-review changed files; translation review is not replaced by the wiki checker.
 2. Don't write release notes: the tag workflow generates them. Every change goes through a PR whose title reads well in a list and whose commit body says `Fixes #N` for each issue it resolves. The release PR, titled `mermaid-tty v<version>`, only bumps the version and is left out of the notes. Preview the notes for a tag with `python3 scripts/release-notes.py v<version>` (set `PREVIOUS_TAG` to compare with another tag).
 
 3. **Publish the wiki first.** Wait for `publish-wiki` to succeed on the exact `main` commit to be tagged, and check the published pages. GitHub creates a wiki's repository only after its first page is saved in the web UI. If cloning fails, save one page there, then re-run the workflow.

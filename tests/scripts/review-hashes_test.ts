@@ -13,7 +13,7 @@ const sha = (s: string | Uint8Array) => createHash('sha256').update(s).digest('h
 const REC = `---\nscope: vr-A\nverdict: pass\ndate: 2026-11-02\nreviewers: [PM, cross-family:gpt-6]\n---\n## Files\n| path | sha256 |\n|---|---|\n| goldens/a.golden | ${sha('A')} |\n## Notes\n- ok\n`
 
 test('VR.reviewers: records parse; hashes match; a changed or missing file fails', () => {
-  const r = parseRecord('docs/reviews/x.md', REC) as any; assert.deepEqual(r.files, [{ path: 'goldens/a.golden', sha256: sha('A') }])
+  const r = parseRecord('ci/reviews/x.md', REC) as any; assert.deepEqual(r.files, [{ path: 'goldens/a.golden', sha256: sha('A') }])
   assert.deepEqual(checkRecords([r], p => (p === 'goldens/a.golden' ? 'A' : null)), [])
   assert.match(checkRecords([r], () => 'B')[0]!, /goldens\/a\.golden: recorded \w+ actual \w+/)
   assert.match(checkRecords([r], () => null)[0]!, /missing/)
@@ -27,8 +27,8 @@ const parsed = (path: string): ReviewRecord =>
   ({ path, scope: 'vr-A', verdict: 'pass', date: '2026-11-02', reviewers: ['PM', 'cross-family:gpt-6'], files: [{ path: 'goldens/a.golden', sha256: sha('A') }] })
 
 test('VR.reviewers: a CRLF or lone-CR record parses as its LF twin, but each reviewed file hashes by its raw bytes, CR included', () => {
-  assert.deepEqual(parseRecord('docs/reviews/x.md', REC), parsed('docs/reviews/x.md'))
-  for (const eol of ['\r\n', '\r']) assert.deepEqual(parseRecord('docs/reviews/x.md', REC.replaceAll('\n', eol)), parsed('docs/reviews/x.md'), JSON.stringify(eol))
+  assert.deepEqual(parseRecord('ci/reviews/x.md', REC), parsed('ci/reviews/x.md'))
+  for (const eol of ['\r\n', '\r']) assert.deepEqual(parseRecord('ci/reviews/x.md', REC.replaceAll('\n', eol)), parsed('ci/reviews/x.md'), JSON.stringify(eol))
   const crlf = parseRecord('c.md', REC.replace(sha('A'), sha('A\r\n'))) as ReviewRecord
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\r\n')), [])
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\n')), [`goldens/a.golden: recorded ${sha('A\r\n')} actual ${sha('A\n')}`])
@@ -126,8 +126,8 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
 
 // The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two folders, so
 // C's goldens never reopen A's review. Plan C (T85) adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes here.
-test("VR.passes: docs/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
-  const req = JSON.parse(readFileSync(fileURLToPath(new URL('../../docs/reviews/required.json', import.meta.url)), 'utf8'))
+test("VR.passes: ci/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
+  const req = JSON.parse(readFileSync(fileURLToPath(new URL('../../ci/reviews/required.json', import.meta.url)), 'utf8'))
   assert.deepEqual(req['vr-A'], ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts'])
   assert.deepEqual(Object.keys(req).filter(k => k !== 'vr-A'), TIER1.map(t => `vr-C-${t}`))
 })
@@ -141,16 +141,16 @@ const record = (scope: string, verdict: string, rows: [string, string][]) =>
 
 test('VR.reviewers: the CLI exits 1 naming each changed or missing file and each record that does not parse; the others are still checked', t => {
   const dir = tree(t, {
-    'goldens/a.golden': 'A\r\n', 'goldens/b.golden': 'B2', 'docs/reviews/notes.md': '# Notes\n',
-    'docs/reviews/2026-11-02-vr-A.md': record('vr-A', 'pass', [['goldens/a.golden', sha('A\r\n')], ['goldens/b.golden', sha('B')], ['goldens/c.golden', sha('C')]]),
+    'goldens/a.golden': 'A\r\n', 'goldens/b.golden': 'B2', 'ci/reviews/notes.md': '# Notes\n',
+    'ci/reviews/2026-11-02-vr-A.md': record('vr-A', 'pass', [['goldens/a.golden', sha('A\r\n')], ['goldens/b.golden', sha('B')], ['goldens/c.golden', sha('C')]]),
   })
   const r = cli(dir)
-  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/notes.md: no front matter between --- lines',
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['ci/reviews/notes.md: no front matter between --- lines',
     `goldens/b.golden: recorded ${sha('B')} actual ${sha('B2')}`, 'goldens/c.golden: missing', ''].join('\n')])
 })
 
-test('VR.reviewers: with no docs/reviews folder, or no records in it, the CLI passes vacuously and exits 0', t => {
-  for (const dir of [tree(t, {}), tree(t, { 'docs/reviews/required.json': '{}' })]) {
+test('VR.reviewers: with no ci/reviews folder, or no records in it, the CLI passes vacuously and exits 0', t => {
+  for (const dir of [tree(t, {}), tree(t, { 'ci/reviews/required.json': '{}' })]) {
     const r = cli(dir)
     assert.deepEqual([r.status, r.stdout, r.stderr], [0, 'check-review-hashes: 0 record(s); every reviewed file matches its SHA-256\n', ''])
   }
@@ -158,13 +158,13 @@ test('VR.reviewers: with no docs/reviews folder, or no records in it, the CLI pa
 
 test('VR.passes: --require-pass exits 1 naming each required path that no passing record lists, and 0 once one lists them all', t => {
   const dir = tree(t, {
-    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }),
+    'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }),
     'goldens/a.golden': 'A', 'goldens/flowchart/b.golden': 'B', 'core/themes.ts': 'T',
   })
   const none = cli(dir, '--require-pass')
   assert.deepEqual([none.status, none.stdout, none.stderr], [1, '', ['vr-A: goldens/a.golden: no passing verdict',
     'vr-A: goldens/flowchart/b.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
-  writeFileSync(join(dir, 'docs/reviews/2026-11-02-vr-A.md'),
+  writeFileSync(join(dir, 'ci/reviews/2026-11-02-vr-A.md'),
     record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['goldens/flowchart/b.golden', sha('B')], ['core/themes.ts', sha('T')]]))
   const all = cli(dir, '--require-pass')
   assert.deepEqual([all.status, all.stdout, all.stderr],
@@ -195,11 +195,11 @@ const Z = '0'.repeat(64)
 // The QA repro: a second ## Files table was never read, so its rows went unchecked and --require-pass still exited 0.
 test('VR.reviewers: a second ## Files table fails the record, so --require-pass exits 1 rather than leave its rows unchecked', t => {
   const dir = tree(t, {
-    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
-    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Files\n| path | sha256 |\n|---|---|\n| absent | ${Z} |\n`,
+    'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'ci/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Files\n| path | sha256 |\n|---|---|\n| absent | ${Z} |\n`,
   })
   const r = cli(dir, '--require-pass')
-  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: more than one ## Files heading',
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['ci/reviews/2026-11-02-vr-A.md: more than one ## Files heading',
     'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
 })
 
@@ -222,8 +222,8 @@ test('VR.reviewers: a valid record, one ## Files table then prose-only sections,
     '## Files', '', '| path | sha256 |', '|:---|---:|', `| goldens/a.golden | ${sha('A')} |`, `|  core/themes.ts  |  ${sha('T')}  |`, '',
     '## Notes', '', 'The PM checked the a | b labels.', '### Detail', '- ok', ''].join('\n')
   const dir = tree(t, {
-    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
-    'docs/reviews/2026-11-02-vr-A.md': text,
+    'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'ci/reviews/2026-11-02-vr-A.md': text,
   })
   const r = cli(dir, '--require-pass')
   assert.deepEqual([r.status, r.stdout, r.stderr],
@@ -233,11 +233,11 @@ test('VR.reviewers: a valid record, one ## Files table then prose-only sections,
 // The QA repro: a table without outer pipes under ## Notes was never parsed, so a reader saw files that were never hashed.
 test('VR.reviewers: a table without outer pipes under ## Notes fails the record, so --require-pass exits 1', t => {
   const dir = tree(t, {
-    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
-    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\npath | sha256\n--- | ---\nabsent | ${Z}\n`,
+    'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'ci/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\npath | sha256\n--- | ---\nabsent | ${Z}\n`,
   })
   const r = cli(dir, '--require-pass')
-  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['ci/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
     'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
 })
 
@@ -282,11 +282,11 @@ test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes'
 // CRLF alone saw one line and left the absent row unchecked.
 test('VR.reviewers: a table on lone-CR lines under ## Notes fails the record, so --require-pass exits 1', t => {
   const dir = tree(t, {
-    'docs/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
-    'docs/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\rpath | sha256\r--- | ---\rabsent | ${Z}\r`,
+    'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }), 'goldens/a.golden': 'A', 'core/themes.ts': 'T',
+    'ci/reviews/2026-11-02-vr-A.md': `${record('vr-A', 'pass', [['goldens/a.golden', sha('A')], ['core/themes.ts', sha('T')]])}## Notes\rpath | sha256\r--- | ---\rabsent | ${Z}\r`,
   })
   const r = cli(dir, '--require-pass')
-  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['docs/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
+  assert.deepEqual([r.status, r.stdout, r.stderr], [1, '', ['ci/reviews/2026-11-02-vr-A.md: table row outside ## Files "--- | ---"',
     'vr-A: goldens/a.golden: no passing verdict', 'vr-A: core/themes.ts: no passing verdict', ''].join('\n')])
 })
 

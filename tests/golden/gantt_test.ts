@@ -1,11 +1,9 @@
-// tests/golden/gantt_test.ts — gantt fixtures (plan C T70): coverage rows, the matrix's bar, ◆ and tick numbers, keyed legends and inks.
+// tests/golden/gantt_test.ts — gantt fixtures (plan C T70): the matrix's bar, ◆ and tick numbers, keyed legends and inks.
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
 import { explain, renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'
-import { coverageOf, fx, hrun } from './c-lib.ts'; import { text } from '../core/graph-fixture.ts'
-const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/gantt').map(f => f.replace('.mmd', ''))
+import { fx, hrun } from './c-lib.ts'; import { text } from '../core/graph-fixture.ts'
 const X = (id: string, w: number) => (explain(fx(id), { columns: w, theme: 'mono' }) as any).drawing
 const ticks = (line: string, f: number) => [...line].flatMap((c, i) => (c === '┬' ? [i - f] : []))
-test('A5: every gantt coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'gantt', ids), []))
 test('A4: gantt-ok-02 at 120, 80 and 60: bar eighths, ◆ and tick cells (the field starts at cell 25)', () => {
   for (const [w, spec, code, at, dia, tk] of [[120, 160, 320, 20, 59, [0, 14, 28, 42]], [80, 147, 293, 18, 54, [0, 12, 25, 38]], [60, 93, 187, 11, 34, [0, 16]]] as const) {
     const d = X('gantt-ok-02', w), t = text(d)

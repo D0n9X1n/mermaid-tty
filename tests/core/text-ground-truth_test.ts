@@ -1,4 +1,4 @@
-// Each drawn field against Mermaid 12.2.0's ground truth (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): 16
+// Each drawn field against what Mermaid 12.2.0 shows: 16
 // cases, each rendered as X{case}Y in Chrome under securityLevel strict. A case Mermaid shows as written draws as written; one
 // it splits at its <br> draws as split lines; any other, shown as other text, swallowed (MISS) or an error (ERR), falls back.
 import test from 'node:test'; import assert from 'node:assert/strict'

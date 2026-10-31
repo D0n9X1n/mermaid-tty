@@ -193,7 +193,7 @@ function flat(o: Record<string, unknown>, prefix: string, out: Record<string, Sc
 // X4. Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.
 const ODD_WS = /[^\S \t\n]/
 // Headers whose Jison grammar skips ODD_WS in the header line, blank lines and indents as \s, verified against Mermaid
-// 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md, X4).
+// 12.2.0 in Chrome.
 const JISON_WS = new Set(['flowchart', 'graph', 'sequenceDiagram', 'stateDiagram', 'stateDiagram-v2', 'classDiagram',
   'classDiagram-v2', 'erDiagram', 'gantt', 'journey', 'timeline', 'xychart', 'xychart-beta'])
 // Langium grammars (gitGraph, pie) hide only [ \t]+ and newlines, so their lexer rejects ODD_WS anywhere outside a

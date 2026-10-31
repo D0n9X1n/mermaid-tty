@@ -2,7 +2,7 @@ import { emOf, emphasize, oneParagraph } from './emphasis.ts'
 import { fail, isFail, type Fail } from './fail.ts'
 import { isWide, unsupported, width } from './width.ts'
 
-// How a field's text reaches the screen in Mermaid 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md):
+// How a field's text reaches the screen in Mermaid 12.2.0, as rendered in Chrome under securityLevel strict:
 // html, an HTML label; markdown, an HTML label marked renders (labelType 'markdown'); plain, text as written; sanitized,
 // DOMPurify's output; escaped, < and > escaped; member, a class member (an HTML label marked renders, too).
 export type Mode = 'html' | 'markdown' | 'plain' | 'sanitized' | 'escaped' | 'member'

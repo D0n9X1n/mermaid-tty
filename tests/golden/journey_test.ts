@@ -1,10 +1,8 @@
-// tests/golden/journey_test.ts — journey fixtures (plan C T66): coverage rows, the matrix's score-bar eighths and series/value inks.
+// tests/golden/journey_test.ts — journey fixtures (plan C T66): the matrix's score-bar eighths and series/value inks.
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
-import { explain, renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'; import { coverageOf, fx, hrun, spanOf } from './c-lib.ts'
-const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/journey').map(f => f.replace('.mmd', ''))
+import { explain, renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'; import { fx, hrun, spanOf } from './c-lib.ts'
 const bars = (id: string, col: number) => { const d = (explain(fx(id), { columns: 80, theme: 'mono' }) as any).drawing
   return d.cells.map((_: unknown, r: number) => hrun(d, r, col)).filter((e: number) => e > 0) }   // the bar field starts at 2 + N + 1
-test('A5: every journey coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'journey', ids), []))
 test('A4: journey-ok-01 fills 80, 48 and 16 eighths (N = 13, "Go downstairs"); journey-ok-02 fills 40 and 76', () => {
   assert.deepEqual(bars('journey-ok-01', 16), [80, 48, 16, 80, 80]); assert.deepEqual(bars('journey-ok-02', 4), [40, 76])
 })

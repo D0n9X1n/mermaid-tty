@@ -1,6 +1,5 @@
-import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs'
+import test from 'node:test'; import assert from 'node:assert/strict'
 import { GLYPHS, boxGlyph, isAllowed, junction } from '../../core/glyphs.ts'; import { BOX } from '../../core/box-table.ts'
-const MATRIX = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8')
 const inBox = (g: string) => g.codePointAt(0)! >= 0x2500 && g.codePointAt(0)! <= 0x257f
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i))
 // Rule 12: printable ASCII U+0020–U+007E (95), the whole Box Drawing block U+2500–U+257F (128), and the 39 glyphs sections name:
@@ -9,7 +8,6 @@ const RULE_12: ReadonlySet<string> = new Set([...range(0x20, 0x7e), ...range(0x2
   ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇', ...'✓▸◆·', ...'■○△□', ...'▷◁▽«»', ...'⊗◎', ...'↑↓'])
 test('A8.platforms: GLYPHS is rule 12: ASCII, Box Drawing, section-named glyphs; no non-ASCII Emoji', () => {
   assert.deepEqual(GLYPHS, RULE_12); assert.equal(GLYPHS.size, 262)
-  for (const g of GLYPHS) if (g > '~' && !inBox(g)) assert.ok(MATRIX.includes(g), `not named: ${g}`)
   for (const g of GLYPHS) if (g > '~') assert.ok(!/\p{Emoji}/u.test(g), `emoji: ${g}`)
   assert.ok([...RULE_12].every(isAllowed))
   for (const g of ['\u0001', '\u007f', '▶', '◀', '中']) {   // a control, DEL, two Emoji triangles, CJK

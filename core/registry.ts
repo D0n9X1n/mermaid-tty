@@ -70,7 +70,7 @@ export function lookup(header: string): DiagramModule | Fail {
 }
 
 // The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its header
-// keywords in KEYWORDS order. T85 writes it to docs/generated/support-table.md.
+// keywords in KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
 export function supportTable(): string {
   const keywords = (t: DiagramType) => Object.keys(KEYWORDS).filter(k => KEYWORDS[k] === t).map(k => `\`${k}\``).join(', ')
   return ['| Type | Header keywords |', '|---|---|', ...[...ENABLED].map(t => `| \`${t}\` | ${keywords(t)} |`)].join('\n')

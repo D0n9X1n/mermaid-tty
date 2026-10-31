@@ -64,7 +64,7 @@ test('A4.fit-ladder: a piece split off between W/F characters joins with nothing
   assert.deepEqual(wrap('读取 配置文件', 4), [{ text: '读取', join: '' }, { text: '配置', join: ' ' }, { text: '文件', join: '' }])
 })
 
-// drawable: whether text draws as Mermaid 12.2.0 shows it (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md).
+// drawable: whether text draws as Mermaid 12.2.0 shows it.
 const MODES: Mode[] = ['html', 'plain', 'sanitized', 'escaped', 'member'], BRS: Br[] = ['any', 'lower', 'literal', 'none']
 const D = (t: string, mode: Mode, br: Br = 'any') => drawable(t, mode, br)?.reason ?? null
 test('A5.errors: drawable: a #…; entity or a ﬂ° or ¶ß marker fails entity in every mode and br; a lone #, ﬂ, ° or ¶ is text', () => {

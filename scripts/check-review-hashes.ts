@@ -1,4 +1,4 @@
-// The review verdict hash check: each docs/reviews/<date>-<scope>.md records a verdict and the
+// The review verdict hash check: each ci/reviews/<date>-<scope>.md records a verdict and the
 // SHA-256 of every file it reviewed, and this proves those files have not changed since.
 // Usage: node scripts/check-review-hashes.ts                    (checks every record's hashes)
 //        node scripts/check-review-hashes.ts --require-pass     (and that each scope in required.json has a pass for each path)
@@ -148,14 +148,14 @@ export function expandGlobs(globs: string[], root = '.'): string[] {
   })
 }
 
-const DIR = 'docs/reviews'
+const DIR = 'ci/reviews'
 
 // A reviewed file's raw bytes, or null when it is not a file.
 function readBytes(path: string): Uint8Array | null {
   return statSync(path, { throwIfNoEntry: false })?.isFile() ? readFileSync(path) : null
 }
 
-// The paths each scope in docs/reviews/required.json needs a passing record for, its globs expanded.
+// The paths each scope in ci/reviews/required.json needs a passing record for, its globs expanded.
 function required(): Record<string, string[]> {
   const globs = JSON.parse(readFileSync(`${DIR}/required.json`, 'utf8')) as Record<string, string[]>
   return Object.fromEntries(Object.entries(globs).map(([scope, g]) => [scope, expandGlobs(g)]))

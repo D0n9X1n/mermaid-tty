@@ -8,8 +8,8 @@ test('A8.validation: only bold text with the colon inside is a label; slugs coll
   assert.deepEqual(parseIds(DOC), ['A4', 'A4.width-table', 'A4.fit-ladder', 'A9', 'A9.stored-copied', 'VR.gallery', 'B7', 'B7.check-ids'])
   assert.equal(slug('Stored / copied'), 'stored-copied'); assert.equal(slug('No build'), 'no-build')
 })
-test('A8.validation: the real acceptance file yields exactly the 48 B7 IDs, in order', () => assert.deepEqual(
-  parseIds(readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', 'utf8')), ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 ' +
+test('A8.validation: ci/coverage.json lists exactly the 48 check IDs, in order', () => assert.deepEqual(
+  Object.keys(JSON.parse(readFileSync('ci/coverage.json', 'utf8'))), ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 ' +
   'A6.hook-tests A6.command A6.in-claude-code A7 A8 A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A9 A9.harness A9.stored A9.release ' +
   'A10 VR.gallery VR.in-ci VR.reviewers VR.tangled VR.passes B1 B1.docs-check B1.beauty-review B2 B2.per-paragraph B2.translation-review B3 B3.publish-test ' +
   'B3.workflow-check B3.release B4 B5 B5.every-pr B5.release B6 B7 B7.check-ids').split(' ')))
@@ -75,13 +75,13 @@ test("A8.validation: CHECKS has plan A §9's 31 rows, in its order, each ID once
     'A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A8 A9 A9.harness A9.stored A9.release A10 ' +
     'VR.gallery VR.tangled VR.reviewers VR.passes VR.in-ci').split(' '))
 })
-test("A8.validation: check-ids passes when CHECKS has a row for exactly the doc's 31 A and VR IDs", () => {
+test("A8.validation: check-ids passes when CHECKS has a row for exactly the 31 A and VR IDs in ci/coverage.json", () => {
   const r = spawnSync(process.execPath, ['scripts/check-ids.ts'], { encoding: 'utf8' })
   assert.equal(r.status, 0); assert.equal(r.stdout, 'check-ids: CHECKS matches the 31 A and VR IDs\n')
 })
-test('A8.validation: check-ids fails, naming the ID, when the doc has a label CHECKS lacks', () => {
-  const doc = 'docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md'
-  scratch({ [doc]: readFileSync(doc, 'utf8').replace('**Cache:**', '**Cache:** x. **Warm cache:**') }, dir => {
+test('A8.validation: check-ids fails, naming the ID, when ci/coverage.json has an ID CHECKS lacks', () => {
+  const map = 'ci/coverage.json'
+  scratch({ [map]: readFileSync(map, 'utf8').replace('"A8.cache": ', '"A8.warm-cache": "check",\n  "A8.cache": ') }, dir => {
     const r = spawnSync(process.execPath, [resolve('scripts/check-ids.ts')], { cwd: dir, encoding: 'utf8' })
     assert.equal(r.status, 1); assert.match(r.stderr, /^check-ids: \{"missing":\["A8\.warm-cache"\],"extra":\[\]\}$/m)
   })

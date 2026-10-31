@@ -242,7 +242,7 @@ function generics(t: string, n: number): string {
   }).join(',')
 }
 
-// How a field's text reaches the screen (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): a label, note or
+// How a field's text reaches the screen, as Mermaid 12.2.0 shows it in Chrome: a label, note or
 // relation label is a markdown HTML label each <br> splits; a name or annotation a markdown HTML label on one line; a
 // namespace title or cardinality a plain HTML label (createLabel) on one line; a member, member text. BUILT: text this
 // parser builds from fields already checked, such as Box<T>.

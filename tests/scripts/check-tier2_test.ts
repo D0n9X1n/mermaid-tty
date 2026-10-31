@@ -5,7 +5,7 @@ const FILES: Record<string, string> = { 'fixtures/radar/radar-ok-01.mmd': 'radar
 const ALL = Object.keys(FILES), read = (p: string) => FILES[p] ?? null
 const sha = (p: string) => createHash('sha256').update(FILES[p]!).digest('hex')
 const rec = (paths: string[], verdict: 'pass' | 'fail' = 'pass', scope = 'vr-C-radar'): ReviewRecord =>
-  ({ path: 'docs/reviews/x.md', scope, verdict, date: '2026-11-01', reviewers: ['a', 'b'], files: paths.map(p => ({ path: p, sha256: sha(p) })) })
+  ({ path: 'ci/reviews/x.md', scope, verdict, date: '2026-11-01', reviewers: ['a', 'b'], files: paths.map(p => ({ path: p, sha256: sha(p) })) })
 test('A5.errors: a Tier 2 type passes the gate only with a vr-C-<type> pass record that hashes every ok fixture and golden', () => {
   assert.deepEqual(tier2Problems('radar', ALL, [rec(ALL)], read), [])
   assert.deepEqual(tier2Problems('radar', ALL, [rec(ALL.slice(1))], read), ['vr-C-radar: fixtures/radar/radar-ok-01.mmd'])  // a fixture not listed

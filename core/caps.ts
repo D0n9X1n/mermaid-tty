@@ -30,8 +30,8 @@ export const CAPS: Readonly<Record<Shape, readonly [string, string]>> = {
   plain: ['', ''],
 }
 
-// flowchart.md's `@{ shape: name }` names for the shapes above
-// (docs/decisions/task0-spikes.md, S4). Any other name draws rectangle caps.
+// flowchart.md's `@{ shape: name }` names for the shapes above, from its table "Complete List of New Shapes"
+// (mermaid-js/mermaid 1fb78698). Any other name draws rectangle caps: a miss changes the caps, never the correctness.
 const NAMES: readonly (readonly [Shape, readonly string[]])[] = [
   ['rect', ['rect', 'rectangle', 'proc', 'process']],
   ['round', ['rounded', 'event']],

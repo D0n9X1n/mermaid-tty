@@ -17,23 +17,19 @@ test('VR.tangled: check-tangle passes over every Tier 1 type and reports each', 
   assert.equal(r.status, 0, r.stderr); for (const t of TIER1) assert.match(r.stdout, new RegExp(`^${t}: \\d+ ok$`, 'm'), t)
 })
 test('VR.reviewers: each Tier 1 type has its own review scope over its goldens and the themes', () => {
-  const req = JSON.parse(readFileSync('docs/reviews/required.json', 'utf8'))
+  const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
   for (const t of TIER1) assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
 })
-test('B1: docs/generated/support-table.md is exactly supportTable()', () => assert.equal(readFileSync('docs/generated/support-table.md', 'utf8'), supportTable() + '\n'))
+// The README's Supported diagrams table is the registry's, so a new or renamed type can't leave it stale.
+test('B1: the README\'s Supported diagrams table is exactly supportTable()', () =>
+  assert.equal(readFileSync('README.md', 'utf8').split('## Supported diagrams')[1]!.split('\n## ')[0]!.split('\n').filter(l => l.startsWith('| ')).join('\n'),
+    supportTable().split('\n').filter(l => !l.startsWith('|---')).join('\n')))
 test('VR.passes: with no records, the release gate reports every Tier 1 review scope', () => {
-  const req = JSON.parse(readFileSync('docs/reviews/required.json', 'utf8'))
+  const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
   for (const t of TIER1) assert.ok(requirePass([], req).some(p => p.startsWith(`vr-C-${t}: `)), t)
 })
 test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   for (const t of TIER1) assert.ok(!('reason' in explain(readFileSync(`fixtures/${t}/${t}-ok-01.mmd`, 'utf8'), { columns: 120 })), t)
-})
-
-// Beyond the plan's tests: support-table.ts --check passes on the committed file, and refuses any other argument.
-test('B1: support-table.ts --check exits 0 on the committed file; an unknown argument prints its usage and exits 2', () => {
-  const run = (...a: string[]) => spawnSync(process.execPath, ['scripts/support-table.ts', ...a], { encoding: 'utf8' })
-  assert.equal(run('--check').status, 0)
-  const bad = run('--nope'); assert.equal(bad.status, 2); assert.match(bad.stderr, /usage: node scripts\/support-table\.ts --write \| --check/)
 })
 
 // Beyond the plan's tests: the stub module is gone, and no source names it.
