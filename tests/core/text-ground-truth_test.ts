@@ -32,11 +32,16 @@ const CASES = [
 ]
 // What Mermaid shows of each case, in CASES' order: = as written, ⏎ split at its <br>, MISS, ERR, or the text it shows.
 const row = (s: string): string[] => s.split(' | ')
+// The two cases a slice shows as other text; it shows every other case as written.
+const SLICE = new Map([
+  ['#9829;', '♥'],
+  ['ﬂ°x¶ß', '&x;'],
+])
 const TRUTH = {
   html: row('= | = | = | MISS | = | < | & | < | ♥ | ⏎ | ⏎ | ⏎ | ⏎ | z | ab | &x;'),
   sequence: row('= | = | = | = | = | ERR | ERR | = | ♥ | ⏎ | ⏎ | ⏎ | ⏎ | = | = | &x;'),
   box: row('= | = | a &lt; b | MISS | = | ERR | ERR | = | ♥ | ⏎ | ⏎ | ⏎ | ⏎ | = | ab | &x;'),
-  slice: CASES.map((c) => (c === '#9829;' ? '♥' : c === 'ﬂ°x¶ß' ? '&x;' : '=')),
+  slice: CASES.map((c) => SLICE.get(c) ?? '='),
   title: row('= | = | a &lt; b | MISS | = | = | = | = | ♥ | = | a<br>b | a<br>b | a<br>b | = | ab | &x;'),
 }
 // The <br> cases, and <b>z</b>.
@@ -78,14 +83,17 @@ function check(f: Field): void {
     [...strict].every((i) => f.truth[i] === '=' || f.truth[i] === '⏎'),
     `${f.name}: strict lists only = and ⏎ cases`,
   )
-  const want = (c: string, i: number) =>
-    f.shows?.includes(i)
-      ? [f.truth[i]!]
-      : strict.has(i) || !['=', '⏎'].includes(f.truth[i]!)
-        ? 'fallback'
-        : f.truth[i] === '='
-          ? [c]
-          : c.split(/<br\s*\/?>/i)
+  const want = (c: string, i: number) => {
+    if (f.shows?.includes(i)) {
+      return [f.truth[i]!]
+    }
+
+    if (strict.has(i) || !['=', '⏎'].includes(f.truth[i]!)) {
+      return 'fallback'
+    }
+
+    return f.truth[i] === '=' ? [c] : c.split(/<br\s*\/?>/i)
+  }
   const got = (c: string) => {
     const d = f.draw(c)
     return isFail(d) ? 'fallback' : d

@@ -130,7 +130,17 @@ const SIDES = [
 ] as const
 // The side each pointed head glyph points at, and the end kind a head glyph draws.
 const POINTS: Readonly<Record<string, number>> = { '▲': 0, '►': 1, '▼': 2, '◄': 3 }
-const kindOf = (ch: string): End => (ch in POINTS ? 'arrow' : ch === 'o' ? 'circle' : ch === 'x' ? 'cross' : 'none')
+function kindOf(ch: string): End {
+  if (ch in POINTS) {
+    return 'arrow'
+  }
+
+  if (ch === 'o') {
+    return 'circle'
+  }
+
+  return ch === 'x' ? 'cross' : 'none'
+}
 
 // e's cells as a graph. A vertex is a line or arrow cell of e. A link joins two lines of e whose dirs point at each
 // other,

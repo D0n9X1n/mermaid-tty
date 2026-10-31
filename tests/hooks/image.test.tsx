@@ -15,7 +15,13 @@ const world = (on: any, vars: Record<string, string>) => {
   }))
   on('process.run', async (_$: any, e: any) => {
     runs.push(e.argv)
-    const stdout = e.argv[1] === '--version' ? '11.17.1\n' : e.argv[0] === 'mktemp' ? '/tmp/mermaid-tty.Kt1\n' : ''
+    let stdout = ''
+    if (e.argv[1] === '--version') {
+      stdout = '11.17.1\n'
+    } else if (e.argv[0] === 'mktemp') {
+      stdout = '/tmp/mermaid-tty.Kt1\n'
+    }
+
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('fs.write', async () => ({ value: undefined }))

@@ -4,7 +4,7 @@ import { explain } from '../../core/render.ts'
 import { state } from '../../core/diagrams/state/layout.ts'
 import { parseState } from '../../core/diagrams/state/parse.ts'
 import { readSource, type Source } from '../../core/source.ts'
-import { text } from './graph-fixture.ts'
+import { cellText, text } from './graph-fixture.ts'
 const X = (body: string, columns = 80) => explain(`stateDiagram-v2\n${body}`, { columns, theme: 'mono' }) as any
 const count = (t: string, g: string) => [...t].filter((c) => c === g).length
 test('A3: states are round pills; each scope draws one ● and one ◉; a composite is a titled frame', () => {
@@ -64,7 +64,7 @@ test('A4.fit-ladder: the state ladder; notes too wide for their slot become keys
 // The role of each glyph or text in the drawing: the first cell whose ch starts s, or whose row holds s as text.
 const roleOf = (d: any, s: string): string | undefined => {
   for (const row of d.cells) {
-    const line = row.map((c: any) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)).join('')
+    const line = row.map(cellText).join('')
     const at = line.indexOf(s)
     if (at < 0) {
       continue
@@ -73,7 +73,7 @@ const roleOf = (d: any, s: string): string | undefined => {
     let col = 0
     let i = 0
     for (; i < row.length && col < at; i++) {
-      col += row[i] === null ? 1 : row[i].kind === 'cont' ? 0 : row[i].ch.length
+      col += cellText(row[i]).length
     }
 
     return row[i]?.role

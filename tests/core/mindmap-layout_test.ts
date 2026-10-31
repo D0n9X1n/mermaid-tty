@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas } from '../../core/canvas.ts'
 import { explain } from '../../core/render.ts'
-import { text } from './graph-fixture.ts'
+import { cellText, text } from './graph-fixture.ts'
 import { validate } from '../../core/validate.ts'
 import { mindmap } from '../../core/diagrams/mindmap/layout.ts'
 import { parseMindmap } from '../../core/diagrams/mindmap/parse.ts'
@@ -70,7 +70,7 @@ test('A3: a capped pill draws its caps on every row; a title is stacked above', 
 // Each cell's role and owner where the label or connector glyph s starts on its row.
 const cell = (d: any, s: string) => {
   for (const row of d.cells) {
-    const line = row.map((c: any) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)).join('')
+    const line = row.map(cellText).join('')
     const at = line.indexOf(s)
     if (at >= 0) {
       return `${row[at].role} ${row[at].owners.join()}`

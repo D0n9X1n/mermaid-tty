@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
-import { createCanvas, type Drawing } from '../../core/canvas.ts'
+import { createCanvas, type Cell, type Drawing } from '../../core/canvas.ts'
 import { validate } from '../../core/validate.ts'
 import { explain } from '../../core/render.ts'
 
@@ -109,13 +109,15 @@ test('Every drawn edge of every ok fixture records its line style', () => {
 // Line-style cases a renderer can get wrong. In each, expect is the renderer's and the cells change.
 const drawn = (src: string): Drawing =>
   structuredClone((explain(src, { columns: 60, theme: 'mono' }) as { drawing: Drawing }).drawing)
-const rows = (d: Drawing) =>
-  d.cells.map((row) =>
-    row
-      .map((x) => (!x ? ' ' : x.kind === 'cont' ? '' : x.ch))
-      .join('')
-      .replace(/ +$/, ''),
-  )
+// What a cell shows: a missing cell ' ', a cont cell '', any other its ch.
+const shows = (x: Cell | null | undefined): string => {
+  if (!x) {
+    return ' '
+  }
+
+  return x.kind === 'cont' ? '' : x.ch
+}
+const rows = (d: Drawing) => d.cells.map((row) => row.map(shows).join('').replace(/ +$/, ''))
 const lineCell = (ch: string, segs: { owner: string; dirs: number }[], style: 'light' | 'dotted' = 'light') => {
   const dirs = segs.reduce((m, s) => m | s.dirs, 0)
   return {

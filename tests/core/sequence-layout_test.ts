@@ -435,7 +435,8 @@ test('A2: without a box, nested frames around a note over one lifeline fall back
   // Mermaid's two rects cover B only; ours would need wider gaps than measure gives a note over one lifeline.
   assert.deepEqual(
     L(
-      `participant A\nparticipant B\nparticipant C\nA->>C: x\n${'rect\n'.repeat(2)}Note over B: n\n${'end\n'.repeat(2)}`,
+      'participant A\nparticipant B\nparticipant C\nA->>C: x\n' +
+        `${'rect\n'.repeat(2)}Note over B: n\n${'end\n'.repeat(2)}`,
     ),
     { reason: 'frame-extent' },
   )

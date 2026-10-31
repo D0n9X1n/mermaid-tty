@@ -60,6 +60,23 @@ const DIRS: Record<string, number> = {
   '┴': 11,
   '┼': 15,
 }
+// The kind of a cell that kinds does not set: a line where its glyph has dirs, else an arrow, cap, fill or text.
+function kindOf(ch: string, dirs: number): string {
+  if (dirs) {
+    return 'line'
+  }
+
+  if ('▲►▼◄'.includes(ch)) {
+    return 'arrow'
+  }
+
+  if ('[]'.includes(ch)) {
+    return 'cap'
+  }
+
+  return ch === ' ' ? 'fill' : 'text'
+}
+
 function grid(
   glyphs: string[],
   keys: string[],
@@ -80,9 +97,7 @@ function grid(
       }
 
       const dirs = DIRS[ch] ?? 0
-      const kind =
-        kinds[k] ??
-        (dirs ? 'line' : '▲►▼◄'.includes(ch) ? 'arrow' : '[]'.includes(ch) ? 'cap' : ch === ' ' ? 'fill' : 'text')
+      const kind = kinds[k] ?? kindOf(ch, dirs)
       const role =
         ({ line: 'edge', arrow: 'arrow', frame: 'frame', lifeline: 'note' } as Record<string, string>)[kind] ?? 'node'
       return {

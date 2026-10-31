@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { heading, stack } from '../../core/charts/sheet.ts'
-import { createCanvas, type Drawing } from '../../core/canvas.ts'
+import { createCanvas, type Cell, type Drawing } from '../../core/canvas.ts'
 import { validate } from '../../core/validate.ts'
 import { text } from './graph-fixture.ts'
 
@@ -106,11 +106,20 @@ const clashing = (owner: string, rows: number, cols: number): Drawing => {
   c.text(rows - 1, 0, '!', 'label', 'x')
   return c.toDrawing({ labels: [{ owner, text: owner }], edges: [], edgeLabels: [], frames: [] })
 }
+// One character per cell: '.' for null, '?' for a hole stack left unset, any other cell its ch.
+function dot(x: Cell | null | undefined): string {
+  if (x === null) {
+    return '.'
+  }
+
+  return x === undefined ? '?' : x.ch
+}
+
 test("A4: stack pads each row with null to the widest part, shifts each part's conflicts by its row offset, and keeps its parts", () => {
   const parts = [clashing('a', 2, 4), clashing('b', 1, 12), clashing('c', 1, 3)]
   const d = stack(parts, 20)
   assert.deepEqual(
-    d.cells.map((r) => Array.from(r, (x) => (x === null ? '.' : x === undefined ? '?' : x.ch)).join('')),
+    d.cells.map((r) => Array.from(r, dot).join('')),
     ['............', 'a...........', 'b...........', 'c...........'],
   )
   assert.deepEqual(d.conflicts, [
