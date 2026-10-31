@@ -316,7 +316,8 @@ export function checkPython(files: string[]): string[] {
     throw new Error(`check_py.py failed: ${run.error?.message ?? run.stderr}`)
   }
 
-  return run.stdout.split('\n').filter(Boolean)
+  // Python on Windows ends its printed lines with \r\n.
+  return run.stdout.split(/\r?\n/).filter(Boolean)
 }
 
 async function main(args: string[]): Promise<number> {
