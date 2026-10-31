@@ -5,6 +5,22 @@ import { showsPixels } from '../../hooks/pixels.ts'
 // A fake $ whose env.get answers from vars; a name not listed is unset.
 const env = (vars: Record<string, string>) => ({ env: { get: async (n: string) => vars[n] } })
 
+test('A6.hook-tests: pixels in SonicTerm, which keeps TERM=xterm-256color and draws kitty images', async () => {
+  for (const [vars, want] of [
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm' }, true],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', TERM_PROGRAM_VERSION: '1.4.0' }, true],
+    [{ TERM: 'tmux-256color', TERM_PROGRAM: 'SonicTerm' }, false], // tmux started in SonicTerm passes no pixels
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', TMUX: '/tmp/tmux-501/default,1,0' }, false],
+    [{ TERM: 'screen-256color', TERM_PROGRAM: 'SonicTerm', STY: '1.pts-0.host' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', ZELLIJ: '0' }, false],
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'SonicTerm', OS: 'Windows_NT' }, false], // Windows panes take another path
+    [{ TERM: 'xterm-256color', TERM_PROGRAM: 'vscode' }, false], // a terminal started inside SonicTerm sets its own
+    [{ TERM: 'vt100', TERM_PROGRAM: 'SonicTerm' }, false], // only the TERM SonicTerm sets
+  ] as [Record<string, string>, boolean][]) {
+    assert.equal(await showsPixels(env(vars)), want, JSON.stringify(vars))
+  }
+})
+
 test('A6.hook-tests: pixels only where TERM names kitty or Ghostty, outside tmux, screen and Zellij', async () => {
   for (const [vars, want] of [
     [{ TERM: 'xterm-kitty' }, true],

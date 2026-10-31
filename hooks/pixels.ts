@@ -1,8 +1,9 @@
 // Whether this terminal shows an Image's pixels (kitty graphics protocol), told conservatively from the environment: a
 // wrong yes would leave only the Image's alt text, so anything unsure is a no. TERM must name kitty or Ghostty (TERM
-// travels over ssh, so a remote session counts). A TERM_PROGRAM naming another terminal means one started inside them,
-// which inherited TERM. tmux, screen and Zellij pass no pixels through, and Windows has no terminal that shows them. A
-// failing env read is a no.
+// travels over ssh, so a remote session counts), or the shell must be SonicTerm's own: TERM_PROGRAM SonicTerm with the
+// TERM it sets, xterm-256color, since SonicTerm ships no terminfo of its own. A TERM_PROGRAM naming another terminal
+// means one started inside them, which inherited TERM. tmux, screen and Zellij pass no pixels through, and Windows has
+// no terminal that shows them. A failing env read is a no.
 export async function showsPixels($: any): Promise<boolean> {
   try {
     if (
@@ -22,6 +23,10 @@ export async function showsPixels($: any): Promise<boolean> {
 
     if (term === 'xterm-ghostty') {
       return program === '' || program === 'ghostty'
+    }
+
+    if (program === 'sonicterm') {
+      return term === 'xterm-256color'
     }
 
     return false

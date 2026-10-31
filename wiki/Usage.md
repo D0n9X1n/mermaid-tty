@@ -105,7 +105,7 @@ ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid
 
 In a terminal that shows pixels, mermaid-tty can draw a diagram as a picture of Mermaid's own rendering. It needs both:
 
-- **kitty or Ghostty**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, and not inside tmux, screen or Zellij, which pass no pixels through. Another terminal started from inside kitty or Ghostty doesn't count.
+- **kitty, Ghostty or SonicTerm**, run directly: `TERM` is `xterm-kitty` or `xterm-ghostty`, or `TERM_PROGRAM` is `SonicTerm` with the `xterm-256color` it sets, and not inside tmux, screen or Zellij, which pass no pixels through. Another terminal started from inside one of them doesn't count.
 - **mermaid-cli** 11 or 12 on PATH: `npm i -g @mermaid-js/mermaid-cli` installs `mmdc`. mermaid-tty doesn't bundle it, so the plugin keeps no dependencies.
 
 A new diagram is drawn as text first. `mmdc` renders it in the background, one diagram at a time, and the reply is drawn again with the picture. The picture uses Mermaid's dark or light theme to match your Claude Code theme, a transparent background and `securityLevel: strict`, and is sized to the available columns.
