@@ -35,7 +35,7 @@ test('A6.hook-tests: prose reaches next() unchanged; diagrams render in order', 
   c.seen.length = 0
   const two = await mount($, FC + FC)
   expect(c.seen).toEqual([''])
-  expect(await two.find({ key: 'mermaid-1' })).toBeDefined() // D5: empty prose
+  expect(await two.find({ key: 'mermaid-1' })).toBeDefined() // two fences with no prose between them
   c.seen.length = 0
   await mount($, `P1\r\n\r\n${FC.replace(/\n/g, '\r\n')}\r\nP2`)
   expect(c.seen).toEqual(['P1\r\n\r\n', '\r\nP2'])
@@ -145,7 +145,7 @@ for (const theme of ['default', 'nord', 'dracula', 'gruvbox', 'solarized'] as co
     ]).toEqual([true, true, true, true, true, true, true])
   })
 }
-// X3. Markdown bold and italic reach Ink as Text bold and italic props, under mono too, where no span has a color.
+// Markdown bold and italic reach Ink as Text bold and italic props, under mono too, where no span has a color.
 test(
   "X3.emphasis: a label's bold and italic draw as Text bold and italic",
   { options: { theme: 'mono' } },

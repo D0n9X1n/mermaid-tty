@@ -1,4 +1,4 @@
-// D15d: GitHub's own render of each page must show exactly the GFM tree's links and images, so any micromark/cmark-gfm
+// GitHub's own render of each page must show exactly the GFM tree's links and images, so any micromark/cmark-gfm
 // divergence (such as code spans past 1,000 backticks) fails in CI.
 import { spawnSync } from 'node:child_process'
 import { all, parse } from '../docs/markdown.ts'

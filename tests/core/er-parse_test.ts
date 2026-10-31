@@ -105,7 +105,7 @@ test('A5.common: entities, unsupported characters and blank label lines fall bac
   assert.deepEqual(P('A ||--|| B : "x\u200Dy"'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(P('CAR {\n  string id "a\u200Db"\n}'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(P('A ||--|| B : "a<br><br>b"'), { reason: 'label-blank-line' })
-  // An alias and a comment draw on one line, so any <br> there falls back first (X2).
+  // An alias and a comment draw on one line, so any <br> there falls back first.
   for (const body of ['p["a<br/><br>b"]', 'CAR {\n  string id "a<br><br>b"\n}']) {
     assert.deepEqual(P(body), { reason: 'html' }, body)
   }
@@ -315,7 +315,7 @@ test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, f
     assert.deepEqual(P(body), { reason: why }, body)
   }
 })
-// X3. Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
+// Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
 // default), and erBox draws each attribute column through createText with markdown on: marked renders all of them, and
 // createText swaps icons and KaTeX.
 test('X3: Markdown the emphasis port cannot match, icons and math in an attribute column or any ER text fall back', () => {
@@ -334,9 +334,9 @@ test('X3: Markdown the emphasis port cannot match, icons and math in an attribut
   assert.equal(P('A {\n  string id "snake_case a\\nb"\n}').entities[0].attrs[0].comment, 'snake_case a\\nb')
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or
-// one a <br> splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's
-// name is its id, so emphasis there still falls back.
+// Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or one a
+// <br> splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's name
+// is its id, so emphasis there still falls back.
 test('X3.emphasis: bold and italic in an ER alias, relation label, subgraph title or attribute comment draw as Mermaid shows them', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const m = P(

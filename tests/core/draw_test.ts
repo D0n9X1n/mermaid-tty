@@ -97,7 +97,7 @@ test('edges that share an endpoint merge their lines into one junction', () => {
 })
 
 test('an edge label is drawn in its label box, owned by the label then its edge, and paired with its edge', () => {
-  const { p, d } = D(g('TB', ['A>B|yes', 'C>D'])) // A>B|yes alone is routed off the grid (router, T17)
+  const { p, d } = D(g('TB', ['A>B|yes', 'C>D'])) // A>B|yes alone is routed off the grid (router)
   assert.equal(validate(d), null)
   const b = p.boxes.get('e0:label')!
   assert.ok(

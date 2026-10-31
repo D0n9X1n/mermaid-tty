@@ -164,7 +164,7 @@ test('A4: a section splits at every <br> spelling; a task name draws <br>, tags 
     { owner: 't0', text: 'Q&A <b>x</b> a<br>b', at: { r: 5, c: 3 } },
   ])
 })
-// X2: Mermaid 12.2.0 draws no header for a section with no task, so one falls back wherever it stands.
+// Mermaid 12.2.0 draws no header for a section with no task, so one falls back wherever it stands.
 test('A5.errors: a section with no task falls back', () => {
   for (const body of [
     'section A\nT :2024-01-01, 1d\nsection B',

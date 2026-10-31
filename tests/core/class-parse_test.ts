@@ -496,10 +496,10 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
     ['x<br>Q&A', 'a < b', 'Q&A', 'Q&A', 'a < b', 'Q&A', ['+a > b', '+Q&A'], 'a < b'],
   )
 })
-// X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels
-// (marked); a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every
-// one through icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits
-// breaks it.
+// Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels (marked);
+// a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one
+// through icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits breaks
+// it.
 test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotation or member, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
   for (const [body, why] of [
     ['class A["**a **b** c**"]', 'markdown'],
@@ -528,7 +528,7 @@ test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotatio
   )
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): class B["**lbl** x"], a relation label **r** _s_ and a note "**n** _o_" show <strong> and
+// Mermaid 12.2.0 (JSDOM): class B["**lbl** x"], a relation label **r** _s_ and a note "**n** _o_" show <strong> and
 // <em>. A member's text Mermaid parses first (+foo() **x** shows "+foo() : <strong>x</strong>"), so members keep
 // falling back.
 test('X3.emphasis: bold and italic in a class label, a relation label or a note draw as Mermaid shows them', async () => {

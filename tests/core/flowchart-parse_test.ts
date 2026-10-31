@@ -67,8 +67,7 @@ const N = (id: string, shape: string, role: string, order: number, ...lines: str
 // The graph a node-only flowchart with no frontmatter title should give.
 const G = (dir: string, ...nodes: object[]) => ({ dir, title: null, nodes, edges: [], clusters: [] })
 
-// One node-only input per row of the diagram matrix's flowchart tables that T13 can parse; rows with links wait for
-// T14.
+// One node-only input per row of the diagram matrix's flowchart tables; rows with links are in flowchart-edges_test.ts.
 test('A1: matrix rows flowchart-ok-01…22 and -49 parse to their graphs', () => {
   const rows: [string, string, object][] = [
     ['flowchart-ok-01', 'flowchart TD\nA[Start]', G('TB', N('A', 'rect', 'node', 0, 'Start'))],
@@ -428,7 +427,7 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
     assert.ok(!('reason' in P(`flowchart TD\n${s}`)), s)
   }
 })
-// X3. Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
+// Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
 // markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX,
 // and nonMarkdownToHTML turns a literal \n into <br />.
 test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
@@ -756,8 +755,8 @@ test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoi
   )
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph
-// title and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
+// Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph title
+// and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
 test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as Mermaid shows them', () => {
   const g = P(
     'flowchart TD\nA["`**bold** and *it*`"] -->|"`__e__ _f_`"| B@{ label: "a*b*c" }\nsubgraph s ["`**t** x`"]\nB\nend',
@@ -777,7 +776,7 @@ test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as
   )
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): an edge label's <br> becomes a newline before marked; a node label's stays a <br>.
+// Mermaid 12.2.0 (JSDOM): an edge label's <br> becomes a newline before marked; a node label's stays a <br>.
 test('X3.emphasis: a flowchart edge label reads each <br> as a newline: a block start after one falls back; a node label draws it', () => {
   assert.deepEqual(P('flowchart TD\nA -->|"`a<br>- **b**`"| B'), { reason: 'markdown' })
   assert.deepEqual(P('flowchart TD\nA -->|"`a<br>- b`"| B'), { reason: 'markdown' })

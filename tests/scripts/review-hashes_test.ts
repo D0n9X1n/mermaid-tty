@@ -251,8 +251,8 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
   })
 })
 
-// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C narrows it to A's two folders, so
-// C's goldens never reopen A's review. Plan C adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes here.
+// The seed: vr-A needs a passing record for A's goldens and for the palettes, only A's two folders, so C's goldens
+// never reopen A's review. Each Tier 1 type has its own vr-C-<type> scope; sub-project B adds its scopes here.
 test("VR.passes: ci/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
   const req = JSON.parse(
     readFileSync(fileURLToPath(new URL('../../ci/reviews/required.json', import.meta.url)), 'utf8'),

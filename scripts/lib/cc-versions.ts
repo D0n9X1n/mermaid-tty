@@ -1,4 +1,4 @@
-// The scheduled Claude Code version job (spec B 4, B4): which versions to test and how a run's legs become results. No
+// The scheduled Claude Code version job (B4): which versions to test and how a run's legs become results. No
 // dependencies, so the version job needs no docs tooling; its workflow rule runs on the parsed YAML tree in
 // docs/ci-rules.ts.
 const STABLE = /^\d+\.\d+\.\d+$/

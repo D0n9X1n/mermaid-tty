@@ -105,7 +105,7 @@ test("A4: a row packs its parts' words one space apart: a null-owner part is cap
     [undefined, ' ', undefined, ''],
   )
 })
-// T46/T63 QA: keyable reaches expect, so a class keyed for only some of its items fails key-partial.
+// From QA: keyable reaches expect, so a class keyed for only some of its items fails key-partial.
 test('A5.mutation-tests: withLegend lists keyable, so a half-keyed class fails key-partial', () => {
   const keyable = [
     { item: 't1.t', cls: 'timing' },

@@ -198,12 +198,12 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, each accepted image sh
     ['a[^1]\n\n[^1]: b', 'footnote', true],
     ['\\![a](assets/readme/after.svg)', 'link target not allowed', true],
     ['[[Page]]', '[[wiki link]]', false],
-    // D15c: where the old scanner and GitHub disagreed
+    // Where the old scanner and GitHub disagreed
     [F('![x](https://evil.dev/a.svg)'), 'src must match', true],
     [F('[y](https://evil.dev)'), 'link target not allowed', true],
     ['| a |\n|---|\n| b | ![x](assets/rogue.svg) |', 'more cells than its header', true],
     [H + '\n![x](assets/readme/after.svg)', 'raw HTML other than', true],
-    // D15d: past cmark-gfm's 1,000-backtick code-span limit, and over-long fences
+    // Past cmark-gfm's 1,000-backtick code-span limit, and over-long fences
     [LONG + '[c](Usage-zh-CN)' + LONG, 'backtick run longer than 3', false],
     ['``````sh\nx\n``````', 'fence longer than 5', true],
   ] as const) {

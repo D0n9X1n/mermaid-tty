@@ -350,7 +350,7 @@ test('A5.errors: any other numeric-looking plain config scalar fails config:<dot
     bad.map((v) => [v, one(v)]),
     bad.map((v) => [v, { reason: 'config:a' }]),
   )
-  // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as
+  // The block's form is checked first: in a block of the wrong form, a numeric-looking scalar still falls back as
   // frontmatter.
   for (const fm of ['config:\n  a: 1.5\n  a: 2', 'config:\n  a: 1.5\n  b: [1]', 'config:\n  a: 1.5\n  b:']) {
     assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm)

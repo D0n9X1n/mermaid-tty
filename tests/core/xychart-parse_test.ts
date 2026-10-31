@@ -162,7 +162,7 @@ test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text',
 
   assert.equal(P('xychart-beta\ntitle "C# 1.0"\nbar [1]').title, 'C# 1.0')
 })
-// T71 QA: numbers keep their spelling exactly, sign and leading dot included, and their exact values.
+// From QA: numbers keep their spelling exactly, sign and leading dot included, and their exact values.
 test('A5: each value keeps its raw spelling and its exact value', () => {
   const v = P('xychart\nline [+1.3, .6, 2.4, -.34]').series[0].values
   assert.deepEqual(

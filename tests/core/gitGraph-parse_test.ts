@@ -247,7 +247,7 @@ test('A5: accTitle and accDescr are ignored; an unclosed accDescr block falls ba
     assert.deepEqual(P(`${h}\ncommit`), { reason: 'header' }, h)
   }
 })
-// X3. Mermaid 12.2.0's gitGraph grammar hides only WS /[ \t]+/ and ends a line at NEWLINE /\r?\n/: any other whitespace
+// Mermaid 12.2.0's gitGraph grammar hides only WS /[ \t]+/ and ends a line at NEWLINE /\r?\n/: any other whitespace
 // (U+00A0, U+2028, a form feed) is a lexer error, between tokens or at either end of a line.
 test('X3: whitespace other than space and tab fails, where Mermaid throws a lexer error; spaces and tabs still separate', () => {
   for (const b of [
@@ -259,7 +259,7 @@ test('X3: whitespace other than space and tab fails, where Mermaid throws a lexe
     'commit id: "a"\u2028',
     'commit\fid: "a"',
   ]) {
-    // readSource now fails these first as 'whitespace' (X4), so the parser's own check is tested past it.
+    // readSource now fails these first as 'whitespace', so the parser's own check is tested past it.
     assert.deepEqual(P(`gitGraph\n${b}`), { reason: 'whitespace' }, JSON.stringify(b))
     assert.deepEqual(
       parseGitGraph({ header: 'gitGraph', title: null, config: {}, lines: [{ n: 2, text: b }] }),

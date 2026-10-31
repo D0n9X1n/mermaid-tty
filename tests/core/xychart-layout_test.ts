@@ -260,7 +260,7 @@ test('A4: an explicit bound prints as written; a computed bound and the midpoint
   assert.deepEqual(ticks('xychart-beta\ny-axis 0.50 --> +2.0\nline [1, 1.5]'), ['+2.0', '1.25', '0.50'])
   assert.deepEqual(ticks('xychart-beta\nline [0, 2.50]'), ['2.5', '1.25', '0'])
 })
-// T72 QA: a horizontal point is placed from y0, not from 0: with y-axis 10 --> 20, the values 10, 15 and 20 sit at
+// From QA: a horizontal point is placed from y0, not from 0: with y-axis 10 --> 20, the values 10, 15 and 20 sit at
 // field cells 0, 9 and 18 (W = 19), after the tag column.
 test('A4: horizontal points sit at cellOf(v − y0, M, W) when y0 is not 0', () => {
   const t = text(X('xychart-beta horizontal\ny-axis 10 --> 20\nline [10, 15, 20]', 25).drawing)

@@ -221,7 +221,7 @@ test('A5.mutation-tests: stack carries every entry of a part, so a part with two
     ],
   )
 })
-// T87 fix: a key's at is a cell, so stacking moves it with its part; a point key under a heading stays placed.
+// A key's at is a cell, so stacking moves it with its part; a point key under a heading stays placed.
 test("A5.mutation-tests: stack moves each key position down by its part's row offset", () => {
   const k = (r: number): Drawing => {
     const c = createCanvas(1, 4, 4)

@@ -19,12 +19,13 @@ function random(seed: number) {
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
 // Strict clearance can require another spacing attempt; both rates have a two-point regression allowance.
 const ceilings = { dag: 3.0, mixed: 6.2, clusters: 31.0, loops: 11.8 }
-// clusters rose with V6 (raw 17.6 -> 22.0, retry 6.8 -> 11.6): each graph lost had an edge between nodes of its frame,
-// most often a back edge on the outside lane, routed out of the frame and back, which validate rejects
-// (edge-outside-frame). V8 won most back: a back edge between nodes of one open frame takes a lane inside it (raw 18.2,
-// retry 7.4). clusters rose with edge-crosses-frame (2026-10-29; raw 18.2 -> 37.8, retry 7.4 -> 29.0): each graph lost
-// had an edge that entered a frame holding neither of its ends, or crossed one more than once, which validate now
-// rejects and the router now refuses. Routing such edges round the frame instead lowers these again.
+// clusters rose when validate began rejecting an edge outside its frame (raw 17.6 -> 22.0, retry 6.8 -> 11.6): each
+// graph lost had an edge between nodes of its frame, most often a back edge on the outside lane, routed out of the
+// frame and back, which validate rejects (edge-outside-frame). Most came back once a back edge between nodes of one
+// open frame took a lane inside it (raw 18.2, retry 7.4). clusters rose with edge-crosses-frame (2026-10-29; raw 18.2
+// -> 37.8, retry 7.4 -> 29.0): each graph lost had an edge that entered a frame holding neither of its ends, or crossed
+// one more than once, which validate now rejects and the router now refuses. Routing such edges round the frame instead
+// lowers these again.
 const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 39.8, loops: 23.0 }
 
 function graphFor(kind: (typeof classes)[number], index: number, next: (n: number) => number) {

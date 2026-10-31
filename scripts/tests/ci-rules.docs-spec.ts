@@ -129,7 +129,7 @@ test('check-docs wires CI, release and check.sh validation', () => {
     encoding: 'utf8',
   })
   assert.ifError(result.error)
-  // README work is independent of T8; this integration assertion covers only T8 diagnostics.
+  // README errors may fail the run; this integration assertion covers only the CI, release and check.sh diagnostics.
   assert.ok(result.status === 0 || result.status === 1, result.stdout + result.stderr)
   assert.doesNotMatch(
     result.stdout + result.stderr,

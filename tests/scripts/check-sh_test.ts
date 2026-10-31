@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 const CHECK_SH = fileURLToPath(new URL('../../scripts/check.sh', import.meta.url))
 
-// Plan A §9's text, line by line. Sub-projects add rows to CHECKS in scripts/check.ts, not lines here.
+// check.sh's expected text, line by line. Sub-projects add rows to CHECKS in scripts/check.ts, not lines here.
 const PLAN_TEXT = [
   '#!/usr/bin/env bash',
   '# scripts/check.sh: the single must-pass entry (CI: shell: bash; Git Bash on Windows).',

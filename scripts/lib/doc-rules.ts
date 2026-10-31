@@ -53,10 +53,10 @@ export const imageErrors = (where: string, md: string, diagrams: string[]) =>
   assetImages(md)
     .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p))
     .map((p) => `${where}: displays ${p}, which is neither a rendered diagram nor allow-listed`)
-// D15b, read from the GFM tree: every accepted image is displayed and every link target is known. README: one HTML
-// node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs, LICENSE or
-// allowlisted https hosts. Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks,
-// reference forms, footnotes, extra table cells and [[wiki links]] fail.
+// Read from the GFM tree: every accepted image is displayed and every link target is known. README: one HTML node, the
+// hero, before the first ##; images are inline or badges; links go to its two wiki URLs, LICENSE or allowlisted https
+// hosts. Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks, reference forms,
+// footnotes, extra table cells and [[wiki links]] fail.
 export const HERO = /^<p align="center"><img src="assets\/icon\.svg" alt="[^"<>]*" width="\d+"><\/p>$/
 const SRC = /^assets\/[a-z0-9/_-]+\.svg$/
 const PAGE = /^[A-Za-z0-9-]+$/

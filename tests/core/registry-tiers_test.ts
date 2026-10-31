@@ -65,9 +65,9 @@ test('B1: supportTable lists each ENABLED type with its header keywords', () => 
   assert.equal(t.length, 2 + ENABLED.size)
 })
 
-// Beyond the plan's three tests: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; and a Tier
-// 1 type whose module fails falls back through explain. The last test files a failing module, the shape T40's stub had
-// (T85 deleted core/diagrams/stub.ts), in each module's place, then files the module back.
+// Beyond the three tests above: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; and a Tier
+// 1 type whose module fails falls back through explain. The last test files a failing module, the shape the deleted
+// core/diagrams/stub.ts had, in each module's place, then files the module back.
 const stub = (type: DiagramType): DiagramModule => {
   const unimplemented = () => fail(`unimplemented:${type}`)
   return { type, parse: unimplemented, steps: () => [], layout: unimplemented }
