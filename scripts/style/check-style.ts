@@ -5,7 +5,7 @@
 //
 // It parses with the TypeScript parser Prettier bundles, so the only package it needs is the one pinned in this
 // folder. TypeScript's own compiler API is not used: the pinned TypeScript 7 exposes no stable one.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,7 +20,9 @@ export type Rule =
   | 'blank-line-after-block'
   | 'max-len'
   | 'max-lines'
+  | 'no-multiple-empty-lines'
   | 'issue-number'
+  | 'one-statement-per-line'
 export type Violation = { file: string; line: number; rule: Rule }
 
 export const MAX_COLUMNS = 120
@@ -196,6 +198,20 @@ export async function check(file: string, source: string): Promise<Violation[]> 
     }
   }
 
+  // At most one blank line in a row, inside comments too; only a template literal's own text may hold more.
+  const templates = literals.filter(([from]) => source[from] === '`')
+  let at = 0
+  let blanks = 0
+  for (const [i, text] of lines.entries()) {
+    const inTemplate = templates.some(([from, to]) => from < at && to > at)
+    blanks = text.trim() === '' && !inTemplate ? blanks + 1 : 0
+    if (blanks === 2) {
+      add(i + 1, 'no-multiple-empty-lines')
+    }
+
+    at += text.length + 1
+  }
+
   // A line may run past the limit only where a string, template or regex, which can't be broken without changing
   // it, or a URL crosses the limit.
   let offset = 0
@@ -216,27 +232,46 @@ export async function check(file: string, source: string): Promise<Violation[]> 
   return found.sort((a, b) => a.line - b.line || a.rule.localeCompare(b.rule))
 }
 
-// Tracked TypeScript files under the checked roots, relative to the repo root.
-export function trackedFiles(): string[] {
+// Tracked files under the checked roots that match a pattern, relative to the repo root.
+function tracked(pattern: RegExp): string[] {
   const out = execFileSync('git', ['ls-files', '--', ...ROOTS], { cwd: ROOT, encoding: 'utf8' })
-  return out
-    .split('\n')
-    .filter((file) => /\.tsx?$/.test(file) && !EXEMPT.has(file) && !file.includes('node_modules/'))
+  return out.split('\n').filter((file) => pattern.test(file) && !EXEMPT.has(file) && !file.includes('node_modules/'))
+}
+
+export const trackedFiles = () => tracked(/\.tsx?$/)
+
+// The Python scripts' violations, from check_py.py, which reads them with Python's own tokenizer. Windows names the
+// interpreter python, other systems python3.
+export function checkPython(files: string[]): string[] {
+  if (files.length === 0) {
+    return []
+  }
+
+  const python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')
+  const script = join(ROOT, 'scripts', 'style', 'check_py.py')
+  const run = spawnSync(python, [script, ...files], { cwd: ROOT, encoding: 'utf8' })
+  if (run.status !== 0) {
+    throw new Error(`check_py.py failed: ${run.error?.message ?? run.stderr}`)
+  }
+
+  return run.stdout.split('\n').filter(Boolean)
 }
 
 async function main(args: string[]): Promise<number> {
-  const files = args.length > 0 ? args : trackedFiles()
+  const files = args.length > 0 ? args.filter((f) => /\.tsx?$/.test(f)) : trackedFiles()
   const violations: Violation[] = []
   for (const file of files) {
     violations.push(...(await check(file, readFileSync(join(ROOT, file), 'utf8'))))
   }
 
-  for (const v of violations) {
-    console.error(`${v.file}:${v.line} ${v.rule}`)
+  const pythonFiles = args.length > 0 ? args.filter((f) => f.endsWith('.py')) : tracked(/\.py$/)
+  const lines = [...violations.map((v) => `${v.file}:${v.line} ${v.rule}`), ...checkPython(pythonFiles)]
+  for (const line of lines) {
+    console.error(line)
   }
 
-  if (violations.length > 0) {
-    console.error(`check-style: ${violations.length} violation(s) in ${new Set(violations.map((v) => v.file)).size} file(s)`)
+  if (lines.length > 0) {
+    console.error(`check-style: ${lines.length} violation(s)`)
     return 1
   }
 

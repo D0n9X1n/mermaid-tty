@@ -2,7 +2,10 @@
 // installed; check.sh runs them after `npm ci --prefix scripts/style`.
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { MAX_COLUMNS, MAX_LINES, check, citesIssue } from './check-style.ts'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { MAX_COLUMNS, MAX_LINES, check, checkPython, citesIssue } from './check-style.ts'
 
 const rules = async (source: string) => (await check('x.ts', source)).map((v) => `${v.line} ${v.rule}`)
 
@@ -63,4 +66,27 @@ test('citesIssue: what counts as a citation', () => {
     { assert.ok(citesIssue(text), text) }
   for (const text of ['#fff', '#abc123', '&#35;', 'C#', 'e3#2', 'item#x', 'attempt 2'])
     { assert.ok(!citesIssue(text), text) }
+})
+
+test('no-multiple-empty-lines: two blank lines in a row fail, in comments too, but not inside a template', async () => {
+  assert.deepEqual(await rules('f()\n\n\ng()\n'), ['3 no-multiple-empty-lines'])
+  assert.deepEqual(await rules('/*\na\n\n\nb\n*/\nf()\n'), ['4 no-multiple-empty-lines'])
+  assert.deepEqual(await rules('const a = `x\n\n\ny`\n'), [])
+})
+
+test('Python: one statement per line, no compound statements, no citations, same limits', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-style-'))
+  try {
+    const bad = join(dir, 'bad.py')
+    writeFileSync(bad, 'x = 1; y = 2\nif x: y = 3\n# fixes #4\ns = "a; b #5"\n')
+    const good = join(dir, 'good.py')
+    writeFileSync(good, 'x = 1\nif x:\n    y = 3\ns = "a; b #5"\n')
+    assert.deepEqual(checkPython([bad, good]).map((line) => line.slice(dir.length + 1)), [
+      'bad.py:1 one-statement-per-line',
+      'bad.py:2 one-statement-per-line',
+      'bad.py:3 issue-number',
+    ])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
