@@ -105,13 +105,13 @@ const WINDOWS_LIST_MS = 15000
 // Whether SonicTerm hosts the console of the session the Windows listing starts from. The terminal emulator is the
 // process that created the pseudoconsole, which makes it the parent of the console host (conhost.exe, or the
 // OpenConsole.exe SonicTerm ships); a shell or Claude Code under it hosts none. Walking up from the session (the
-// lister's parent), the first ancestor with a console host child owns the console and must be SonicTerm's own
-// `sonicterm-windows.exe`. A parent that started after its child is a reused pid, which breaks the chain, as does a gap
-// or a chain longer than any real one.
+// lister's parent, Claude Code itself, which owns a console when it was started in a window of its own), the first
+// process with a console host child owns the console and must be SonicTerm's own `sonicterm-windows.exe`. A host counts
+// only if it started after its owner, and a parent only if it started before its child: either way round is a reused
+// pid. A start time Windows withholds (0), a gap or a chain longer than any real one is a no.
 export function sonicTermOwnsConsole(listing: string): boolean {
   const [first = '', ...rows] = listing.split(/\r?\n/)
   const byPid = new Map<string, { ppid: string; started: bigint; name: string }>()
-  const hostsConsole = new Set<string>()
   for (const row of rows) {
     const fields = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+?)\s*$/.exec(row)
     if (fields) {
@@ -119,30 +119,34 @@ export function sonicTermOwnsConsole(listing: string): boolean {
     }
   }
 
+  // The start of each console host, by the pid of the process it hosts a console for.
+  const hostStarts = new Map<string, bigint[]>()
   for (const [, entry] of byPid) {
     if (entry.name === 'conhost.exe' || entry.name === 'openconsole.exe') {
-      hostsConsole.add(entry.ppid)
+      hostStarts.set(entry.ppid, [...(hostStarts.get(entry.ppid) ?? []), entry.started])
     }
   }
 
   const lister = byPid.get(first.trim())
-  let child = lister && byPid.get(lister.ppid)
-  if (!lister || !child || child.started > lister.started) {
+  let current = lister && byPid.get(lister.ppid)
+  if (!lister || !current || current.started === 0n || current.started > lister.started) {
     return false
   }
 
+  let currentPid = lister.ppid
   for (let depth = 0; depth < 64; depth++) {
-    const parentPid = child.ppid
-    const parent = byPid.get(parentPid)
-    if (!parent || parent.started > child.started) {
+    const hosts = hostStarts.get(currentPid) ?? []
+    if (hosts.some((started) => started >= current!.started)) {
+      return current.name === 'sonicterm-windows.exe'
+    }
+
+    const parent = byPid.get(current.ppid)
+    if (!parent || parent.started === 0n || parent.started > current.started) {
       return false
     }
 
-    if (hostsConsole.has(parentPid)) {
-      return parent.name === 'sonicterm-windows.exe'
-    }
-
-    child = parent
+    currentPid = current.ppid
+    current = parent
   }
 
   return false

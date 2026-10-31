@@ -74,7 +74,7 @@ test('A6.hook-tests: the pty owner is the nearest ancestor on another tty, and a
 
 // Windows process tables as the PowerShell listing prints them: its own pid first, then `pid ppid ticks name` rows.
 // SonicTerm (200) created the pseudoconsole, so its OpenConsole (210) is its child; pwsh (300) runs Claude Code (400),
-// whose PowerShell (500) lists. Ticks rise with start time; Claude Code's own hidden console host (450) is ignored.
+// whose PowerShell (500) lists. Ticks rise with start time, as on the windows-latest run that drew a picture.
 const windows = (...extra: string[]) =>
   [
     '500',
@@ -84,7 +84,6 @@ const windows = (...extra: string[]) =>
     '210 200 2100 OpenConsole.exe',
     '300 200 3000 pwsh.exe',
     '400 300 4000 claude.exe',
-    '450 400 4500 conhost.exe',
     '500 400 5000 powershell.exe',
     ...extra,
   ].join('\r\n')
@@ -139,6 +138,46 @@ test('A6.hook-tests: the console owner is the nearest ancestor hosting a console
   // A name that only contains SonicTerm's is not its executable.
   assert.equal(
     sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('sonicterm-windows.exe', 'sonicterm-windows.exe.bak')),
+    false,
+  )
+  // Claude Code started in a classic console window of its own (`start "" claude.exe` from a SonicTerm pane) owns that
+  // console, so the walk stops at it even though SonicTerm is further up.
+  assert.equal(sonicTermOwnsConsole(windows('450 400 4500 conhost.exe')), false)
+  // A console host that started before its owner is a reused pid, and a start time Windows withholds is unknown.
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('210 200 2100', '210 200 1000')), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('200 150 2000', '200 150 0')), false)
+  assert.equal(sonicTermOwnsConsole(SONICTERM_WINDOWS.replace('400 300 4000', '400 300 0')), false)
+  // The walk checks at most 64 processes from Claude Code up: above 62 shells SonicTerm is the 64th, above 63 the 65th.
+  assert.equal(sonicTermOwnsConsole(shells(62)), true)
+  assert.equal(sonicTermOwnsConsole(shells(63)), false)
+})
+
+// A Windows listing with `count` nested cmd.exe shells between SonicTerm and Claude Code.
+function shells(count: number): string {
+  const nested = Array.from(
+    { length: count },
+    (_, index) => `${1000 + index} ${index ? 999 + index : 200} ${3000 + index} cmd.exe`,
+  )
+  return [
+    '500',
+    '200 150 2000 sonicterm-windows.exe',
+    '210 200 2100 OpenConsole.exe',
+    ...nested,
+    `400 ${999 + count} 5000 claude.exe`,
+    '500 400 6000 powershell.exe',
+  ].join('\r\n')
+}
+
+test('A5.errors: on Windows, a PowerShell listing that fails or throws means no pixels', async () => {
+  const run = (result: () => Promise<unknown>) => ({ env: env(WINDOWS_PAIR).env, process: { run: result } })
+  assert.equal(await showsPixels(run(async () => ({ exitCode: 1, stdout: SONICTERM_WINDOWS, stderr: '' }))), false)
+  assert.equal(await showsPixels(run(async () => Promise.reject(new Error('denied')))), false)
+  assert.equal(
+    await showsPixels(
+      run(() => {
+        throw new Error('no powershell')
+      }),
+    ),
     false,
   )
 })
