@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readSource, type Source } from '../../core/source.ts'
-// #25. A config setting draws only if a renderer here honours it, or if it was seen under Mermaid 12.2.0 (JSDOM) to change
+// A config setting draws only if a renderer here honours it, or if it was seen under Mermaid 12.2.0 (JSDOM) to change
 // only pixels, with a value of a type Mermaid takes. Each case is written as frontmatter config and as an init directive.
 type Obj = { [k: string]: string | number | boolean | Obj }
 const yaml = (o: Obj, pad = '  '): string => Object.entries(o).map(([k, v]) =>
@@ -8,7 +8,7 @@ const forms = (o: Obj) => [`---\nconfig:\n${yaml(o)}\n---\nflowchart TD\nA`, `%%
 const flat = (o: Obj, p = ''): Record<string, unknown> =>
   Object.assign({}, ...Object.entries(o).map(([k, v]) => (typeof v === 'object' ? flat(v, `${p}${k}.`) : { [p + k]: v })))
 
-test('#25: a setting that changes what Mermaid shows, or one of a type Mermaid rejects, falls back with config:<key>', () => {
+test('A setting that changes what Mermaid shows, or one of a type Mermaid rejects, falls back with config:<key>', () => {
   const bad: [Obj, string][] = [
     // The cross-family review's cases.
     [{ gitGraph: { showBranches: false } }, 'gitGraph.showBranches'], [{ gitGraph: { showCommitLabel: false } }, 'gitGraph.showCommitLabel'],
@@ -52,7 +52,7 @@ test('#25: a setting that changes what Mermaid shows, or one of a type Mermaid r
   assert.deepEqual(readSource('---\ndisplayMode: compact\n---\ngantt\ntask : 2024-01-01, 1d'), { reason: 'config:gantt.displayMode' })
 })
 
-test('#25: settings honoured here, or seen to change only pixels with a value Mermaid takes, draw', () => {
+test('Settings honoured here, or seen to change only pixels with a value Mermaid takes, draw', () => {
   const good: Obj[] = [{ theme: 'dark' }, { theme: 'base' }, { theme: 'default' }, { theme: 'forest' }, { logLevel: 'debug' }, { logLevel: 5 },
     { theme: 'neutral', themeVariables: { pieOuterStrokeWidth: '1px', pieStrokeWidth: '0.5px' } }, { themeVariables: { pieOuterStrokeWidth: '2px', pieStrokeWidth: '2px' } },
     { htmlLabels: true, flowchart: { htmlLabels: true }, markdownAutoWrap: false },
@@ -66,9 +66,9 @@ test('#25: settings honoured here, or seen to change only pixels with a value Me
   assert.deepEqual((readSource('%%{init: {"htmlLabels": false}}%%\n%%{init: {"htmlLabels": true}}%%\nflowchart TD\nA') as Source).config, { htmlLabels: true })
 })
 
-// PM, #25: a sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so
+// A sequence frame's lifelines follow Mermaid's default geometry, which a sequence.* margin or width can move, so
 // none of them is allowed, default value or not.
-test('#25: a sequence geometry setting around a framed diagram falls back', () => {
+test('A sequence geometry setting around a framed diagram falls back', () => {
   const framed = 'sequenceDiagram\nbox Team\nparticipant A\nparticipant B\nend\nrect rgb(1, 2, 3)\nA->>B: hi\nend\nloop again\nB->>A: ok\nend'
   assert.ok(!('reason' in readSource(framed)))
   const keys: [string, string | number | boolean][] = [['boxMargin', 40], ['actorMargin', 50], ['width', 150], ['boxTextMargin', 5],

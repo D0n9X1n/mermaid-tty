@@ -1,8 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
 import { explain, renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'
-import { coverageOf, fx, vrun } from './c-lib.ts'; import { widest } from './golden-lib.ts'; import { text } from '../core/graph-fixture.ts'
-const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/xychart').map(f => f.replace('.mmd', ''))
-test('A5: every xychart coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'xychart', ids), []))
+import { fx, vrun } from './c-lib.ts'; import { widest } from './golden-lib.ts'; import { text } from '../core/graph-fixture.ts'
+const ids = readdirSync('fixtures/xychart').map(f => f.replace('.mmd', ''))
 test('A4: xychart-ok-01: bar eighth-rows; ticks 11000, 7500, 4000; vertical (79 cells) at 80, horizontal at 60', () => {
   const r = explain(fx('xychart-ok-01'), { columns: 80, theme: 'mono' }) as any, t = text(r.drawing), base = t.findIndex(l => l.includes('└'))
   assert.deepEqual([r.step, widest(r.drawing)], ['natural', 79])   // G = 6, c = 5: group g's first bar cell is column 8 + 6g

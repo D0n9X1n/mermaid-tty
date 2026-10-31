@@ -1,6 +1,6 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readSource, scanSource, type Source } from '../../core/source.ts'
 const src = (fm: string) => readSource(`---\n${fm}\n---\ngitGraph\ncommit`)
-// The scanner's config, before readSource checks each setting (#25), so that any key tests the YAML subset.
+// The scanner's config, before readSource checks each setting against its allowlist, so that any key tests the YAML subset.
 const cfg = (fm: string) => (scanSource(`---\n${fm}\n---\ngitGraph\ncommit`) as Source).config
 test('A5: frontmatter config scalars become dotted keys; other top-level keys are ignored', () => {
   assert.deepEqual(cfg('title: Log\nconfig:\n  theme: dark\n  gitGraph:\n    mainBranchName: "trunk"\n    mainBranchOrder: 2\ndisplayMode: compact'),

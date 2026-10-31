@@ -77,7 +77,7 @@ test('A5.mutation-tests: fuzz: every line cell redrawn in another style of the s
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #18 re-review: one arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the
+// One arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the
 // mixed one the canvas would draw for those arms, so the cell is self-consistent and only its weight is wrong: a thick
 // branch on a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm (a
 // gitGraph lane's tail ╵) has no other arm to differ from: expect states no line's weight, so its weight is unchecked.
@@ -334,7 +334,7 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #27: a whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
+// A whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
 // arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A cell
 // it shares (a stem, a crossing) is left as drawn; an edge with no cell of its own is skipped.
 const RESTYLE = { solid: ['light', '1'], thick: ['heavy', '2'], dotted: ['dotted', '1'] } as const
@@ -357,7 +357,7 @@ test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails'
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #27 review: an edge's line cut out, as compaction cuts slack: every column (row) whose drawn cells are only that edge's own
+// An edge's line cut out, as compaction cuts slack: every column (row) whose drawn cells are only that edge's own
 // straight ─ (│) is removed, the grid closing up, so its head meets its node and no line shows its style (A►B for A┄┄►B).
 // Only a cut that leaves the edge no line cell is a mutant: one that just shortens a longer line draws the same edge.
 // As one patch: every cell that the removal changes.
@@ -384,7 +384,7 @@ test('A5.mutation-tests: fuzz: an edge with its own line cut out, its head again
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #27 review: an invisible edge (~~~) given a head, ► in an empty cell beside each of its nodes, or a line cell there.
+// An invisible edge (~~~) given a head, ► in an empty cell beside each of its nodes, or a line cell there.
 const HIDDEN: Case[] = [['hidden', 'flowchart LR\nA ~~~ B\nB --> C'], ['hidden TB', 'flowchart TB\nA ~~~ B\nA --> C']].flatMap(([name, src]) => draw(name!, src!))
 test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
   const { mutants, survivors } = tally(t, 'hidden', function* (d) {
@@ -400,7 +400,7 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', t => {
   assert.ok(mutants > 0); assert.deepEqual(survivors, [])
 })
 
-// #27 re-review: an edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
+// An edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
 // own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part no
 // arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side: no
 // arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the edge.

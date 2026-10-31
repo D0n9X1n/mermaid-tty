@@ -2,7 +2,7 @@ import { emOf, emphasize, oneParagraph } from './emphasis.ts'
 import { fail, isFail, type Fail } from './fail.ts'
 import { isWide, unsupported, width } from './width.ts'
 
-// How a field's text reaches the screen in Mermaid 12.2.0 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md):
+// How a field's text reaches the screen in Mermaid 12.2.0, as rendered in Chrome under securityLevel strict:
 // html, an HTML label; markdown, an HTML label marked renders (labelType 'markdown'); plain, text as written; sanitized,
 // DOMPurify's output; escaped, < and > escaped; member, a class member (an HTML label marked renders, too).
 export type Mode = 'html' | 'markdown' | 'plain' | 'sanitized' | 'escaped' | 'member'
@@ -63,7 +63,7 @@ function codeChar(name: string): string | null {
 // *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   if (!/#\w+;/.test(text)) return drawable(text, mode, br) ?? text
-  // #26. Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
+  // Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
   // edge label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
   if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) return fail('markdown')
   let bad = false

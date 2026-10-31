@@ -121,7 +121,7 @@ test('A5: a transition and a region chain are whole edges: solid with an arrow h
     { id: 't1', from: 'start:C:r1', to: 'b', style: 'solid', tail: 'none', head: 'arrow', label: null, minlen: 1, order: 2 }])
 })
 
-// X2 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): a description, transition label or note is an HTML label
+// As Mermaid 12.2.0 shows them: a description, transition label or note is an HTML label
 // each <br> splits; a composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls back.
 test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back', () => {
   for (const [body, why] of [['state "a<!--c-->b" as A', 'html'], ['A : a<i>b</i>', 'html'], ['A --> B : a<b>', 'html'], ['A\nnote left of A : &lt x', 'entity'],

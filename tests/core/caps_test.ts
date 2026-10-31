@@ -7,11 +7,9 @@ test('A3: every shape has its own cap pair', () => {
   for (const [s, [l, r]] of Object.entries(CAPS)) { const k = `${l}\u0000${r}`; assert.ok(!seen.has(k), `${s} = ${seen.get(k)}`); seen.set(k, s) }
 })
 
-// Transcribed from the End caps table in
-// docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md, row by row; the
-// block-arrow row gives four shapes. Keys are core/caps.ts's Shape names, and
-// '' is the table's "(none)".
-test('A3: CAPS is exactly the matrix End caps table, all 22 shapes', () => {
+// Each shape's end caps, as drawn in place of Mermaid's outline; the block
+// arrow gives four shapes. Keys are core/caps.ts's Shape names, and '' is no cap.
+test('A3: CAPS is exactly the 22 shapes\' end caps', () => {
   const matrix = {
     rect: ['[', ']'],
     round: ['(', ')'],
@@ -53,9 +51,8 @@ test('A1: names inherited from Object.prototype are unknown → rect', () => {
   assert.deepEqual(leaked, [])
 })
 
-// Transcribed from docs/decisions/task0-spikes.md S4: every flowchart.md
-// @{shape} name whose shape has a row in the matrix's End caps table, with that
-// shape. There are 49.
+// Every flowchart.md @{shape} name whose shape has end caps, with that shape.
+// There are 49.
 test('A1: ALIASES is exactly the 49 @{shape} aliases; shapeFromName agrees', () => {
   const aliases: Record<string, string> = {
     rect: 'rect', rectangle: 'rect', proc: 'rect', process: 'rect',

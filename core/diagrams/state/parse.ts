@@ -179,7 +179,7 @@ function closes(rest: string): boolean | null {
 
 // Text a statement draws, trimmed and with its bold and italic marked (styled), or why it cannot be drawn: 'entity',
 // 'html', 'markdown', 'icon' or 'math' where
-// Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md); 'semicolon' for a ;, where
+// Mermaid's markdown HTML label (labelType 'markdown' on every state text), each <br> splitting, shows other text than written; 'semicolon' for a ;, where
 // Mermaid starts a new statement; 'unsupported-char U+XXXX' for a character no terminal draws reliably; and
 // 'label-blank-line' for a blank line among two or more (from <br><br>, or a <br> at either end). edge: a transition label,
 // where Mermaid makes each <br> a newline before marked (styled's breaks).

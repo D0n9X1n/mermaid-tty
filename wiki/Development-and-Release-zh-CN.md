@@ -18,8 +18,8 @@
 | `fixtures/` | 测试和脚本使用的 Mermaid 源码样例。 |
 | `scripts/` | 检查、生成器、端到端测试框架及文档工具。 |
 | `assets/` | `icon.svg` 和 README 图片。 |
-| `docs/` | 规范、计划、决策和评审结论。 |
-| `wiki/` | 本百科的源文件。 |
+| `ci/` | `coverage.json` 把每个检查 ID 对应到 CI 步骤；`reviews/` 存放 golden 评审的结论记录。 |
+| `wiki/` | 本百科的源文件，也是唯一的文档。仓库中没有 `docs/` 目录，一旦出现，`check-docs` 会失败。 |
 | `.github/workflows/` | CI、百科发布和版本发布工作流。 |
 
 没有构建步骤，也没有运行时依赖。根目录 `package.json` 无依赖，Claude Code 和 Node 24 或更高版本直接运行 TypeScript。只有文档工具（`scripts/docs/`）和端到端框架（`scripts/e2e/`）需要安装包，分别使用自己的锁文件。
@@ -57,7 +57,7 @@ node scripts/check-ci-coverage.ts
 |---|---|
 | `node --test` | 运行自动发现的全部 Node 测试，包括 `scripts/tests/*_test.ts`，无需安装依赖；文档测试使用单独命令。 |
 | `node scripts/typecheck.ts` | 使用固定版本 TypeScript 检查 `core/`；存在生成的 Claude Code 类型时也检查钩子。使用 npx 缓存，不是构建步骤。 |
-| `node scripts/check-review-hashes.ts` | 校验评审记录的哈希；加 `--require-pass` 要求通过评审的范围覆盖 `docs/reviews/required.json`。 |
+| `node scripts/check-review-hashes.ts` | 校验评审记录的哈希；加 `--require-pass` 要求通过评审的范围覆盖 `ci/reviews/required.json`。 |
 | `node --test 'scripts/tests/*.docs-spec.ts'` | 安装 `scripts/docs` 依赖后运行文档工具测试。 |
 | `node scripts/check.ts <ID>` | 运行一个验收检查的步骤，例如 `A4` 或 `A8.portability`。 |
 | `node scripts/explain.ts FILE COLS` | 查看 `FILE` 中图表按 `COLS` 列适配的步骤及结果，或回退原因。 |
@@ -139,7 +139,7 @@ flowchart LR
 
 ## 发布
 
-1. 确认 `main` 在三个系统上的 CI 均通过，`.claude-plugin/plugin.json` 的 `version` 与待发布版本一致，且 `bash scripts/check.sh` 通过。评审步骤要求 `docs/reviews/required.json` 的每个路径都有通过结论，所有已评审文件仍匹配记录的 SHA-256。文件变化后应重新评审；百科检查器不能替代翻译评审。
+1. 确认 `main` 在三个系统上的 CI 均通过，`.claude-plugin/plugin.json` 的 `version` 与待发布版本一致，且 `bash scripts/check.sh` 通过。评审步骤要求 `ci/reviews/required.json` 的每个路径都有通过结论，所有已评审文件仍匹配记录的 SHA-256。文件变化后应重新评审；百科检查器不能替代翻译评审。
 2. 不要手写发布说明：标签工作流会自动生成。每项改动都通过 PR 合并，PR 标题要适合放进列表，提交正文为它解决的每个 issue 写上 `Fixes #N`。发布 PR 的标题为 `mermaid-tty v<version>`，只更新版本号，不会出现在说明中。可用 `python3 scripts/release-notes.py v<version>` 预览某个标签的说明（设置 `PREVIOUS_TAG` 可与另一个标签比较）。
 
 3. **先发布百科。** 等待待打标签的那个 `main` 提交完成 `publish-wiki`，并确认发布的页面。GitHub 只有在网页界面保存第一个百科页面后才创建百科仓库；若克隆失败，先保存一页，再重跑工作流。

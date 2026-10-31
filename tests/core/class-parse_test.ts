@@ -132,7 +132,7 @@ test('A5.errors (11): style, classDef and cssClass lines outside their grammar f
     'cssClass "A" hot\ncssClass "A,B" cold\nstyle A fill:#f9f;\nstyle A #f00 50%')
   assert.deepEqual(m.classes.map((c: any) => c.id), ['A'])
 })
-// X2 (docs/specs/2026-10-29-mermaid-tty-v1-text-ground-truth.md): each drawn field in its mode. Label, note and relation
+// Each drawn field in the mode Mermaid 12.2.0 shows it in. Label, note and relation
 // label: html, any <br> splits; namespace title, annotation, cardinality and a backtick name: html, no <br>; a member: member.
 test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back', () => {
   for (const [body, why] of [['class B["a<!--c-->b"]', 'html'], ['namespace N["First<br>Second"] {\nclass B\n}', 'html'], ['note "a<i>x</i>"', 'html'],

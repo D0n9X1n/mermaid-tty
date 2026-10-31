@@ -1,5 +1,5 @@
 // The Tier 2 gate (plan C §9): a Tier 2 type may be in TIER2_PASSED only when one vr-C-<type> pass record in
-// docs/reviews lists every ok fixture of the type and its golden, each with the SHA-256 of its bytes now.
+// ci/reviews lists every ok fixture of the type and its golden, each with the SHA-256 of its bytes now.
 // Usage: node scripts/check-tier2.ts   (exits 1 unless TIER2_PASSED lists exactly the Tier 2 types that pass)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -9,7 +9,7 @@ import { checkRecords, parseRecord, requirePass, type ReviewRecord } from './che
 import { isMain } from './lib/is-main.ts'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
-const DIR = 'docs/reviews'
+const DIR = 'ci/reviews'
 
 // A file's raw bytes, from a path relative to the repo root, or null when it is not a file.
 function readRepo(path: string): Uint8Array | null {
@@ -25,7 +25,7 @@ export function tier2Files(t: string): string[] {
     .flatMap(n => [`fixtures/${t}/${n}`, `goldens/${t}/${n.slice(0, -'.mmd'.length)}.golden`])
 }
 
-// Every docs/reviews/*.md record that parses. One that does not is dropped, so the gate fails closed;
+// Every ci/reviews/*.md record that parses. One that does not is dropped, so the gate fails closed;
 // check-review-hashes.ts reports its parse error.
 export function repoRecords(): ReviewRecord[] {
   const dir = join(ROOT, DIR)

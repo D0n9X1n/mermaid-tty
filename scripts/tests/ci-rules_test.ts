@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { checkShErrors, coverageErrors, notesErrors, tagErrors } from '../lib/ci-rules.ts';
 import { INSTALL } from '../lib/workflow.ts';
-import { parseIds } from '../lib/check-ids.ts';
 const SH = '#!/usr/bin/env bash\nset -euo pipefail\nclaude plugin validate .\n';
 test('check.sh accepts fail-fast bash, including the real header comments', () => {
   assert.deepEqual(checkShErrors(SH), []);
@@ -22,8 +21,8 @@ const IDS48 = ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5
   'A7 A8 A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A9 A9.harness A9.stored A9.release ' +
   'A10 VR.gallery VR.in-ci VR.reviewers VR.tangled VR.passes B1 B1.docs-check B1.beauty-review B2 B2.per-paragraph ' +
   'B2.translation-review B3 B3.publish-test B3.workflow-check B3.release B4 B5 B5.every-pr B5.release B6 B7 B7.check-ids').split(' ');
-test('check IDs: plan A\'s one parser yields the 48 acceptance IDs', () => {
-  assert.deepEqual(parseIds(readFileSync(new URL('../../docs/specs/2026-10-27-mermaid-tty-v1-acceptance.md', import.meta.url), 'utf8')).sort(), [...IDS48].sort());
+test('check IDs: ci/coverage.json lists the 48 acceptance IDs', () => {
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(new URL('../../ci/coverage.json', import.meta.url), 'utf8'))).sort(), [...IDS48].sort());
 });
 test('coverage map: every check ID maps to an existing step id, and no unknown ID', () => {
   const ids = ['A8', 'A8.portability', 'A8.no-build', 'VR.in-ci', 'B1', 'B1.beauty-review'];

@@ -12,7 +12,7 @@ const show = (d: Drawing) => text(d).join('\n')
 
 // QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2 in
 // flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where one is
-// due, so the router refuses it (edge-crosses-frame, #19) and the fence falls back. The validator half of the finding, a
+// due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the finding, a
 // label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between() further down.
 test('A5.mutation-tests: QA\'s cluster-border repro, its edge through S0 and back, falls back', () => {
   const src = 'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
@@ -54,9 +54,9 @@ test('A5.mutation-tests: a frame passes with its title and a straight crossing; 
   assert.equal(validate(framed(straight, ['F', 'G']))?.reason, 'frame-broken')
 })
 
-// #19: a node's pill sharing cells with a frame's border, across its top or down its side, is a true overlap: frame-broken.
+// A node's pill sharing cells with a frame's border, across its top or down its side, is a true overlap: frame-broken.
 // Inside, beside the border, it passes. (A run of an edge along a border fails alike: framed(along) above.)
-test('#19: a node pill drawn on a frame\'s border fails frame-broken', () => {
+test('A node pill drawn on a frame\'s border fails frame-broken', () => {
   // C's pill, a cap and its text, two cells from (r, col); F spans columns 0–6, and e runs down column 3.
   const pill = (r: number, col: number) => framed(c => { straight(c); c.cap(r, col, '[', 'node', 'C'); c.text(r, col + 1, 'c', 'node', 'C') },
     ['F'], [{ owner: 'C', text: 'c' }])
@@ -119,7 +119,7 @@ test('V6: an edge between two nodes of one frame that leaves it through its bord
   assert.equal(validate(kept), null, show(kept))
 })
 
-// #19: frame F, rows 1–5 and columns 1–7, between a at (0,4) above it and b at (7,4) below it; edge e from A to B, its head
+// Frame F, rows 1–5 and columns 1–7, between a at (0,4) above it and b at (7,4) below it; edge e from A to B, its head
 // ▼ at (6,4), as ink draws it. F holds neither end, so e must not cross its border at all.
 function between(ink: (c: Canvas) => void): Drawing {
   const c = createCanvas(8, 9, 9); c.frame(1, 1, 5, 7, 'frame', 'F', 'T'); c.text(0, 4, 'a', 'node', 'A'); c.text(7, 4, 'b', 'node', 'B'); ink(c)
@@ -127,25 +127,25 @@ function between(ink: (c: Canvas) => void): Drawing {
   return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],
     edges: [{ id: 'e', from: 'A', to: 'B', ends: [{ node: 'B', glyph: '▼' }] }], edgeLabels: [], frames: ['F'] })
 }
-test('#19: an edge through a frame that holds neither of its ends fails edge-crosses-frame', () => {
+test('An edge through a frame that holds neither of its ends fails edge-crosses-frame', () => {
   // Down column 4, in through F's top border and out through its bottom, each crossing a straight │.
   const through = between(c => line(c, [[1, 4, 5], [2, 4, 5], [3, 4, 5], [4, 4, 5], [5, 4, 5]]))
   assert.equal(validate(through)?.reason, 'edge-crosses-frame', show(through))
   // framed(straight) above is the passing case: F holds one end, and the edge crosses its border once.
   assert.equal(validate(framed(straight)), null)
 })
-// #13's case 2 at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds neither end, and leaves through its
+// The two-subgraph LR chart (case 2) at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds neither end, and leaves through its
 // right wall. Every step of the ladder draws a frame crossed so, or another broken drawing, so the fence falls back.
-test('#19: #13 case 2 at 80 columns, its dotted edge crossing Data tier, falls back', () => {
+test('The two-subgraph LR chart at 80 columns, its dotted edge crossing Data tier, falls back', () => {
   const src = 'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
     '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
   const r = explain(src, { columns: 80 })
   assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
 })
-// GPT-6's review of #19: an edge whose end is the frame itself was exempt from every crossing. Only its mark, which meets
+// An edge whose end is the frame itself is not exempt from every crossing. Only its mark, which meets
 // the border from outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S.
 // Here S-->S ran down through S, across its top and bottom borders, and drew at 60, 80 and 120.
-test('#19 review: a self-loop on a frame never runs over the frame\'s border', () => {
+test('A self-loop on a frame never runs over the frame\'s border', () => {
   const src = 'flowchart BT\nsubgraph S\nX\nY\nend\nB --> F\nS --> F\nF --> S\nS --> B\nS --> S'
   for (const columns of [60, 80, 120]) {
     const r = explain(src, { columns, theme: 'mono' })
@@ -160,7 +160,7 @@ test('#19 review: a self-loop on a frame never runs over the frame\'s border', (
 })
 // The validator half alone, on F of between() with no a: e from F to b leaves F's top from above, at (0,3), then runs down
 // column 4 through F's interior, crossing its top and bottom borders. F is e's end, but not that way.
-test('#19 review: an edge from a frame that runs through the frame fails edge-crosses-frame', () => {
+test('An edge from a frame that runs through the frame fails edge-crosses-frame', () => {
   const c = createCanvas(8, 9, 9); c.frame(1, 1, 5, 7, 'frame', 'F', 'T'); c.text(7, 4, 'b', 'node', 'B')
   line(c, [[0, 3, 6], [0, 4, 12], [1, 4, 5], [2, 4, 5], [3, 4, 5], [4, 4, 5], [5, 4, 5]]); c.arrow(6, 4, '▼', 'e')
   const d = c.toDrawing({ labels: [{ owner: 'B', text: 'b' }, { owner: 'F', text: 'T' }],

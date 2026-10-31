@@ -70,10 +70,10 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
     assert.deepEqual(P(body), { reason: why }, body)
   assert.deepEqual(P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id), ['12', 'B', 'TOTAL'])
 })
-// #16. Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
+// Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
 // and each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from the
 // outside in. A relation label and a subgraph title show ~ as written. Each case below was rendered under JSDOM.
-test('#16: ~…~ in an ER entity label with attributes and in attribute columns draws as <…>, as erBox shows it', () => {
+test('~…~ in an ER entity label with attributes and in attribute columns draws as <…>, as erBox shows it', () => {
   const m = P(['A["List~T~"] {', '  List~T~? items PK', '  Map~K,V~ m', '  string x~T~', '  ~T~ t', '  string c "a b~c~"', '  string d "a ~b"', '}',
     'B["x~T~"]', 'A ||--o{ B : "r~T~"', 'subgraph S ["t~T~"]', 'C', 'end'].join('\n'))
   assert.deepEqual(m.entities.map((e: any) => [e.id, e.label]), [['A', 'List<T>'], ['B', 'x~T~'], ['C', 'C']])
@@ -88,7 +88,7 @@ test('#16: ~…~ in an ER entity label with attributes and in attribute columns 
 // Mermaid's lexer reads a word holding a ~ through the last ~ on its line as one attribute word, so a ~ in two columns, a
 // lone ~ in the type, or a ~ in a comment's first word with another after it is a parse error there; a <br> it would
 // show as written falls back.
-test('#16: an attribute line Mermaid misreads for its ~, or a generic forming <br>, falls back', () => {
+test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, falls back', () => {
   for (const [body, why] of [['A {\n  List~T~ x~U~\n}', 'syntax:3'], ['A {\n  List~T~ id "c~d"\n}', 'syntax:3'], ['A {\n  ~T~ t "a ~b"\n}', 'syntax:3'],
     ['A {\n  List~T~? items PK "a b~c~"\n}', 'syntax:3'],
     ['A {\n  string id "a~b c~"\n}', 'syntax:3'], ['A {\n  string id "a~b~c"\n}', 'syntax:3'], ['A {\n  List~ id\n}', 'syntax:3'],

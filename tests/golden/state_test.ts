@@ -1,9 +1,7 @@
-// tests/golden/state_test.ts — state fixtures (plan C T56): coverage, one start and one end mark per scope, and nord roles.
+// tests/golden/state_test.ts — state fixtures (plan C T56): one start and one end mark per scope, and nord roles.
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync, readdirSync } from 'node:fs'
 import { explain, renderMermaid } from '../../core/render.ts'; import { THEMES } from '../../core/themes.ts'
-import { coverageOf, fx, spanOf } from './c-lib.ts'; import { text } from '../core/graph-fixture.ts'
-const M = readFileSync('docs/specs/2026-10-27-mermaid-tty-v1-diagram-matrix.md', 'utf8'), ids = readdirSync('fixtures/state').map(f => f.replace('.mmd', ''))
-test('A5: every state coverage row cites an existing fixture; every ok fixture is cited', () => assert.deepEqual(coverageOf(M, 'state', ids), []))
+import { fx, spanOf } from './c-lib.ts'; import { text } from '../core/graph-fixture.ts'
 test('A4: state-ok-05 shares one ● and one ◉ among its [*]', () => {
   const t = [...text((explain(fx('state-ok-05'), { columns: 80, theme: 'mono' }) as any).drawing).join('')]
   assert.deepEqual([t.filter(c => c === '●').length, t.filter(c => c === '◉').length], [1, 1])

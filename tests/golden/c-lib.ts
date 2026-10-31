@@ -48,21 +48,6 @@ export const fx = (id: string): string => readFileSync(join('fixtures', id.repla
 // A table row's trimmed cells, split at each | no backslash escapes: '| a | b\|c |' gives ['a', 'b\|c'].
 const cells = (row: string): string[] => row.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim())
 
-// What is wrong with matrix's | <type> | <feature> | <ids> | rows after ## Coverage, given the ids of type's fixtures: each
-// row that cites none ('empty: <feature>'), each cited id with no fixture ('missing <id>') and each ok fixture no row cites
-// ('uncited <id>'), each group sorted; or only 'no rows: <type>' when no row names type. A row cites each token of its ids
-// cell, split at commas and whitespace, as a whole id: pie-ok-01-typo cites no pie-ok-01.
-export function coverageOf(matrix: string, type: string, ids: readonly string[]): string[] {
-  const start = matrix.indexOf('## Coverage'), lines = start < 0 ? [] : matrix.slice(start).split('\n')
-  const rows = lines.filter(l => l.startsWith('|')).map(cells).filter(r => r.length >= 3 && r[0] === type)
-  if (!rows.length) return [`no rows: ${type}`]
-  const cite = (r: string[]): string[] => r.at(-1)!.split(/[\s,]+/).filter(Boolean)
-  const cited = new Set(rows.flatMap(cite))
-  return [...rows.filter(r => !cite(r).length).map(r => `empty: ${r[1]}`).sort(),
-    ...[...cited].filter(id => !ids.includes(id)).map(id => `missing ${id}`).sort(),
-    ...ids.filter(id => id.includes('-ok-') && !cited.has(id)).map(id => `uncited ${id}`).sort()]
-}
-
 // The owners of d's cells of the given kinds.
 const ownersOf = (d: Drawing, kinds: readonly string[]): Set<string> =>
   new Set(d.cells.flat().flatMap(c => (c && kinds.includes(c.kind) ? c.owners : [])))
