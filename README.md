@@ -28,7 +28,7 @@ A Claude Code plugin (mod) that redraws closed `mermaid` fences in Claude's repl
 - **Fits your terminal.** No row is wider than your window: gaps tighten, labels wrap, and wide graphs turn vertical.
 - **Exact CJK widths.** Wide characters take two columns, so Chinese, Japanese and Korean labels line up.
 - **Themes.** Follows your Claude Code theme, or pick nord, dracula, gruvbox, solarized or mono.
-- **Real images where they work.** In kitty and Ghostty, Mermaid's own picture replaces the text drawing.
+- **Real images where they work.** In kitty, Ghostty and SonicTerm, Mermaid's own picture replaces the text drawing.
 - **Nothing to install but the plugin.** Pure TypeScript, no build step, no runtime dependencies.
 - **The transcript keeps the source.** `/copy` copies the exact Mermaid text, and one command switches back to source.
 
@@ -72,7 +72,7 @@ claude plugin uninstall mermaid-tty@mermaid-tty
 | ![A gantt chart drawn by mermaid-tty](assets/readme/gantt.svg) | ![A class diagram drawn by mermaid-tty](assets/readme/class.svg) |
 | ![A pie chart drawn by mermaid-tty](assets/readme/pie.svg) | |
 
-## Images in kitty and Ghostty
+## Images in kitty, Ghostty and SonicTerm
 
 In a terminal that shows pixels, mermaid-tty swaps the text drawing for Mermaid's own picture once [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) renders it in the background. The reply from the top of this page, in Ghostty:
 
@@ -124,7 +124,7 @@ flowchart TD
   C --> V{Drawing checked}
   V -->|passes| D[Text diagram]
   V -->|fails| F[Original source]
-  D -.->|kitty or Ghostty, mmdc on PATH| I[Mermaid's own picture]
+  D -.->|kitty, Ghostty or SonicTerm, mmdc on PATH| I[Mermaid's own picture]
 ```
 
 mermaid-tty only changes how a reply is shown. The reply, the transcript and `/copy` keep the Mermaid source. The [wiki](https://github.com/D0n9X1n/mermaid-tty/wiki) walks through each stage in its Architecture page.
@@ -153,7 +153,16 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **How do I see the Mermaid source?** Run `/mermaid-tty source` to show diagrams as source, including replies already on screen. `/mermaid-tty diagram` draws them again; bare `/mermaid-tty` reports the current mode. `/copy` copies the exact Mermaid source in either mode.
 
-**Can diagrams show as images?** Yes, in kitty and Ghostty, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on.
+**Can diagrams show as images?** Yes, in kitty, Ghostty and SonicTerm, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on.
+
+**Can images show inside tmux or RMUX?** Not yet; you keep the text drawing there. tmux and RMUX forward a kitty image only when it arrives wrapped in their passthrough sequence, and only with passthrough allowed:
+
+```tmux
+# ~/.tmux.conf, or rmux.conf for RMUX
+set -g allow-passthrough on
+```
+
+Claude Code 2.1.309 sends its kitty image uploads unwrapped inside tmux, so the multiplexer drops them before they reach the terminal. With `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` the picture's cells still arrive, but they show blank. mermaid-tty therefore keeps text inside tmux, screen and Zellij until Claude Code wraps those uploads. Start Claude Code outside the multiplexer to see pictures.
 
 **Which platforms and terminals work?** macOS, Linux and Windows, in any terminal Claude Code supports: Windows Terminal; macOS Terminal, iTerm2 and Ghostty; and Linux terminals. Truecolor terminals show the palettes exactly; 256-color terminals use their available colors. Use a monospaced font with box-drawing and geometric-shape glyphs, plus a CJK font for CJK labels. Keep ambiguous-width characters set to one column so lines meet.
 
