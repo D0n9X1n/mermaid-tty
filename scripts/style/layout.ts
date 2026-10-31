@@ -115,10 +115,76 @@ function wrap(line: string): string[] {
   return out
 }
 
+// A comment line's parts: its prefix (indent and `//` or ` *`, with one space), any further indent, and its text.
+const PARTS = /^(\s*(?:\/\/|\*)\s?)(\s*)(.*)$/
+
+// Where a comment paragraph ends: a line that starts a list item, a table row, a code fence or an indented
+// continuation, a blank comment line, or one after a line ending in a colon. Those keep their own lines.
+const STARTS_BLOCK = /^(?:[-*•]\s|\d+[.)]\s|\||```|$)/
+// Aligned columns or box drawing: a comment laid out by hand, left exactly as written.
+const LAID_OUT = /\S {3,}\S|[─│┌┐└┘├┤┬┴┼━┃]/
+
+// Comment lines refilled as paragraphs: each run of `//` (or ` *`) lines with one prefix and no deeper indent is
+// joined and wrapped again at the limit, so no line holds a stray word cut from the one above. Lists, tables, code,
+// indented continuations and hand-aligned text keep their lines.
+export function refill(lines: readonly string[], inComment: (n: number) => boolean): string[] {
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    const first = PARTS.exec(lines[i]!)
+    if (!inComment(i + 1) || !first) {
+      out.push(lines[i]!)
+      i++
+      continue
+    }
+
+    const [, prefix, ,] = first as unknown as [string, string, string, string]
+    const run: string[] = [lines[i]!]
+    let j = i + 1
+    while (j < lines.length && inComment(j + 1)) {
+      const next = PARTS.exec(lines[j]!)
+      const previous = run.at(-1)!
+      if (!next || next[1] !== prefix || next[2] !== '' || STARTS_BLOCK.test(next[3]!) || /:$/.test(previous)) {
+        break
+      }
+
+      run.push(lines[j]!)
+      j++
+    }
+
+    const texts = run.map((line) => PARTS.exec(line)![3]!)
+    const keep = run.length === 1 || texts.some((t) => LAID_OUT.test(t)) || (first[2] ?? '') !== ''
+    out.push(...(keep ? run : fill(prefix, texts.join(' '))))
+    i = j
+  }
+
+  return out
+}
+
+// Words laid greedily onto lines of at most the limit, each starting with prefix.
+function fill(prefix: string, text: string): string[] {
+  const out: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (line && (prefix + line + ' ' + word).length > MAX_COLUMNS) {
+      out.push(prefix + line)
+      line = word
+    } else {
+      line = line ? `${line} ${word}` : word
+    }
+  }
+
+  out.push(prefix + line)
+  return out
+}
+
 // The comments' words, in order: what wrapping and moving may not change.
+// A block comment's ` *` line prefixes are layout, not words; a line comment's text is all words, a leading * too.
 const words = (tree: Tree) =>
   tree.comments
-    .flatMap((comment) => comment.value.split('\n').map((line) => line.replace(/^\s*\*/, '')))
+    .flatMap((comment) =>
+      comment.type === 'Block' ? comment.value.split('\n').map((line) => line.replace(/^\s*\*/, '')) : [comment.value],
+    )
     .join(' ')
     .split(/\s+/)
     .filter(Boolean)
@@ -189,7 +255,19 @@ export async function layout(source: string): Promise<{ output: string; problem:
     }
   }
 
-  const output = out.join('\n')
+  const laid = await parse(out.join('\n'))
+  const laidLines = out
+  const laidComment = new Set<number>()
+  for (const comment of laid.comments) {
+    const before = laidLines[comment.loc.start.line - 1]!.slice(0, comment.loc.start.column)
+    for (let line = comment.loc.start.line; line <= comment.loc.end.line; line++) {
+      if (line > comment.loc.start.line || before.trim() === '') {
+        laidComment.add(line)
+      }
+    }
+  }
+
+  const output = refill(laidLines, (n) => laidComment.has(n)).join('\n')
   if (output === source) {
     return { output, problem: null }
   }
