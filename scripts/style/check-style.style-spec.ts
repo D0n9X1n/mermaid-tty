@@ -47,6 +47,10 @@ test('max-len: a line over the limit fails unless a string, template, regex or U
   assert.deepEqual(await rules(`const a = \`${long}\`\n`), [])
   assert.deepEqual(await rules(`const a = /${long}/\n`), [])
   assert.deepEqual(await rules(`// see https://example.com/${long}\n`), [])
+  // A test's name is one unbreakable string, and Prettier keeps the callback's head on its line.
+  assert.deepEqual(await rules(`test('${long}', () => {\n  f()\n})\n`), [])
+  assert.deepEqual(await rules(`test('${long}', async ($, on) => {\n  f()\n})\n`), [])
+  assert.deepEqual(await rules(`const x = f('${'y'.repeat(10)}') + ${long}\n`), ['1 max-len'])
 })
 
 test('max-lines: a file over the limit fails once', async () => {

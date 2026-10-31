@@ -233,13 +233,17 @@ export async function check(file: string, source: string): Promise<Violation[]> 
     at += text.length + 1
   }
 
+  // A test's opening line: its name, then the callback's head, which Prettier always keeps on the name's line.
+  const TEST_OPENER = /^\s*(?:test|it|describe)\((['"`]).*\1, (?:async )?\([^)]*\) =>(?: \{)?$/
+
   // A line may run past the limit only where a string, template or regex, which can't be broken without changing
   // it, or a URL crosses the limit.
   let offset = 0
   lines.forEach((text, i) => {
     const start = offset
     offset += text.length + 1
-    if (text.length <= MAX_COLUMNS || /https?:\/\//.test(text)) {
+    // A test's name is a string the line can't break, and Prettier won't move the callback's head off its line.
+    if (text.length <= MAX_COLUMNS || /https?:\/\//.test(text) || TEST_OPENER.test(text)) {
       return
     }
 
