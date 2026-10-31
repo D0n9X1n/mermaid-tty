@@ -19,6 +19,7 @@
 | `scripts/` | 检查、生成器、端到端测试框架及文档工具。 |
 | `assets/` | `icon.svg` 和 README 图片。 |
 | `ci/` | `coverage.json` 把每个检查 ID 对应到 CI 步骤；`reviews/` 存放 golden 评审的结论记录。 |
+| `CLAUDE.md` | 给编程智能体的工作规则：工作流程、发布、文档、代码风格和测试。 |
 | `wiki/` | 本百科的源文件，也是唯一的文档。仓库中没有 `docs/` 目录，一旦出现，`check-docs` 会失败。 |
 | `.github/workflows/` | CI、百科发布和版本发布工作流。 |
 
@@ -66,11 +67,45 @@ node scripts/check-ci-coverage.ts
 | `node scripts/check-docs.ts` | 检查 README 及图片、百科工作流和图标。 |
 | `node scripts/check-wiki.ts` | 检查百科页面，详见下方“百科”。 |
 
+## 代码风格
+
+代码要写给下一位读者看。风格遵循 copilot-relay 的规则和主流 TypeScript 指南（Google、Airbnb、StandardJS）：一种统一的风格，由工具格式化，不靠人工争论。
+
+```sh
+npm ci --prefix scripts/style
+node scripts/style/run.ts --write
+node scripts/style/run.ts
+```
+
+- `npm ci --prefix scripts/style` 安装 Prettier 3.6.2，版本固定在独立的 lockfile 中；根目录不依赖它。
+- `node scripts/style/run.ts --write` 负责格式化：先运行 Prettier，再用 `scripts/style/layout.ts` 处理 Prettier 不管的部分（多行代码块后空一行、注释在 120 列处换行），最后再运行一次 Prettier。
+- `node scripts/style/run.ts` 负责检查：`prettier --check`、`scripts/style/check-style.ts` 及检查器自身的测试。CI 在 Linux、macOS 和 Windows 上运行它。
+
+Prettier（`.prettierrc.json`）使用单引号、不加分号、两个空格缩进、120 列和尾随逗号。`.prettierignore` 排除生成的表格、golden 文件、样例以及所有非 TypeScript 文件。
+
+`check-style.ts` 用 Prettier 自带的 TypeScript 解析器解析每个文件，检查 Prettier 不负责的规则：
+
+| 规则 | 最接近的 ESLint 规则 |
+|---|---|
+| 每个 `if`、`else`、`for`、`while` 和 `do` 的主体都用花括号包起来；只有 `else if` 例外 | `curly: all` |
+| 使用 `===` 和 `!==`；只有同时匹配 `null` 和 `undefined` 时才用 `== null` | `eqeqeq`，忽略 null |
+| 三元表达式中不再嵌套三元表达式 | `no-nested-ternary` |
+| 每个 `const` 或 `let` 只声明一个变量；循环头除外 | `one-var: never` |
+| 每个多行代码块语句之后空一行 | `padding-line-between-statements` |
+| 连续空行最多一行，注释中也一样 | `no-multiple-empty-lines` |
+| 每行不超过 120 列，除非是字符串、模板、正则或 URL 越过了限制 | `max-len` |
+| 每个文件不超过 1000 行 | `max-lines` |
+| 注释、字符串和测试名中不出现 issue 或 PR 编号 | 本项目规则 |
+
+对于 Python 发布脚本，`scripts/style/check_py.py` 用 Python 的分词器读取每个文件，要求一行一条语句、不写单行复合语句，并适用同样的行宽、文件长度和编号限制。发布说明的测试把真实 issue 编号当作数据，因此不受编号规则约束。
+
+需要评审、不由工具检查的规则：注释说明原因（所对应的 Mermaid 行为、所依赖的终端事实、所维持的不变量），不复述下一行代码；代码只描述当前如何工作，不讲历史；命名说明值是什么；用卫语句代替深层嵌套；测试分开准备、执行和断言三个步骤。只改格式的提交与改逻辑的提交分开，方便评审者确认行为不变。
+
 ## 持续集成
 
 `.github/workflows/ci.yml` 在每次 push 和 pull request 时运行。`check` 和 `e2e` 使用 `ubuntu-latest`、`macos-latest`、`windows-latest`，配置 Node 24，并从 npm 安装 Claude Code 2.1.308。
 
-- **check** 在三个系统上运行：裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
+- **check** 在三个系统上运行：代码风格检查（`node scripts/style/run.ts`）、裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
 - **e2e** 在三个系统上运行真实 Claude Code 框架，使用 `--scenario all`，覆盖源码视图、存储文本、包括 `mono` 的主题和 256 色输出。Windows 使用 ConPTY，macOS 和 Linux 使用 tmux。
 - **gallery** 仅在 Ubuntu 上运行：渲染 SVG 图库并上传为构建产物，供视觉评审。
 - **claude-code-versions** 每四小时运行一次：针对每个新发布的 Claude Code 版本运行 A9 端到端框架，新版本一旦破坏插件，几小时内即可发现。
