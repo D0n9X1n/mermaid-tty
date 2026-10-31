@@ -31,11 +31,26 @@ const CODE: Readonly<Record<Ink, string>> = {
 // !@#$%^&* for 1–8, so the glyph scan never reads source text as a drawn series glyph.
 const SHIFTED = '!@#$%^&*'
 const textCode = (code: string): string => (/^[1-8]$/.test(code) ? SHIFTED[Number(code) - 1]! : code.toUpperCase())
-const glyph = (c: Cell | null): string => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
+const glyph = (c: Cell | null): string => {
+  if (c === null) {
+    return ' '
+  }
+
+  return c.kind === 'cont' ? '' : c.ch
+}
 // A cell's role code: ' ' when empty, '~' on a cont cell, textCode on a text cell, and its ink's code on any other
 // kind.
-export const roleCode = (c: Cell | null): string =>
-  c === null ? ' ' : c.kind === 'cont' ? '~' : c.kind === 'text' ? textCode(CODE[c.role]) : CODE[c.role]
+export const roleCode = (c: Cell | null): string => {
+  if (c === null) {
+    return ' '
+  }
+
+  if (c.kind === 'cont') {
+    return '~'
+  }
+
+  return c.kind === 'text' ? textCode(CODE[c.role]) : CODE[c.role]
+}
 // One row per canvas row, each cell mapped by f, right-trimmed of spaces only.
 const rows = (d: Drawing, f: (c: Cell | null) => string): string[] =>
   d.cells.map((row) => row.map(f).join('').replace(/ +$/, ''))

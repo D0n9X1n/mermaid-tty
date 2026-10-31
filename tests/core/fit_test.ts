@@ -48,9 +48,19 @@ function draw(what: Rung[1], columns: number): Drawing | Fail {
     return what
   }
 
-  const n = what === 'clash' || what === 'short' ? 3 : what === 'liar' ? columns + 1 : what
+  let n = 3
+  let declared = columns
+  if (typeof what === 'number') {
+    n = what
+  } else if (what === 'liar') {
+    n = columns + 1
+    declared = columns + 5
+  } else if (what === 'short') {
+    declared = columns - 5
+  }
+
   const t = 'x'.repeat(n)
-  const c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
+  const c = createCanvas(1, 12, declared)
   c.text(0, 0, t, 'node', 'A')
   if (what === 'clash') {
     c.arrow(0, 0, '►', 'A')

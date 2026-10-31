@@ -30,9 +30,17 @@ export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}
   return { dir, title: null, nodes: [...nodes.values()], edges, clusters: [] }
 }
 
-// One string per row: a cont cell is '', an empty cell ' ', any other its ch; trailing spaces trimmed.
-const ch = (c: Cell | null) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
-export const text = (d: Drawing): string[] => d.cells.map((row) => row.map(ch).join('').replace(/ +$/, ''))
+// What a cell shows: an empty cell ' ', a cont cell '', any other its ch.
+export function cellText(c: Cell | null): string {
+  if (c === null) {
+    return ' '
+  }
+
+  return c.kind === 'cont' ? '' : c.ch
+}
+
+// One string per row, each cell as cellText shows it; trailing spaces trimmed.
+export const text = (d: Drawing): string[] => d.cells.map((row) => row.map(cellText).join('').replace(/ +$/, ''))
 
 // Independently read shared arms as joined edge networks, then enumerate the bare-end/mark pairs they imply that no
 // edge draws.

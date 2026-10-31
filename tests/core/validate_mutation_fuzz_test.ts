@@ -236,6 +236,15 @@ test('A5.mutation-tests: fuzz: a line cell given to another edge of its joined n
 // other
 // cell; and the pill's shape, its empty, border and inner cells, so pills of one shape and size can swap.
 const PILL = new Set(['cap', 'fill', 'text', 'cont', 'frame'])
+// A pill cell's part of its shape: '.' when empty, a border cell (cap or frame) its ch, an inner cell 'i'.
+function shapeOf(x: Cell | null): string {
+  if (!x) {
+    return '.'
+  }
+
+  return x.kind === 'cap' || x.kind === 'frame' ? x.ch : 'i'
+}
+
 function pills(d: Drawing) {
   const nodes = new Set(d.expect.edges.flatMap((e) => [e.from, e.to]))
   const out: { id: string; r: number; c: number; rows: (Cell | null)[][]; shape: string }[] = []
@@ -261,9 +270,7 @@ function pills(d: Drawing) {
       r: r0,
       c: c0,
       rows,
-      shape: rows
-        .map((row) => row.map((x) => (!x ? '.' : x.kind === 'cap' || x.kind === 'frame' ? x.ch : 'i')).join(''))
-        .join('/'),
+      shape: rows.map((row) => row.map(shapeOf).join('')).join('/'),
     })
   }
 
@@ -272,7 +279,13 @@ function pills(d: Drawing) {
 // Whether swapping nodes a and b maps the source onto itself: each edge, its ends and its label, read with a and b
 // swapped, is an edge of the source. An edge with no marks shows no direction, so its endpoints are unordered.
 function automorphic(d: Drawing, a: string, b: string): boolean {
-  const sw = (n: string) => (n === a ? b : n === b ? a : n)
+  const sw = (n: string) => {
+    if (n === a) {
+      return b
+    }
+
+    return n === b ? a : n
+  }
   const text = new Map(d.expect.labels.map((l) => [l.owner, l.text]))
   const label = (id: string) =>
     d.expect.edgeLabels

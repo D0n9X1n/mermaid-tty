@@ -137,7 +137,13 @@ test('A8.platforms: junction() for every dirs 1–15, light, heavy and dotted', 
     const light = PINNED[armsOf(dirs, '1')]
     const heavy = PINNED[armsOf(dirs, '2')]
     // no dashed corners: bend light
-    const dotted = [1, 4, 5].includes(dirs) ? '┆' : [2, 8, 10].includes(dirs) ? '┄' : light
+    let dotted = light
+    if ([1, 4, 5].includes(dirs)) {
+      dotted = '┆'
+    } else if ([2, 8, 10].includes(dirs)) {
+      dotted = '┄'
+    }
+
     for (const [w, want] of [
       ['light', light],
       ['heavy', heavy],

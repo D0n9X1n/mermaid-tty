@@ -67,11 +67,14 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
     process: {
       run: async (argv: string[]) => {
         runs.push(argv[1] === '--version' ? 'probe' : argv[0]!)
-        return {
-          exitCode: 0,
-          stdout: argv[1] === '--version' ? '11.17.1\n' : argv[0] === 'mktemp' ? '/tmp/mermaid-tty.X1\n' : '',
-          stderr: '',
+        let stdout = ''
+        if (argv[1] === '--version') {
+          stdout = '11.17.1\n'
+        } else if (argv[0] === 'mktemp') {
+          stdout = '/tmp/mermaid-tty.X1\n'
         }
+
+        return { exitCode: 0, stdout, stderr: '' }
       },
     },
     fs: {
@@ -82,7 +85,15 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
   }
   return { $, runs }
 }
-const shape = (p: any) => p?.parts.map((x: any) => ('prose' in x ? 'prose' : 'rows' in x ? 'rows' : 'picture'))
+// A plan part's kind: prose, rows or picture.
+const partKind = (x: any) => {
+  if ('prose' in x) {
+    return 'prose'
+  }
+
+  return 'rows' in x ? 'rows' : 'picture'
+}
+const shape = (p: any) => p?.parts.map(partKind)
 
 // Only a fence core parses becomes a picture: BAD (a character core rejects) stays prose. FAN parses but is too wide
 // for

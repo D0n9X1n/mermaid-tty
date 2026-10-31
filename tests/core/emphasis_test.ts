@@ -1,6 +1,6 @@
-// core/emphasis.ts against Mermaid 12.2.0: each expectation is what its markdownToHTML (marked 16.4.2) emits, rendered under
-// JSDOM, written per character: {b:…} bold, {i:…} italic, {bi:…} both; a space between two characters of one style joins
-// their run. null is text the port does not draw: it falls back.
+// core/emphasis.ts against Mermaid 12.2.0: each expectation is what its markdownToHTML (marked 16.4.2) emits, rendered
+// under JSDOM, written per character: {b:…} bold, {i:…} italic, {bi:…} both; a space between two characters of one
+// style joins their run. null is text the port does not draw: it falls back.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { emOf, emphasize, plain } from '../../core/emphasis.ts'
@@ -15,6 +15,7 @@ function show(s: string): string {
       em = emOf(ch)
       continue
     }
+
     cs.push({ ch, em })
     em = 0
   }
@@ -31,10 +32,13 @@ function show(s: string): string {
       out += (cur ? '}' : '') + (c.em ? `{${CODE[c.em]}:` : '')
       cur = c.em
     }
+
     out += c.ch
   }
+
   return out + (cur ? '}' : '')
 }
+
 const E = (t: string) => {
   const r = emphasize(t)
   return r === null ? null : show(r)
@@ -90,9 +94,9 @@ test('X3.emphasis: nesting a style in itself, escapes, code, links, strikethroug
   }
 })
 
-// X3. Mermaid 12.2.0 (JSDOM) turns each <br> spelling in an edge, transition or relation label into a newline before marked
-// runs, so emphasis spans it as whitespace, and a line after it can start a block (`a<br>- **b**` shows <p>a</p>- **b**).
-// breaks: that reading. A block start, a heading underline or a hard break on any line falls back.
+// X3. Mermaid 12.2.0 (JSDOM) turns each <br> spelling in an edge, transition or relation label into a newline before
+// marked runs, so emphasis spans it as whitespace, and a line after it can start a block (`a<br>- **b**` shows
+// <p>a</p>- **b**). breaks: that reading. A block start, a heading underline or a hard break on any line falls back.
 test('X3.emphasis: in an edge label each <br> is a newline as Mermaid makes it; a block start on any line falls back', () => {
   const B = (t: string) => {
     const r = emphasize(t, true)
