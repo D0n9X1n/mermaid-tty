@@ -1,11 +1,11 @@
-// Whether this terminal shows an Image's pixels (kitty graphics protocol), told conservatively from the environment: a
-// wrong yes would leave only the Image's alt text, so anything unsure is a no. TERM must name kitty or Ghostty (TERM
-// travels over ssh, so a remote session counts), or the shell must be SonicTerm's own: TERM_PROGRAM SonicTerm with the
-// TERM it sets, xterm-256color, since SonicTerm ships no terminfo of its own. A TERM_PROGRAM naming another terminal
-// means one started inside them, which inherited TERM. SonicTerm's pair is common enough that a terminal started in it
-// can keep both (xfce4-terminal copies TERM_PROGRAM, and VTE sets xterm-256color), so a marker such a terminal sets of
-// its own is a no too. tmux, screen and Zellij pass no pixels through, and Windows has no terminal that shows them. A
-// failing env read is a no.
+// Whether this terminal shows an Image's pixels (kitty graphics protocol), told conservatively: a wrong yes would leave
+// only the Image's alt text, so anything unsure is a no. TERM must name kitty or Ghostty (TERM travels over ssh, so a
+// remote session counts), or SonicTerm must own this session's terminal. SonicTerm sets TERM_PROGRAM SonicTerm and
+// TERM xterm-256color, since it ships no terminfo of its own, but a terminal started inside it can keep both (VTE and
+// QTermWidget do), so that pair only asks the process table, where the terminal holding this session's pty is the
+// nearest ancestor on another tty. A TERM_PROGRAM naming another terminal means one started inside them, which
+// inherited TERM. tmux, screen and Zellij pass no pixels through, and Windows has no terminal that shows them. A failing
+// env read or process listing is a no.
 export async function showsPixels($: any): Promise<boolean> {
   try {
     if (
@@ -28,7 +28,7 @@ export async function showsPixels($: any): Promise<boolean> {
     }
 
     if (program === 'sonicterm') {
-      return term === 'xterm-256color' && !(await nestedTerminal($))
+      return term === 'xterm-256color' && sonicTermOwnsTty(await listProcesses($))
     }
 
     return false
@@ -37,22 +37,49 @@ export async function showsPixels($: any): Promise<boolean> {
   }
 }
 
-// Whether a terminal started inside SonicTerm runs this session: each variable is one a terminal sets for its own
-// sessions, so one present under SonicTerm's TERM_PROGRAM means a terminal that kept it but draws on its own. Each name
-// is spelled out because the engine lists the variables a module reads.
-async function nestedTerminal($: any): Promise<boolean> {
-  const markers = [
-    await $.env.get('VTE_VERSION'),
-    await $.env.get('KONSOLE_VERSION'),
-    await $.env.get('ALACRITTY_WINDOW_ID'),
-    await $.env.get('KITTY_WINDOW_ID'),
-    await $.env.get('WEZTERM_PANE'),
-    await $.env.get('WT_SESSION'),
-    await $.env.get('TERMINATOR_UUID'),
-    await $.env.get('TILIX_ID'),
-    await $.env.get('GNOME_TERMINAL_SCREEN'),
-    await $.env.get('ITERM_SESSION_ID'),
-    await $.env.get('GHOSTTY_RESOURCES_DIR'),
-  ]
-  return markers.some(Boolean)
+// How long the process listing may take, in milliseconds.
+const LIST_MS = 5000
+
+// The process table as `ps` prints it, after a first line holding the pid of `ps` itself: it runs as `sh`'s own pid,
+// which `exec` keeps, so the listing starts from a child of this session. Empty when the listing fails.
+async function listProcesses($: any): Promise<string> {
+  const listed = await $.process.run(['sh', '-c', 'echo $$; exec ps -A -o pid=,ppid=,tty=,comm='], { timeoutMs: LIST_MS })
+  return listed.exitCode === 0 ? listed.stdout : ''
+}
+
+// Whether SonicTerm holds the pty of the process the listing starts from: walking up from it, the first ancestor on
+// another tty is the terminal emulator, and its executable must be SonicTerm's own, `sonicterm-mac` in the macOS app
+// or `sonicterm` on Linux. A start with no tty, a gap in the chain or a chain longer than any real one is a no, as is a
+// tmux server or sshd at the top, which pass the pty on rather than draw it.
+export function sonicTermOwnsTty(listing: string): boolean {
+  const [first = '', ...rows] = listing.split('\n')
+  const byPid = new Map<string, { ppid: string; tty: string; command: string }>()
+  for (const row of rows) {
+    const fields = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+?)\s*$/.exec(row)
+    if (fields) {
+      byPid.set(fields[1], { ppid: fields[2], tty: fields[3], command: fields[4] })
+    }
+  }
+
+  const start = byPid.get(first.trim())
+  if (!start || /^\?+$/.test(start.tty)) {
+    return false
+  }
+
+  let current = start
+  for (let depth = 0; depth < 64; depth++) {
+    const parent = byPid.get(current.ppid)
+    if (!parent) {
+      return false
+    }
+
+    if (parent.tty !== start.tty) {
+      const executable = parent.command.slice(parent.command.lastIndexOf('/') + 1)
+      return executable === 'sonicterm' || executable === 'sonicterm-mac'
+    }
+
+    current = parent
+  }
+
+  return false
 }
