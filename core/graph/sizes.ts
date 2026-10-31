@@ -1,7 +1,5 @@
-// Box sizes (plan A §7): a node is its widest piece, a pad cell each side and its caps wide; an edge label its widest
-// piece and
-// a pad cell each side. Each takes one row per piece, its lines wrapped at wrapAt, or as they are when wrapAt is null;
-// a
+// Box sizes: a node is its widest piece, a pad cell each side and its caps wide; an edge label its widest piece and a
+// pad cell each side. Each takes one row per piece, its lines wrapped at wrapAt, or as they are when wrapAt is null; a
 // member row built fixed, or a row of columns, is one piece and never wraps.
 import { CAPS } from '../caps.ts'
 import { fail } from '../fail.ts'
@@ -36,12 +34,13 @@ function size(lines: readonly (string | number)[], wrapAt: number | null, extra:
 
 // A row of columns is its indent, then each column's width, a gap cell apart; a fixed row is its indent, then its text.
 // null for a row that wraps.
-const fixedWidth = (r: NodeRow): number | null =>
-  r.cols
-    ? (r.indent ?? 0) + r.cols.reduce((s, c) => s + c.width, 0) + r.cols.length - 1
-    : r.fixed
-      ? (r.indent ?? 0) + width(r.text)
-      : null
+function fixedWidth(r: NodeRow): number | null {
+  if (r.cols) {
+    return (r.indent ?? 0) + r.cols.reduce((s, c) => s + c.width, 0) + r.cols.length - 1
+  }
+
+  return r.fixed ? (r.indent ?? 0) + width(r.text) : null
+}
 
 // A mark is one glyph cell, whatever its rows. A bar is span cells across the flow: a row of them, or a column when the
 // ranks go across, so layered's cross extent is always span. A bar with no span is one cell.

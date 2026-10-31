@@ -1,5 +1,4 @@
-// The layered layout (plan A §6–7): a Graph placed on a cell grid, each node, edge label and dummy a Box, each cluster
-// a frame.
+// The layered layout: a Graph placed on a cell grid, each node, edge label and dummy a Box, each cluster a frame.
 import { fail, isFail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
 import type { Extent, Unit } from './chains.ts'
@@ -30,13 +29,19 @@ export type Placed = {
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
 
+// The cells a back edge's lane takes across the ranks: its label's extent that way, or one cell with no label.
+function laneWidth(label: Box | undefined, across: boolean): number {
+  if (!label) {
+    return 1
+  }
+
+  return across ? label.rows : label.cols
+}
+
 // A sealed cluster is laid out on its own, in its own direction or else its parent's, and placed as one block: its
-// frame a
-// border on each side, plus a pad cell on each side across the ranks, and at least its title + 4 wide, the content
-// centred.
-// An open cluster is a strip of the level it is on, in that level's direction. An edge may end on a sealed cluster,
-// never on
-// an open one.
+// frame a border on each side, plus a pad cell on each side across the ranks, and at least its title + 4 wide, the
+// content centred. An open cluster is a strip of the level it is on, in that level's direction. An edge may end on a
+// sealed cluster, never on an open one.
 export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail {
   const across = g.dir === 'LR' || g.dir === 'RL'
   const pr = across ? 2 : 1
@@ -55,9 +60,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   const subs = new Map<string, Placed>()
   const last = Math.max(-1, ...g.nodes.map((n) => n.order))
   // A side note, left when its ranks go across (withNotes made it a node): its node's unit grows on its side by the
-  // note's
-  // widest line, wrapped at wrapAt, or its key, plus ' ┄┄'; its main extent is the larger of its rows and the note's
-  // lines.
+  // note's widest line, wrapped at wrapAt, or its key, plus ' ┄┄'; its main extent is the larger of its rows and the
+  // note's lines.
   const sided = new Map<string, { pill: Size; note: Size; side: 'left' | 'right'; id: string }>()
   for (const n of g.nodes.filter((n) => top(n.id))) {
     const z = nodeSize(n, s.wrapAt, across)
@@ -65,12 +69,11 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       return z
     }
 
-    const note =
-      n.note && !across
-        ? n.note.key !== undefined
-          ? { rows: 1, cols: width(n.note.key) + 2 }
-          : labelSize(n.note.text, s.wrapAt)
-        : null
+    let note: Size | Fail | null = null
+    if (n.note && !across) {
+      note = n.note.key !== undefined ? { rows: 1, cols: width(n.note.key) + 2 } : labelSize(n.note.text, s.wrapAt)
+    }
+
     if (note && isFail(note)) {
       return note
     }
@@ -112,12 +115,11 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   const labels = new Map<string, Extent>()
   for (const e of free) {
     // A keyed label is drawn as its key alone: a one-row box its key wide, with no pad.
-    const z =
-      e.label === null
-        ? null
-        : e.labelKey !== undefined
-          ? { rows: 1, cols: width(e.labelKey) }
-          : labelSize(e.label, s.wrapAt)
+    let z: Size | Fail | null = null
+    if (e.label !== null) {
+      z = e.labelKey !== undefined ? { rows: 1, cols: width(e.labelKey) } : labelSize(e.label, s.wrapAt)
+    }
+
     if (z && isFail(z)) {
       return z
     }
@@ -131,9 +133,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     g.clusters.filter((c) => !t.sealed.has(c.id) && top(c.id)).map((c) => [c.id, t.parent.get(c.id) ?? null] as const),
   )
   // An end label lies along a horizontal run, above it, and beside a vertical one: so the gap it lies in, between ranks
-  // when
-  // they go across, else between the nodes of a rank, widens by the widest end label + 1 cells. Compaction drops what
-  // is unused.
+  // when they go across, else between the nodes of a rank, widens by the widest end label + 1 cells. Compaction drops
+  // what is unused.
   const room = (e: GEdge) =>
     Math.max(-1, ...[e.tailLabel, e.headLabel].flatMap((t) => (t === undefined ? [] : [width(t)]))) + 1
   const extra = Math.max(0, ...free.map(room))
@@ -290,15 +291,13 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     }
   }
   // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further
-  // out.
-  // A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's move
-  // here.
+  // out. A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's
+  // move here.
   const blocked = new Set([...subs.values()].flatMap((x) => x.graph.edges.map((e) => e.id)))
   const inStrip = stripLanes(graph, t, boxes, frames, notes, across, room, blocked)
   const backs = graph.edges.filter((e) => e.reversed && !blocked.has(e.id) && !inStrip.has(e.id))
   // Nested, beside all but these edges' own dummies and labels, which move into the lanes, so the frame holds no blank
-  // rows
-  // before them; at the top level the drawings stay as they were.
+  // rows before them; at the top level the drawings stay as they were.
   const own = (k: string) => nested && backs.some((e) => k.startsWith(`${e.id}#`) || k === `${e.id}:label`)
   let outside =
     Math.max(
@@ -321,10 +320,10 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       )
     }
 
-    outside += (label ? (across ? label.rows : label.cols) : 1) + 2
+    outside += laneWidth(label, across) + 2
   }
-  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it
-  // goes.
+  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as
+  // it goes.
   const lanes = nested && backs.some((e) => e.style !== 'invisible') ? outside - 2 : 0
   const all = [...boxes.values(), ...frames.values()] // a strip widened for its lanes (stripLanes) too
   const rows = Math.max(across ? p.wide : p.long, ...all.map((b) => b.row + b.rows), across ? lanes : 0)
@@ -333,13 +332,10 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
 }
 
 // V8: a back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside
-// what
-// the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all past
-// it
-// moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown. An edge
-// into
-// the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7). Returns the
-// edges.
+// what the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all
+// past it moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown.
+// An edge into the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7).
+// Returns the edges.
 function stripLanes(
   g: Graph,
   t: Tree,
@@ -387,7 +383,7 @@ function stripLanes(
         boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
       }
 
-      outside += (label ? (across ? label.rows : label.cols) : 1) + 2
+      outside += laneWidth(label, across) + 2
     }
 
     const d = outside - 2 + gap + 1 - far(f)
@@ -407,7 +403,11 @@ function stripLanes(
     }
 
     for (const [k, b] of frames) {
-      frames.set(k, k === c || wraps(b, f) ? grow(b) : start(b) >= past ? move(b) : b)
+      if (k === c || wraps(b, f)) {
+        frames.set(k, grow(b))
+      } else if (start(b) >= past) {
+        frames.set(k, move(b))
+      }
     }
   }
 
