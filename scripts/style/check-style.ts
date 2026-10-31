@@ -22,6 +22,7 @@ export type Rule =
   | 'max-lines'
   | 'no-multiple-empty-lines'
   | 'issue-number'
+  | 'spec-reference'
   | 'one-statement-per-line'
 export type Violation = { file: string; line: number; rule: Rule }
 
@@ -107,6 +108,21 @@ const CITATIONS = [
 
 // A hash and 3, 4, 6 or 8 hex digits is a color, not a citation.
 const COLOR = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g
+
+// A label that points at a spec, plan or task outside the code, which the reader can't open: a plan or spec named by
+// letter, a section sign and number, a task, decision or requirement label (a T, D, V, X or S and a number), or a
+// numbered rule. The patterns below spell each one out; the comment should say the fact itself instead.
+const SPEC_LABELS = [
+  /\b(?:plan|spec) [ABC]\b/,
+  /§\s?\d/,
+  /(?<![\w.-])T\d{1,3}\b(?![\w-]|\.\w)/,
+  /(?<![\w.#-])[DVXS]\d{1,2}[a-z]?\b(?![\w-]|\.\w)/,
+  /\b(?:common )?rules? \d+\b/,
+]
+
+export function citesSpec(prose: string): boolean {
+  return SPEC_LABELS.some((pattern) => pattern.test(prose))
+}
 
 export function citesIssue(prose: string): boolean {
   const text = prose.replace(COLOR, '')
@@ -196,6 +212,10 @@ export async function check(file: string, source: string): Promise<Violation[]> 
   for (const comment of ast.comments) {
     if (citesIssue(comment.value)) {
       add(comment.loc.start.line, 'issue-number')
+    }
+
+    if (citesSpec(comment.value)) {
+      add(comment.loc.start.line, 'spec-reference')
     }
   }
 

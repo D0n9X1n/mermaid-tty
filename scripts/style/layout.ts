@@ -60,17 +60,21 @@ const BLOCK_LIKE = new Set([
   'TSModuleDeclaration',
 ])
 
+// The statements a node holds directly: a program's or block's body, or a switch case's consequent.
+function statements(node: Node): Node[] | null {
+  if (node.type === 'Program' || node.type === 'BlockStatement') {
+    return node.body as Node[]
+  }
+
+  return node.type === 'SwitchCase' ? (node.consequent as Node[]) : null
+}
+
 // The 1-based line numbers after which a blank line goes: the last line of each multi-line block statement whose next
 // sibling starts on the very next line.
 function blankLinesAfter(tree: Tree): Set<number> {
   const out = new Set<number>()
   for (const node of nodes(tree)) {
-    const list =
-      node.type === 'Program' || node.type === 'BlockStatement'
-        ? (node.body as Node[])
-        : node.type === 'SwitchCase'
-          ? (node.consequent as Node[])
-          : null
+    const list = statements(node)
     for (const [i, statement] of (list ?? []).entries()) {
       const next = list![i + 1]
       const multiLine = statement.loc.end.line > statement.loc.start.line

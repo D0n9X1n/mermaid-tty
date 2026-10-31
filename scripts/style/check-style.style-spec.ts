@@ -5,7 +5,7 @@ import test from 'node:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { MAX_COLUMNS, MAX_LINES, check, checkPython, citesIssue } from './check-style.ts'
+import { MAX_COLUMNS, MAX_LINES, check, checkPython, citesIssue, citesSpec } from './check-style.ts'
 
 const rules = async (source: string) => (await check('x.ts', source)).map((v) => `${v.line} ${v.rule}`)
 
@@ -90,5 +90,17 @@ test('Python: one statement per line, no compound statements, no citations, same
     )
   } finally {
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('spec-reference: comments state the fact, not a label of a spec or task the reader cannot open', async () => {
+  assert.deepEqual(await rules('// the tick rule (plan C §4, T47)\nf()\n'), ['1 spec-reference'])
+  for (const text of ['plan A', 'spec C rule 5', '§6', 'T17', 'D15c', 'X3.', 'V6:', 'common rule 5']) {
+    assert.ok(citesSpec(text), text)
+  }
+
+  // Acceptance check IDs name CI steps and test prefixes, and words that merely look like labels are not.
+  for (const text of ['A8.no-build', 'VR.gallery', 'TS7', 'utf-8', 'UTF-16', 'D3.js', 'H2', 'x2', 'e3#2', 'step 2']) {
+    assert.ok(!citesSpec(text), text)
   }
 })
