@@ -44,11 +44,12 @@ function items(m: ClassModel): { item: string; cls: 'label' | 'note'; text: stri
 // fieldKey(k) in place and a legend row; keyable lists every item, so each class is keyed all or none (T87).
 function build(m: ClassModel): Build {
   return ({ dir, keyed, wrapAt }) => {
-    const all = items(m), keys = new Map(all.map((x, k) => [x.item, fieldKey(k)]))
+    const all = items(m)
+const  keys = new Map(all.map((x, k) => [x.item, fieldKey(k)]))
     const nodes: GNode[] = []
     for (const c of m.classes) {
       const members = classRows(c.id, c.members, wrapAt)
-      if (isFail(members)) return members
+      if (isFail(members)) { return members }
       const head: NodeRow[] = [...(c.annot === null ? [] : [{ text: `«${c.annot}»`, role: 'node' as const, align: 'center' as const, id: `${c.id}.annot` }]),
         ...labelLines(c.label).map((text): NodeRow => ({ text, role: 'node', align: 'center' }))]
       nodes.push({ id: c.id, shape: 'rect', role: 'node', rows: [...head, ...members], order: nodes.length })
@@ -65,8 +66,8 @@ function build(m: ClassModel): Build {
         ...(r.tailLabel === null ? {} : { tailLabel: r.tailLabel }), ...(r.headLabel === null ? {} : { headLabel: r.headLabel }),
         ...(key === undefined ? {} : { labelKey: key }) }
     })
-    for (const n of m.notes) if (n.for !== null) edges.push({ id: `${n.id}:link`, from: n.id, to: n.for, style: 'dotted', tail: 'none',
-      head: 'none', label: null, minlen: 1, order: edges.length })
+    for (const n of m.notes) { if (n.for !== null) { edges.push({ id: `${n.id}:link`, from: n.id, to: n.for, style: 'dotted', tail: 'none',
+      head: 'none', label: null, minlen: 1, order: edges.length }) } }
     const clusters = m.namespaces.map(s => ({ id: s.id, title: s.label, dir: null, nodes: [...s.classes, ...s.notes], clusters: [] }))
     const legend: LegendRow[] = keyed ? all.map(x => ({ key: keys.get(x.item)!, keyInk: x.cls, item: x.item, cls: x.cls,
       parts: [{ text: labelLines(x.text).join(' '), ink: x.cls, owner: x.item }] })) : []

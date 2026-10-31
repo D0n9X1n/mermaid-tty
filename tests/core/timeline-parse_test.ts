@@ -18,17 +18,17 @@ test('A5: disableMulticolor is read by JS truthiness: a quoted "false" disables 
 test('A5.errors: an event before any period, a period before the first section, a repeated section, ":" with no space, # and a second title fall back', () => {
   for (const [body, why] of [[': lonely', 'syntax:2'], ['2001 : a\nsection A\n2002 : b', 'section:2'], ['section A\n2001 : a\nsection A\n2002 : b', 'repeat:4'],
     ['2002 :LinkedIn', 'syntax:2'], ['C# 1.0 : released', 'syntax:2'], ['title A\ntitle B\n2002 : x', 'repeat:3']] as const)
-    assert.deepEqual(P(`timeline\n${body}`), { reason: why }, body)
+    { assert.deepEqual(P(`timeline\n${body}`), { reason: why }, body) }
 })
 test('A5.errors: the header is timeline, alone or with LR or TD, case-sensitive', () => {
   assert.deepEqual(['timeline LR', 'timeline TD'].map(h => P(`${h}\n2002`).dir), ['LR', 'TD'])
   for (const h of ['Timeline', 'timeline RL', 'timeline  TD', 'timelines', 'timeline td'])
-    assert.deepEqual(P(`${h}\n2002`), { reason: 'header' }, h)
+    { assert.deepEqual(P(`${h}\n2002`), { reason: 'header' }, h) }
 })
 test('A5.errors: a keyword in another case, starting a longer word or with no text, a section with ":", and empty or ambiguous events fall back', () => {
   for (const body of ['Section A', 'SECTION A', 'Title A', 'titled x', 'title', 'section', 'sections A', 'timeline', 'ACCTITLE: x',
     'section A: b', '2002 : a :', '2002 :\tx', '2002 :  : x', '2002 : ', ':', 'accDescr { a } x'])
-    assert.deepEqual(P(`timeline\n${body}`), { reason: 'syntax:2' }, body)
+    { assert.deepEqual(P(`timeline\n${body}`), { reason: 'syntax:2' }, body) }
   assert.deepEqual(P('timeline\n2002\naccDescr {\nopen'), { reason: 'syntax:3' })
 })
 test('A5: accTitle and accDescr are ignored, # and : included; no title is null', () => {
@@ -42,6 +42,6 @@ test('A5: periods, events and section names show &, <, >, tags, comments and eve
 test('A5.errors: entity markers and unsupported characters fall back in every field; a title is sanitized with no <br>', () => {
   for (const [body, why] of [['section ﬂ°x¶ß\n2002', 'entity'], ['2002 : ﬂ°x', 'entity'], ['¶ß', 'entity'], ['2002 : a‍b', 'unsupported-char U+200D'],
     ['section a‍b\n2002', 'unsupported-char U+200D'], ['title a < b\n2002', 'html'], ['title a<br>b\n2002', 'html'], ['title a‍b\n2002', 'unsupported-char U+200D']] as const)
-    assert.deepEqual(P(`timeline\n${body}`), { reason: why }, body)
+    { assert.deepEqual(P(`timeline\n${body}`), { reason: why }, body) }
   assert.equal(P('timeline\ntitle Q&A > x\n2002').title, 'Q&A > x')
 })

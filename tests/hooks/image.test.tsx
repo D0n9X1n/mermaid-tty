@@ -21,7 +21,8 @@ const mount = ($: any, body: string) => $.ui.mount({ plugin: 'mermaid-tty', surf
   props: { text: '```mermaid\n' + body + '\n```\n', isFirstOfReply: true }, viewport: { columns: 80, rows: 40 } })
 
 test('A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc\'s PNG', async ($, on) => {
-  const runs = world(on, { TERM: 'xterm-kitty' }), ui = await mount($, 'flowchart TD\nK1 --> K2')
+  const runs = world(on, { TERM: 'xterm-kitty' })
+const  ui = await mount($, 'flowchart TD\nK1 --> K2')
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image'); expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
   expect(runs.map(r => r.slice(0, 2).join(' '))).toEqual(['mmdc --version', 'mktemp -d', 'mmdc -i', 'mmdc -i', 'rm -rf'])
@@ -38,7 +39,8 @@ test('A5.errors: in kitty, the themeCSS repro and a click href never become an I
 })
 
 test('A6.hook-tests: under tmux, and in text mode, a fence stays text and mmdc never runs', async ($, on) => {
-  const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' }), ui = await mount($, 'flowchart TD\nT1 --> T2')
+  const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' })
+const  ui = await mount($, 'flowchart TD\nT1 --> T2')
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box'); expect(runs).toEqual([])
 })
 

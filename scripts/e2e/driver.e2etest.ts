@@ -77,12 +77,12 @@ const pid = () => Number(readFileSync(join(dir, 'pid'), 'utf8'))
 const alive = (pid: number) => { try { process.kill(pid, 0); return true } catch { return false } }
 // Whether no process has pid within 10 s.
 async function gone(pid: number): Promise<boolean> {
-  for (const end = Date.now() + 10000; Date.now() < end; await sleep(50)) if (!alive(pid)) return true
+  for (const end = Date.now() + 10000; Date.now() < end; await sleep(50)) { if (!alive(pid)) { return true } }
   return false
 }
 const SKIP = { pty: false, tmux: process.platform === 'win32' || spawnSync('tmux', ['-V']).status !== 0 }
 
-for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: the ${driver} driver runs a program at 100×40 in the env given, types keys into it, reads its cells, text, ANSI and OSC 52 copy, and stops it`, { skip: SKIP[driver] }, async () => {
+for (const driver of ['pty', 'tmux'] as const) { test(`A9.harness: the ${driver} driver runs a program at 100×40 in the env given, types keys into it, reads its cells, text, ANSI and OSC 52 copy, and stops it`, { skip: SKIP[driver] }, async () => {
   const s = await start(driver)
   try {
     // The program takes a while to start, so waitFor finds ready only on a later poll; it resolves to the screen's text.
@@ -111,22 +111,23 @@ for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: the ${driver} d
   assert.equal(process.platform === 'win32' ? await gone(pid()) : !alive(pid()), true)
   // A second stop() resolves too.
   assert.equal(await s.stop(), undefined)
-})
+}) }
 
-for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver the last screen stays readable after the program exits, and waitFor then times out with it`, { skip: SKIP[driver] }, async () => {
+for (const driver of ['pty', 'tmux'] as const) { test(`A9.harness: under the ${driver} driver the last screen stays readable after the program exits, and waitFor then times out with it`, { skip: SKIP[driver] }, async () => {
   const s = await start(driver)
   try {
     await s.waitFor(/ready/, 10000)
     await s.type('q')
     assert.equal(await gone((await s.waitFor(/bye/, 10000), pid())), true)
     // tmux marks the dead pane on its last row, scrolling the screen up one row.
-    const screen = await s.waitFor(driver === 'tmux' ? /Pane is dead/ : /bye/, 10000), lines = screen.split('\n')
+    const screen = await s.waitFor(driver === 'tmux' ? /Pane is dead/ : /bye/, 10000)
+const  lines = screen.split('\n')
     const drawn = ['读 b', 'ready', 'got "q"', 'bye', ...Array<string>(35).fill('')]
-    if (driver === 'pty') assert.deepEqual(lines, [first(driver), ...drawn])
-    else assert.deepEqual([lines.slice(0, 39), /^Pane is dead \(status 0, [^)]+\)$/.test(lines[39]!)], [drawn, true])
+    if (driver === 'pty') { assert.deepEqual(lines, [first(driver), ...drawn]) }
+    else { assert.deepEqual([lines.slice(0, 39), /^Pane is dead \(status 0, [^)]+\)$/.test(lines[39]!)], [drawn, true]) }
     await assert.rejects(s.waitFor(/never/, 300), { message: `waitFor /never/ timed out after 300 ms; the screen:\n${screen}` })
   } finally { await s.stop() }
-})
+}) }
 
 test('A9.harness: the tmux driver runs a server of its own, on a socket named for this process, and stop() removes the socket', { skip: SKIP.tmux }, async () => {
   const s = await start('tmux')
@@ -137,7 +138,7 @@ test('A9.harness: the tmux driver runs a server of its own, on a socket named fo
   assert.equal(existsSync(socketPath()), false)
 })
 
-for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver stop() ends a program that ignores hangups, and its child, within 5 s, and leaves no socket`, { skip: SKIP[driver] }, async () => {
+for (const driver of ['pty', 'tmux'] as const) { test(`A9.harness: under the ${driver} driver stop() ends a program that ignores hangups, and its child, within 5 s, and leaves no socket`, { skip: SKIP[driver] }, async () => {
   const s = await startSession({ driver, argv: HUP, cwd: dir, env: envFor(driver) })
   let pids: number[] = []
   try {
@@ -147,18 +148,19 @@ for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${dri
     const t0 = Date.now()
     assert.equal(await Promise.race([s.stop().then(() => 'stopped'), sleep(6000, 'still stopping', { ref: false })]), 'stopped')
     assert.ok(Date.now() - t0 < 5000, `stop() took ${Date.now() - t0} ms`)
-    for (const p of pids) assert.equal(await gone(p), true, `pid ${p}`)
-    if (driver === 'tmux') assert.equal(existsSync(socketPath()), false)
-  } finally { for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {} }
-})
+    for (const p of pids) { assert.equal(await gone(p), true, `pid ${p}`) }
+    if (driver === 'tmux') { assert.equal(existsSync(socketPath()), false) }
+  } finally { for (const p of pids) { if (p > 0) { try { process.kill(p, 'SIGKILL') } catch {} } } }
+}) }
 
 // The child stays in the program's process group, which outlives the program. Windows has no process groups, and
 // taskkill /T cannot find the tree under a program that has exited, so there only stop() hangs the program up.
-for (const early of [false, true]) for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver stop() kills the child of a program that exits on a hangup${early ? ' before stop()' : ''}, though the child ignores hangups`, { skip: SKIP[driver] || (early && process.platform === 'win32') }, async () => {
+for (const early of [false, true]) { for (const driver of ['pty', 'tmux'] as const) { test(`A9.harness: under the ${driver} driver stop() kills the child of a program that exits on a hangup${early ? ' before stop()' : ''}, though the child ignores hangups`, { skip: SKIP[driver] || (early && process.platform === 'win32') }, async () => {
   const s = await startSession({ driver, argv: [process.execPath, join(dir, 'kid.mjs')], cwd: dir, env: envFor(driver) })
   let child = 0
   try {
-    const screen = await s.waitFor(/^child \d+$/m, 10000), pidOf = (who: string) => Number(new RegExp(`^${who} (\\d+)$`, 'm').exec(screen)?.[1])
+    const screen = await s.waitFor(/^child \d+$/m, 10000)
+const  pidOf = (who: string) => Number(new RegExp(`^${who} (\\d+)$`, 'm').exec(screen)?.[1])
     const parent = pidOf('parent')
     child = pidOf('child')
     assert.ok(parent > 0 && child > 0, `parent ${parent}, child ${child}`)
@@ -169,10 +171,10 @@ for (const early of [false, true]) for (const driver of ['pty', 'tmux'] as const
     await s.stop()
     assert.deepEqual([await gone(parent), await gone(child)], [true, true])
   } finally {
-    if (child > 0) try { process.kill(child, 'SIGKILL') } catch {}
+    if (child > 0) { try { process.kill(child, 'SIGKILL') } catch {} }
     await s.stop()
   }
-})
+}) } }
 
 // On Windows, closing the console ends the program and what shares its console, but not a process detached from it, as
 // a program's background work may be; stop() must kill the tree while the program still roots it.
@@ -191,7 +193,7 @@ test('A9.harness: on Windows the pty driver\'s stop() kills a child detached fro
     await s.stop()
     assert.deepEqual([await gone(pids[0]!), await gone(pids[1]!)], [true, true])
   } finally {
-    for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
+    for (const p of pids) { if (p > 0) { try { process.kill(p, 'SIGKILL') } catch {} } }
     await s.stop()
   }
 })
@@ -199,25 +201,26 @@ test('A9.harness: on Windows the pty driver\'s stop() kills a child detached fro
 // What holds the session goes first: under tmux its server, whose end hangs the program up; under the pty driver the
 // program, killed outright. With the program gone, stop() must still reach its process group. Windows, without process
 // groups, is skipped as above.
-for (const driver of ['pty', 'tmux'] as const) test(`A9.harness: under the ${driver} driver stop() still kills the child that ignores hangups once the ${driver === 'tmux' ? 'server' : 'program'} is gone`, { skip: SKIP[driver] || process.platform === 'win32' }, async () => {
+for (const driver of ['pty', 'tmux'] as const) { test(`A9.harness: under the ${driver} driver stop() still kills the child that ignores hangups once the ${driver === 'tmux' ? 'server' : 'program'} is gone`, { skip: SKIP[driver] || process.platform === 'win32' }, async () => {
   const s = await startSession({ driver, argv: [process.execPath, join(dir, 'kid.mjs')], cwd: dir, env: envFor(driver) })
   let pids: number[] = []
   try {
-    const screen = await s.waitFor(/^child \d+$/m, 10000), pidOf = (who: string) => Number(new RegExp(`^${who} (\\d+)$`, 'm').exec(screen)?.[1])
+    const screen = await s.waitFor(/^child \d+$/m, 10000)
+const  pidOf = (who: string) => Number(new RegExp(`^${who} (\\d+)$`, 'm').exec(screen)?.[1])
     pids = [pidOf('parent'), pidOf('child')]
     const [parent, child] = pids as [number, number]
     assert.ok(parent > 0 && child > 0, `parent ${parent}, child ${child}`)
-    if (driver === 'tmux') assert.equal(spawnSync('tmux', ['-L', `mtty-${process.pid}`, 'kill-server'], { env: { PATH: process.env.PATH ?? '' }, timeout: 5000 }).status, 0)
-    else process.kill(parent, 'SIGKILL')
+    if (driver === 'tmux') { assert.equal(spawnSync('tmux', ['-L', `mtty-${process.pid}`, 'kill-server'], { env: { PATH: process.env.PATH ?? '' }, timeout: 5000 }).status, 0) }
+    else { process.kill(parent, 'SIGKILL') }
     assert.equal(await gone(parent), true)
     await s.stop()
     assert.deepEqual([await gone(parent), await gone(child)], [true, true])
-    if (driver === 'tmux') assert.equal(existsSync(socketPath()), false)
+    if (driver === 'tmux') { assert.equal(existsSync(socketPath()), false) }
   } finally {
-    for (const p of pids) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
+    for (const p of pids) { if (p > 0) { try { process.kill(p, 'SIGKILL') } catch {} } }
     await s.stop()
   }
-})
+}) }
 
 test('A9.harness: waitFor checks its deadline before each read, and abandons a read that outlasts it', async () => {
   const t0 = Date.now()
@@ -227,7 +230,9 @@ test('A9.harness: waitFor checks its deadline before each read, and abandons a r
 
 test('A9.harness: with its tmux server suspended, waitFor still times out on time, type() fails within 2 s, and stop() ends the server, the program and the socket', { skip: SKIP.tmux }, async () => {
   const s = await start('tmux')
-  let server = 0, prog = 0, resume: ReturnType<typeof spawn> | undefined
+  let server = 0
+let  prog = 0
+let  resume: ReturnType<typeof spawn> | undefined
   try {
     await s.waitFor(/ready/, 10000)
     prog = pid()
@@ -249,15 +254,16 @@ test('A9.harness: with its tmux server suspended, waitFor still times out on tim
     assert.deepEqual([await gone(server), await gone(prog), existsSync(socketPath())], [true, true, false])
   } finally {
     resume?.kill()
-    if (server > 0) try { process.kill(server, 'SIGCONT') } catch {}
-    if (prog > 0) try { process.kill(prog, 'SIGKILL') } catch {}
+    if (server > 0) { try { process.kill(server, 'SIGCONT') } catch {} }
+    if (prog > 0) { try { process.kill(prog, 'SIGKILL') } catch {} }
     await s.stop()
   }
 })
 
 test('A9.harness: with its live tmux socket unlinked, stop() still kills the server whose pid it recorded, and the program', { skip: SKIP.tmux }, async () => {
   const s = await start('tmux')
-  let server = 0, prog = 0
+  let server = 0
+let  prog = 0
   try {
     await s.waitFor(/ready/, 10000)
     prog = pid()
@@ -268,7 +274,7 @@ test('A9.harness: with its live tmux socket unlinked, stop() still kills the ser
     await s.stop()
     assert.deepEqual([await gone(server), await gone(prog)], [true, true])
   } finally {
-    for (const p of [server, prog]) if (p > 0) try { process.kill(p, 'SIGKILL') } catch {}
+    for (const p of [server, prog]) { if (p > 0) { try { process.kill(p, 'SIGKILL') } catch {} } }
     await s.stop()
   }
 })
@@ -293,7 +299,9 @@ test('A9.harness: ensureSpawnHelper sets the execute bits of each prebuilt spawn
       chmodSync(p, mode)
       return p
     }
-    const arm = file('darwin-arm64', 'spawn-helper', 0o644), x64 = file('darwin-x64', 'spawn-helper', 0o755), node = file('win32-x64', 'pty.node', 0o644)
+    const arm = file('darwin-arm64', 'spawn-helper', 0o644)
+const  x64 = file('darwin-x64', 'spawn-helper', 0o755)
+const  node = file('win32-x64', 'pty.node', 0o644)
     const modes = () => [arm, x64, node].map(p => statSync(p).mode & 0o777)
     assert.deepEqual(ensureSpawnHelper(root, 'win32'), [])
     assert.deepEqual(modes(), [0o644, 0o755, 0o644])

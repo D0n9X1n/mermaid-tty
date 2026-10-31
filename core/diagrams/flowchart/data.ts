@@ -17,7 +17,8 @@ const PAIR_LINE = /^( *)([A-Za-z_][\w-]*): +("[^"\\]*"|'[^']*'|[\p{L}\p{N}_][\p{
 export function joinData(lines: readonly Line[]): Line[] {
   const out: Line[] = []
   for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]!, end = opensData(l.text) ? blockEnd(lines, i) : -1
+    const l = lines[i]!
+const  end = opensData(l.text) ? blockEnd(lines, i) : -1
     if (end < 0) {
       out.push(l)
       continue
@@ -34,10 +35,10 @@ function blockEnd(lines: readonly Line[], i: number): number {
   let indent: string | null = null
   for (let j = i + 1; j < lines.length; j++) {
     const l = lines[j]!
-    if (l.n !== lines[j - 1]!.n + 1) return -1
-    if (/^[ \t]*\}/.test(l.text)) return j > i + 1 ? j : -1
+    if (l.n !== lines[j - 1]!.n + 1) { return -1 }
+    if (/^[ \t]*\}/.test(l.text)) { return j > i + 1 ? j : -1 }
     const m = PAIR_LINE.exec(l.text)
-    if (!m || (indent !== null && m[1] !== indent)) return -1
+    if (!m || (indent !== null && m[1] !== indent)) { return -1 }
     indent = m[1]!
   }
   return -1
@@ -58,8 +59,8 @@ function opensData(text: string): boolean {
 // null: Mermaid keeps the label it had.
 export function yamlValue(raw: string): { kind: 'string'; text: string } | { kind: 'other' } | null {
   const v = raw.trim()
-  if (/^"[^"\\]+"$/.test(v)) return { kind: 'string', text: v.slice(1, -1) }
-  if (/^'[^'}^]+'$/.test(v)) return (v.split('"').length - 1) % 2 === 0 ? { kind: 'string', text: v.slice(1, -1) } : null
-  if (/^(?:true|True|TRUE|false|False|FALSE|null|Null|NULL|~|[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)$/.test(v)) return { kind: 'other' }
+  if (/^"[^"\\]+"$/.test(v)) { return { kind: 'string', text: v.slice(1, -1) } }
+  if (/^'[^'}^]+'$/.test(v)) { return (v.split('"').length - 1) % 2 === 0 ? { kind: 'string', text: v.slice(1, -1) } : null }
+  if (/^(?:true|True|TRUE|false|False|FALSE|null|Null|NULL|~|[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)$/.test(v)) { return { kind: 'other' } }
   return /^[\p{L}_][^:#{}[\]^"&*!|>%@`,]*$/u.test(v) ? { kind: 'string', text: v } : null
 }

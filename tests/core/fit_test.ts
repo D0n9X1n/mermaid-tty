@@ -6,7 +6,8 @@ import { flowchart } from '../../core/diagrams/flowchart/layout.ts'; import { se
 import { readSource, type Source } from '../../core/source.ts'
 const fake = { type: 'flowchart', parse: (s: unknown) => s, steps: () => ['natural', 'tight'],
   layout: (_m: unknown, step: string, cols: number) => {
-    const t = 'x'.repeat(step === 'natural' ? 11 : 9), c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
+    const t = 'x'.repeat(step === 'natural' ? 11 : 9)
+const  c = createCanvas(1, 12, cols); c.text(0, 0, t, 'node', 'A')
     return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [], frames: [] }) } }
 test('A4.fit-ladder: the first fitting step is taken; none fits → Fail', () => {
   assert.equal((fitLadder(fake as never, {}, 10) as { step: string }).step, 'tight')
@@ -26,11 +27,12 @@ test('A1: registry keywords; ENABLED is A, Tier 1 and the passed Tier 2 types', 
 // ('short'); or a Fail. calls logs each layout.
 type Rung = readonly [Step, number | 'clash' | 'liar' | 'short' | Fail]
 function draw(what: Rung[1], columns: number): Drawing | Fail {
-  if (typeof what === 'object') return what
+  if (typeof what === 'object') { return what }
   const n = what === 'clash' || what === 'short' ? 3 : what === 'liar' ? columns + 1 : what
-  const t = 'x'.repeat(n), c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
+  const t = 'x'.repeat(n)
+const  c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
   c.text(0, 0, t, 'node', 'A')
-  if (what === 'clash') c.arrow(0, 0, '►', 'A')
+  if (what === 'clash') { c.arrow(0, 0, '►', 'A') }
   return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [], frames: [] })
 }
 function fit(rungs: readonly Rung[], columns: number, calls: [Step, number][] = []) {
@@ -75,7 +77,7 @@ test('A4.fit-ladder: a type with no steps fails with too-wide and lays out nothi
 test('A4.fit-ladder: flowchart lays out only the steps of its own ladder; any other Step fails with step', () => {
   const g = flowchart.parse(readSource('flowchart LR\nA --> B') as Source) as never
   for (const step of ['keyed', 'keyedWrap', 'horizontal', 'oneActor', 'compact', 'outline'] as Step[])
-    assert.deepEqual(flowchart.layout(g, step, 80), { reason: 'step' }, step)
+    { assert.deepEqual(flowchart.layout(g, step, 80), { reason: 'step' }, step) }
   for (const step of ['natural', 'tight', 'wrap', 'lrToTd'] as Step[]) {
     const d = flowchart.layout(g, step, 80)
     assert.deepEqual('reason' in d ? d : [d.columns, validate(d)], [80, null], step)
@@ -118,7 +120,8 @@ test('A1: lookup returns each enabled type\'s registered module, sequenceDiagram
     [sequence, { reason: 'disabled:radar' }, { reason: 'fallback:flowchart-elk' }])
 })
 test('A1: registering a second module of a type replaces the first, so lookup returns the second', () => {
-  const first = stub('flowchart'), second = stub('flowchart')
+  const first = stub('flowchart')
+const  second = stub('flowchart')
   register(first)
   register(second)
   assert.equal(lookup('flowchart TD'), second)

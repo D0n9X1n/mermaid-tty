@@ -19,8 +19,8 @@ function realPath(p: string): string {
 // and with --entry-url, argv[1] may be a file:// URL, so the fallback returns false and main()
 // is skipped. That flag is experimental and is never used to run our dev scripts.
 export function isMain(meta: { url: string; main?: boolean }): boolean {
-  if (typeof meta.main === 'boolean') return meta.main
+  if (typeof meta.main === 'boolean') { return meta.main }
   const argv1 = process.argv[1]
-  if (!argv1) return false
+  if (!argv1) { return false }
   return meta.url === pathToFileURL(realPath(resolve(argv1))).href
 }

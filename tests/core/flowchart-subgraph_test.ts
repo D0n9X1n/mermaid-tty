@@ -106,7 +106,8 @@ test('A1: default L_… edge ids differ from each other and from every node id i
 // One input per diagram-matrix row that T15 covers, with the graph it should parse to. W parses a whole fence.
 const W = (t: string) => parseFlowchart(readSource(t) as Source) as any
 test('A1: matrix rows flowchart-ok-34…39, -47 and -48 parse to their graphs, and common rule 4 directives change nothing', () => {
-  const ab = [Box('A', 0), Box('B', 1)], e = [L('A', 'B', 0)]
+  const ab = [Box('A', 0), Box('B', 1)]
+const  e = [L('A', 'B', 0)]
   assert.deepEqual(P('subgraph outer\n  C\n  subgraph inner\n    A --> B\n  end\nend\nC --> A'), G([Box('C', 0), Box('A', 1), Box('B', 2)],
     [L('A', 'B', 0), L('C', 'A', 1)], [K('outer', 'outer', null, ['C'], ['inner']), K('inner', 'inner', null, ['A', 'B'])]), 'flowchart-ok-34')
   assert.deepEqual(P('subgraph api [Public API]\n  G[Gateway] --> S[Service]\nend'), G([N('G', 'rect', 'node', 0, 'Gateway'),
@@ -136,5 +137,5 @@ test('An LR chart with two subgraphs, case 2, draws at 120 columns and falls bac
     '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
   const wide = explain(src, { columns: 120 })
   assert.ok('drawing' in wide && validate(wide.drawing) === null)
-  for (const columns of [60, 80]) assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
+  for (const columns of [60, 80]) { assert.ok(!('drawing' in explain(src, { columns })), `${columns}`) }
 })

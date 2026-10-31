@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { githubRefs, renderErrors, treeRefs } from '../lib/github-render.ts';
-const T = '`'.repeat(1001), HERO = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'; // the HTML below is shaped like gh api markdown output recorded on 2026-10-28
+const T = '`'.repeat(1001)
+const  HERO = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'; // the HTML below is shaped like gh api markdown output recorded on 2026-10-28
 const W = (src: string) => `<a target="_blank" rel="noopener noreferrer" href="${src}"><img src="${src}" alt="x" style="max-width: 100%;"></a>`;
 test('githubRefs drops image wrappers and heading anchors and reads data-canonical-src', () => {
   const camo = 'https://camo.githubusercontent.com/abc';
@@ -22,10 +23,13 @@ test('agreement passes, the hero counts, and a ref only the checker sees fails',
   assert.deepEqual(renderErrors('README', '[l](LICENSE)', '<p>[l](LICENSE)</p>'), ['README: the checker sees link LICENSE, which GitHub does not render (D15d)']);
 });
 test('check-docs skips the cross-check locally without GH_TOKEN and fails without it in CI', async () => {
-  const { spawnSync } = await import('node:child_process'), { fileURLToPath } = await import('node:url');
-  const { GH_TOKEN: _, GITHUB_ACTIONS: __, ...env } = process.env, script = fileURLToPath(new URL('../check-docs.ts', import.meta.url));
+  const { spawnSync } = await import('node:child_process')
+const  { fileURLToPath } = await import('node:url');
+  const { GH_TOKEN: _, GITHUB_ACTIONS: __, ...env } = process.env
+const  script = fileURLToPath(new URL('../check-docs.ts', import.meta.url));
   const run = (extra: Record<string, string>) => spawnSync(process.execPath, [script], { encoding: 'utf8', env: { ...env, ...extra } });
-  const local = run({}), ci = run({ GITHUB_ACTIONS: 'true' });
+  const local = run({})
+const  ci = run({ GITHUB_ACTIONS: 'true' });
   assert.match(local.stdout, /^check-docs: GitHub render cross-check skipped: no GH_TOKEN \(CI sets it\)$/m);
   assert.doesNotMatch(local.stderr, /GH_TOKEN/);
   assert.equal(ci.status, 1);

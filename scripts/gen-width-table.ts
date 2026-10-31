@@ -5,18 +5,18 @@
 import { readFileSync } from 'node:fs'
 
 const file = process.argv[2]
-if (!file) throw new Error('usage: node scripts/gen-width-table.ts <EastAsianWidth.txt>')
+if (!file) { throw new Error('usage: node scripts/gen-width-table.ts <EastAsianWidth.txt>') }
 const text = readFileSync(file, 'utf8')
 const version = /^# EastAsianWidth-(\d+\.\d+\.\d+)\.txt/.exec(text)?.[1]
-if (!version) throw new Error(file + ': the first line does not name an EastAsianWidth version')
+if (!version) { throw new Error(file + ': the first line does not name an EastAsianWidth version') }
 
 const ranges: [number, number][] = []
 for (const line of text.split(/\r?\n/)) {
   const data = line.replace(/#.*/, '').trim()
-  if (!data) continue
+  if (!data) { continue }
   const m = /^([0-9A-F]{4,6})(?:\.\.([0-9A-F]{4,6}))?\s*;\s*(A|F|H|N|Na|W)$/.exec(data)
-  if (!m) throw new Error(file + ': unexpected line: ' + line)
-  if (m[3] !== 'W' && m[3] !== 'F') continue
+  if (!m) { throw new Error(file + ': unexpected line: ' + line) }
+  if (m[3] !== 'W' && m[3] !== 'F') { continue }
   const lo = parseInt(m[1]!, 16)
   ranges.push([lo, m[2] ? parseInt(m[2], 16) : lo])
 }
@@ -25,8 +25,8 @@ ranges.sort((a, b) => a[0] - b[0])
 const merged: [number, number][] = []
 for (const [lo, hi] of ranges) {
   const last = merged[merged.length - 1]
-  if (last && lo <= last[1] + 1) last[1] = Math.max(last[1], hi)
-  else merged.push([lo, hi])
+  if (last && lo <= last[1] + 1) { last[1] = Math.max(last[1], hi) }
+  else { merged.push([lo, hi]) }
 }
 
 const hex = (n: number) => '0x' + n.toString(16).toUpperCase()

@@ -55,13 +55,14 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [ciErrors, CI, '  e2e:\n', '      - id: docs\n        run: node scripts/check-docs.ts\n  e2e:\n', 'GH_TOKEN on every check-docs step'],
 ];
 for (const [rule, base, from, to, want] of cases)
-  test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some(e => e.includes(want)), `${from} -> ${to}`));
+  { test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some(e => e.includes(want)), `${from} -> ${to}`)); }
 test('step ids come from real step keys, not comments, job ids or shell content', () => {
   assert.deepEqual([...stepIds(CI)], ['check', 'e2e-tooling', 'e2e', 'gallery']);
   assert.deepEqual([...stepIds('jobs:\n  id:\n    uses: org/repo/.github/workflows/job.yml@' + SHA + ' # v1\n  x:\n    steps:\n      - "id": real\n        run: |\n          id: fake\n      # id: comment\n')], ['real']);
   assert.throws(() => stepIds('jobs: [broken'), /unreadable/);
 });
-const root = new URL('../../', import.meta.url), read = (path: string) => readFileSync(new URL(path, root), 'utf8');
+const root = new URL('../../', import.meta.url)
+const  read = (path: string) => readFileSync(new URL(path, root), 'utf8');
 test('real workflows pass CI and release rules', () => {
   assert.deepEqual(ciErrors(read('.github/workflows/ci.yml')), []);
   assert.deepEqual(releaseErrors(read('.github/workflows/release.yml')), []);
@@ -84,21 +85,22 @@ test('CI preserves every interim check and runs all A9 scenarios on each OS', ()
   for (const command of ['node --test', 'node scripts/typecheck.ts', 'npm ci --prefix scripts/docs',
     "node --test 'scripts/tests/*.docs-spec.ts'", 'node scripts/check-docs.ts', 'bash scripts/test-wiki-publish.sh',
     'bash scripts/test-local-install.sh', 'bash scripts/check.sh', 'node scripts/check-review-hashes.ts'])
-    assert.ok(runs('check').includes(command), command);
-  for (const command of ['claude plugin validate .', 'claude plugin test .']) assert.ok(read('scripts/check.sh').includes(command));
+    { assert.ok(runs('check').includes(command), command); }
+  for (const command of ['claude plugin validate .', 'claude plugin test .']) { assert.ok(read('scripts/check.sh').includes(command)); }
   assert.ok(runs('e2e').includes('npm ci --prefix scripts/e2e'));
   assert.ok(runs('e2e').includes('node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts'));
   assert.ok(runs('e2e').includes('node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all'));
 });
 test('release checks tag, notes and wiki before publication; tests the fresh installed copy afterwards', () => {
-  const w = readWorkflow('release.yml', read('.github/workflows/release.yml')).value as any, job = w.jobs.release;
+  const w = readWorkflow('release.yml', read('.github/workflows/release.yml')).value as any
+const  job = w.jobs.release;
   assert.equal(job['runs-on'], 'ubuntu-latest');
   // The runner context is not allowed in job-level env (GitHub rejects the file), so the first step sets it.
   assert.equal(job.env.CLAUDE_CONFIG_DIR, undefined);
   assert.equal(job.steps[0].run, 'echo "CLAUDE_CONFIG_DIR=$RUNNER_TEMP/claude-config" >> "$GITHUB_ENV"');
   for (const [name, wf] of [['ci.yml', 'ci.yml'], ['release.yml', 'release.yml'], ['publish-wiki.yml', 'publish-wiki.yml']] as const) {
     const y = readWorkflow(name, read(`.github/workflows/${wf}`)).value as any
-    for (const [id, j] of Object.entries<any>(y.jobs)) assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${name} ${id}: runner context in job env`)
+    for (const [id, j] of Object.entries<any>(y.jobs)) { assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${name} ${id}: runner context in job env`) }
   }
   const ids = job.steps.map((s: any) => s.id).filter(Boolean);
   const order = ['release-tag', 'release-notes', 'release-wiki-run', 'release-wiki', 'release-publish', 'release-notes-published', 'release-install', 'release-e2e'];

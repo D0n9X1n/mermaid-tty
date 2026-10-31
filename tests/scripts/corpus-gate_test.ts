@@ -17,7 +17,7 @@ const BAD = 'flowchart TD\nA[open --> B\n'
 function dir(t: TestContext, files: Record<string, string>): string {
   const d = mkdtempSync(join(tmpdir(), 'mermaid-tty-corpus-'))
   t.after(() => rmSync(d, { recursive: true, force: true }))
-  for (const [name, text] of Object.entries(files)) writeFileSync(join(d, name), text)
+  for (const [name, text] of Object.entries(files)) { writeFileSync(join(d, name), text) }
   return d
 }
 const run = (...args: string[]) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' })
@@ -64,7 +64,8 @@ test('A10: the CLI prints the counts and each failure, never a block or a path, 
 })
 
 test('A10: --private gates a second directory and prints only its counts; with no failure the CLI exits 0', t => {
-  const pub = dir(t, { 'a.mmd': GOOD }), priv = dir(t, { 'x.mmd': BAD, 'y.mmd': GOOD })
+  const pub = dir(t, { 'a.mmd': GOOD })
+const  priv = dir(t, { 'x.mmd': BAD, 'y.mmd': GOOD })
   const r = run(pub, '--private', priv)
   assert.equal(r.stdout, 'corpus-gate: 1 block, 0 failures at 80 and 120 columns\n' +
     'corpus-gate --private: 2 blocks, 2 failures at 80 and 120 columns\n')

@@ -34,24 +34,25 @@ const WIDTHS = [10, 16, 20, 24, 30, 31, 40, 60, 80, 81, 100, 120]
 // The module and model s parses to; a source that does not parse throws, so none drops out unseen.
 function parsed(s: string) {
   const src = readSource(s)
-  if (isFail(src)) throw new Error(src.reason)
+  if (isFail(src)) { throw new Error(src.reason) }
   const mod = lookup(src.header)
-  if (isFail(mod)) throw new Error(mod.reason)
+  if (isFail(mod)) { throw new Error(mod.reason) }
   const model = mod.parse(src)
-  if (isFail(model)) throw new Error(model.reason)
+  if (isFail(model)) { throw new Error(model.reason) }
   return { mod, model }
 }
 test('A5.mutation-tests: no row of a drawing validate accepts is wider than its columns, as toRows emits it', () => {
   assert.ok(FIXTURES.length > 0)
   for (const s of SOURCES) {
-    const { mod, model } = parsed(s), name = JSON.stringify(s.slice(0, 32))
+    const { mod, model } = parsed(s)
+const  name = JSON.stringify(s.slice(0, 32))
     let validated = 0
-    for (const columns of WIDTHS) for (const step of mod.steps(model)) {
+    for (const columns of WIDTHS) { for (const step of mod.steps(model)) {
       const d = mod.layout(model, step, columns)
-      if (isFail(d) || validate(d) !== null) continue
+      if (isFail(d) || validate(d) !== null) { continue }
       validated++
-      for (const row of plain(d)) assert.ok(width(row) <= d.columns, `${name} ${step} at ${d.columns}: ${width(row)} wide`)
-    }
+      for (const row of plain(d)) { assert.ok(width(row) <= d.columns, `${name} ${step} at ${d.columns}: ${width(row)} wide`) }
+    } }
     assert.ok(validated > 0, `${name} never validates`)
   }
 })

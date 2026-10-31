@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { readWorkflow } from '../docs/workflow-tree.ts';
 import { versionsErrors } from '../docs/ci-rules.ts';
-const SHA = 'a'.repeat(40), NODE = `      - uses: actions/setup-node@${SHA} # v7.1.0\n        with:\n          node-version: 24\n`;
+const SHA = 'a'.repeat(40)
+const  NODE = `      - uses: actions/setup-node@${SHA} # v7.1.0\n        with:\n          node-version: 24\n`;
 const VERS = "on:\n  schedule:\n    - cron: '41 */4 * * *'\n  workflow_dispatch:\n    inputs:\n      version:\n        required: false\n\npermissions:\n  contents: read\n\njobs:\n" +
   '  list:\n    outputs:\n      versions: ${{ steps.untested.outputs.versions }}\n    steps:\n      - id: untested\n        run: versions="$(node scripts/cc-versions.ts list a b)"\n' +
   '  a9:\n    needs: list\n    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, macos-latest, windows-latest]\n' +
@@ -23,12 +24,12 @@ test('the version workflow passes, and each clause is required', () => {
     ['"@anthropic-ai/claude-code@${{ matrix.version }}"', '@anthropic-ai/claude-code@latest', 'that version from npm'],
     ['  a9:\n    needs: list\n', '  a9:\n    needs: list\n    permissions:\n      contents: write\n', 'outside the record job'],
     ['scripts/cc-versions.ts list a b', 'scripts/other.ts list a b', 'untested-version list']])
-    assert.ok(versionsErrors(VERS.replace(from, () => to)).some((e) => e.includes(want)), want);
+    { assert.ok(versionsErrors(VERS.replace(from, () => to)).some((e) => e.includes(want)), want); }
 });
 const real = () => readFileSync(new URL('../../.github/workflows/claude-code-versions.yml', import.meta.url), 'utf8');
 test('the real version workflow passes, keeps the runner context out of job env, and check-docs runs its rule', () => {
   assert.deepEqual(versionsErrors(real()), []);
   for (const [id, j] of Object.entries<any>((readWorkflow('claude-code-versions.yml', real()).value as any).jobs))
-    assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${id}: runner context in job env`);
+    { assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${id}: runner context in job env`); }
   assert.match(readFileSync(new URL('../check-docs.ts', import.meta.url), 'utf8'), /versionsErrors\(read\('\.github\/workflows\/claude-code-versions\.yml'\)\)/);
 });

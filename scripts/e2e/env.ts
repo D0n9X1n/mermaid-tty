@@ -19,7 +19,7 @@ export function sessionEnv(r: Recipe): Record<string, string> {
     Object.assign(env, { USERPROFILE: r.home, APPDATA: win32.join(r.home, 'AppData', 'Roaming'), LOCALAPPDATA: win32.join(r.home, 'AppData', 'Local') })
     for (const k of ['SystemRoot', 'ComSpec', 'PATHEXT']) {
       const v = process.env[k]
-      if (v !== undefined) env[k] = v
+      if (v !== undefined) { env[k] = v }
     }
   } else {
     const locale = r.platform === 'darwin' ? 'en_US.UTF-8' : 'C.UTF-8'
@@ -29,8 +29,8 @@ export function sessionEnv(r: Recipe): Record<string, string> {
   // TMUX turns that clamp on (E3). Under the tmux driver, tmux sets TMUX itself.
   if (r.color === 'truecolor') {
     env.COLORTERM = 'truecolor'
-    if (r.driver === 'tmux') env.CLAUDE_CODE_TMUX_TRUECOLOR = '1'
-  } else if (r.driver === 'pty') env.TMUX = 'e2e'
+    if (r.driver === 'tmux') { env.CLAUDE_CODE_TMUX_TRUECOLOR = '1' }
+  } else if (r.driver === 'pty') { env.TMUX = 'e2e' }
   return env
 }
 
@@ -39,7 +39,7 @@ export function sessionEnv(r: Recipe): Record<string, string> {
 // Windows, Claude Code may key the project by its /-separated path (E2), so both forms are trusted.
 export function seedConfig(realCwd: string, key: string, platform: string): string {
   const projects: Record<string, { hasTrustDialogAccepted: true }> = { [realCwd]: { hasTrustDialogAccepted: true } }
-  if (platform === 'win32') projects[realCwd.replaceAll('\\', '/')] = { hasTrustDialogAccepted: true }
+  if (platform === 'win32') { projects[realCwd.replaceAll('\\', '/')] = { hasTrustDialogAccepted: true } }
   return JSON.stringify({ hasCompletedOnboarding: true, customApiKeyResponses: { approved: [key.trim().slice(-20)], rejected: [] }, projects }, null, 2)
 }
 
@@ -54,9 +54,9 @@ export function seedSettings(theme: string): string {
 export function mergeJson(existing: string, seed: string): string {
   const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
   const merge = (a: unknown, b: unknown): unknown => {
-    if (!isObject(a) || !isObject(b)) return b
+    if (!isObject(a) || !isObject(b)) { return b }
     const out: Record<string, unknown> = { ...a }
-    for (const [k, v] of Object.entries(b)) out[k] = k in a ? merge(a[k], v) : v
+    for (const [k, v] of Object.entries(b)) { out[k] = k in a ? merge(a[k], v) : v }
     return out
   }
   return JSON.stringify(merge(JSON.parse(existing), JSON.parse(seed)), null, 2)

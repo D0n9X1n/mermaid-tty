@@ -24,7 +24,7 @@ test('VR.gallery: each background run is one <rect> at col × cellW, as wide as 
 
 test('VR.gallery: <, & and " in text are escaped, and glyphXs reads each glyph back', () => {
   const svg = rowsToSvg([[{ text: 'a<&"b' }]], CELLS)
-  for (const e of ['>&lt;</text>', '>&amp;</text>', '>&quot;</text>']) assert.ok(svg.includes(e), e)
+  for (const e of ['>&lt;</text>', '>&amp;</text>', '>&quot;</text>']) { assert.ok(svg.includes(e), e) }
   assert.doesNotMatch(svg, />[<&"]<\/text>/)
   assert.deepEqual(glyphXs(svg), [['a', 0], ['<', 10], ['&', 20], ['"', 30], ['b', 40]])
 })
@@ -39,9 +39,10 @@ test('VR.gallery: a ThemeKey color or background resolves through DARK_KEYS to i
 })
 
 test('VR.gallery: DARK_KEYS previews in hex exactly the 12 ThemeKeys the default theme draws with', () => {
-  const d = THEMES.default, used = new Set([...Object.values(d.roles), ...Object.values(d.series), d.onFill])
+  const d = THEMES.default
+const  used = new Set([...Object.values(d.roles), ...Object.values(d.series), d.onFill])
   assert.deepEqual(Object.keys(DARK_KEYS).sort(), [...used].sort())
-  for (const [k, v] of Object.entries(DARK_KEYS)) assert.match(v, /^#[0-9a-f]{6}$/, k)
+  for (const [k, v] of Object.entries(DARK_KEYS)) { assert.match(v, /^#[0-9a-f]{6}$/, k) }
 })
 
 test('VR.gallery: a bold span sets font-weight and a dim span opacity, each on its own glyphs only', () => {
@@ -60,7 +61,8 @@ test('VR.gallery: a dark page as wide as the widest row, glyphs in ui-monospace,
 })
 
 test('VR.gallery: offGrid passes a true render, and reports a glyph moved off its cell and a dropped glyph', () => {
-  const rows = [[{ text: '中a' }], [{ text: '─►', color: '#88C0D0' }]], svg = rowsToSvg(rows, CELLS)
+  const rows = [[{ text: '中a' }], [{ text: '─►', color: '#88C0D0' }]]
+const  svg = rowsToSvg(rows, CELLS)
   assert.deepEqual(offGrid(svg, rows, 10), [])
   assert.equal(offGrid(svg.replace('<text x="20"', '<text x="21"'), rows, 10).length, 1)
   assert.deepEqual(offGrid(svg.replace(/<text [^>]*>►<\/text>/, ''), rows, 10), ['expected 4 glyphs, found 3'])
@@ -77,7 +79,8 @@ const LR = 'flowchart LR\nA[alpha one] --> B[beta two] --> C[gamma three] --> D[
 
 // A temp dir, removed after the test, holding src as in.mmd; run spawns render-svg.ts with args, '@in' standing for in.mmd.
 function cli(t: { after(fn: () => void): void }, src: string) {
-  const dir = mkdtempSync(join(tmpdir(), 'mtty-svg-')), file = join(dir, 'in.mmd')
+  const dir = mkdtempSync(join(tmpdir(), 'mtty-svg-'))
+const  file = join(dir, 'in.mmd')
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   writeFileSync(file, src)
   const run = (...args: string[]) => spawnSync(process.execPath, [RENDER_SVG, ...args.map(a => (a === '@in' ? file : a))], { encoding: 'utf8' })
@@ -85,7 +88,8 @@ function cli(t: { after(fn: () => void): void }, src: string) {
 }
 
 test('VR.gallery: render-svg.ts FILE COLS THEME OUT.svg writes the SVG of the rows core draws at COLS under THEME, and exits 0', t => {
-  const { out, run } = cli(t, LR), r = run('@in', '40', 'dracula', out)
+  const { out, run } = cli(t, LR)
+const  r = run('@in', '40', 'dracula', out)
   assert.equal(r.status, 0, r.stderr)
   assert.equal(readFileSync(out, 'utf8'), rowsToSvg(renderMermaid(LR, { columns: 40, theme: 'dracula' })!))
 })
@@ -100,7 +104,8 @@ test('VR.gallery: render-svg.ts prints its usage and exits 2 on a missing OUT.sv
 })
 
 test('VR.gallery: render-svg.ts says so, exits 1 and writes nothing when core falls back', t => {
-  const { out, run } = cli(t, 'no diagram here\n'), r = run('@in', '80', 'nord', out)
+  const { out, run } = cli(t, 'no diagram here\n')
+const  r = run('@in', '80', 'nord', out)
   assert.equal(r.status, 1); assert.match(r.stderr, /fell back/); assert.equal(existsSync(out), false)
 })
 

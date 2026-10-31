@@ -24,7 +24,7 @@ test('A6.hook-tests: pixels only where TERM names kitty or Ghostty, outside tmux
     [{ TERM: 'xterm-256color', TERM_PROGRAM: 'iTerm.app' }, false],
     [{ TERM: 'xterm-256color', TERM_PROGRAM: 'Apple_Terminal' }, false],
     [{}, false],
-  ] as [Record<string, string>, boolean][]) assert.equal(await showsPixels(env(vars)), want, JSON.stringify(vars))
+  ] as [Record<string, string>, boolean][]) { assert.equal(await showsPixels(env(vars)), want, JSON.stringify(vars)) }
 })
 
 test('A5.errors: an env read that throws or rejects means no pixels', async () => {

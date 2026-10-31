@@ -7,7 +7,8 @@ test('A4: state-ok-05 shares one ● and one ◉ among its [*]', () => {
   assert.deepEqual([t.filter(c => c === '●').length, t.filter(c => c === '◉').length], [1, 1])
 })
 test('A7: states, choices, notes and frames carry their nord roles', () => {
-  const n = THEMES.nord.roles, R = (id: string) => renderMermaid(fx(id), { columns: 80, theme: 'nord' })!
+  const n = THEMES.nord.roles
+const  R = (id: string) => renderMermaid(fx(id), { columns: 80, theme: 'nord' })!
   assert.equal(spanOf(R('state-ok-03'), /Second/)?.backgroundColor, n.node); assert.equal(spanOf(R('state-ok-08'), /◇/)?.color, n.decision)
   assert.equal(spanOf(R('state-ok-12'), /remember/)?.color, n.note); assert.equal(spanOf(R('state-ok-06'), /┌─Moving/)?.color, n.frame)
 })

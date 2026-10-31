@@ -18,14 +18,18 @@ test('A5: showData and a title on the header line; single-quoted labels; decimal
 })
 test('A5.errors: zero, negative, repeated, unquoted, backslash and empty pies fall back', () => {
   for (const [src, why] of [['pie\n"Dogs" : 0', 'domain:2'], ['pie\n"Dogs" : -5', 'domain:2'], ['pie\n"Dogs" : 1\n"Dogs" : 2', 'repeat:3'],
-    ['pie\nDogs : 386', 'syntax:2'], ['pie\n"a\\b" : 1', 'syntax:2'], ['pie title Empty', 'empty']] as const) assert.deepEqual(X(src, 80), { reason: why }, src)
+    ['pie\nDogs : 386', 'syntax:2'], ['pie\n"a\\b" : 1', 'syntax:2'], ['pie title Empty', 'empty']] as const) { assert.deepEqual(X(src, 80), { reason: why }, src) }
 })
 
 // Beyond the plan's tests. Nine slices, so ink cycles: ties keep source order, and ink and owners follow the source index
 // k, not the rank. A bar's ink is s<(k mod 8) + 1>, so i (k = 8) wraps to s1.
 test('A4: ties keep source order; ink and owners follow the source index; expect lists every bar and text owner once', () => {
-  const vs = [1, 2, 2, 1, 1, 1, 1, 1, 3], E = [0, 37, 74, 111], P = ['', ' 7.7%', '15.4%', '23.1%'], rank = [8, 1, 2, 0, 3, 4, 5, 6, 7]
-  const r = X(['pie', ...vs.map((v, k) => `"${'abcdefghi'[k]}" : ${v}`)].join('\n'), 80), d = r.drawing
+  const vs = [1, 2, 2, 1, 1, 1, 1, 1, 3]
+const  E = [0, 37, 74, 111]
+const  P = ['', ' 7.7%', '15.4%', '23.1%']
+const  rank = [8, 1, 2, 0, 3, 4, 5, 6, 7]
+  const r = X(['pie', ...vs.map((v, k) => `"${'abcdefghi'[k]}" : ${v}`)].join('\n'), 80)
+const  d = r.drawing
   assert.equal(r.step, 'natural')
   assert.deepEqual(text(d), rank.map(k => `${'abcdefghi'[k]} ${bar(E[vs[k]!]!, 60)} ${vs[k]} ${P[vs[k]!]}`))
   assert.deepEqual(d.cells.map((row: any[]) => [...new Set(row.flatMap(c => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]),
@@ -46,18 +50,18 @@ test('A5.errors: other header forms and value tokens outside the subset fall bac
     ['pie\n"a" : +5', 'domain:2'], ['pie\n"a" : 007', 'domain:2'], ['pie\n"a" : 0.0', 'domain:2'], ['pie\n"a" : 1e3', 'syntax:2'],
     ['pie\n"a" : .5', 'syntax:2'], ['pie\n"a" : 5.', 'syntax:2'], ['pie\n"a" : 1;', 'syntax:2'], ['pie\n"a" : 1 : 2', 'syntax:2'],
     ['pie\n"a\u0007" : 1', 'unsupported-char U+0007'], ['pie title A\u0007\n"a" : 1', 'unsupported-char U+0007']] as const)
-    assert.deepEqual(X(src, 80), { reason: why }, src)
+    { assert.deepEqual(X(src, 80), { reason: why }, src) }
 })
 // Mermaid 12.2.0 encodes each #…; of the diagram body as an entity and decodes it in the SVG, so it would draw other text.
 test('A5.errors: a #…; entity in a slice label or a header title falls back; a # that starts no entity is text', () => {
-  for (const src of ['pie\n"#9829;" : 1', 'pie title I #9829; pets\n"a" : 1']) assert.deepEqual(X(src, 80), { reason: 'entity' }, src)
+  for (const src of ['pie\n"#9829;" : 1', 'pie title I #9829; pets\n"a" : 1']) { assert.deepEqual(X(src, 80), { reason: 'entity' }, src) }
   assert.deepEqual(text(X('pie title C# and F#\n"F#" : 1', 80).drawing), ['C# and F#', `F# ${bar(480, 60)} 1 100.0%`])
 })
 // accTitle and accDescr, in each form, are parsed and not drawn (matrix common rule 4).
 test('A5: a title statement or a frontmatter title draws as the heading; accTitle and accDescr are ignored', () => {
   for (const [src, title] of [['pie\ntitle Pets\n"Dogs" : 3', 'Pets'], ['---\ntitle: "I ♥ pets"\n---\npie\n"Dogs" : 3', 'I ♥ pets'],
     ['pie title Pets\naccTitle: Pets\naccDescr: Two\naccDescr {\n  dogs\n  cats }\naccDescr { one }\n"Dogs" : 3', 'Pets']] as const)
-    assert.deepEqual(text(X(src, 80).drawing), [title, `Dogs ${bar(480, 60)} 3 100.0%`], src)
+    { assert.deepEqual(text(X(src, 80).drawing), [title, `Dogs ${bar(480, 60)} 3 100.0%`], src) }
 })
 test('A5.errors: a second title, an undrawable title statement or an unclosed accDescr block falls back; acc lines alone are empty', () => {
   for (const [src, why] of [['pie title A\ntitle B\n"a" : 1', 'repeat:2'], ['pie\ntitle A\n"a" : 1\ntitle B', 'repeat:4'],
@@ -67,5 +71,5 @@ test('A5.errors: a second title, an undrawable title statement or an unclosed ac
     ['---\ntitle: "I #9829; pets"\n---\npie\n"a" : 1', 'entity'],
     ['pie\naccTitle: Pets', 'empty'], ['pie\naccDescr {\n"a" : 1', 'syntax:2'], ['pie\naccDescr { a } b\n"a" : 1', 'syntax:2'],
     ['pie\nTitle A\n"a" : 1', 'syntax:2'], ['pie\ntitled A\n"a" : 1', 'syntax:2']] as const)
-    assert.deepEqual(X(src, 80), { reason: why }, src)
+    { assert.deepEqual(X(src, 80), { reason: why }, src) }
 })

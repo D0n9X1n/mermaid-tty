@@ -2,8 +2,8 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { parseDec, dec, add, sub, mul, div, cmp, floor, ceil, roundHalfUp, toExact, toFixed, type Dec } from '../../core/charts/decimal.ts'
 const D = (s: string) => parseDec(s) as Dec
 test('A4: decimals parse exactly; malformed numbers are null', () => {
-  for (const s of ['1', '-0.34', '+1.3', '.6', '2.4', '0']) assert.notEqual(parseDec(s), null, s)
-  for (const s of ['1.', '1e3', 'NaN', '0x10', '', '-', '1.2.3']) assert.equal(parseDec(s), null, s)
+  for (const s of ['1', '-0.34', '+1.3', '.6', '2.4', '0']) { assert.notEqual(parseDec(s), null, s) }
+  for (const s of ['1.', '1e3', 'NaN', '0x10', '', '-', '1.2.3']) { assert.equal(parseDec(s), null, s) }
   assert.equal(cmp(add(D('0.1'), D('0.2')), D('0.3')), 0); assert.equal(div(D('1'), dec(0)), null)
 })
 test('A4: rounding is half up; exact and fixed printing', () => {
@@ -19,7 +19,7 @@ test('A4: a Dec is reduced with its sign on n; whitespace, doubled signs, a lone
     [{ n: -17n, d: 50n }, { n: 13n, d: 10n }, { n: 3n, d: 5n }, { n: 5n, d: 2n }, { n: 0n, d: 1n }, { n: 7n, d: 1n }, { n: -25n, d: 2n }])
   assert.deepEqual([dec(-4), div(dec(3), dec(-6)), div(dec(0), D('-2'))], [{ n: -4n, d: 1n }, { n: -1n, d: 2n }, { n: 0n, d: 1n }])
   assert.equal(div(dec(5), D('-0.00')), null)
-  for (const s of [' 1', '1 ', '1\n', '+-1', '--1', '.', '-.', '1,5', 'Infinity', '١']) assert.equal(parseDec(s), null, JSON.stringify(s))
+  for (const s of [' 1', '1 ', '1\n', '+-1', '--1', '.', '-.', '1,5', 'Infinity', '١']) { assert.equal(parseDec(s), null, JSON.stringify(s)) }
 })
 // Each case drifts as a Number: 0.1 + 0.2 is 0.30000000000000004, and (1.005).toFixed(2) is '1.00'.
 test('A4: arithmetic, comparison and rounding stay exact where a Number drifts', () => {

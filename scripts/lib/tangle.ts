@@ -37,11 +37,15 @@ const isLine = (x: Cell | null): boolean => x?.kind === 'line'
 // The commit a fork's corner at (r, c) starts from: along its side arm to the tee on the parent's lane, then back up that
 // lane, against the corner's forward arm, to the first cap's mark. None if the corner has no such arms or no cap is there.
 function fork(d: Drawing, r: number, c: number): string[] {
-  const x = cellAt(d, r, c)!, side = x.dirs & 10, dr = x.dirs & 4 ? -1 : x.dirs & 1 ? 1 : 0, dc = side === 8 ? -1 : 1
-  if (side === 0 || side === 10 || dr === 0) return []
-  let cc = c, rr = r + dr
-  while (isLine(cellAt(d, r, cc)) && (cellAt(d, r, cc)!.dirs & side) !== 0) cc += dc
-  while (isLine(cellAt(d, rr, cc))) rr += dr
+  const x = cellAt(d, r, c)!
+const  side = x.dirs & 10
+const  dr = x.dirs & 4 ? -1 : x.dirs & 1 ? 1 : 0
+const  dc = side === 8 ? -1 : 1
+  if (side === 0 || side === 10 || dr === 0) { return [] }
+  let cc = c
+let  rr = r + dr
+  while (isLine(cellAt(d, r, cc)) && (cellAt(d, r, cc)!.dirs & side) !== 0) { cc += dc }
+  while (isLine(cellAt(d, rr, cc))) { rr += dr }
   const cap = cellAt(d, rr, cc)
   return cap?.kind === 'cap' ? cap.owners.filter(o => marks(d).has(o)) : []
 }
@@ -55,7 +59,7 @@ const rowMarks = (d: Drawing, y: number): string[] => (d.cells[y] ?? []).flatMap
 function laneEnds(d: Drawing, r: number, c: number, o: string): string[] {
   return [-1, 1].flatMap(dr => {
     let y = r
-    while (cellAt(d, y, c)?.kind !== 'cap' && ownedBy(cellAt(d, y + dr, c), o)) y += dr
+    while (cellAt(d, y, c)?.kind !== 'cap' && ownedBy(cellAt(d, y + dr, c), o)) { y += dr }
     return rowMarks(d, y)
   })
 }
@@ -64,7 +68,7 @@ function laneEnds(d: Drawing, r: number, c: number, o: string): string[] {
 // start's commit; none for any other owner.
 function ends(d: Drawing, id: string, r: number, c: number): string[] {
   const e = d.expect.edges.find(x => x.id === id)
-  if (e) return [e.from, e.to]
+  if (e) { return [e.from, e.to] }
   return id.startsWith('lane:') ? laneEnds(d, r, c, id) : marks(d).has(id) ? fork(d, r, c) : []
 }
 

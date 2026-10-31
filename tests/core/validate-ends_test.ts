@@ -9,8 +9,8 @@ import type { Graph } from '../../core/graph/model.ts'; import { text } from './
 const S = (t: string): Drawing => sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as any
 function F(t: string): Drawing {
   const p = layoutGraph(parseFlowchart(readSource(`flowchart ${t}`) as Source) as Graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
-  if ('reason' in p) throw new Error(p.reason)
-  const routes = routeGraph(p); if ('reason' in routes) throw new Error(routes.reason)
+  if ('reason' in p) { throw new Error(p.reason) }
+  const routes = routeGraph(p); if ('reason' in routes) { throw new Error(routes.reason) }
   return drawGraph(p, routes, 80)
 }
 type At = { r: number; c: number }
@@ -26,7 +26,8 @@ const show = (d: Drawing) => text(d).join('\n')
 
 // QA's repro: B-xA draws its x beside A; swapped with the line cell beside B, the x sits at the sender.
 test('A5.mutation-tests: a sequence end mark beside the wrong participant fails end-misplaced', () => {
-  const d = S('participant A\nparticipant B\nB-xA: bye'), cells = route(d, d.expect.edges[0]!.id)
+  const d = S('participant A\nparticipant B\nB-xA: bye')
+const  cells = route(d, d.expect.edges[0]!.id)
   assert.equal(validate(d), null, show(d))
   const x = cells.find(p => d.cells[p.r]![p.c]!.ch === 'x')!
   const far = cells.filter(p => p.r === x.r).reduce((m, p) => (Math.abs(p.c - x.c) > Math.abs(m.c - x.c) ? p : m))
@@ -35,7 +36,8 @@ test('A5.mutation-tests: a sequence end mark beside the wrong participant fails 
 // Each edge's head swapped with its line cell beside A: ► then points away from A; ● and x have no point.
 test('A5.mutation-tests: a flowchart head moved beside its tail node fails end-misplaced', () => {
   for (const t of ['LR\nA --> B', 'LR\nA --o B', 'TB\nA --x B']) {
-    const d = F(t), cells = route(d, d.expect.edges[0]!.id)
+    const d = F(t)
+const  cells = route(d, d.expect.edges[0]!.id)
     assert.equal(validate(d), null, show(d))
     const head = cells.find(p => d.cells[p.r]![p.c]!.kind === 'arrow')!
     const nearA = cells.find(p => d.cells[p.r]![p.c]!.kind === 'line' && touches(d, p, 'A'))!
@@ -57,7 +59,7 @@ test('A5.mutation-tests: sequence ends put the head at to and the tail mark at f
 // a───b►: the ► beside B points away from it. Listed with no ends, the ► is an extra head.
 function past(ends: { node: string; glyph: string }[]): Drawing {
   const c = createCanvas(1, 6, 6); c.text(0, 0, 'a', 'node', 'A'); c.text(0, 4, 'b', 'node', 'B'); c.arrow(0, 5, '►', 'e')
-  for (let i = 1; i < 4; i++) c.line(0, i, 10, 'light', 'edge', 'e')
+  for (let i = 1; i < 4; i++) { c.line(0, i, 10, 'light', 'edge', 'e') }
   return c.toDrawing({ labels: [{ owner: 'A', text: 'a' }, { owner: 'B', text: 'b' }], edges: [{ id: 'e', from: 'A', to: 'B', ends }], edgeLabels: [] })
 }
 test('A5.mutation-tests: a directional mark beside its node must point at it, and a mark no end claims is an extra head', () => {

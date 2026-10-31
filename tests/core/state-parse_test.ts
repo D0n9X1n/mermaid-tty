@@ -3,7 +3,8 @@ import { parseState } from '../../core/diagrams/state/parse.ts'; import { readSo
 const P = (body: string) => { const s = readSource(`stateDiagram-v2\n${body}`); return ('reason' in s ? s : parseState(s)) as any }
 test('A5: states, descriptions, transitions, marks, a composite and a note make one graph', () => {
   const m = P(['[*] --> s1', 's1 : First state', 'state "Second" as s2', 's1 --> s2 : go', 's2 --> C', 'state C {', '  [*] --> c1', '  c1 --> [*]', '}',
-    'state ch <<choice>>', 's2 --> ch', 'ch --> [*]', 'note left of s1 : remember'].join('\n')), g = m.graph
+    'state ch <<choice>>', 's2 --> ch', 'ch --> [*]', 'note left of s1 : remember'].join('\n'))
+const  g = m.graph
   assert.deepEqual(g.nodes.map((n: any) => [n.id, n.mark ?? n.rows[0].text]), [['start:root', 'start'], ['s1', 'First state'], ['s2', 'Second'],
     ['start:C', 'start'], ['c1', 'c1'], ['end:C', 'end'], ['ch', 'choice'], ['end:root', 'end']])
   assert.deepEqual(g.edges.map((e: any) => [e.from, e.to, e.label]), [['start:root', 's1', null], ['s1', 's2', 'go'], ['s2', 'C', null],
@@ -24,7 +25,7 @@ test('A5: regions are frameless clusters chained in order; direction; a multi-li
 test('A5.errors: unsupported, malformed and repeated statements fall back with their line', () => {
   for (const [body, why] of [['s1 --> s2\nstate s9', 'syntax:3'], ['state Two Words {\n}', 'syntax:2'], ['state A {\ns1 --> s2', 'syntax:2'],
     ['s1 : one\ns1 : two', 'repeat:3'], ['note left of s1 : a\nnote right of s1 : b', 'repeat:3'], ['state A {\nx --> y\n}\nstate B {\nx --> z\n}', 'scope:6'],
-    ['note "floating" as N', 'syntax:2'], ['state c <<choice>>\nc : label', 'mark-label:3']] as const) assert.deepEqual(P(body), { reason: why }, body)
+    ['note "floating" as N', 'syntax:2'], ['state c <<choice>>\nc : label', 'mark-label:3']] as const) { assert.deepEqual(P(body), { reason: why }, body) }
 })
 
 // Beyond the plan's three: each rule's edges.
@@ -47,7 +48,7 @@ test('A5.errors: drawn text falls back on a #…; entity, an unsupported charact
   for (const [body, why] of [['s1 : #9829;', 'entity'], ['state "a #amp; b" as s1', 'entity'], ['state "#9829;" as A {\n}', 'entity'],
     ['a --> b : #9829;', 'entity'], ['note left of s1 : #9829;\ns1 --> s2', 'entity'], ['note right of s1\n  #9829;\nend note\ns1 --> s2', 'entity'],
     ['s1 : a‍b', 'unsupported-char U+200D'], ['a --> b : x<br><br>y', 'label-blank-line'], ['s1 : a<br>', 'label-blank-line']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   const g = P('s1 : a # b\ns1 --> s2 : #1 pick\nnote left of s2 : see #3').graph
   assert.deepEqual([g.nodes[0].rows[0].text, g.edges[0].label, g.nodes[1].note.text], ['a # b', '#1 pick', 'see #3'])
 })
@@ -69,7 +70,7 @@ test('A5.errors: a keyword in another case or starting a longer word, a bad head
   for (const [body, why] of [['Note left of s1 : x', 'syntax:2'], ['STATE x {\n}', 'syntax:2'], ['stated', 'syntax:2'], ['state', 'syntax:2'],
     ['notes --> x', 'syntax:2'], ['Direction LR', 'syntax:2'], ['direction lr', 'syntax:2'], ['direction TD', 'syntax:2'],
     ['s1 : turn direction LR', 'syntax:2'], ['a --> b\nnote left of b : go direction LR', 'syntax:3'], ['accDescr {\n  text\n} s1 --> s2', 'syntax:4']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   assert.deepEqual(parseState(readSource('stateDiagram-v3\na') as any), { reason: 'header' })
 })
 test('A5.errors: root-only lines in a body, an empty region, a late or repeated mark, a note on no state, a second body fall back', () => {
@@ -78,13 +79,13 @@ test('A5.errors: root-only lines in a body, an empty region, a late or repeated 
     ['state A {\n  --\n  a\n}', 'syntax:3'], ['state A {\n  a\n  --\n}', 'syntax:5'], ['state A {\n  a\n  --\n  --\n  b\n}', 'syntax:5'],
     ['a --> c\nstate c <<choice>>', 'syntax:3'], ['state c <<choice>>\nstate c <<fork>>', 'syntax:3'], ['state A {\n}\nstate A <<choice>>', 'syntax:4'],
     ['state A {\n}\nnote left of A : x', 'syntax:4'], ['state A {\n}\nstate A {\n}', 'repeat:4']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
 })
 test('A5.errors: a note or accDescr block with no end, an end note in another form, an empty note or a blank line in one falls back', () => {
   for (const [body, why] of [['s1\nnote left of s1\n  text', 'syntax:3'], ['s1\nnote left of s1\n  text\nEnd Note', 'syntax:5'],
     ['s1\nnote left of s1\n  text\nend notes', 'syntax:5'], ['s1\nnote left of s1\nend note', 'syntax:3'], ['accDescr {\n  text', 'syntax:2'],
     ['s1\nnote left of s1\n  a\n\n  b\nend note', 'label-blank-line'], ['state A {\nnote left of a\n  x\n}', 'syntax:3']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   assert.equal(P('s1\nnote left of s1\n\n  a\n\nend note').graph.nodes[0].note.text, 'a')
 })
 test('A5.errors: an id Mermaid drops or shares, a styling or click line it reads otherwise, and text after : it splits fall back', () => {
@@ -93,25 +94,25 @@ test('A5.errors: an id Mermaid drops or shares, a styling or click line it reads
     ['s1 : a; b', 'syntax:2'], ['s1 : a::b', 'syntax:2'], ['s1 : a:', 'syntax:2'], ['s1 :: a', 'syntax:2'], ['a --> b :', 'syntax:2'],
     ['s1\nnote left of s1 : a: b', 'syntax:3'], ['s1\nnote left of s1  : a', 'syntax:3'], ['state "" as s1', 'syntax:2'],
     ['state A {\n  ----\n}', 'syntax:3'], ['a---->b', 'syntax:2'], ['a- --> b', 'syntax:2']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   const g = P('s1 : at 10:30\ns1 --> long-name : a:b\nclick s1 "https://x" "tip"').graph
   assert.deepEqual([g.nodes[0].rows[0].text, g.nodes[1].id, g.edges[0].label], ['at 10:30', 'long-name', 'a:b'])
 })
 test('A5.errors: a state or composite mentioned in two regions of one composite falls back, as Mermaid moves it to the last', () => {
   for (const [body, why] of [['state C {\na\n--\na --> b\n}', 'scope:5'], ['state C {\nb --> a\n--\nc\nnote left of a\n  x\nend note\n}', 'scope:6'],
-    ['state C {\nstate B {\n}\n--\nB --> c\n}', 'scope:6']] as const) assert.deepEqual(P(body), { reason: why }, body)
+    ['state C {\nstate B {\n}\n--\nB --> c\n}', 'scope:6']] as const) { assert.deepEqual(P(body), { reason: why }, body) }
   assert.deepEqual(P('state C {\n[*] --> a\n--\n[*] --> b\n}\nnote left of a : x').graph.nodes.find((n: any) => n.id === 'a').note.text, 'x')
 })
 test('A5: a note is a mention, in source order: its first mention declares a plain state in its scope', () => {
   for (const [body, why] of [['note right of a : text\nstate a <<choice>>', 'syntax:3'], ['state A {\nnote left of a : x\n}\na --> b', 'scope:5']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   const g = P('note left of s9 : x').graph
   assert.deepEqual(g.nodes, [{ id: 's9', shape: 'round', role: 'node', rows: [{ text: 's9', role: 'node', align: 'center' }], order: 0,
     note: { id: 's9:note', text: 'x', side: 'left' } }])
 })
 test('A5.errors: a multi-line note whose first line starts with : falls back at its opener, as Mermaid reads a one-line note there', () => {
   for (const [body, why] of [['a\nnote right of a\n: text\nb\nend note', 'syntax:3'], ['a\nnote right of a\n  :text\nend note', 'syntax:3']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   assert.equal(P('a\nnote right of a\n  x : y\nend note').graph.nodes[0].note.text, 'x : y')
 })
 test('A5: a transition and a region chain are whole edges: solid with an arrow head, or invisible with none', () => {
@@ -126,7 +127,7 @@ test('A5: a transition and a region chain are whole edges: solid with an arrow h
 test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back', () => {
   for (const [body, why] of [['state "a<!--c-->b" as A', 'html'], ['A : a<i>b</i>', 'html'], ['A --> B : a<b>', 'html'], ['A\nnote left of A : &lt x', 'entity'],
     ['A\nnote left of A\n  a<b>\nend note', 'html'], ['state "First<br>Second" as C {\n  a\n}', 'html'], ['state C {\n  a\n}\nC : x<br>y', 'html'],
-    ['state "a;b" as A', 'semicolon'], ['A\nnote left of A\n  a;b\nend note', 'semicolon']] as const) assert.deepEqual(P(body), { reason: why }, body)
+    ['state "a;b" as A', 'semicolon'], ['A\nnote left of A\n  a;b\nend note', 'semicolon']] as const) { assert.deepEqual(P(body), { reason: why }, body) }
   const g = P('state "Q&A" as A\nA --> B : a < b\nB : x<br>Q&A\nnote left of A : a < b\nstate "a < b" as C {\n  c\n}').graph
   assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label, g.nodes[0].note.text, g.clusters[0].title],
     [['Q&A', 'x|Q&A', 'c'], 'a < b', 'a < b', 'a < b'])
@@ -136,7 +137,7 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
 test('X3: Markdown the emphasis port cannot match, icons and math in a state text, or a state id shown as its label, fall back', () => {
   for (const [body, why] of [['state "**a **b** c**" as A', 'markdown'], ['A --> B : a \\* b', 'markdown'], ['A\nnote left of A : *a *b* c*', 'markdown'],
     ['state "_c_" as C {\n  c\n}', 'markdown'], ['state __c__ {\n  c\n}', 'markdown'],
-    ['A : fa:fa-book', 'icon'], ['A --> B : $$x^2$$', 'math']]) assert.deepEqual(P(body), { reason: why }, body)
+    ['A : fa:fa-book', 'icon'], ['A --> B : $$x^2$$', 'math']]) { assert.deepEqual(P(body), { reason: why }, body) }
   const g = P('state "snake_case" as A\nA --> my_b : a*b\nD : C:\\x').graph
   assert.deepEqual([g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label], [['snake_case', 'my_b', 'C:\\x'], 'a*b'])
 })

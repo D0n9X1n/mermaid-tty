@@ -4,9 +4,11 @@ import { safePlan } from '../../hooks/plan.ts'
 
 // Fail closed at the hook: an error in the plugin's own work gives null, and the hook then sends the
 // reply through next(e) unchanged. The debug log is best-effort: a failing log never stops a drawing.
-const FC = '```mermaid\nflowchart TD\nP[一] --> Q[二]\n```\n', BAD = '```mermaid\nflowchart TD\nA[👩‍👧]\n```\n'
+const FC = '```mermaid\nflowchart TD\nP[一] --> Q[二]\n```\n'
+const  BAD = '```mermaid\nflowchart TD\nA[👩‍👧]\n```\n'
 const ev = (text: string) => ({ surface: 'terminal', props: { text, isFirstOfReply: true }, viewport: { columns: 80, rows: 40 } })
-const ui = { log: () => {}, resolve: () => ({ Box: 'Box', Text: 'Text' }) }, diagram = async () => 'diagram' as const
+const ui = { log: () => {}, resolve: () => ({ Box: 'Box', Text: 'Text' }) }
+const  diagram = async () => 'diagram' as const
 const boom = () => { throw new Error('down') }
 
 test('A5.errors: a throwing mode read, UI resolve or renderer callback gives null, so the reply goes through untouched', async () => {
@@ -41,7 +43,9 @@ const shape = (p: any) => p?.parts.map((x: any) => 'prose' in x ? 'prose' : 'row
 const FAN = '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
 const at = (text: string, columns: number) => ({ ...ev(text), viewport: { columns, rows: 40 } })
 test('A6.hook-tests: where pixels show, a fence draws as text first, then as its picture; one core does not parse never does', async () => {
-  const { $, runs } = pix(), s = createPictures(), reply = `a\n${FC}m\n${BAD}b`
+  const { $, runs } = pix()
+const  s = createPictures()
+const  reply = `a\n${FC}m\n${BAD}b`
   assert.deepEqual(shape(await safePlan($, ev(reply), 'default', diagram, s)), ['prose', 'rows', 'prose'])
   await s.idle(); assert.deepEqual(runs, ['probe', 'mktemp', 'mmdc', 'mmdc', 'rm'])
   const p = await safePlan($, ev(reply), 'default', diagram, s)
@@ -49,17 +53,21 @@ test('A6.hook-tests: where pixels show, a fence draws as text first, then as its
   assert.deepEqual((p!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 }); assert.equal((p!.parts[2] as any).prose, `m\n${BAD}b`)
 })
 test('A6.hook-tests: a fence too wide for text, which core parses, gets a picture in place of its source', async () => {
-  const { $ } = pix(), s = createPictures(), reply = `a\n${FAN}b`
+  const { $ } = pix()
+const  s = createPictures()
+const  reply = `a\n${FAN}b`
   assert.equal(await safePlan($, at(reply, 40), 'default', diagram, s), null)
   await s.idle(); assert.deepEqual(shape(await safePlan($, at(reply, 40), 'default', diagram, s)), ['prose', 'picture', 'prose'])
 })
 
 test('A6.command: text mode, mono, tmux and source never run mmdc', async () => {
   for (const [vars, theme, mode] of [[undefined, 'default', 'text'], [undefined, 'mono', 'diagram'], [{ TERM: 'xterm-kitty', TMUX: '1' }, 'default', 'diagram']] as const) {
-    const { $, runs } = pix(vars as any), s = createPictures()
+    const { $, runs } = pix(vars as any)
+const  s = createPictures()
     assert.deepEqual(shape(await safePlan($, ev(`a\n${FC}b`), theme, async () => mode, s)), ['prose', 'rows', 'prose']); await s.idle(); assert.deepEqual(runs, [])
   }
-  const { $, runs } = pix(), s = createPictures()
+  const { $, runs } = pix()
+const  s = createPictures()
   assert.equal(await safePlan($, ev(`a\n${FC}b`), 'default', async () => 'source' as const, s), null); await s.idle(); assert.deepEqual(runs, [])
 })
 

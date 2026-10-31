@@ -1,6 +1,12 @@
 // Serializes styled terminal rows to SVG. Every glyph is its own <text> at x = col × CELL, so
 // alignment never depends on the viewer's font metrics (spec B, requirement 1, Images).
-export const CELL = 9, ROW = 18, FONT = 15, BASE = 14, PAD = 16, BAR = 28, BG = '#1e1f26';
+export const CELL = 9
+export const  ROW = 18
+export const  FONT = 15
+export const  BASE = 14
+export const  PAD = 16
+export const  BAR = 28
+export const  BG = '#1e1f26';
 export type Styled = { text: string; fg: string; bg?: string; bold?: boolean; italic?: boolean };
 export type Glyph = { row: number; col: number; text: string; span: number };
 // A PNG over a block of cells, as the plugin's image mode shows a fence in kitty and Ghostty.
@@ -13,11 +19,12 @@ export function glyphCells(rows: { text: string }[][], width: (s: string) => num
   const out: Glyph[] = [];
   rows.forEach((row, r) => {
     const ends: number[] = [];
-    let len = 0, col = 0;
-    for (const sp of row) ends.push((len += sp.text.length));
+    let len = 0
+let  col = 0;
+    for (const sp of row) { ends.push((len += sp.text.length)); }
     for (const { segment, index } of seg.segment(row.map((sp) => sp.text).join(''))) {
       const w = width(segment);
-      if (w > 0 && segment.trim()) out.push({ row: r, col, text: segment, span: ends.findIndex((e) => index < e) });
+      if (w > 0 && segment.trim()) { out.push({ row: r, col, text: segment, span: ends.findIndex((e) => index < e) }); }
       col += w;
     }
   });
@@ -25,7 +32,9 @@ export function glyphCells(rows: { text: string }[][], width: (s: string) => num
 }
 export function toSvg(rows: Styled[][], width: (s: string) => number, title: string, pics: Pic[] = []): string {
   const cols = Math.max(1, ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)), ...pics.map((p) => p.col + p.columns));
-  const W = cols * CELL + 2 * PAD, H = rows.length * ROW + 2 * PAD + BAR, out: string[] = [];
+  const W = cols * CELL + 2 * PAD
+const  H = rows.length * ROW + 2 * PAD + BAR
+const  out: string[] = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`,
     `<rect width="${W}" height="${H}" rx="10" fill="${BG}"/>`,
     ...['#ff5f57', '#febc2e', '#28c840'].map((c, i) => `<circle cx="${PAD + 6 + i * 18}" cy="14" r="5" fill="${c}"/>`),
@@ -34,11 +43,11 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
     let col = 0;
     for (const sp of row) {
       const w = width(sp.text);
-      if (sp.bg) out.push(`<rect x="${col * CELL}" y="${r * ROW}" width="${w * CELL}" height="${ROW}" fill="${sp.bg}"/>`);
+      if (sp.bg) { out.push(`<rect x="${col * CELL}" y="${r * ROW}" width="${w * CELL}" height="${ROW}" fill="${sp.bg}"/>`); }
       col += w;
     }
   });
-  for (const p of pics) out.push(`<image x="${p.col * CELL}" y="${p.row * ROW}" width="${p.columns * CELL}" height="${p.rows * ROW}" href="data:image/png;base64,${p.png}"/>`);
+  for (const p of pics) { out.push(`<image x="${p.col * CELL}" y="${p.row * ROW}" width="${p.columns * CELL}" height="${p.rows * ROW}" href="data:image/png;base64,${p.png}"/>`); }
   for (const g of glyphCells(rows, width)) {
     const sp = rows[g.row]![g.span]!;
     out.push(`<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}${sp.italic ? ' font-style="italic"' : ''}>${esc(g.text)}</text>`);

@@ -19,10 +19,11 @@ export function placed(owner: string, text: string, ps: readonly { text: string 
 // reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br> label.
 // 'word-too-wide' if a word is wider than columns.
 export function heading(text: string, ink: Ink, owner: string, columns: number): Drawing | Fail {
-  const lines = labelLines(text), pieces: { text: string; join?: Piece['join'] }[] = []
+  const lines = labelLines(text)
+const  pieces: { text: string; join?: Piece['join'] }[] = []
   for (const [i, line] of lines.entries()) {
     const ps = wrap(line, columns)
-    if (!ps) return fail('word-too-wide')
+    if (!ps) { return fail('word-too-wide') }
     ps.forEach((p, j) => pieces.push(j > 0 ? p : i > 0 ? { ...p, join: '\n' } : { text: p.text }))
   }
   const c = createCanvas(pieces.length, Math.max(0, ...pieces.map(p => width(p.text))), columns)
@@ -34,11 +35,13 @@ export function heading(text: string, ink: Ink, owner: string, columns: number):
 // padded with null to the widest part, each part's conflicts move down by its row offset, and its expect merges by name.
 export function stack(parts: readonly Drawing[], columns: number): Drawing {
   const wide = parts.reduce((w, p) => p.cells.reduce((v, r) => Math.max(v, r.length), w), 0)
-  const cells: (Cell | null)[][] = [], conflicts: Conflict[] = [], expects: Expect[] = []
+  const cells: (Cell | null)[][] = []
+const  conflicts: Conflict[] = []
+const  expects: Expect[] = []
   for (const p of parts) {
     expects.push(shift(p.expect, cells.length))
-    for (const x of p.conflicts) conflicts.push({ ...x, row: x.row + cells.length })
-    for (const r of p.cells) cells.push([...r, ...Array<Cell | null>(wide - r.length).fill(null)])
+    for (const x of p.conflicts) { conflicts.push({ ...x, row: x.row + cells.length }) }
+    for (const r of p.cells) { cells.push([...r, ...Array<Cell | null>(wide - r.length).fill(null)]) }
   }
   return { columns, cells, conflicts, expect: merge(expects) }
 }
@@ -54,6 +57,6 @@ const shift = (e: Expect, dr: number): Expect => dr === 0 ? e : Object.fromEntri
 // empty, since every Expect lists them; any other field no expect has stays absent, so nothing is invented or dropped.
 function merge(expects: readonly Expect[]): Expect {
   const out: Record<string, unknown[]> = { labels: [], edges: [], edgeLabels: [], frames: [] }
-  for (const e of expects) for (const [k, v] of Object.entries(e)) if (Array.isArray(v)) out[k] = (out[k] ?? []).concat(v)
+  for (const e of expects) { for (const [k, v] of Object.entries(e)) { if (Array.isArray(v)) { out[k] = (out[k] ?? []).concat(v) } } }
   return out as unknown as Expect
 }

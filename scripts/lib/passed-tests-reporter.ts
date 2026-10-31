@@ -11,10 +11,10 @@ export default async function* passedTests(events: AsyncIterable<TestEvent>): As
   // before its result, so names[0..nesting-1] then hold the passing test's ancestors.
   const names: string[] = []
   for await (const { type, data } of events) {
-    if (type === 'test:start') names[data.nesting] = data.name
+    if (type === 'test:start') { names[data.nesting] = data.name }
     // skip, todo and expectFailure are absent unless set; t.skip('') sets skip to ''.
     else if (type === 'test:pass' && data.details?.type === 'test' && data.skip === undefined && data.todo === undefined &&
       data.expectFailure === undefined && data.file !== resolve(data.name))
-      yield `${JSON.stringify([...names.slice(0, data.nesting), data.name])}\n`
+      { yield `${JSON.stringify([...names.slice(0, data.nesting), data.name])}\n` }
   }
 }

@@ -9,18 +9,20 @@ export type Segment = { kind: 'prose'; text: string } | { kind: 'mermaid'; text:
 const LINE_END = /(?:\r\n|\r|\n)$/
 
 export function splitFences(reply: string): Segment[] {
-  const out: Segment[] = []; let from = 0, pos = 0
+  const out: Segment[] = []; let from = 0
+let  pos = 0
   let open: { ch: string; len: number; at: number; bodyAt: number; mermaid: boolean } | null = null
   for (const line of reply.match(/[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$/g) ?? []) {
-    const t = line.replace(LINE_END, ''), next = pos + line.length
+    const t = line.replace(LINE_END, '')
+const  next = pos + line.length
     if (!open) {
       const m = /^ {0,3}(`{3,}|~{3,})([^\r\n]*)$/.exec(t)
-      if (m && !(m[1]![0] === '`' && m[2]!.includes('`'))) open = { ch: m[1]![0]!, len: m[1]!.length, at: pos, bodyAt: next, mermaid: /^[ \t]*mermaid[ \t]*$/.test(m[2]!) }
+      if (m && !(m[1]![0] === '`' && m[2]!.includes('`'))) { open = { ch: m[1]![0]!, len: m[1]!.length, at: pos, bodyAt: next, mermaid: /^[ \t]*mermaid[ \t]*$/.test(m[2]!) } }
     } else {
       const m = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(t)
       if (m && m[1]![0] === open.ch && m[1]!.length >= open.len) {
         if (open.mermaid) {
-          if (open.at > from) out.push({ kind: 'prose', text: reply.slice(from, open.at) })
+          if (open.at > from) { out.push({ kind: 'prose', text: reply.slice(from, open.at) }) }
           out.push({ kind: 'mermaid', text: reply.slice(open.at, next), body: reply.slice(open.bodyAt, pos).replace(LINE_END, '') })
           from = next
         }
@@ -29,6 +31,6 @@ export function splitFences(reply: string): Segment[] {
     }
     pos = next
   }
-  if (from < reply.length) out.push({ kind: 'prose', text: reply.slice(from) })
+  if (from < reply.length) { out.push({ kind: 'prose', text: reply.slice(from) }) }
   return out
 }

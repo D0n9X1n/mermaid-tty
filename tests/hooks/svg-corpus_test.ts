@@ -20,23 +20,24 @@ const sample = readdirSync(DIR).filter(f => f.endsWith('.svg')).sort()
 
 // The element and attribute names an SVG uses, by context: inside a foreignObject is HTML. Namespace declarations aside.
 function names(svg: string): Set<string> {
-  const out = new Set<string>(), stack: string[] = []
+  const out = new Set<string>()
+const  stack: string[] = []
   for (const m of svg.matchAll(/<(\/?)([A-Za-z][\w:.-]*)((?:\s+[^\s=>/]+\s*=\s*"[^"]*")*)\s*(\/?)>/g)) {
     const [, close, name, attrs, self] = m
     if (close) { stack.pop(); continue }
     const ctx = stack.includes('foreignObject') ? 'html' : 'svg'
     out.add(`${ctx} element ${name}`)
-    for (const a of attrs!.matchAll(/([^\s=]+)\s*=\s*"[^"]*"/g)) if (!a[1]!.startsWith('xmlns')) out.add(`${ctx} attribute ${a[1]}`)
-    if (!self) stack.push(name!)
+    for (const a of attrs!.matchAll(/([^\s=]+)\s*=\s*"[^"]*"/g)) { if (!a[1]!.startsWith('xmlns')) { out.add(`${ctx} attribute ${a[1]}`) } }
+    if (!self) { stack.push(name!) }
   }
   return out
 }
 
 test('A6.hook-tests: every sampled Mermaid SVG (13 types, mmdc 11 and 12) passes layer A', () => {
   assert.ok(sample.length >= 26, `${sample.length} samples`)
-  for (const v of ['11', '12']) for (const t of ['class', 'er', 'flowchart', 'gantt', 'gitGraph', 'journey', 'mindmap', 'pie', 'quadrant', 'sequence', 'state', 'timeline', 'xychart'])
-    assert.ok(sample.some(f => f.startsWith(`mmdc${v}-`) && f.includes(`-${t}-ok-`)), `mmdc ${v} ${t}`)
-  for (const f of sample) assert.equal(svgUnsafe(readFileSync(join(DIR, f), 'utf8')), null, f)
+  for (const v of ['11', '12']) { for (const t of ['class', 'er', 'flowchart', 'gantt', 'gitGraph', 'journey', 'mindmap', 'pie', 'quadrant', 'sequence', 'state', 'timeline', 'xychart'])
+    { assert.ok(sample.some(f => f.startsWith(`mmdc${v}-`) && f.includes(`-${t}-ok-`)), `mmdc ${v} ${t}`) } }
+  for (const f of sample) { assert.equal(svgUnsafe(readFileSync(join(DIR, f), 'utf8')), null, f) }
 })
 
 test('A6.hook-tests: the allowlist is exactly the element and attribute names the sample uses', () => {
@@ -53,7 +54,9 @@ test('A6.hook-tests: every SVG real mmdc makes for a fixture that reaches it pas
   const fixtures = readdirSync('fixtures', { recursive: true, encoding: 'utf8' }).filter(f => /-ok-\d+\.mmd$/.test(f)).sort()
     .map(f => ({ name: f, body: readFileSync(join('fixtures', f), 'utf8').replace(/\r?\n$/, '') }))
     .filter(f => !parseFail(f.body) && !unsafeReason(f.body))
-  const tmp = mkdtempSync(join(tmpdir(), 'mtty-corpus-')), bad: string[] = [], failed: string[] = []
+  const tmp = mkdtempSync(join(tmpdir(), 'mtty-corpus-'))
+const  bad: string[] = []
+const  failed: string[] = []
   let checked = 0
   try {
     writeFileSync(join(tmp, 'puppeteer.json'), JSON.stringify(puppeteerConfig(80)))
@@ -67,8 +70,8 @@ test('A6.hook-tests: every SVG real mmdc makes for a fixture that reaches it pas
           const argv = mmdcArgs({ out, format: 'svg', look, config: join(tmp, `config-${look}.json`), puppeteer: join(tmp, 'puppeteer.json'), columns: 80, major })
           const c = spawn(bin, argv.slice(1), { stdio: ['pipe', 'ignore', 'ignore'] })
           c.on('close', () => {
-            if (!existsSync(out)) failed.push(`${major} ${look} ${f.name}`)
-            else { checked++; const r = svgUnsafe(readFileSync(out, 'utf8')); if (r) bad.push(`${major} ${look} ${f.name}: ${r}`) }
+            if (!existsSync(out)) { failed.push(`${major} ${look} ${f.name}`) }
+            else { checked++; const r = svgUnsafe(readFileSync(out, 'utf8')); if (r) { bad.push(`${major} ${look} ${f.name}: ${r}`) } }
             done()
           })
           c.stdin.end(f.body)
@@ -76,7 +79,7 @@ test('A6.hook-tests: every SVG real mmdc makes for a fixture that reaches it pas
       }
     }
     let next = 0
-    await Promise.all(Array.from({ length: 8 }, async () => { while (next < jobs.length) await jobs[next++]!() }))
+    await Promise.all(Array.from({ length: 8 }, async () => { while (next < jobs.length) { await jobs[next++]!() } }))
     console.log(`corpus: ${fixtures.length} fixtures, ${checked} SVGs checked, ${failed.length} not drawn by Mermaid: ${failed.join(', ')}`)
     assert.ok(checked > 0); assert.deepEqual(bad, [])
   } finally { rmSync(tmp, { recursive: true, force: true }) }

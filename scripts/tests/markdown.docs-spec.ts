@@ -28,10 +28,12 @@ test('section runs to the next h1/h2; text drops code; CJK', () => {
   assert.equal(text(parse('a<br>b\n\n    code\n')), 'a b ');
   // Every CJK range, checked one code point either side of each end.
   for (const [a, b] of [[0x3040, 0x30ff], [0x3400, 0x4dbf], [0x4e00, 0x9fff], [0xac00, 0xd7af], [0xf900, 0xfaff]] as const)
-    assert.deepEqual([a - 1, a, b, b + 1].map((c) => CJK.test(String.fromCharCode(c))), [false, true, true, false], a.toString(16));
+    { assert.deepEqual([a - 1, a, b, b + 1].map((c) => CJK.test(String.fromCharCode(c))), [false, true, true, false], a.toString(16)); }
 });
 test('GFM: a table and an autolink literal parse; within walks the parent links up to the root', () => {
-  const src = '| a | b |\n| - | - |\n| [![i](a.svg)](L) | see https://x.example/a |\n', t = parse(src), img = all(t, 'image')[0]!;
+  const src = '| a | b |\n| - | - |\n| [![i](a.svg)](L) | see https://x.example/a |\n'
+const  t = parse(src)
+const  img = all(t, 'image')[0]!;
   assert.equal(all(t, 'table').length, 1);
   assert.deepEqual([img.url, within(img, 'link'), within(img, 'table'), within(img, 'blockquote'), within(t, 'root')], ['a.svg', true, true, false, false]);
   // An image-only link has no visible label; a bare URL links to itself.
@@ -39,7 +41,8 @@ test('GFM: a table and an autolink literal parse; within walks the parent links 
 });
 test('lineOf: a node with no position takes the line of its nearest ancestor that has one; links() leaves out reference-style links', () => {
   // The GFM transform makes this literal autolink, and its text, with no position: both take the paragraph's line 3, not the root's 1.
-  const src = '# T\n\nsay "www.x.example"\n', link = all(parse(src), 'link')[0]!;
+  const src = '# T\n\nsay "www.x.example"\n'
+const  link = all(parse(src), 'link')[0]!;
   assert.deepEqual(links(src), [{ line: 3, label: 'www.x.example', target: 'http://www.x.example' }]);
   assert.deepEqual([link.position, lineOf(link.children![0]!)], [undefined, 3]);
   // A node that spans lines reports its first.

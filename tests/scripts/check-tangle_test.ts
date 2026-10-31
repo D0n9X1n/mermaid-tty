@@ -27,7 +27,7 @@ function tmp(t: TestContext): string {
 // explain with every arrow cell wiped: each edge keeps its end marks in expect but loses its head, so ambiguous-head fires.
 const headless: typeof explain = (s, o) => {
   const r = explain(s, o)
-  if (!isFail(r)) for (const row of r.drawing.cells) row.forEach((x, i) => { if (x?.kind === 'arrow') row[i] = null })
+  if (!isFail(r)) { for (const row of r.drawing.cells) { row.forEach((x, i) => { if (x?.kind === 'arrow') { row[i] = null } }) } }
   return r
 }
 const blocks = [{ id: 'one', source: CLEAN }, { id: 'prose', source: 'not a diagram' }, { id: 'two', source: CLEAN }]
@@ -54,7 +54,7 @@ test('VR.tangled: report with types adds <type>: <n> ok after the counts, n the 
 
 test('VR.tangled: the goldens are the -ok- fixtures of every fixtures/ folder but corpus; --corpus reads fixtures/corpus/*.mmd', () => {
   const ids = fixtures().map(b => b.id)
-  for (const t of ['flowchart', 'sequence', ...TIER1]) assert.ok(ids.includes(`${t}-ok-01`), t)
+  for (const t of ['flowchart', 'sequence', ...TIER1]) { assert.ok(ids.includes(`${t}-ok-01`), t) }
   assert.deepEqual(ids.filter(id => !/^[A-Za-z]+-ok-\d+$/.test(id) || id.startsWith('corpus-')), [])
   assert.ok(corpus().length > 0 && corpus().every(b => /^corpus-\d+$/.test(b.id)))
 })
@@ -70,7 +70,8 @@ test('VR.tangled: --private reads every closed mermaid fence of the .md files un
 })
 
 test('VR.tangled: no golden is tangled: the CLI prints the goldens\' counts, then <type>: <n> ok per type, and exits 0', () => {
-  const r = run(), types = [...new Set(fixtures().map(b => b.id.slice(0, b.id.indexOf('-'))))]
+  const r = run()
+const  types = [...new Set(fixtures().map(b => b.id.slice(0, b.id.indexOf('-'))))]
   assert.equal(r.stdout, [`check-tangle: ${fixtures().length} blocks, 0 hits at 60, 80 and 120 columns`,
     ...types.map(t => `${t}: ${fixtures().filter(b => b.id.startsWith(`${t}-`)).length} ok`)].map(l => `${l}\n`).join(''))
   assert.equal(r.stderr, ''); assert.equal(r.status, 0)
@@ -87,7 +88,8 @@ test('VR.tangled: --corpus adds the corpus\'s counts and the ids that hit; --pri
 })
 
 test('VR.tangled: main exits 1 on any hit, and --private DIR still names no file and quotes no block', t => {
-  const d = tmp(t), out: string[] = []
+  const d = tmp(t)
+const  out: string[] = []
   writeFileSync(join(d, 'n.md'), NOTE)
   t.mock.method(console, 'log', (s: string) => void out.push(s))
   assert.equal(main(['--private', d], headless), 1)

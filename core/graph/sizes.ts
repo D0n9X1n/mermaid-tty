@@ -17,7 +17,7 @@ function size(lines: readonly (string | number)[], wrapAt: number | null, extra:
   for (const line of lines) {
     if (typeof line === 'number') { widths.push(line); continue }
     const ps = wrapAt === null ? [line] : wrap(line, wrapAt)?.map(p => p.text)
-    if (!ps) return fail('word-too-wide')
+    if (!ps) { return fail('word-too-wide') }
     widths.push(...ps.map(width))
   }
   return { rows: widths.length, cols: Math.max(0, ...widths) + extra }
@@ -32,8 +32,8 @@ const fixedWidth = (r: NodeRow): number | null =>
 // A mark is one glyph cell, whatever its rows. A bar is span cells across the flow: a row of them, or a column when the
 // ranks go across, so layered's cross extent is always span. A bar with no span is one cell.
 export function nodeSize(n: GNode, wrapAt: number | null, across = false): Size | Fail {
-  if (n.mark === 'bar') return across ? { rows: n.span ?? 1, cols: 1 } : { rows: 1, cols: n.span ?? 1 }
-  if (n.mark) return { rows: 1, cols: 1 }
+  if (n.mark === 'bar') { return across ? { rows: n.span ?? 1, cols: 1 } : { rows: 1, cols: n.span ?? 1 } }
+  if (n.mark) { return { rows: 1, cols: 1 } }
   return size(n.rows.map(r => fixedWidth(r) ?? r.text), wrapAt, 2 + width(CAPS[n.shape][0]) + width(CAPS[n.shape][1]))
 }
 

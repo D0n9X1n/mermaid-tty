@@ -13,10 +13,10 @@ test('A3: a connector over a lane records both arms: the lane is an owner of the
   assert.deepEqual([d.cells[5][2].ch, d.cells[6][2].segs], ['╵', [{ owner: 'm6', dirs: 10 }]])
 })
 test('A5.mutation-tests: a crossing glyph that is not what its arms draw fails line-glyph', () => {
-  for (const [r, chs] of [[6, '┴┼┬'], [4, '─┴┬']] as const) for (const ch of chs) {
+  for (const [r, chs] of [[6, '┴┼┬'], [4, '─┴┬']] as const) { for (const ch of chs) {
     const d = structuredClone(X(CROSS)); d.cells[r][2] = { ...d.cells[r][2], ch }
     assert.deepEqual(validate(d), { reason: 'line-glyph' }, `${r} ${ch}`)
-  }
+  } }
 })
 test('A5.mutation-tests: removing the lane stretch a crossing continues leaves its arm dangling', () => {
   const d = structuredClone(X(CROSS)); d.cells[5][2] = null
@@ -30,20 +30,20 @@ test('A3: each commit declares its glyph, and each unforked lane its opening cap
   assert.deepEqual(d.expect.glyphs, [{ owner: 's0', ch: '╷' }, { owner: 'c1', ch: '●' }, { owner: 'c2', ch: '⊗' }, { owner: 'c3', ch: '■' }, { owner: 'c5', ch: '●' }, { owner: 'c6', ch: '◉' }])
 })
 test('A5.mutation-tests: a commit drawn with another type\'s glyph fails glyph-wrong', () => {
-  for (const [r, c] of [[0, 0], [1, 0], [2, 0], [3, 0], [5, 2], [6, 0]]) for (const ch of '●⊗■◉◎╵') {
+  for (const [r, c] of [[0, 0], [1, 0], [2, 0], [3, 0], [5, 2], [6, 0]]) { for (const ch of '●⊗■◉◎╵') {
     const d = structuredClone(X(TYPES))
-    if (d.cells[r][c].ch === ch) continue
+    if (d.cells[r][c].ch === ch) { continue }
     d.cells[r][c] = { ...d.cells[r][c], ch }
     assert.deepEqual(validate(d), { reason: 'glyph-wrong' }, `${r},${c} ${ch}`)
-  }
+  } }
 })
 // Moves every text cell each owner draws (owners[0]) down by its dr, all lifted before any is placed, so labels can swap.
 function relocate(d: any, moves: [string, number][]): any {
   const lifted: [number, number, any][] = []
-  for (const [owner, dr] of moves) d.cells.forEach((row: any[], r: number) => row.forEach((x, c) => {
+  for (const [owner, dr] of moves) { d.cells.forEach((row: any[], r: number) => row.forEach((x, c) => {
     if (x && (x.kind === 'text' || x.kind === 'cont') && x.owners[0] === owner) { lifted.push([r + dr, c, x]); row[c] = null }
-  }))
-  for (const [r, c, x] of lifted) d.cells[r][c] = x
+  })) }
+  for (const [r, c, x] of lifted) { d.cells[r][c] = x }
   return d
 }
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'

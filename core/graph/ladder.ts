@@ -49,13 +49,14 @@ function attempt(build: Build, dir: Dir, keyed: boolean, gaps: Gaps, wrapAt: num
   let last: Fail = fail('route-conflict')
   for (const extra of [0, 2, 4]) {
     const b = build({ dir, keyed, wrapAt })
-    if (isFail(b)) return b
-    if (keyed && b.keyable.length === 0) return fail('step')
+    if (isFail(b)) { return b }
+    if (keyed && b.keyable.length === 0) { return fail('step') }
     const placed = layoutGraph(withNotes(b.graph), { rankGap: gaps.rankGap + extra, nodeGap: gaps.nodeGap + extra, wrapAt })
-    if (isFail(placed)) return placed
+    if (isFail(placed)) { return placed }
     const routes = routeGraph(placed)
-    if (isFail(routes)) { if (routes.reason !== 'route-conflict') return routes; last = routes; continue }
-    const d = drawGraph(placed, routes, columns), head = title === null ? null : heading(title, 'title', 'title', columns)
+    if (isFail(routes)) { if (routes.reason !== 'route-conflict') { return routes; } last = routes; continue }
+    const d = drawGraph(placed, routes, columns)
+const  head = title === null ? null : heading(title, 'title', 'title', columns)
     const titled = head === null ? d : isFail(head) ? head : stack([head, d], columns)
     // Nothing to key (flowchart): no legend pass, so the drawing's expect stays exactly A's, with no empty keys or keyable.
     return b.legend.length === 0 && b.keyable.length === 0 ? titled : withLegend(titled, b.legend, columns, b.keyable)
@@ -66,14 +67,15 @@ function attempt(build: Build, dir: Dir, keyed: boolean, gaps: Gaps, wrapAt: num
 // step's drawing at columns: each of its wrapAt tries in order, the first drawing validate accepts, else the last try.
 // lrToTd and keyed draw LR as TB and RL as BT; only keyed builds keyed. A step off the graph ladder fails 'step'.
 export function drawAt(build: Build, dir: Dir, step: Step, columns: number, title: string | null): Drawing | Fail {
-  if (!isGraphStep(step)) return fail('step')
-  const { row, wraps } = PLAN[step], turn = step === 'lrToTd' || step === 'keyed'
+  if (!isGraphStep(step)) { return fail('step') }
+  const { row, wraps } = PLAN[step]
+const  turn = step === 'lrToTd' || step === 'keyed'
   const drawn: Dir = !turn ? dir : dir === 'LR' ? 'TB' : dir === 'RL' ? 'BT' : dir
   const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
   let last: Drawing | Fail = fail('too-wide')
   for (const wrapAt of wraps) {
     last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title)
-    if (!isFail(last) && validate(last) === null) return last
+    if (!isFail(last) && validate(last) === null) { return last }
   }
   return last
 }

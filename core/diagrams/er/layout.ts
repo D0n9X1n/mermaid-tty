@@ -16,7 +16,7 @@ import { parseEr, type ErModel } from './parse.ts'
 // label and chain cells, an attribute column's, or the title. Owners would then be ambiguous, so the fence falls back.
 function parse(src: Source): ErModel | Fail {
   const m = parseEr(src)
-  if (isFail(m)) return m
+  if (isFail(m)) { return m }
   const minted = new Set([...(m.title === null ? [] : ['title']), ...m.relations.flatMap(r => [r.id, `${r.id}:label`, `${r.id}:tail`, `${r.id}:head`]),
     ...m.entities.flatMap(e => e.attrs.flatMap((_, k) => ['type', 'name', 'keys', 'comment'].map(f => `${e.id}.a${k}.${f}`)))])
   const ids = [...m.entities.map(e => e.id), ...m.subgraphs.map(s => s.id)]
@@ -30,7 +30,7 @@ function build(m: ErModel, { dir, keyed, wrapAt }: Parameters<Build>[0]): Return
   for (const e of m.entities) {
     const owner = (k: number) => `${e.id}.a${k}.comment`
     const rows = erRows(e.id, e.attrs.map((a, k) => (key.has(owner(k)) ? { ...a, comment: key.get(owner(k))! } : a)), wrapAt)
-    if (isFail(rows)) return rows
+    if (isFail(rows)) { return rows }
     const keyedRows = rows.map((r): NodeRow => (r.cols ? { ...r, cols: r.cols.map(c => (key.has(c.id) ? { ...c, key: key.get(c.id)! } : c)) } : r))
     nodes.push({ id: e.id, shape: 'rect', role: 'node', order: e.order, rows: [{ text: e.label, role: 'node', align: 'center' }, ...keyedRows] })
   }

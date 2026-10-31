@@ -19,8 +19,9 @@ function readRepo(path: string): Uint8Array | null {
 // Each fixtures/<t>/<t>-ok-NN.mmd, sorted, followed by its goldens/<t>/<t>-ok-NN.golden, present or not, so a
 // missing golden fails the gate. None when the fixture folder is absent.
 export function tier2Files(t: string): string[] {
-  const dir = join(ROOT, 'fixtures', t), ok = new RegExp(`^${t}-ok-\\d{2}\\.mmd$`)
-  if (!existsSync(dir)) return []
+  const dir = join(ROOT, 'fixtures', t)
+const  ok = new RegExp(`^${t}-ok-\\d{2}\\.mmd$`)
+  if (!existsSync(dir)) { return [] }
   return readdirSync(dir).filter(n => ok.test(n)).sort()
     .flatMap(n => [`fixtures/${t}/${n}`, `goldens/${t}/${n.slice(0, -'.mmd'.length)}.golden`])
 }
@@ -29,7 +30,7 @@ export function tier2Files(t: string): string[] {
 // check-review-hashes.ts reports its parse error.
 export function repoRecords(): ReviewRecord[] {
   const dir = join(ROOT, DIR)
-  if (!existsSync(dir)) return []
+  if (!existsSync(dir)) { return [] }
   return readdirSync(dir).filter(f => f.endsWith('.md')).sort()
     .map(f => parseRecord(`${DIR}/${f}`, readFileSync(join(dir, f), 'utf8')))
     .filter((p): p is ReviewRecord => !('error' in p))
@@ -41,25 +42,26 @@ export function repoRecords(): ReviewRecord[] {
 export function tier2Problems(t: string, files: string[], records: ReviewRecord[],
   read: (path: string) => string | Uint8Array | null = readRepo): string[] {
   const scope = `vr-C-${t}`
-  if (!files.length) return [`${scope}: no ok fixtures`]
+  if (!files.length) { return [`${scope}: no ok fixtures`] }
   const each = records.filter(r => r.scope === scope && r.verdict === 'pass')
     .map(r => [...requirePass([r], { [scope]: files }), ...checkRecords([r], read)])
-  if (!each.length) return requirePass([], { [scope]: files })
+  if (!each.length) { return requirePass([], { [scope]: files }) }
   return each.reduce((best, p) => (p.length < best.length ? p : best))
 }
 
 function main(): number {
   const records = repoRecords()
   const problems = TIER2.flatMap(t => {
-    const found = tier2Problems(t, tier2Files(t), records), enabled = TIER2_PASSED.includes(t)
-    if (enabled) return found.map(p => `${t}: ${p}`)
+    const found = tier2Problems(t, tier2Files(t), records)
+const  enabled = TIER2_PASSED.includes(t)
+    if (enabled) { return found.map(p => `${t}: ${p}`) }
     return found.length ? [] : [`${t}: passes the gate but is not in TIER2_PASSED`]
   })
-  for (const p of problems) console.error(p)
-  if (problems.length) return 1
+  for (const p of problems) { console.error(p) }
+  if (problems.length) { return 1 }
   console.log(`check-tier2: TIER2_PASSED [${TIER2_PASSED.join(', ')}] lists exactly the Tier 2 types that pass the gate`)
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports tier2Problems.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

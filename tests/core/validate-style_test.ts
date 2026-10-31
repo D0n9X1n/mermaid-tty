@@ -8,7 +8,8 @@ const drawing = (src: string): Drawing => {
 }
 // The drawing of src with the line cell at (r, c), which must show was, redrawn as ch: its arms, style and owners kept.
 const restyled = (src: string, r: number, c: number, was: string, ch: string): Drawing => {
-  const d = structuredClone(drawing(src)), x = d.cells[r]![c]!
+  const d = structuredClone(drawing(src))
+const  x = d.cells[r]![c]!
   assert.equal(x.kind, 'line'); assert.equal(x.ch, was)
   d.cells[r]![c] = { ...x, ch }
   return d
@@ -38,7 +39,7 @@ test('A whole edge redrawn heavy or dotted fails line-glyph', () => {
   assert.equal(lines.length, 2)
   for (const [style, weight, ch] of [['heavy', '2', '━'], ['dotted', '1', '┄']] as const) {
     const d = structuredClone(r.drawing)
-    for (const [y, c] of lines) d.cells[y]![c] = { ...d.cells[y]![c]!, ch, style, arms: `0${weight}0${weight}` }
+    for (const [y, c] of lines) { d.cells[y]![c] = { ...d.cells[y]![c]!, ch, style, arms: `0${weight}0${weight}` } }
     assert.match(d.cells.map(row => row.map(x => (x ? x.ch : ' ')).join('')).join('\n'), new RegExp(`\\]${ch}${ch}►\\[`))
     assert.equal(validate(d)?.reason, 'line-glyph', style)
   }
@@ -52,7 +53,8 @@ test('A line cell drawn for an invisible edge fails line-glyph', () => {
   const [id] = r.drawing.expect.hidden ?? []
   assert.ok(id, 'the ~~~ edge is listed as hidden')
   assert.equal(validate(r.drawing), null)
-  const d = structuredClone(r.drawing), row = d.cells.findIndex(x => x.some(c => c?.owners.includes('C')))
+  const d = structuredClone(r.drawing)
+const  row = d.cells.findIndex(x => x.some(c => c?.owners.includes('C')))
   const col = d.cells[row]!.findIndex(c => c?.owners.includes('C')) - 1
   assert.equal(d.cells[row]![col], null)
   d.cells[row]![col] = { ch: '─', role: 'edge', kind: 'line', owners: [id!], dirs: 10, arms: '0101', style: 'light', segs: [{ owner: id!, dirs: 10 }] }
@@ -61,10 +63,10 @@ test('A line cell drawn for an invisible edge fails line-glyph', () => {
 // Every edge a fixture draws states its style, so the check above is never skipped for want of one.
 test('Every drawn edge of every ok fixture records its line style', () => {
   const missing: string[] = []
-  for (const dir of readdirSync('fixtures').filter(x => x !== 'corpus')) for (const f of readdirSync(`fixtures/${dir}`).filter(f => f.includes('-ok-'))) {
+  for (const dir of readdirSync('fixtures').filter(x => x !== 'corpus')) { for (const f of readdirSync(`fixtures/${dir}`).filter(f => f.includes('-ok-'))) {
     const r = explain(readFileSync(`fixtures/${dir}/${f}`, 'utf8'), { columns: 80, theme: 'mono' })
-    if ('drawing' in r) for (const e of r.drawing.expect.edges) if (!e.style) missing.push(`${f} ${e.id}`)
-  }
+    if ('drawing' in r) { for (const e of r.drawing.expect.edges) { if (!e.style) { missing.push(`${f} ${e.id}`) } } }
+  } }
   assert.deepEqual(missing, [])
 })
 
@@ -78,7 +80,8 @@ const lineCell = (ch: string, segs: { owner: string; dirs: number }[], style: 'l
 // Hole 1: a dotted edge whose every cell is a crossing shows no dash. C---D, rerouted up through both of A-.-B's cells,
 // draws [ A ]┼┼[ B ]: A-.-B reads as solid.
 test('A dotted edge drawn only as crossings fails line-glyph', () => {
-  const d = drawn('flowchart LR\nA -.- B\nC --- D\nE --- F'), [ab, cd] = d.expect.edges.map(e => e.id) as [string, string]
+  const d = drawn('flowchart LR\nA -.- B\nC --- D\nE --- F')
+const  [ab, cd] = d.expect.edges.map(e => e.id) as [string, string]
   d.cells.unshift(Array(d.cells[0]!.length).fill(null))   // a row above A-.-B for C---D to turn in
   d.cells[3]![5] = lineCell('┘', [{ owner: cd, dirs: 9 }]); d.cells[2]![5] = lineCell('│', [{ owner: cd, dirs: 5 }])
   d.cells[1]![5] = lineCell('┼', [{ owner: ab, dirs: 10 }, { owner: cd, dirs: 5 }]); d.cells[0]![5] = lineCell('┌', [{ owner: cd, dirs: 6 }])
@@ -90,13 +93,14 @@ test('A dotted edge drawn only as crossings fails line-glyph', () => {
 // Hole 2: an edge drawn as its head alone has no line to show its style. A-.->B with its two ┄ columns cut: [ A ]►[ B ].
 test('An edge drawn with no line cell fails line-glyph', () => {
   const d = drawn('flowchart LR\nA -.-> B')
-  for (const row of d.cells) row.splice(5, 2)
+  for (const row of d.cells) { row.splice(5, 2) }
   assert.equal(rows(d)[0], '[ A ]►[ B ]')
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
 // Hole 3: an invisible edge draws no cell of any kind, a head included. A ~~~ B with a ► owned by it between them.
 test('A head drawn for an invisible edge fails line-glyph', () => {
-  const d = drawn('flowchart LR\nA ~~~ B'), [id] = d.expect.hidden ?? []
+  const d = drawn('flowchart LR\nA ~~~ B')
+const  [id] = d.expect.hidden ?? []
   assert.equal(d.cells[0]![5], null)
   d.cells[0]![5] = { ch: '►', role: 'arrow', kind: 'arrow', owners: [id!], dirs: 0 }
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
@@ -109,7 +113,7 @@ function cornerCross(ring = false): Drawing {
   c.text(1, 0, 'a', 'node', 'A'); c.text(3, 1, 'b', 'node', 'B'); c.text(2, 0, 'c', 'node', 'C'); c.text(2, 2, 'd', 'node', 'D')
   c.line(1, 1, 12, 'dotted', 'edge', 'AB'); c.line(2, 1, 5, 'dotted', 'edge', 'AB'); c.line(2, 1, 10, 'light', 'edge', 'CD')
   // A closed ┄ ring owned by A-.-B, joined to nothing: a dotted witness off its path.
-  if (ring) for (const [r, col, dirs] of [[5, 4, 6], [5, 5, 10], [5, 6, 12], [6, 4, 5], [6, 6, 5], [7, 4, 3], [7, 5, 10], [7, 6, 9]] as const) c.line(r, col, dirs, 'dotted', 'edge', 'AB')
+  if (ring) { for (const [r, col, dirs] of [[5, 4, 6], [5, 5, 10], [5, 6, 12], [6, 4, 5], [6, 6, 5], [7, 4, 3], [7, 5, 10], [7, 6, 9]] as const) { c.line(r, col, dirs, 'dotted', 'edge', 'AB') } }
   return c.toDrawing({ labels: ['A', 'B', 'C', 'D'].map(o => ({ owner: o, text: o.toLowerCase() })), edgeLabels: [], frames: [],
     edges: [{ id: 'AB', from: 'A', to: 'B', ends: [], style: 'dotted' }, { id: 'CD', from: 'C', to: 'D', ends: [], style: 'solid' }] })
 }
@@ -122,7 +126,7 @@ test('A dotted edge drawn only as a corner and a crossing fails line-glyph', () 
 test('A dotted two-headed self-message draws a dotted straight cell, or falls back', () => {
   for (const columns of [60, 80, 120]) {
     const r = explain('sequenceDiagram\nA<<-->>A: x', { columns, theme: 'mono' })
-    if (!('drawing' in r)) continue
+    if (!('drawing' in r)) { continue }
     const mine = r.drawing.cells.flat().filter(x => x?.kind === 'line' && x.owners.includes('m0'))
     assert.ok(mine.some(x => x!.style === 'dotted' && (x!.dirs === 5 || x!.dirs === 10)), `${columns}\n${rows(r.drawing).join('\n')}`)
     assert.equal(validate(r.drawing), null, `${columns}`)
@@ -145,7 +149,7 @@ test('A stray ring beside an edge label is not reached through the label, and fa
   c.line(1, 5, 10, 'dotted', 'edge', 'AB'); c.line(1, 6, 10, 'dotted', 'edge', 'AB')
   c.line(1, 5, 5, 'light', 'edge', 'CD'); c.line(1, 6, 5, 'light', 'edge', 'EF')
   c.text(1, 7, 'x', 'label', ['AB:label', 'AB'])
-  for (const [r, col, dirs] of [[2, 7, 6], [2, 8, 10], [2, 9, 12], [3, 7, 5], [3, 9, 5], [4, 7, 3], [4, 8, 10], [4, 9, 9]] as const) c.line(r, col, dirs, 'dotted', 'edge', 'AB')
+  for (const [r, col, dirs] of [[2, 7, 6], [2, 8, 10], [2, 9, 12], [3, 7, 5], [3, 9, 5], [4, 7, 3], [4, 8, 10], [4, 9, 9]] as const) { c.line(r, col, dirs, 'dotted', 'edge', 'AB') }
   const d = c.toDrawing({ labels: [...['A', 'B'].map(o => ({ owner: o, text: `[ ${o} ]` })), ...['C', 'D', 'E', 'F'].map(o => ({ owner: o, text: o.toLowerCase() })),
     { owner: 'AB:label', text: 'x' }], edgeLabels: [{ owner: 'AB:label', edge: 'AB' }], frames: [],
     edges: [{ id: 'AB', from: 'A', to: 'B', ends: [], style: 'dotted' }, { id: 'CD', from: 'C', to: 'D', ends: [], style: 'solid' },

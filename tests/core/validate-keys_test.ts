@@ -10,7 +10,7 @@ function keyed(drawn: readonly [string, string | null, (string | null)?][], keys
   drawn.forEach(([item, key, lk], i) => {
     if (key === null) { c.text(0, 6 * i, TEXT[item]!, 'note', item); return }
     c.key(0, 6 * i, key, 'note', item, false)
-    if (lk !== undefined) { if (lk !== null) c.key(1 + i, 0, lk, 'note', item, true); c.text(1 + i, 2, TEXT[item]!, 'note', item) }
+    if (lk !== undefined) { if (lk !== null) { c.key(1 + i, 0, lk, 'note', item, true); } c.text(1 + i, 2, TEXT[item]!, 'note', item) }
   })
   return c.toDrawing({ labels: drawn.map(([item]) => ({ owner: item, text: TEXT[item]! })), edges: [], edgeLabels: [], frames: [],
     keys, keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
@@ -26,10 +26,11 @@ test('A5.mutation-tests: each key is drawn once at its item and once in the lege
     [[['n1', 'a', 'a'], ['n2', null]], [K[0]!], 'key-partial'],              // half the class keyed
     [[['n1', 'a', 'a'], ['n2', 'b', 'b']], [K[0]!], 'key-stray'],            // a key no entry lists
   ] as const
-  for (const [drawn, keys, reason] of cases) assert.deepEqual(validate(keyed(drawn, keys)), { reason }, reason)
+  for (const [drawn, keys, reason] of cases) { assert.deepEqual(validate(keyed(drawn, keys)), { reason }, reason) }
 })
 test('A5.mutation-tests: a legend key is bound to its own row, so swapping whole legend key cells between rows fails', () => {
-  const rows = (k1: string, k2: string): Drawing => { const c = createCanvas(3, 12, 12), own = (k: string) => (k === 'a' ? 'n1' : 'n2')
+  const rows = (k1: string, k2: string): Drawing => { const c = createCanvas(3, 12, 12)
+const  own = (k: string) => (k === 'a' ? 'n1' : 'n2')
     c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, 6, 'b', 'note', 'n2', false)
     c.key(1, 0, k1, 'note', own(k1), true); c.text(1, 2, 'memo', 'note', 'n1'); c.key(2, 0, k2, 'note', own(k2), true); c.text(2, 2, 'other', 'note', 'n2')
     return c.toDrawing({ labels: [{ owner: 'n1', text: 'memo' }, { owner: 'n2', text: 'other' }], edges: [], edgeLabels: [], frames: [], keys: K,
@@ -39,7 +40,7 @@ test('A5.mutation-tests: a legend key is bound to its own row, so swapping whole
 test("A5.mutation-tests: an edge label's key cell carries its edge like the label's text", () => {
   const draw = (key: boolean): Drawing => {
     const c = createCanvas(7, 8, 8); c.text(0, 2, 'A', 'node', 'A'); c.line(1, 2, 5, 'light', 'edge', 'e0')
-    if (key) c.key(2, 2, 'a', 'label', ['e0:label', 'e0'], false)
+    if (key) { c.key(2, 2, 'a', 'label', ['e0:label', 'e0'], false) }
     c.line(3, 2, 5, 'light', 'edge', 'e0'); c.arrow(4, 2, '▼', 'e0'); c.text(5, 2, 'B', 'node', 'B')
     c.key(6, 0, 'a', 'label', 'e0:label', true); c.text(6, 2, 'yes', 'label', 'e0:label')
     return c.toDrawing({ labels: [{ owner: 'A', text: 'A' }, { owner: 'B', text: 'B' }, { owner: 'e0:label', text: 'yes' }],
@@ -95,7 +96,7 @@ test('A5.mutation-tests: a second run fails key-dup; a legend key not one blank 
   assert.equal(validate(board()), null)
   assert.deepEqual(validate(board(c => c.key(0, 4, 'a', 'note', 'n1', false))), { reason: 'key-dup' })   // a second in-place run
   assert.deepEqual(validate(board(c => c.key(2, 0, 'a', 'note', 'n1', true))), { reason: 'key-dup' })    // a second legend run
-  for (const gap of [0, 2]) assert.deepEqual(validate(board(undefined, gap)), { reason: 'key-unbound' }, `gap ${gap}`)
+  for (const gap of [0, 2]) { assert.deepEqual(validate(board(undefined, gap)), { reason: 'key-unbound' }, `gap ${gap}`) }
   assert.deepEqual(validate(board(c => c.key(0, 1, 'b', 'note', 'n1', false))), { reason: 'key-mismatch' })   // its in-place run reads ab
 })
 // One in-place key a owned by both points p1 and p2, at (0, 0) and (0, 1), then each point's own legend row.
@@ -114,7 +115,7 @@ test('A5.mutation-tests: stacked keyed parts validate on their merged expect, an
     return c.toDrawing({ labels: [{ owner: k.item, text }], edges: [], edgeLabels: [], frames: [], keys: [k], keyable: [{ item: k.item, cls: k.cls }] }) }
   const d = stack([part(K[0]!, 'memo'), part(K[1]!, 'other')], 8)
   assert.deepEqual(d.expect.keys, K); assert.equal(validate(d), null)
-  for (const i of [0, 1]) assert.deepEqual(validate({ ...d, expect: { ...d.expect, keys: d.expect.keys!.filter((_, j) => j !== i) } }), { reason: 'key-stray' }, `${i}`)
+  for (const i of [0, 1]) { assert.deepEqual(validate({ ...d, expect: { ...d.expect, keys: d.expect.keys!.filter((_, j) => j !== i) } }), { reason: 'key-stray' }, `${i}`) }
 })
 // n1's in-place key a at (0, 0) and n2's b at (0, k), then each one's legend row.
 function apart(k: number): Drawing {
@@ -145,15 +146,15 @@ function lone(r: number, c: number): Drawing {
 test("A5.mutation-tests: an entry's at is in its in-place key or beside it on its row, and a key several items own needs at on each", () => {
   assert.deepEqual(validate(points(20)), { reason: 'key-unplaced' }); assert.equal(validate(points(2)), null)   // the second point far off; then beside the key
   assert.deepEqual(validate(points(2, false)), { reason: 'key-unplaced' })                                    // a shared key, and no at
-  for (const c of [1, 2, 3]) assert.equal(validate(lone(0, c)), null, `${c}`)                                 // beside it on the left, in it, beside it on the right
-  for (const [r, c] of [[0, 0], [0, 4], [1, 2]] as const) assert.deepEqual(validate(lone(r, c)), { reason: 'key-unplaced' }, `${r},${c}`)
+  for (const c of [1, 2, 3]) { assert.equal(validate(lone(0, c)), null, `${c}`) }                                 // beside it on the left, in it, beside it on the right
+  for (const [r, c] of [[0, 0], [0, 4], [1, 2]] as const) { assert.deepEqual(validate(lone(r, c)), { reason: 'key-unplaced' }, `${r},${c}`) }
 })
 // In-place keys a and b at (0, 0) and (0, 2), then the legend: a alpha · 0.3, its separator and value owned by others, then
 // n1's wrapped tail and b beta in the given order.
 function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
   const c = createCanvas(4, 16, 16); c.key(0, 0, 'a', 'note', 'n1', false); c.key(0, 2, 'b', 'note', 'n2', false)
   c.key(1, 0, 'a', 'note', 'n1', true); c.text(1, 2, 'alpha', 'note', 'n1'); c.text(1, 7, ' · ', 'note', 'sep'); c.text(1, 10, '0.3', 'value', 'n1.xy')
-  order.forEach((x, i) => { if (x === 'tail') c.text(2 + i, 2, 'tail', 'note', 'n1', ' '); else { c.key(2 + i, 0, 'b', 'note', 'n2', true); c.text(2 + i, 2, 'beta', 'note', 'n2') } })
+  order.forEach((x, i) => { if (x === 'tail') { c.text(2 + i, 2, 'tail', 'note', 'n1', ' '); } else { c.key(2 + i, 0, 'b', 'note', 'n2', true); c.text(2 + i, 2, 'beta', 'note', 'n2') } })
   return c.toDrawing({ labels: [{ owner: 'n1', text: 'alpha tail' }, { owner: 'sep', text: '·' }, { owner: 'n1.xy', text: '0.3' }, { owner: 'n2', text: 'beta' }],
     edges: [], edgeLabels: [], frames: [], keys: K, keyable: [{ item: 'n1', cls: 'note' }, { item: 'n2', cls: 'note' }] })
 }

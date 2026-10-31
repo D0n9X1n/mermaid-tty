@@ -36,7 +36,7 @@ export type ExpectLine = { cols: number; step: Step | 'fallback'; widest?: numbe
 export function expectLines(src: string): ExpectLine[] {
   return src.split('\n').flatMap(line => {
     const m = /^%% expect (\d+) (\w+)(?: widest (\d+))?$/.exec(line)
-    if (!m) return []
+    if (!m) { return [] }
     const e: ExpectLine = { cols: Number(m[1]), step: m[2] as ExpectLine['step'] }
     return [m[3] === undefined ? e : { ...e, widest: Number(m[3]) }]
   })
@@ -84,7 +84,8 @@ const BARS = { h: [...'▏▎▍▌▋▊▉█'], v: [...'▁▂▃▄▅▆▇
 const eighths = (cell: Cell | null | undefined, axis: 'h' | 'v'): number => (cell?.kind === 'cap' ? BARS[axis].indexOf(cell.ch) + 1 : 0)
 // The summed eighths of the bar caps from (r, c) on, a step of dr rows and dc columns at a time, up to the first other cell.
 function run(d: Drawing, r: number, c: number, dr: number, dc: number, axis: 'h' | 'v'): number {
-  let sum = 0, e = eighths(d.cells[r]?.[c], axis)
+  let sum = 0
+let  e = eighths(d.cells[r]?.[c], axis)
   while (e > 0) { sum += e; r += dr; c += dc; e = eighths(d.cells[r]?.[c], axis) }
   return sum
 }

@@ -37,7 +37,7 @@ test('A6.command: a reply for each mode, changed or not', () => {
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
   const usage = { error: 'usage: /mermaid-tty [source|diagram|text]' }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
-  for (const a of [['source'], { toString: null }, 42, null]) assert.deepEqual(parseModeArgs(a), usage)
+  for (const a of [['source'], { toString: null }, 42, null]) { assert.deepEqual(parseModeArgs(a), usage) }
 })
 
 // text: diagrams drawn as text even where the terminal shows pictures; only source passes replies through.

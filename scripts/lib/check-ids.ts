@@ -21,10 +21,10 @@ export function parseIds(md: string): string[] {
   for (const line of md.split('\n')) {
     if (line.startsWith('## ')) { section = SECTION.exec(line)?.[1] ?? ''; continue }
     const labels = [...line.matchAll(LABEL)].map(m => slug(m[1]!))
-    if (section === 'Visual review') ids.push(...labels.map(l => `VR.${l}`))
+    if (section === 'Visual review') { ids.push(...labels.map(l => `VR.${l}`)) }
     else if (section) {
       const row = ROW.exec(line)?.[1]
-      if (row) ids.push(row, ...labels.map(l => `${row}.${l}`))
+      if (row) { ids.push(row, ...labels.map(l => `${row}.${l}`)) }
     }
   }
   return ids

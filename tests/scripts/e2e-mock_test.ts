@@ -36,7 +36,7 @@ test('A9.harness: the mock streams REPLY to every concurrent POST /v1/messages; 
 })
 
 test('A9.harness: REPLY has prose, a CJK flowchart, a sequence, an unsupported diagram and an unclosed fence', () => {
-  for (const s of ['读取配置文件', 'sequenceDiagram', 'flowchart-elk TD']) assert.ok(REPLY.includes(s), s)
+  for (const s of ['读取配置文件', 'sequenceDiagram', 'flowchart-elk TD']) { assert.ok(REPLY.includes(s), s) }
   assert.match(REPLY, /`{3}mermaid\nflowchart TD\nA --> B\n?$/)
 })
 
@@ -88,7 +88,8 @@ test("A9.harness: mermaid-tty's fence splitter finds REPLY's three closed diagra
 })
 
 // U+1F600, an astral character: two UTF-16 code units, four UTF-8 bytes. 读, a CJK character: one code unit, three bytes.
-const ASTRAL = '\u{1F600}', CJK = '读'
+const ASTRAL = '\u{1F600}'
+const  CJK = '读'
 test('A9.harness: chunks splits text into runs of 64 code points, never inside a surrogate pair or a character', () => {
   // Code unit 64 is the astral character's second half: a split by code units leaves a lone surrogate in each run.
   assert.deepEqual(chunks('a'.repeat(63) + ASTRAL + 'b'), ['a'.repeat(63) + ASTRAL, 'b'])
@@ -117,7 +118,8 @@ test('A9.harness: a stream is message_start, content_block_start, the deltas, co
     const r = await fetch(`${m.url}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-test', stream: true, messages: [{ role: 'user', content: 'hi' }] }) })
     assert.equal(r.status, 200)
     assert.equal(r.headers.get('content-type'), 'text/event-stream')
-    const body = await r.text(), list = events(body)
+    const body = await r.text()
+const  list = events(body)
     const deltas = list.filter(e => e.event === 'content_block_delta').map(e => e.data.delta.text as string)
     assert.equal(deltas.length, 5)
     assert.deepEqual(list, [
@@ -159,7 +161,8 @@ test('A9.harness: only stream: true streams; stream "false", stream 1 and no str
       const { type, content } = await r.json()
       assert.deepEqual({ type, content }, { type: 'message', content: [{ type: 'text', text: REPLY }] }, JSON.stringify(body))
     }
-    const r = await post({ stream: true }), sse = await r.text()
+    const r = await post({ stream: true })
+const  sse = await r.text()
     assert.equal(r.headers.get('content-type'), 'text/event-stream')
     assert.equal(events(sse).at(-1)?.event, 'message_stop')
     assert.equal(text(sse), REPLY)

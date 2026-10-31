@@ -66,7 +66,7 @@ export function allSteps(checks: Check[]): string[][] {
   const seen = new Set([NT, KIT, VALIDATE].map(s => JSON.stringify(s)))
   const rest = checks.filter(c => c.inAll !== false).flatMap(c => c.steps).filter(s => {
     const key = JSON.stringify(s)
-    if (seen.has(key)) return false
+    if (seen.has(key)) { return false }
     seen.add(key); return true
   })
   return [NT, ...rest]
@@ -75,16 +75,16 @@ export function allSteps(checks: Check[]): string[][] {
 // Runs one step and returns its exit code. id filters @nt and is the ID it proves; `all` passes none, and @nt proves every row's.
 export function run(step: string[], id?: string): number {
   const [cmd = '', ...args] = step
-  if (cmd === '@nt') return nodeTests(id)
-  if (cmd === '@kit') return claude(['plugin', 'test', '.'])
+  if (cmd === '@nt') { return nodeTests(id) }
+  if (cmd === '@kit') { return claude(['plugin', 'test', '.']) }
   if (cmd !== 'node' && cmd !== 'claude') { console.error(`unsupported step ${cmd}`); return 1 }
   const tmp = args.includes('@tmp') ? mkdtempSync(join(tmpdir(), 'mtty-')) : ''
   try {
     const argv = args.map(a => (a === '@tmp' ? tmp : a))
-    if (cmd === 'claude') return claude(argv)
+    if (cmd === 'claude') { return claude(argv) }
     return spawnSync(process.execPath, argv, { stdio: 'inherit' }).status ?? 1
   } finally {
-    if (tmp) rmSync(tmp, { recursive: true, force: true })
+    if (tmp) { rmSync(tmp, { recursive: true, force: true }) }
   }
 }
 
@@ -105,11 +105,11 @@ function nodeTests(id?: string): number {
     const r = spawnSync(process.execPath, [`--import=${hooks}`, '--test', '--test-reporter=tap', '--test-reporter-destination=stdout',
       `--test-reporter=${reporter}`, `--test-reporter-destination=${passed}`,
       ...(id ? [`--test-name-pattern=${idPattern(id)}`] : []), ...files], { stdio: 'inherit' })
-    if (r.status !== 0) return r.status ?? 1
+    if (r.status !== 0) { return r.status ?? 1 }
     const tests = readFileSync(passed, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line) as string[])
     const ids = id ? [id] : CHECKS.filter(c => c.steps.some(s => s[0] === '@nt')).map(c => c.id)
     const unproven = ids.filter(i => { const match = new RegExp(idPattern(i)); return !tests.some(names => names.some(n => match.test(n))) })
-    for (const i of unproven) console.error(`no tests ran for ${i}`)
+    for (const i of unproven) { console.error(`no tests ran for ${i}`) }
     return unproven.length > 0 ? 1 : 0
   } finally { rmSync(tmp, { recursive: true, force: true }) }
 }
@@ -123,10 +123,10 @@ function main(): number {
   for (const step of steps) {
     console.error(`> ${step.join(' ')}`)
     const code = run(step, id === 'all' ? undefined : id)
-    if (code !== 0) return code
+    if (code !== 0) { return code }
   }
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports CHECKS or run.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

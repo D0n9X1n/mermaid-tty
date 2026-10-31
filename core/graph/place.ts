@@ -22,31 +22,39 @@ export function place(units: readonly Unit[], edges: readonly GEdge[], labels: R
   const paths = new Map<string | null, string[]>()
   const path = (o: string | null) => paths.get(o) ?? paths.set(o, pathOf(outer, o)).get(o)!
   const common = (a: string | null, b: string | null) => {
-    const p = path(a), q = path(b), n = p.findIndex((c, i) => q[i] !== c)
+    const p = path(a)
+const  q = path(b)
+const  n = p.findIndex((c, i) => q[i] !== c)
     return (n < 0 ? p : p.slice(0, n)).at(-1) ?? null
   }
-  const level: Level = buildLevel(units, edges, labels, common), span = spans(level.items, path)
+  const level: Level = buildLevel(units, edges, labels, common)
+const  span = spans(level.items, path)
   addSpacers(level.items, span, path)
   const ranks: Item[][] = Array.from({ length: 1 + Math.max(-1, ...level.items.map(i => i.rank)) }, () => [])
-  for (const it of level.items) ranks[it.rank]!.push(it)
+  for (const it of level.items) { ranks[it.rank]!.push(it) }
   const fits = new Map([...fit].filter(([c]) => span.has(c)))
-  const placed = order(ranks, level.segs, path), x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
-  const heights = placed.map(r => Math.max(...r.map(i => i.main))), channel = channels(tracks(placed, level.segs), gap.rankGap)
+  const placed = order(ranks, level.segs, path)
+const  x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
+  const heights = placed.map(r => Math.max(...r.map(i => i.main)))
+const  channel = channels(tracks(placed, level.segs), gap.rankGap)
   const b = borders(span, c => path(c).length, channel, placed.length)
-  if (across) for (const [c, w] of [...fits].sort(([a], [z]) => path(z).length - path(a).length)) {
-    const [lo, hi] = span.get(c)!, t = bandTops(heights, channel, b.before, b.after).tops, mid = (lo + hi) >> 1
+  if (across) { for (const [c, w] of [...fits].sort(([a], [z]) => path(z).length - path(a).length)) {
+    const [lo, hi] = span.get(c)!
+const  t = bandTops(heights, channel, b.before, b.after).tops
+const  mid = (lo + hi) >> 1
     const short = w - (t[hi]! + heights[hi]! + b.down(c) - t[lo]! + b.up(c))
-    if (short > 0) heights[mid] = heights[mid]! + short  // innermost first: the strips around it see it grown
-  }
+    if (short > 0) { heights[mid] = heights[mid]! + short }  // innermost first: the strips around it see it grown
+  } }
   const { tops, length } = bandTops(heights, channel, b.before, b.after)
   const rects = new Map<string, Rect>()
   for (const it of placed.flat()) {
-    if (it.kind === 'spacer') continue
+    if (it.kind === 'spacer') { continue }
     rects.set(it.id, { cross: x.get(it.id)!, main: tops[it.rank]! + Math.floor((heights[it.rank]! - it.main) / 2), wide: it.cross, long: it.main })
   }
   const strips = new Map<string, Rect>()
   for (const [c, [lo, hi]] of span) {
-    const top = tops[lo]! - b.up(c), bottom = tops[hi]! + heights[hi]! - 1 + b.down(c)
+    const top = tops[lo]! - b.up(c)
+const  bottom = tops[hi]! + heights[hi]! - 1 + b.down(c)
     strips.set(c, { cross: x.get(LEFT(c))!, main: top, wide: x.get(RIGHT(c))! - x.get(LEFT(c))! + 1, long: bottom - top + 1 })
   }
   const wide = Math.max(0, ...[...rects.values(), ...strips.values()].map(r => r.cross + r.wide))

@@ -19,13 +19,14 @@ export const DARK_KEYS: Readonly<Record<string, string>> = Object.fromEntries(US
 // A span's color as hex: a '#rrggbb' as given, a ThemeKey through DARK_KEYS. Anything else throws, rather than
 // writing a color no viewer can draw.
 function paint(c: string): string {
-  if (/^#[0-9a-f]{6}$/i.test(c)) return c
-  if (Object.hasOwn(DARK_KEYS, c)) return DARK_KEYS[c]!
+  if (/^#[0-9a-f]{6}$/i.test(c)) { return c }
+  if (Object.hasOwn(DARK_KEYS, c)) { return DARK_KEYS[c]! }
   throw new Error(`render-svg: no color for ${JSON.stringify(c)}`)
 }
 
 // The default cell, in px: about a terminal cell's 1:2.
-export const CELL_W = 10, CELL_H = 20
+export const CELL_W = 10
+export const  CELL_H = 20
 
 // rows as a dark SVG page of cellW × cellH cells: a <rect> per background run, the most neighbouring cells of a row
 // with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style; dimColor, which terminals
@@ -35,17 +36,19 @@ export function rowsToSvg(rows: Rows, { cellW = CELL_W, cellH = CELL_H }: { cell
   rows.forEach((row, r) => {
     let col = 0
     for (const sp of row) {
-      const w = width(sp.text), last = runs[runs.length - 1]
+      const w = width(sp.text)
+const  last = runs[runs.length - 1]
       if (sp.backgroundColor !== undefined) {
         const fill = paint(sp.backgroundColor)
-        if (last?.r === r && last.fill === fill && last.col + last.w === col) last.w += w
-        else runs.push({ r, col, w, fill })
+        if (last?.r === r && last.fill === fill && last.col + last.w === col) { last.w += w }
+        else { runs.push({ r, col, w, fill }) }
       }
       col += w
     }
   })
   const cols = Math.max(1, ...rows.map(row => row.reduce((n, sp) => n + width(sp.text), 0)))
-  const W = cols * cellW + 2 * PAD, H = rows.length * cellH + 2 * PAD
+  const W = cols * cellW + 2 * PAD
+const  H = rows.length * cellH + 2 * PAD
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
     `<rect width="${W}" height="${H}" fill="${BG}"/>`,
     `<g transform="translate(${PAD} ${PAD})" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="${cellW * 17 / 10}" fill="${DARK_KEYS.text}">`,
@@ -71,16 +74,17 @@ export function glyphXs(svg: string): [string, number][] {
 // at x / cellW = its column, or both glyph counts when they differ. It counts code points, not graphemes: a base and a
 // spacing mark, which the renderer draws as one glyph, fail it, loudly rather than silently.
 export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
-  const want: { row: number; col: number; ch: string }[] = [], got = glyphXs(svg)
+  const want: { row: number; col: number; ch: string }[] = []
+const  got = glyphXs(svg)
   rows.forEach((row, r) => {
     let col = 0
     for (const ch of row.map(sp => sp.text).join('')) {
       const w = width(ch)
-      if (w > 0 && ch.trim()) want.push({ row: r, col, ch })
+      if (w > 0 && ch.trim()) { want.push({ row: r, col, ch }) }
       col += w
     }
   })
-  if (want.length !== got.length) return [`expected ${want.length} glyphs, found ${got.length}`]
+  if (want.length !== got.length) { return [`expected ${want.length} glyphs, found ${got.length}`] }
   return want.flatMap((g, i) => {
     const [text, x] = got[i]!
     return text.startsWith(g.ch) && x / cellW === g.col ? [] : [`row ${g.row} col ${g.col}: want ${g.ch} at x=${g.col * cellW}, found ${text} at x=${x}`]
@@ -117,6 +121,6 @@ if (isMain(import.meta) && process.argv[2] === '--readme') {
     const { styledRows } = await import('./lib/render-image.ts')
     const rows = styledRows(readFileSync(file, 'utf8'), Number(cols), theme)
     if (!rows) { console.error(`render-svg: core fell back for ${file} at ${cols} columns`); process.exitCode = 3 }
-    else process.stdout.write(toSvg(rows, width, basename(file)))
+    else { process.stdout.write(toSvg(rows, width, basename(file))) }
   }
-} else if (isMain(import.meta)) process.exitCode = main()
+} else if (isMain(import.meta)) { process.exitCode = main() }

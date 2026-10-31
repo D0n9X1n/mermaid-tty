@@ -10,7 +10,7 @@ test('A5: frontmatter config scalars become dotted keys; other top-level keys ar
   assert.deepEqual(cfg("config:\n  gitGraph:\n    mainBranchName: 'it''s # main'\n    x: \"a \\\" b\""), { 'gitGraph.mainBranchName': "it's # main", 'gitGraph.x': 'a " b' })
   assert.deepEqual((readSource('pie\n"a" : 1') as Source).config, {})
   assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: trunk\t# note\n    x: a#b'), { 'gitGraph.mainBranchName': 'trunk', 'gitGraph.x': 'a#b' })   // a tab-# comment; a # inside a word
-  for (const q of ['"trunk" # note', '"trunk"\t# note', "'trunk' # note"]) assert.deepEqual(cfg(`config:\n  gitGraph:\n    mainBranchName: ${q}`), { 'gitGraph.mainBranchName': 'trunk' }, q)
+  for (const q of ['"trunk" # note', '"trunk"\t# note', "'trunk' # note"]) { assert.deepEqual(cfg(`config:\n  gitGraph:\n    mainBranchName: ${q}`), { 'gitGraph.mainBranchName': 'trunk' }, q) }
   assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: "a # b" # note'), { 'gitGraph.mainBranchName': 'a # b' })   // a # inside the quotes is kept
 })
 test('A5.errors: a config block outside the strict YAML subset falls back', () => {
@@ -18,7 +18,7 @@ test('A5.errors: a config block outside the strict YAML subset falls back', () =
     'config:\n  a: &x 1', 'config:\n  a: *x', 'config:\n  a: !!str 1', 'config:\n  a: |\n    text', 'config:\n  a: >\n    text',
     'config:\n  a: one\n    two', 'config:\n  a: 1\n  a: 2', 'config:\n\tmindmap:', 'config:\n  a: "open', 'config:\n    a: 1\n  b: 2',
     'config:\n  a:', 'config:\n  a: b: c', 'config:\n  a: "x\\q"', 'config:\n  gitGraph.mainBranchName: fake']
-  for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
+  for (const fm of bad) { assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm) }
 })
 
 // A frontmatter block written one YAML line per argument.
@@ -48,13 +48,13 @@ test('A5.errors: every other scalar, key, indentation or tab form falls back', (
   const shape = ['a:\n  b: 1', 'a:\ntitle: T', 'a:\n    b:', 'a: 1\n    b: 2', 'a: 1\n\t# c', 'a: 1\n \tb: 2']
   const bad = [...[...plain, ...quoted].map(v => `config:\n  a: ${v}`), ...[...keys, ...shape].map(l => `config:\n  ${l}`),
     'title: T\n\tx: 1', 'config:', 'config:\ntitle: T']
-  for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
+  for (const fm of bad) { assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm) }
 })
 test('A5.errors: config in any other top-level form, a second config: block, or an indented first line falls back', () => {
   const bad = ['config: {}', 'config: { gitGraph: { mainBranchName: trunk } }', 'config: x', 'config: # c\n  a: 1', 'config :\n  a: 1',
     'config\t:\n  a: 1', '"config":\n  a: 1', "'config':\n  a: 1", '? config\n:\n  a: 1', '{ config: { a: 1 } }', '&c config:\n  a: 1',
     '!!str config:\n  a: 1', '- config:\n    a: 1', '  config:\n    a: 1', 'config:\n  a: 1\nconfig:\n  b: 2']
-  for (const fm of bad) assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
+  for (const fm of bad) { assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm) }
   // Other plain top-level keys, indicators after their first character included, are still ignored, but for displayMode,
   // which processFrontmatter sets as gantt.displayMode.
   assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), { a: 1, 'gantt.displayMode': 'compact' })
@@ -62,7 +62,7 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
 test('X4: an htmlLabels key anywhere in config, set to anything but true, falls back (Mermaid then draws SVG text)', () => {
   const off = ['htmlLabels: false', 'htmlLabels: "true"', 'htmlLabels: 0', 'htmlLabels: ~', 'htmlLabels: yes',
     'flowchart:\n    htmlLabels: false', 'class:\n    htmlLabels: false', 'state:\n    htmlLabels: "false"']
-  for (const v of off) assert.deepEqual(src(`config:\n  ${v}`), { reason: 'config:htmlLabels' }, v)
+  for (const v of off) { assert.deepEqual(src(`config:\n  ${v}`), { reason: 'config:htmlLabels' }, v) }
   assert.deepEqual(cfg('config:\n  htmlLabels: true\n  flowchart:\n    htmlLabels: true'), { htmlLabels: true, 'flowchart.htmlLabels': true })
   assert.deepEqual(cfg('config:\n  htmlLabelsX: false'), { htmlLabelsX: false })
 })

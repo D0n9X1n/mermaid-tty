@@ -14,8 +14,11 @@ const MATRIX: [string, (j: Job) => unknown][] = [
   ['Node 24 via pinned actions/setup-node', j => steps(j).some(s => action(s, 'setup-node') && String(s.with?.['node-version']) === '24')],
   ['pinned Claude Code from npm', j => hasRun(j, /^npm install -g @anthropic-ai\/claude-code@\d+\.\d+\.\d+\s*$/m)]];
 export function ciErrors(yml: string): string[] {
-  const { errors, value } = readWorkflow('ci.yml', yml), w = value as any;
-  const check: Job = w?.jobs?.check ?? {}, e2e: Job = w?.jobs?.e2e ?? {}, gallery: Job = w?.jobs?.gallery ?? {};
+  const { errors, value } = readWorkflow('ci.yml', yml)
+const  w = value as any;
+  const check: Job = w?.jobs?.check ?? {}
+const  e2e: Job = w?.jobs?.e2e ?? {}
+const  gallery: Job = w?.jobs?.gallery ?? {};
   return [...errors, ...need('ci.yml', w, [
     ['pull_request trigger on every PR', w => Object.hasOwn(w.on, 'pull_request') && (w.on.pull_request === null || Object.keys(w.on.pull_request).length === 0)],
     ['push trigger on every branch', w => Object.hasOwn(w.on, 'push') && (w.on.push === null || Object.keys(w.on.push).length === 0)],
@@ -39,7 +42,9 @@ export function ciErrors(yml: string): string[] {
       .map(() => 'ci.yml: npm ci outside its tooling job'))];
 }
 export function releaseErrors(yml: string): string[] {
-  const { errors, value } = readWorkflow('release.yml', yml), w = value as any, release: Job = w?.jobs?.release ?? {};
+  const { errors, value } = readWorkflow('release.yml', yml)
+const  w = value as any
+const  release: Job = w?.jobs?.release ?? {};
   return [...errors, ...need('release.yml', w, [
     ['v* tag trigger', w => JSON.stringify(w.on.push.tags) === '["v*"]' && Object.keys(w.on.push).length === 1],
     ['read-only workflow token', w => w.permissions.contents === 'read' && Object.values(w.permissions).every(v => v === 'read' || v === 'none')]]), ...need('release.yml release job', release, [
@@ -55,8 +60,11 @@ export function releaseErrors(yml: string): string[] {
 }
 // B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version, and records every result.
 export function versionsErrors(yml: string): string[] {
-  const { errors, value } = readWorkflow('claude-code-versions.yml', yml), w = value as any;
-  const list: Job = w?.jobs?.list ?? {}, a9: Job & { strategy?: { matrix?: { version?: unknown } } } = w?.jobs?.a9 ?? {}, rec: Job & { if?: string } = w?.jobs?.record ?? {};
+  const { errors, value } = readWorkflow('claude-code-versions.yml', yml)
+const  w = value as any;
+  const list: Job = w?.jobs?.list ?? {}
+const  a9: Job & { strategy?: { matrix?: { version?: unknown } } } = w?.jobs?.a9 ?? {}
+const  rec: Job & { if?: string } = w?.jobs?.record ?? {};
   const writers = Object.entries<any>(w?.jobs ?? {}).filter(([name, j]) => name !== 'record' && j?.permissions?.contents === 'write');
   return [...errors, ...need('claude-code-versions.yml', w, [
     ['a schedule of a few hours', w => w.on.schedule.length === 1 && /^\d+ \*\/\d+ \* \* \*$/.test(w.on.schedule[0].cron)],
@@ -79,7 +87,7 @@ export function versionsErrors(yml: string): string[] {
 export function stepIds(...ymls: string[]): Set<string> {
   return new Set(ymls.flatMap(yml => {
     const { unreadable, value } = readWorkflow('workflow', yml);
-    if (unreadable.length) throw new Error(unreadable.join('\n'));
+    if (unreadable.length) { throw new Error(unreadable.join('\n')); }
     return jobs(value).flatMap(j => steps(j).flatMap(s => typeof s.id === 'string' ? [s.id] : []));
   }));
 }

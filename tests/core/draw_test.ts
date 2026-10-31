@@ -19,7 +19,9 @@ const D = (gr: ReturnType<typeof g>, wrapAt: number | null = null) => {
 
 test('A3: edge labels draw centered text without fill while nodes keep their fill', () => {
   const p = layoutGraph(g('LR', ['A>B|成功']), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
-  const d = drawGraph(p, [], 80, x => x), label = p.boxes.get('e0:label')!, a = p.boxes.get('A')!
+  const d = drawGraph(p, [], 80, x => x)
+const  label = p.boxes.get('e0:label')!
+const  a = p.boxes.get('A')!
   assert.equal(d.cells[label.row]![label.col], null)
   assert.equal(d.cells[label.row]![label.col + label.cols - 1], null)
   assert.deepEqual(d.cells[label.row]![label.col + 1]!.owners, ['e0:label', 'e0'])
@@ -34,7 +36,7 @@ test('A3: one row per label line; no border-only rows', () => {
   assert.equal(p.boxes.get('B')!.rows, 2)
   for (const id of ['A', 'B']) {
     const b = p.boxes.get(id)!
-    for (let r = b.row; r < b.row + b.rows; r++) assert.ok(d.cells[r]!.some(c => c?.kind === 'text' && c.owners.includes(id)), `${id}@${r}`)
+    for (let r = b.row; r < b.row + b.rows; r++) { assert.ok(d.cells[r]!.some(c => c?.kind === 'text' && c.owners.includes(id)), `${id}@${r}`) }
   }
   assert.match(text(d).join('\n'), /\[ one \][\s\S]*▼[\s\S]*\[ +two +\]/)
 })
@@ -124,20 +126,22 @@ test('every shape validates; every row of every box has its caps, owned by the n
     const [l, r] = CAPS[shape]
     for (const [label, wrapAt] of [['one', null], ['a<br/>b<br/>c', null], ['alpha beta gamma', 8]] as const) {
       const gr = g('TB', ['A>B'], { A: label, B: label })
-      for (const n of gr.nodes) n.shape = shape
-      const { p, d } = D(gr, wrapAt), at = `${shape} ${label}`
+      for (const n of gr.nodes) { n.shape = shape }
+      const { p, d } = D(gr, wrapAt)
+const  at = `${shape} ${label}`
       assert.equal(validate(d), null, at)
       for (const id of ['A', 'B']) {
         const b = p.boxes.get(id)!
         for (let row = b.row; row < b.row + b.rows; row++) {
           // An empty cap leaves its column to the node's fill.
-          const left = d.cells[row]![b.col], right = d.cells[row]![b.col + b.cols - 1]
+          const left = d.cells[row]![b.col]
+const  right = d.cells[row]![b.col + b.cols - 1]
           assert.deepEqual([left?.kind, left?.ch, left?.owners], [l ? 'cap' : 'fill', l ? [...l][0] : ' ', [id]], `${at} ${id}@${row} left`)
           assert.deepEqual([right?.kind, right?.ch, right?.owners], [r ? 'cap' : 'fill', r ? [...r].at(-1) : ' ', [id]], `${at} ${id}@${row} right`)
         }
       }
       const a = p.boxes.get('A')!
-      if (label === 'one') assert.equal(text(d)[a.row]!.slice(a.col), `${l} one ${r}`.trimEnd(), at)
+      if (label === 'one') { assert.equal(text(d)[a.row]!.slice(a.col), `${l} one ${r}`.trimEnd(), at) }
     }
   }
 })

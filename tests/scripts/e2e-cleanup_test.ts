@@ -13,7 +13,8 @@ test('A9.harness: removeSandbox removes the sandbox, and returns no warning', ()
 
 // A directory that cannot be written to keeps its entries: a real removal failure, without Windows.
 test('A9.harness: removeSandbox returns a warning naming the sandbox when it cannot remove it, and does not throw', { skip: process.platform === 'win32' || process.getuid?.() === 0 }, () => {
-  const parent = mkdtempSync(join(tmpdir(), 'mtty-clean-')), base = join(parent, 'mtty-x')
+  const parent = mkdtempSync(join(tmpdir(), 'mtty-clean-'))
+const  base = join(parent, 'mtty-x')
   mkdirSync(join(base, 'cwd'), { recursive: true }); writeFileSync(join(base, 'cwd', 'f'), 'x')
   chmodSync(join(base, 'cwd'), 0o555)
   try {

@@ -22,16 +22,18 @@ const ceilings = { dag: 3.0, mixed: 6.2, clusters: 31.0, loops: 11.8 }
 const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 39.8, loops: 23.0 }
 
 function graphFor(kind: typeof classes[number], index: number, next: (n: number) => number) {
-  const count = 2 + next(11), names = Array.from({ length: count }, (_, i) => `N${i}`)
+  const count = 2 + next(11)
+const  names = Array.from({ length: count }, (_, i) => `N${i}`)
   const specs: string[] = []
   const edge = (a: number, b: number) => {
     const style = kind === 'dag' ? '>' : ['>', '=>', '.>'][next(3)]!
     const label = kind !== 'dag' && next(10) < 3 ? `|${next(2) ? 'yes' : '成功'}` : ''
     specs.push(`${names[a]}${style}${names[b]}${label}`)
   }
-  for (let i = 1; i < count; i++) edge(next(i), i)
+  for (let i = 1; i < count; i++) { edge(next(i), i) }
   for (let i = 0; i < next(count); i++) {
-    const a = next(count - 1), b = a + 1 + next(count - a - 1)
+    const a = next(count - 1)
+const  b = a + 1 + next(count - a - 1)
     const reverse = kind !== 'dag' && next(4) === 0
     edge(reverse ? b : a, reverse ? a : b)
   }
@@ -41,58 +43,64 @@ function graphFor(kind: typeof classes[number], index: number, next: (n: number)
   if (kind === 'clusters') {
     graph.clusters = [{ id: 'S', title: next(2) ? '组' : null, dir: null,
       nodes: names.slice(next(count - 1), count - 1), clusters: [] }]
-    for (const e of graph.edges) if (next(4) === 0) e.tail = ['arrow', 'circle', 'cross'][next(3)] as 'arrow'
+    for (const e of graph.edges) { if (next(4) === 0) { e.tail = ['arrow', 'circle', 'cross'][next(3)] as 'arrow' } }
   }
   return graph
 }
 
 test('A1: seeded router property covers 2000 graphs without invalid drawings', () => {
-  const next = random(0x17a10), failures: string[] = [], rates: Record<string, number> = {}
+  const next = random(0x17a10)
+const  failures: string[] = []
+const  rates: Record<string, number> = {}
   for (const kind of classes) {
-    let conflicts = 0, raw = 0
+    let conflicts = 0
+let  raw = 0
     for (let i = 0; i < 500; i++) {
       const graph = graphFor(kind, i, next)
       let p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null })
       if ('reason' in p) { conflicts++; raw++; continue }
       let rs = routeGraph(p)
-      if (!Array.isArray(rs)) raw++
+      if (!Array.isArray(rs)) { raw++ }
       for (const extra of [2, 4]) {
-        if (Array.isArray(rs) || rs.reason !== 'route-conflict') break
+        if (Array.isArray(rs) || rs.reason !== 'route-conflict') { break }
         const placed = layoutGraph(graph, { rankGap: 3 + extra, nodeGap: 4 + extra, wrapAt: null })
-        if ('reason' in placed) break
+        if ('reason' in placed) { break }
         p = placed; rs = routeGraph(p)
       }
       if (!Array.isArray(rs)) { conflicts++; continue }
       // At layout coordinates, where the routes' cells are; compacted, as shown, it must validate too.
-      const drawing = drawGraph(p, rs, 10000, x => x), error = validate(drawing) ?? validate(compact(drawing))
-      if (error) failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`)
+      const drawing = drawGraph(p, rs, 10000, x => x)
+const  error = validate(drawing) ?? validate(compact(drawing))
+      if (error) { failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`) }
       assert.deepEqual(falsePairs(drawing), [], `${kind}/${i} false implied pair`)
       assert.deepEqual(falsePairs(compact(drawing)), [], `${kind}/${i} compacted false implied pair`)
       for (const r of rs) {
         const loop = p.graph.edges.find(e => e.id === r.edge)!
-        if (loop.from === loop.to) for (const c of r.cells) {
+        if (loop.from === loop.to) { for (const c of r.cells) {
           const owners = drawing.cells[c.r]![c.c]!.segs ?? []
           if (drawing.cells[c.r]![c.c]!.dirs === 15 && owners.length > 1) {
             assert.ok(owners.every(s => s.dirs === 5 || s.dirs === 10), `${kind}/${i} self-loop crossing`)
           }
-        }
+        } }
         for (const other of rs.slice(rs.indexOf(r) + 1)) {
           const otherCells = new Map(other.cells.map(c => [`${c.r},${c.c}`, c]))
           const shared = new Set<string>()
           for (let k = 0; k < Math.min(r.cells.length, other.cells.length); k++) {
-            const a = r.cells[k]!, b = other.cells[k]!
-            if (a.r !== b.r || a.c !== b.c) break
+            const a = r.cells[k]!
+const  b = other.cells[k]!
+            if (a.r !== b.r || a.c !== b.c) { break }
             shared.add(`${a.r},${a.c}`)
           }
           for (let k = 1; k <= Math.min(r.cells.length, other.cells.length); k++) {
-            const a = r.cells.at(-k)!, b = other.cells.at(-k)!
-            if (a.r !== b.r || a.c !== b.c) break
+            const a = r.cells.at(-k)!
+const  b = other.cells.at(-k)!
+            if (a.r !== b.r || a.c !== b.c) { break }
             shared.add(`${a.r},${a.c}`)
           }
           for (const a of r.cells) {
             const b = otherCells.get(`${a.r},${a.c}`)
-            if (b && !shared.has(`${a.r},${a.c}`)) assert.ok(a.dirs === 5 && b.dirs === 10 || a.dirs === 10 && b.dirs === 5,
-              `${kind}/${i}: unrelated shared run ${r.edge}/${other.edge}`)
+            if (b && !shared.has(`${a.r},${a.c}`)) { assert.ok(a.dirs === 5 && b.dirs === 10 || a.dirs === 10 && b.dirs === 5,
+              `${kind}/${i}: unrelated shared run ${r.edge}/${other.edge}`) }
           }
           const ownCells = new Set(r.cells.map(c => `${c.r},${c.c}`))
           assert.ok(r.ends.every(a => !otherCells.has(`${a.r},${a.c}`)))
@@ -102,14 +110,17 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         assert.equal(r.ends.length, Number(e.tail !== 'none') + Number(e.head !== 'none'))
         const drawnPath = [...(e.tail === 'none' ? [] : [r.ends[0]!]), ...r.cells,
           ...(e.head === 'none' ? [] : [r.ends.at(-1)!])]
-        const label = p.boxes.get(`${e.id}:label`), path: { r: number; c: number }[] = []
+        const label = p.boxes.get(`${e.id}:label`)
+const  path: { r: number; c: number }[] = []
         for (const c of drawnPath) {
           const previous = path.at(-1)
           if (label && previous && (previous.c === c.c || previous.r === c.r)) {
             const distance = Math.abs(c.r - previous.r) + Math.abs(c.c - previous.c)
-            const dr = Math.sign(c.r - previous.r), dc = Math.sign(c.c - previous.c)
+            const dr = Math.sign(c.r - previous.r)
+const  dc = Math.sign(c.c - previous.c)
             for (let k = 1; k < distance; k++) {
-              const row = previous.r + dr * k, col = previous.c + dc * k
+              const row = previous.r + dr * k
+const  col = previous.c + dc * k
               assert.ok(row >= label.row && row < label.row + label.rows && col >= label.col && col < label.col + label.cols)
               path.push({ r: row, c: col })
             }
@@ -119,7 +130,8 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         const context = `${kind}/${i}/${e.id}`
         assert.equal(new Set(path.map(c => `${c.r},${c.c}`)).size, path.length, context)
         assert.ok(path.every((c, i) => i === 0 || Math.abs(c.r - path[i - 1]!.r) + Math.abs(c.c - path[i - 1]!.c) === 1), context)
-        const a = p.boxes.get(e.from)!, b = p.boxes.get(e.to)!
+        const a = p.boxes.get(e.from)!
+const  b = p.boxes.get(e.to)!
         const distance = (c: { r: number; c: number }, b: typeof a) => Math.max(0,
           b.row - c.r, c.r - b.row - b.rows + 1, b.col - c.c, c.c - b.col - b.cols + 1)
         assert.equal(distance(path[0]!, a), 1, context)
@@ -132,10 +144,10 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
           assert.ok(index > previous, context)
           previous = index
         }
-        if (label) assert.ok(drawnPath.some(c => distance(c, label) === 1), context)
-        for (const [id, b] of p.boxes) if (!id.startsWith(`${e.id}#`) && id !== `${e.id}:label`) {
+        if (label) { assert.ok(drawnPath.some(c => distance(c, label) === 1), context) }
+        for (const [id, b] of p.boxes) { if (!id.startsWith(`${e.id}#`) && id !== `${e.id}:label`) {
           assert.ok(drawnPath.every(c => distance(c, b) > 0), context)
-        }
+        } }
         assert.ok(r.cells.every(c => drawing.cells[c.r]![c.c]!.kind === 'line'), context)
         assert.ok(r.cells.every(c => [3, 5, 6, 9, 10, 12].includes(c.dirs)), context)
       }

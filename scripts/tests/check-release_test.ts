@@ -20,7 +20,8 @@ test('B5: release CLI accepts only the tag matching plugin.json', () => {
   }
 });
 test('B5: release CLI checks notes from a file or stdin for both install commands', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'mtty-release-')), file = join(dir, 'notes with spaces.txt');
+  const dir = mkdtempSync(join(tmpdir(), 'mtty-release-'))
+const  file = join(dir, 'notes with spaces.txt');
   try {
     writeFileSync(file, INSTALL.join('\n'));
     for (const result of [run(['notes', file]), run(['notes', '-'], INSTALL.join('\n'))]) {
@@ -28,7 +29,8 @@ test('B5: release CLI checks notes from a file or stdin for both install command
       assert.equal(result.stdout, `check-release: notes ok (${version})\n`);
     }
     for (const present of INSTALL) {
-      const bad = run(['notes', '-'], present), absent = INSTALL.find(line => line !== present);
+      const bad = run(['notes', '-'], present)
+const  absent = INSTALL.find(line => line !== present);
       assert.equal(bad.status, 1);
       assert.equal(bad.stderr, `check-release: release notes lack: ${absent}\n`);
     }

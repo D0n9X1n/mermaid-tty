@@ -27,7 +27,8 @@ function corpus(root: string): Record<string, string> {
 }
 
 test('A10: gen-corpus is byte-stable: two runs write the same 100 files, which are the committed corpus', t => {
-  const a = tmp(t), b = tmp(t)
+  const a = tmp(t)
+const  b = tmp(t)
   assert.equal(run(a).status, 0); assert.equal(run(b).status, 0)
   assert.deepEqual(Object.keys(corpus(a)), NAMES)
   assert.deepEqual(corpus(a), corpus(b))
@@ -35,7 +36,8 @@ test('A10: gen-corpus is byte-stable: two runs write the same 100 files, which a
 })
 
 test('A10: gen-corpus --check exits 0 on a current corpus, and 1, naming the file and writing nothing, on a changed or missing one', t => {
-  const d = tmp(t), f = join(d, 'fixtures/corpus/corpus-042.mmd')
+  const d = tmp(t)
+const  f = join(d, 'fixtures/corpus/corpus-042.mmd')
   assert.equal(run(d).status, 0)
   assert.equal(run(d, '--check').status, 0)
   writeFileSync(f, 'flowchart TD\nA --> B\n')
@@ -48,7 +50,9 @@ test('A10: gen-corpus --check exits 0 on a current corpus, and 1, naming the fil
 })
 
 test('A10: gen-corpus --check exits 1 on a file in fixtures/corpus that it does not write, naming it and removing nothing', t => {
-  const d = tmp(t), extra = join(d, 'fixtures/corpus/corpus-101.mmd'), notes = join(d, 'fixtures/corpus/notes.txt')
+  const d = tmp(t)
+const  extra = join(d, 'fixtures/corpus/corpus-101.mmd')
+const  notes = join(d, 'fixtures/corpus/notes.txt')
   assert.equal(run(d).status, 0)
   writeFileSync(extra, 'flowchart TD\nA --> B\n'); writeFileSync(notes, 'x\n')
   const r = run(d, '--check')

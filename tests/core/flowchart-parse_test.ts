@@ -4,14 +4,14 @@ import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'; import 
 import { ALIASES } from '../../core/caps.ts'; import { emphasize } from '../../core/emphasis.ts'
 const P = (t: string) => parseFlowchart(readSource(t) as Source) as any
 test('A1: headers and directions', () => {
-  for (const [d, w] of [['TD', 'TB'], ['TB', 'TB'], ['BT', 'BT'], ['LR', 'LR'], ['RL', 'RL']]) assert.equal(P(`flowchart ${d}\nA`).dir, w)
+  for (const [d, w] of [['TD', 'TB'], ['TB', 'TB'], ['BT', 'BT'], ['LR', 'LR'], ['RL', 'RL']]) { assert.equal(P(`flowchart ${d}\nA`).dir, w) }
   assert.equal(P('graph LR\nA').dir, 'LR'); assert.equal(P('flowchart\nA').dir, 'TB'); assert.equal(P('graph\nA').dir, 'TB')
 })
 test('A1: every bracket shape, @{shape}, quoted and <br/> labels', () => {
   const S: [string, string][] = [['A[x]', 'rect'], ['A(x)', 'round'], ['A([x])', 'stadium'], ['A[[x]]', 'subroutine'], ['A[(x)]', 'cylinder'],
     ['A((x))', 'circle'], ['A{x}', 'diamond'], ['A{{x}}', 'hexagon'], ['A[/x/]', 'leanR'], ['A[\\x\\]', 'leanL'], ['A[/x\\]', 'trap'],
     ['A[\\x/]', 'trapInv'], ['A>x]', 'asym'], ['A(((x)))', 'dcircle'], ['A@{ shape: cyl, label: "x" }', 'cylinder'], ['A@{ shape: rect }', 'rect']]
-  for (const [src, shape] of S) assert.equal(P(`flowchart TD\n${src}`).nodes[0].shape, shape, src)
+  for (const [src, shape] of S) { assert.equal(P(`flowchart TD\n${src}`).nodes[0].shape, shape, src) }
   assert.equal(P('flowchart TD\nA["a, b: (c)!"]').nodes[0].rows[0].text, 'a, b: (c)!')
   assert.deepEqual(P('flowchart TD\nA[one<br/>two<br>three]').nodes[0].rows.map((r: any) => r.text), ['one', 'two', 'three'])
   assert.equal(P('flowchart TD\nA{ok?}').nodes[0].role, 'decision')
@@ -100,7 +100,7 @@ test('A1: a label is trimmed, as Mermaid trims node text', () => {
 test('A1: @{…} reads shape through ALIASES and label, ignores other keys, and splits pairs outside "…"', () => {
   assert.deepEqual(P('flowchart TD\nA@{ shape: db, label: "Store" }').nodes, [N('A', 'cylinder', 'node', 0, 'Store')])
   assert.deepEqual(P('flowchart TD\nA@{ note: "x, label: no", label: "a, b: {c}", shape: question }').nodes, [N('A', 'diamond', 'decision', 0, 'a, b: {c}')])
-  for (const [name, shape] of ALIASES) assert.equal(P(`flowchart TD\nA@{ shape: ${name} }`).nodes[0].shape, shape, name)
+  for (const [name, shape] of ALIASES) { assert.equal(P(`flowchart TD\nA@{ shape: ${name} }`).nodes[0].shape, shape, name) }
 })
 
 test('A1: a later @{…} replaces only the shape or label it gives', () => {
@@ -204,7 +204,7 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
   const bad = ['A[a<br/><br/>b]', 'A[<br/>a]', 'A[a<br/>]', 'A[" a<br/> "]', 'A[a<br/> <br>b]', 'A@{ label: "a<br><br>b" }',
     'A -->|a<br/><br/>b| B', 'A -->|<br/>a| B', 'A -- a<br/> --> B', 'A -->|<br/>| B']
   assert.deepEqual(bad.map(s => [s, P(`flowchart TD\n${s}`)]), bad.map(s => [s, { reason: 'label-blank-line' }]))
-  for (const s of ['A[a<br/>b]', 'A[ a <br/> b ]', 'A -->|a<br>b| B', 'A[ ]', 'A -->| | B']) assert.ok(!('reason' in P(`flowchart TD\n${s}`)), s)
+  for (const s of ['A[a<br/>b]', 'A[ a <br/> b ]', 'A -->|a<br>b| B', 'A[ ]', 'A -->| | B']) { assert.ok(!('reason' in P(`flowchart TD\n${s}`)), s) }
 })
 // X3. Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
 // markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX, and
@@ -212,7 +212,7 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
 test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
   for (const [s, why] of [['A[fa:fa-book]', 'icon'], ['A["fab:fa-github x"]', 'icon'], ['A -->|fa:fa-car| B', 'icon'], ['A["$$x^2$$"]', 'math'],
     ['A -->|"$$x$$"| B', 'math'], ['subgraph S ["fa:fa-a"]\nA\nend', 'icon'], ['subgraph S ["a\\nb"]\nA\nend', 'newline']])
-    assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s)
+    { assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s) }
   assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
 })
 
@@ -226,7 +226,7 @@ test('A literal \\n in an HTML flowchart label is a line break, as Mermaid draws
   assert.deepEqual(rows('A["a\\\\nb"]'), [['a\\', 'b']])
   assert.deepEqual(rows('A["`a\\nb`"]'), [['a\\nb']])
   assert.deepEqual(rows("A@{ label: 'a\\nb' }"), [['a\\nb']])
-  for (const s of ['A -->|"a\\nb"| B', 'A -->|a\\nb| B', 'A -- a\\nb --> B']) assert.deepEqual(F(s).edges.map((e: any) => e.label), ['a<br />b'], s)
+  for (const s of ['A -->|"a\\nb"| B', 'A -->|a\\nb| B', 'A -- a\\nb --> B']) { assert.deepEqual(F(s).edges.map((e: any) => e.label), ['a<br />b'], s) }
   assert.deepEqual(['A["a\\n"]', 'A["a\\n\\nb"]', 'A["a\\n<br>b"]'].map(s => F(s).reason), ['label-blank-line', 'label-blank-line', 'label-blank-line'])
 })
 
@@ -287,7 +287,10 @@ test('A5.errors: an @{ … } body with a control character, or a space YAML does
   assert.deepEqual(F('A@{\tlabel: x }').nodes, [N('A', 'rect', 'node', 0, 'x')])
 })
 test('A5.errors: a "}" value does not end the @{ … } character check early', () => {
-  const nb = String.fromCharCode(0xa0), c1 = String.fromCharCode(1), ls = String.fromCharCode(0x2028), bom = String.fromCharCode(0xfeff)
+  const nb = String.fromCharCode(0xa0)
+const  c1 = String.fromCharCode(1)
+const  ls = String.fromCharCode(0x2028)
+const  bom = String.fromCharCode(0xfeff)
   const bad = [`A@{ ignored: "}", label:${nb}x }`, `A@{ ignored: "}${c1}", label: x }`, `A@{\n  ignored: "}"\n  note: "${c1}"\n  label: x\n}`,
     `A e1@--> B\ne1@{ ignored: "}", animate:${ls}true }`, `A@{ ignored: "}", label: ${bom}x }`,
     `A@{${nb}\n  label: x\n}`, `A@{\n  label: x\n${nb}}`, `A@{\n  label: x\n${bom}}`, `${nb}A@{\n  label: x\n}`]

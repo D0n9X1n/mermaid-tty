@@ -28,7 +28,7 @@ export type LegendRow = { key: string; keyInk: Ink; item: string; cls: string; p
 // lines: wrap packs a stand-in word used cells wide, then s, so s breaks exactly where wrap breaks a label. The first piece
 // is what fits on the line, possibly '', and each later piece starts a line. null if a word is wider than field.
 function fill(s: string, used: number, field: number): Piece[] | null {
-  if (used === 0) return wrap(s, field)
+  if (used === 0) { return wrap(s, field) }
   const ps = wrap('x'.repeat(used) + ' ' + s, field)
   return ps && [{ ...ps[0]!, text: ps[0]!.text.slice(used + 1) }, ...ps.slice(1)]
 }
@@ -41,15 +41,18 @@ type Run = { line: number; col: number; text: string; join?: Piece['join']; part
 // instance; each later piece starts the next line, indented to start, with its wrap join. null if a word is wider than
 // columns − start.
 function layout(row: LegendRow, columns: number): { runs: Run[]; lines: number } | null {
-  const start = width(row.key) + 1, field = columns - start, runs: Run[] = []
-  let line = 0, used = 0                                            // used: the cells this line's text takes from start
+  const start = width(row.key) + 1
+const  field = columns - start
+const  runs: Run[] = []
+  let line = 0
+let  used = 0                                            // used: the cells this line's text takes from start
   for (const part of row.parts) {
     const ps = fill(part.text, used, field)
-    if (!ps) return null
+    if (!ps) { return null }
     let first = true
     for (const [i, p] of ps.entries()) {
       if (i > 0) { line++; used = 0 }
-      if (!p.text) continue
+      if (!p.text) { continue }
       const col = start + (used === 0 ? 0 : used + 1)
       runs.push({ line, col, text: p.text, part, ...(first ? {} : { join: p.join }) })
       used = col - start + width(p.text); first = false
@@ -63,19 +66,20 @@ function layout(row: LegendRow, columns: number): { runs: Run[]; lines: number }
 // 'word-too-wide' if a word is wider than a row's field.
 export function legendRows(rows: readonly LegendRow[], columns: number): Drawing | Fail {
   const laid: { row: LegendRow; runs: Run[]; lines: number }[] = []
-  for (const row of rows) { const l = layout(row, columns); if (!l) return fail('word-too-wide'); laid.push({ row, ...l }) }
+  for (const row of rows) { const l = layout(row, columns); if (!l) { return fail('word-too-wide'); } laid.push({ row, ...l }) }
   const wide = Math.max(0, ...laid.map(({ row, runs }) => Math.max(width(row.key), ...runs.map(x => x.col + width(x.text)))))
-  const c = createCanvas(laid.reduce((n, l) => n + l.lines, 0), wide, columns), labels: Expect['labels'][number][] = []
+  const c = createCanvas(laid.reduce((n, l) => n + l.lines, 0), wide, columns)
+const  labels: Expect['labels'][number][] = []
   let top = 0
   for (const { row, runs, lines } of laid) {
     for (const p of row.parts) {                                    // an owned part is placed at its first run
       const x = runs.find(y => y.part === p)
-      if (p.owner !== null) labels.push(x ? { owner: p.owner, text: p.text, at: { r: top + x.line, c: x.col } } : { owner: p.owner, text: p.text })
+      if (p.owner !== null) { labels.push(x ? { owner: p.owner, text: p.text, at: { r: top + x.line, c: x.col } } : { owner: p.owner, text: p.text }) }
     }
     c.key(top, 0, row.key, row.keyInk, row.item, true)
     for (const x of runs) {
-      if (x.part.owner === null) c.cap(top + x.line, x.col, x.text, x.part.ink, row.item)
-      else c.text(top + x.line, x.col, x.text, x.part.ink, x.part.owner, x.join)
+      if (x.part.owner === null) { c.cap(top + x.line, x.col, x.text, x.part.ink, row.item) }
+      else { c.text(top + x.line, x.col, x.text, x.part.ink, x.part.owner, x.join) }
     }
     top += lines
   }
@@ -86,9 +90,10 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
 // keyable, with or without rows, so T87 checks the keys d drew in place: one missing there, or one no row lists, fails.
 // A Fail, d's or the legend's, is returned as is.
 export function withLegend(d: Drawing | Fail, rows: readonly LegendRow[], columns: number, keyable: NonNullable<Expect['keyable']> = []): Drawing | Fail {
-  if (isFail(d)) return d
+  if (isFail(d)) { return d }
   const legend = rows.length > 0 ? legendRows(rows, columns) : null
-  if (isFail(legend)) return legend
-  const out = legend ? stack([d, legend], columns) : d, keys = rows.map(r => ({ key: r.key, item: r.item, cls: r.cls, ...(r.at ? { at: r.at } : {}) }))
+  if (isFail(legend)) { return legend }
+  const out = legend ? stack([d, legend], columns) : d
+const  keys = rows.map(r => ({ key: r.key, item: r.item, cls: r.cls, ...(r.at ? { at: r.at } : {}) }))
   return { ...out, expect: { ...out.expect, keys: [...(out.expect.keys ?? []), ...keys], keyable: [...(out.expect.keyable ?? []), ...keyable] } }
 }

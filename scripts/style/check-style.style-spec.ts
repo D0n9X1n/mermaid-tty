@@ -60,7 +60,7 @@ test('issue-number: comments and test names say why, never which issue', async (
 
 test('citesIssue: what counts as a citation', () => {
   for (const text of ['#12', 'see #4.', 'issue 8', 'PR #33', 'pull request 2', '/pull/9'])
-    assert.ok(citesIssue(text), text)
+    { assert.ok(citesIssue(text), text) }
   for (const text of ['#fff', '#abc123', '&#35;', 'C#', 'e3#2', 'item#x', 'attempt 2'])
-    assert.ok(!citesIssue(text), text)
+    { assert.ok(!citesIssue(text), text) }
 })

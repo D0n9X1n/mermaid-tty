@@ -6,19 +6,19 @@ test('VR.gallery: every Tier 1 ok fixture at 80 and 60, a CJK sheet per type, th
   const out = mkdtempSync(join(tmpdir(), 'mtty-galc-'))
   try {
     assert.deepEqual(gallery(out).problems, []); const files = new Set(readdirSync(out))
-    for (const t of TIER1) for (const f of readdirSync(`fixtures/${t}`).sort().filter(f => f.includes('-ok-')))
-      for (const w of [80, 60]) assert.ok(files.has(f.replace('.mmd', `@${w}.svg`)), `${f}@${w}`)
-    for (const t of TIER1) assert.ok(files.has(`cjk-${t}.svg`), `cjk-${t}`)
+    for (const t of TIER1) { for (const f of readdirSync(`fixtures/${t}`).sort().filter(f => f.includes('-ok-')))
+      { for (const w of [80, 60]) { assert.ok(files.has(f.replace('.mmd', `@${w}.svg`)), `${f}@${w}`) } } }
+    for (const t of TIER1) { assert.ok(files.has(`cjk-${t}.svg`), `cjk-${t}`) }
     assert.ok(files.has('palettes.svg'))
   } finally { rmSync(out, { recursive: true, force: true }) }
 })
 test('VR.tangled: check-tangle passes over every Tier 1 type and reports each', () => {
   const r = spawnSync(process.execPath, ['scripts/check-tangle.ts'], { encoding: 'utf8' })
-  assert.equal(r.status, 0, r.stderr); for (const t of TIER1) assert.match(r.stdout, new RegExp(`^${t}: \\d+ ok$`, 'm'), t)
+  assert.equal(r.status, 0, r.stderr); for (const t of TIER1) { assert.match(r.stdout, new RegExp(`^${t}: \\d+ ok$`, 'm'), t) }
 })
 test('VR.reviewers: each Tier 1 type has its own review scope over its goldens and the themes', () => {
   const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
-  for (const t of TIER1) assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
+  for (const t of TIER1) { assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t) }
 })
 // The README's Supported diagrams table is the registry's, so a new or renamed type can't leave it stale.
 test('B1: the README\'s Supported diagrams table is exactly supportTable()', () =>
@@ -26,10 +26,10 @@ test('B1: the README\'s Supported diagrams table is exactly supportTable()', () 
     supportTable().split('\n').filter(l => !l.startsWith('|---')).join('\n')))
 test('VR.passes: with no records, the release gate reports every Tier 1 review scope', () => {
   const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
-  for (const t of TIER1) assert.ok(requirePass([], req).some(p => p.startsWith(`vr-C-${t}: `)), t)
+  for (const t of TIER1) { assert.ok(requirePass([], req).some(p => p.startsWith(`vr-C-${t}: `)), t) }
 })
 test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
-  for (const t of TIER1) assert.ok(!('reason' in explain(readFileSync(`fixtures/${t}/${t}-ok-01.mmd`, 'utf8'), { columns: 120 })), t)
+  for (const t of TIER1) { assert.ok(!('reason' in explain(readFileSync(`fixtures/${t}/${t}-ok-01.mmd`, 'utf8'), { columns: 120 })), t) }
 })
 
 // Beyond the plan's tests: the stub module is gone, and no source names it.

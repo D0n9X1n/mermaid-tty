@@ -5,14 +5,14 @@ export function createLru<K, V>(capacity: number): Lru<K, V> {
   const m = new Map<K, V>()
   return {
     get(k) {
-      if (!m.has(k)) return undefined
+      if (!m.has(k)) { return undefined }
       const v = m.get(k) as V
       m.delete(k); m.set(k, v)
       return v
     },
     set(k, v) {
       m.delete(k); m.set(k, v)
-      if (m.size > capacity) m.delete(m.keys().next().value!)
+      if (m.size > capacity) { m.delete(m.keys().next().value!) }
     },
     get size() { return m.size },
   }

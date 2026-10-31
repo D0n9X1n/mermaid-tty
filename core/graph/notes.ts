@@ -11,7 +11,10 @@ export function withNotes(g: Graph): Graph {
   const t = clusterTree(g)
   const dirOf = (id: string): Dir =>
     ancestors(t.parent, id).map(c => t.byId.get(c)!).find(c => t.sealed.has(c.id) && c.dir !== null)?.dir ?? g.dir
-  const nodes: GNode[] = [], added: GNode[] = [], edges: GEdge[] = [], home = new Map<string, string>()
+  const nodes: GNode[] = []
+const  added: GNode[] = []
+const  edges: GEdge[] = []
+const  home = new Map<string, string>()
   for (const n of g.nodes) {
     const d = n.note ? dirOf(n.id) : null
     if (!n.note || d === 'TB' || d === 'BT') { nodes.push(n); continue }
@@ -24,9 +27,9 @@ export function withNotes(g: Graph): Graph {
     edges.push({ id: `${note.id}:link`, from: into ? note.id : n.id, to: into ? n.id : note.id, style: 'dotted', tail: 'none',
       head: 'none', label: null, minlen: 1, order: g.edges.length + edges.length })
     const c = t.parent.get(n.id)
-    if (c !== undefined) home.set(note.id, c)
+    if (c !== undefined) { home.set(note.id, c) }
   }
-  if (added.length === 0) return g
+  if (added.length === 0) { return g }
   const clusters = g.clusters.map(c => {
     const more = added.filter(n => home.get(n.id) === c.id).map(n => n.id)
     return more.length > 0 ? { ...c, nodes: [...c.nodes, ...more] } : c

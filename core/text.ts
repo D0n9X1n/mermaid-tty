@@ -32,12 +32,12 @@ const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
 // Why text, in a field of mode and br, would draw other text than Mermaid shows: 'entity' or 'html'; null if it draws as
 // written. Each <br> that splits becomes a line break first, so the text on either side is checked on its own.
 export function drawable(text: string, mode: Mode, br: Br): Fail | null {
-  if (ENTITY.test(text)) return fail('entity')
-  if (br === 'none' && /<\/?br/i.test(text)) return fail('html')
+  if (ENTITY.test(text)) { return fail('entity') }
+  if (br === 'none' && /<\/?br/i.test(text)) { return fail('html') }
   const t = br === 'any' ? text.replace(BR_ANY, '\n') : br === 'lower' ? text.replaceAll('<br>', '\n') : text
-  if (br === 'any' && BR_MERMAID.test(t)) return fail('html')
+  if (br === 'any' && BR_MERMAID.test(t)) { return fail('html') }
   const hit = RULES[mode].find(([re]) => re.test(t))
-  if (hit) return fail(hit[1])
+  if (hit) { return fail(hit[1]) }
   return mode === 'html' || mode === 'markdown' || mode === 'member' ? rendered(text, mode) : null
 }
 
@@ -50,9 +50,9 @@ const CODE = /#(\w+);/g
 // The character a #…; code shows, or null: a decimal code for a scalar value that is not a control, whitespace or a
 // surrogate (the browser shows U+FFFD or a space there); or a name NAMED knows.
 function codeChar(name: string): string | null {
-  if (!/^\d+$/.test(name)) return Object.hasOwn(NAMED, name) ? NAMED[name]! : null
+  if (!/^\d+$/.test(name)) { return Object.hasOwn(NAMED, name) ? NAMED[name]! : null }
   const n = Number(name)
-  if (n < 0x20 || (n >= 0x7f && n <= 0x9f) || (n >= 0xd800 && n <= 0xdfff) || n > 0x10ffff) return null
+  if (n < 0x20 || (n >= 0x7f && n <= 0x9f) || (n >= 0xd800 && n <= 0xdfff) || n > 0x10ffff) { return null }
   const ch = String.fromCodePoint(n)
   return /\s/.test(ch) ? null : ch
 }
@@ -62,18 +62,18 @@ function codeChar(name: string): string | null {
 // text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a decoded &, <,
 // *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
-  if (!/#\w+;/.test(text)) return drawable(text, mode, br) ?? text
+  if (!/#\w+;/.test(text)) { return drawable(text, mode, br) ?? text }
   // Where marked runs, a \ right before a code is read two ways (JSDOM: a node label A["`a\#110;b`"] shows anb, an
   // edge label "`c\#110;d`" c\nd); the masked code below would hide the escape from drawable, so it falls back.
-  if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) return fail('markdown')
+  if ((mode === 'markdown' || mode === 'member') && /\\#\w+;/.test(text)) { return fail('markdown') }
   let bad = false
   const out = text.replace(CODE, (_, name: string) => codeChar(name) ?? ((bad = true), ''))
-  if (bad) return fail('entity')
+  if (bad) { return fail('entity') }
   const f = drawable(text.replace(CODE, '\u{E000}'), mode, br)
-  if (f) return f
+  if (f) { return f }
   for (const piece of br === 'any' ? text.split(BR_ANY) : [text]) {
     const g = drawable(piece.replace(CODE, (_, name: string) => codeChar(name)!), mode, 'literal')
-    if (g) return g
+    if (g) { return g }
   }
   return out
 }
@@ -87,11 +87,11 @@ export function decoded(text: string, mode: Mode, br: Br): string | Fail {
 // then (oneParagraph; a blank line is left to the caller) fails 'markdown', emphasis or not.
 export function styled(text: string, br: Br, { decode = false, breaks = false }: { decode?: boolean; breaks?: boolean } = {}): string | Fail {
   const d = decode ? decoded(text, 'markdown', br) : (drawable(text, 'markdown', br) ?? text)
-  if (isFail(d) && d.reason !== 'markdown') return d
+  if (isFail(d) && d.reason !== 'markdown') { return d }
   const bad = unsupported(isFail(d) ? text : d)
-  if (bad) return fail(`unsupported-char ${bad}`)
-  if (breaks && !oneParagraph(text, true)) return fail('markdown')
-  if (!isFail(d) || /#\w+;/.test(text) || (br !== 'any' && text.includes('<'))) return d
+  if (bad) { return fail(`unsupported-char ${bad}`) }
+  if (breaks && !oneParagraph(text, true)) { return fail('markdown') }
+  if (!isFail(d) || /#\w+;/.test(text) || (br !== 'any' && text.includes('<'))) { return d }
   return emphasize(text, breaks) ?? d
 }
 
@@ -99,11 +99,12 @@ export function styled(text: string, br: Br, { decode = false, breaks = false }:
 // (/(fa[bklrs]?):fa-([\w-]+)/; fad too, to be safe) for an icon, and a $$…$$ makes the whole label KaTeX. A markdown label
 // goes through marked, which drops a \ before ASCII punctuation and renders * and _ emphasis; a plain one shows a literal
 // \n as a <br />. Code, links, headings and lists marked leaves as written (markdownToHTML emits their raw text).
-const ICON = /fa[bdklrs]?:fa-[\w-]/, MATH = /\$\$[^]*?\$\$/
+const ICON = /fa[bdklrs]?:fa-[\w-]/
+const  MATH = /\$\$[^]*?\$\$/
 function rendered(text: string, mode: 'html' | 'markdown' | 'member'): Fail | null {
-  if (ICON.test(text)) return fail('icon')
-  if (MATH.test(text)) return fail('math')
-  if (mode === 'html') return /\\n/.test(text) ? fail('newline') : null
+  if (ICON.test(text)) { return fail('icon') }
+  if (MATH.test(text)) { return fail('math') }
+  if (mode === 'html') { return /\\n/.test(text) ? fail('newline') : null }
   return marked(text) ? fail('markdown') : null
 }
 
@@ -111,7 +112,7 @@ function rendered(text: string, mode: 'html' | 'markdown' | 'member'): Fail | nu
 // touch a non-letter, non-digit (or an end), as emphasis can only open or close there. A lone * or _, and _ inside a
 // word (snake_case), stay as written.
 function marked(text: string): boolean {
-  if (/\\[!-/:-@[-`{-~]/.test(text) || (text.match(/\*/g) ?? []).length > 1) return true
+  if (/\\[!-/:-@[-`{-~]/.test(text) || (text.match(/\*/g) ?? []).length > 1) { return true }
   const word = (ch: string | undefined) => ch !== undefined && /[\p{L}\p{N}]/u.test(ch)
   const edge = [...text.matchAll(/_+/g)].reduce((k, m) =>
     k + (word(text[m.index - 1]) && word(text[m.index + m[0].length]) ? 0 : m[0].length), 0)
@@ -138,12 +139,14 @@ export function labelLines(label: string): string[] {
 export function wrap(line: string, max: number): Piece[] | null {
   // Each token, and whether a space came before it.
   const toks: { t: string; sp: boolean }[] = []
-  let cur = '', sp = false, prevWide = false
+  let cur = ''
+let  sp = false
+let  prevWide = false
   let mark = ''                                    // an emphasis marker, held until the character it styles
   for (const ch of line) {
     if (emOf(ch)) { mark = ch; continue }
     if (ch === ' ') {
-      if (cur) toks.push({ t: cur, sp })
+      if (cur) { toks.push({ t: cur, sp }) }
       cur = ''; sp = true; prevWide = false
       continue
     }
@@ -151,13 +154,14 @@ export function wrap(line: string, max: number): Piece[] | null {
     if (w && prevWide && cur) { toks.push({ t: cur, sp }); cur = ''; sp = false }
     cur += mark + ch; prevWide = w; mark = ''
   }
-  if (cur) toks.push({ t: cur, sp })
+  if (cur) { toks.push({ t: cur, sp }) }
   const out: Piece[] = []
   for (const k of toks) {
-    if (width(k.t) > max) return null
-    const last = out.at(-1), sep = k.sp ? ' ' : ''
-    if (last && width(last.text + sep + k.t) <= max) last.text += sep + k.t
-    else out.push({ text: k.t, join: out.length ? sep : '' })
+    if (width(k.t) > max) { return null }
+    const last = out.at(-1)
+const  sep = k.sp ? ' ' : ''
+    if (last && width(last.text + sep + k.t) <= max) { last.text += sep + k.t }
+    else { out.push({ text: k.t, join: out.length ? sep : '' }) }
   }
   return out.length ? out : [{ text: '', join: '' }]
 }

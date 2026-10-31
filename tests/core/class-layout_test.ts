@@ -2,7 +2,8 @@ import test from 'node:test'; import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'; import { text } from './graph-fixture.ts'; import { validate } from '../../core/validate.ts'
 const X = (body: string, columns = 80) => explain(`classDiagram\n${body}`, { columns, theme: 'mono' }) as any
 test('A3: a class pill shows «annot», its name, then attributes before methods, with no divider row', () => {
-  const t = text(X('class Duck {\n  <<service>>\n  +swim()\n  +String beakColor\n}').drawing), at = (s: string) => t.findIndex(l => l.includes(s))
+  const t = text(X('class Duck {\n  <<service>>\n  +swim()\n  +String beakColor\n}').drawing)
+const  at = (s: string) => t.findIndex(l => l.includes(s))
   assert.deepEqual([at('«service»') + 1, at(' Duck ') + 1, at('+String beakColor') + 1], [at(' Duck '), at('+String beakColor'), at('+swim()')])
   assert.ok(t.slice(at('«service»'), at('+swim()') + 1).every(l => /\[.*\]/.test(l)))
   const duck = X('class Duck {\n  <<service>>\n  +String beakColor\n  +swim()\n}').drawing   // an annotated class with members validates
@@ -10,10 +11,11 @@ test('A3: a class pill shows «annot», its name, then attributes before methods
 })
 test('A3: ends face their class: △ inheritance, ◆ composition, ◇ aggregation, ▽ a dashed realization', () => {
   const t = text(X('Animal <|-- Duck\nDuck *-- Egg\nLake o-- Duck\nDuck ..|> Swimmer').drawing).join('\n')
-  for (const g of ['△', '◆', '◇', '▽', '┆']) assert.ok(t.includes(g), g)
+  for (const g of ['△', '◆', '◇', '▽', '┆']) { assert.ok(t.includes(g), g) }
 })
 test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence, in source order', () => {
-  const W = 'Supercalifragilisticexpialidocious', r = X(`direction LR\nA --> B : uses\nnote for B "${W}"`, 40)
+  const W = 'Supercalifragilisticexpialidocious'
+const  r = X(`direction LR\nA --> B : uses\nnote for B "${W}"`, 40)
   assert.equal(r.step, 'keyed'); assert.deepEqual(text(r.drawing).slice(-2), ['a uses', `b ${W}`])
   assert.ok(r.drawing.cells.flat().some((c: any) => c?.kind === 'key' && c.ch === 'b' && c.owners[0] === 'note0' && !c.legend))   // the class note node draws its key (B4)
 })
@@ -34,7 +36,7 @@ test('A4.fit-ladder: keyed, an unlabelled relation takes no key; labels, then no
 })
 test('A5.errors: a class or namespace named as a relation or a note fails id-clash', () => {
   for (const body of ['class r0\nA --> r0', 'class note0', 'A --> B\nnamespace r0 {\n  class C\n}', 'class note3\nnote "x"'])
-    assert.deepEqual(X(body), { reason: 'id-clash' }, body)
+    { assert.deepEqual(X(body), { reason: 'id-clash' }, body) }
   assert.ok(X('class r\nclass notes\nclass r0a').drawing)
 })
 test('A4.fit-ladder: keyed, a note written above a labelled relation takes its key first, in source order', () => {

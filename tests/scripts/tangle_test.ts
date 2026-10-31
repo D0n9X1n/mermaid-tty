@@ -1,14 +1,16 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { readFileSync } from 'node:fs'
 import { explain } from '../../core/render.ts'; import { tangles } from '../../scripts/lib/tangle.ts'
 const fresh = () => (explain(readFileSync('fixtures/flowchart/flowchart-ok-30.mmd', 'utf8'), { columns: 80, theme: 'mono' }) as any).drawing
-const find = (d: any, p: (c: any) => boolean) => { for (const [r, row] of d.cells.entries()) for (const [c, x] of row.entries()) if (x && p(x)) return [r, c]; throw new Error('none') }
+const find = (d: any, p: (c: any) => boolean) => { for (const [r, row] of d.cells.entries()) { for (const [c, x] of row.entries()) { if (x && p(x)) { return [r, c]; } } } throw new Error('none') }
 test('VR.tangled: a clean golden has no tangle; each rule catches its break', () => {
   assert.deepEqual(tangles(fresh()), [])
-  const t = fresh(), [r, c] = find(t, x => x.kind === 'fill' && x.owners.includes('A'))
+  const t = fresh()
+const  [r, c] = find(t, x => x.kind === 'fill' && x.owners.includes('A'))
   t.cells[r][c] = { ch: '│', role: 'edge', kind: 'line', owners: ['Z>Y'], dirs: 5 }; assert.ok(tangles(t).includes('through-node'))
-  const s = fresh(), [r2, c2] = find(s, x => x.kind === 'line'); s.cells[r2][c2] = { ...s.cells[r2][c2], owners: [...s.cells[r2][c2].owners, 'Z>Y'] }
+  const s = fresh()
+const  [r2, c2] = find(s, x => x.kind === 'line'); s.cells[r2][c2] = { ...s.cells[r2][c2], owners: [...s.cells[r2][c2].owners, 'Z>Y'] }
   assert.ok(tangles(s).includes('shared-segment'))
-  const h = fresh(); for (const row of h.cells) row.forEach((x: any, i: number) => { if (x?.kind === 'arrow') row[i] = null })
+  const h = fresh(); for (const row of h.cells) { row.forEach((x: any, i: number) => { if (x?.kind === 'arrow') { row[i] = null } }) }
   assert.ok(tangles(h).includes('ambiguous-head'))
   const l = fresh(); l.expect = { ...l.expect, edgeLabels: l.expect.edgeLabels.map((e: any) => ({ ...e, edge: 'nope' })) }
   assert.ok(tangles(l).includes('label-detached'))
@@ -20,9 +22,10 @@ test('VR.tangled: a clean golden has no tangle; each rule catches its break', ()
 const DIRS: Record<string, number> = { '─': 10, '┄': 10, '│': 5, '┌': 6, '┐': 12, '└': 3, '┘': 9, '├': 7, '┤': 13, '┬': 14, '┴': 11, '┼': 15 }
 function grid(glyphs: string[], keys: string[], own: Record<string, string[]>, expect: object, kinds: Record<string, string> = {}): any {
   const cells = glyphs.map((g, r) => [...g].map((ch, c) => {
-    const k = keys[r]![c]!, owners = own[k]
-    if (k === '.') return null
-    if (!owners) throw new Error(`no owners for key ${k} at ${r},${c}`)
+    const k = keys[r]![c]!
+const  owners = own[k]
+    if (k === '.') { return null }
+    if (!owners) { throw new Error(`no owners for key ${k} at ${r},${c}`) }
     const dirs = DIRS[ch] ?? 0
     const kind = kinds[k] ?? (dirs ? 'line' : '▲►▼◄'.includes(ch) ? 'arrow' : '[]'.includes(ch) ? 'cap' : ch === ' ' ? 'fill' : 'text')
     const role = ({ line: 'edge', arrow: 'arrow', frame: 'frame', lifeline: 'note' } as Record<string, string>)[kind] ?? 'node'

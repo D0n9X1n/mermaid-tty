@@ -13,15 +13,18 @@ const R = (dir: 'TB' | 'LR', e: string[]) => routeGraph(layoutGraph(g(dir, e), {
   rankGap: 3, nodeGap: 4, wrapAt: null,
 }) as Placed) as Route[]
 const linked = (r: Route, p?: Placed) => r.cells.every((c, i) => {
-  if (!i) return true
-  const a = r.cells[i - 1]!, distance = Math.abs(c.r - a.r) + Math.abs(c.c - a.c)
-  if (distance === 1) return true
+  if (!i) { return true }
+  const a = r.cells[i - 1]!
+const  distance = Math.abs(c.r - a.r) + Math.abs(c.c - a.c)
+  if (distance === 1) { return true }
   const b = p?.boxes.get(`${r.edge}:label`)
-  if (!b || c.c !== a.c && c.r !== a.r) return false
-  const dr = Math.sign(c.r - a.r), dc = Math.sign(c.c - a.c)
+  if (!b || c.c !== a.c && c.r !== a.r) { return false }
+  const dr = Math.sign(c.r - a.r)
+const  dc = Math.sign(c.c - a.c)
   for (let k = 1; k < distance; k++) {
-    const row = a.r + dr * k, col = a.c + dc * k
-    if (row < b.row || row >= b.row + b.rows || col < b.col || col >= b.col + b.cols) return false
+    const row = a.r + dr * k
+const  col = a.c + dc * k
+    if (row < b.row || row >= b.row + b.rows || col < b.col || col >= b.col + b.cols) { return false }
   }
   return true
 })
@@ -66,11 +69,14 @@ test('A1: R3 a rejoined suffix cannot merge before the target channel', () => {
     { N0: 'a wider node' }), { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
-  const a = rs.find(r => r.edge === 'e5')!, b = rs.find(r => r.edge === 'e6')!, head = b.ends[0]!
+  const a = rs.find(r => r.edge === 'e5')!
+const  b = rs.find(r => r.edge === 'e6')!
+const  head = b.ends[0]!
   const suffix: Route['cells'][number][] = []
   for (let i = 1; i <= Math.min(a.cells.length, b.cells.length); i++) {
-    const x = a.cells.at(-i)!, y = b.cells.at(-i)!
-    if (x.r !== y.r || x.c !== y.c) break
+    const x = a.cells.at(-i)!
+const  y = b.cells.at(-i)!
+    if (x.r !== y.r || x.c !== y.c) { break }
     suffix.push(y)
   }
   assert.ok(suffix.length > 0)
@@ -124,14 +130,14 @@ test('A1: R4 a shared run stays inside one merge group', () => {
 })
 
 test('A1: R4 circle and cross fans share a stem again', () => {
-  for (const op of ['--o', '--x']) for (const [src, a, b] of [[`A${op}B\nA${op}C`, 'L_A_B_0', 'L_A_C_0'], [`A${op}C\nB${op}C`, 'L_A_C_0', 'L_B_C_0']]) {
+  for (const op of ['--o', '--x']) { for (const [src, a, b] of [[`A${op}B\nA${op}C`, 'L_A_B_0', 'L_A_C_0'], [`A${op}C\nB${op}C`, 'L_A_C_0', 'L_B_C_0']]) {
     const r = explain(`flowchart TB\n${src}`, { columns: 80 })
     assert.ok(!('reason' in r))
     assert.equal(validate(r.drawing), null)
     assert.deepEqual(falsePairs(r.drawing), [])
     const shared = r.drawing.cells.flat().filter(c => c?.kind === 'line' && c.owners.includes(a) && c.owners.includes(b))
     assert.ok(shared.length > 0, `${src} shares no line\n${text(r.drawing).join('\n')}`)
-  }
+  } }
 })
 
 test('A1: R3 self-loop turns stay out of crossings even when all owners share its node', () => {
@@ -143,7 +149,7 @@ test('A1: R3 self-loop turns stay out of crossings even when all owners share it
   const d = drawGraph(p, rs, 120, x => x)
   assert.equal(validate(d), null)
   const loop = rs.find(r => r.edge === 'e3')!
-  for (const c of loop.cells) if (d.cells[c.r]![c.c]!.dirs === 15) assert.ok(c.dirs === 5 || c.dirs === 10)
+  for (const c of loop.cells) { if (d.cells[c.r]![c.c]!.dirs === 15) { assert.ok(c.dirs === 5 || c.dirs === 10) } }
   assert.deepEqual(falsePairs(d), [])
 })
 
@@ -155,16 +161,17 @@ test('A1: R2 every owner stays straight where unrelated edges cross', () => {
   assert.ok(Array.isArray(rs))
   assert.equal(validate(drawGraph(p, rs, 120)), null)
   const spots = new Map<string, { edge: string; dirs: number }[]>()
-  for (const r of rs) for (const c of r.cells) {
+  for (const r of rs) { for (const c of r.cells) {
     const key = `${c.r},${c.c}`
     spots.set(key, [...(spots.get(key) ?? []), { edge: r.edge, dirs: c.dirs }])
-  }
+  } }
   for (const owners of spots.values()) {
     const unrelated = owners.some(a => owners.some(b => {
-      const x = p.graph.edges.find(e => e.id === a.edge)!, y = p.graph.edges.find(e => e.id === b.edge)!
+      const x = p.graph.edges.find(e => e.id === a.edge)!
+const  y = p.graph.edges.find(e => e.id === b.edge)!
       return ![x.from, x.to].some(id => id === y.from || id === y.to)
     }))
-    if (unrelated) assert.ok(owners.every(c => c.dirs === 5 || c.dirs === 10))
+    if (unrelated) { assert.ok(owners.every(c => c.dirs === 5 || c.dirs === 10)) }
   }
 })
 
@@ -204,9 +211,9 @@ test('A1: shared end groups never hide arrow-on-bend conflicts', () => {
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
-  for (const r of rs) for (const other of rs.filter(s => s !== r)) {
+  for (const r of rs) { for (const other of rs.filter(s => s !== r)) {
     assert.ok(r.ends.every(h => !at(other).has(`${h.r},${h.c}`)))
-  }
+  } }
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
@@ -248,7 +255,8 @@ test('A1: side-entry splices preserve all dummy and label waypoints in order', (
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
-  const r = rs.find(r => r.edge === 'e1')!, waypoints = [...p.boxes].filter(([id]) => id.startsWith('e1#'))
+  const r = rs.find(r => r.edge === 'e1')!
+const  waypoints = [...p.boxes].filter(([id]) => id.startsWith('e1#'))
     .sort((a, b) => a[1].row - b[1].row)
   let previous = -1
   for (const [, b] of waypoints) {
@@ -292,7 +300,7 @@ test('A1: aligned one-to-one chains use centered straight ports', () => {
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
-  for (const r of rs) assert.ok(r.cells.every(c => c.dirs === 5))
+  for (const r of rs) { assert.ok(r.cells.every(c => c.dirs === 5)) }
   assert.equal(validate(drawGraph(p, rs, 80)), null)
 })
 
@@ -340,12 +348,12 @@ test('A1: a fan-out shares its stem; unrelated routes share no cell', () => {
 test('A1: bends have corners; each head follows a straight cell; crossings are perpendicular', () => {
   const rs = R('TB', ['A>B', 'A>C'])
   assert.ok(rs.some(r => r.cells.some(c => [3, 6, 9, 12].includes(c.dirs))))
-  for (const r of rs) assert.ok([5, 10].includes(r.cells.at(-1)!.dirs), r.edge)
+  for (const r of rs) { assert.ok([5, 10].includes(r.cells.at(-1)!.dirs), r.edge) }
   const [, ad, bc] = R('TB', ['A>C', 'A=>D', 'B>C', 'B>D'])
   const dirOf = (r: Route, k: string) => r.cells.find(c => `${c.r},${c.c}` === k)!.dirs
   const shared = [...at(ad!)].filter(k => at(bc!).has(k))
   assert.ok(shared.length > 0)
-  for (const k of shared) assert.equal(dirOf(ad!, k) + dirOf(bc!, k), 15)
+  for (const k of shared) { assert.equal(dirOf(ad!, k) + dirOf(bc!, k), 15) }
 })
 
 test('A1: invisible edges have no route and visible styles survive', () => {
@@ -362,7 +370,8 @@ test('A1: BT and RL point their heads toward the target', () => {
     assert.ok(Array.isArray(rs))
     assert.equal(rs[0]!.ends[0]!.ch, ch)
     assert.ok(linked(rs[0]!))
-    const b = p.boxes.get('B')!, h = rs[0]!.ends[0]!
+    const b = p.boxes.get('B')!
+const  h = rs[0]!.ends[0]!
     assert.equal(dir === 'BT' ? h.r : h.c, dir === 'BT' ? b.row + b.rows : b.col + b.cols)
   }
 })
@@ -414,7 +423,8 @@ test('A1: labelled edges join through their label without overwriting its text',
     }) as Placed
     const rs = routeGraph(p)
     assert.ok(Array.isArray(rs))
-    const r = rs[0]!, b = p.boxes.get('e0:label')!
+    const r = rs[0]!
+const  b = p.boxes.get('e0:label')!
     const distance = (c: { r: number; c: number }) => Math.max(
       b.row - c.r, c.r - b.row - b.rows + 1, b.col - c.c, c.c - b.col - b.cols + 1, 0)
     assert.ok(r.cells.some(c => distance(c) === 1))
@@ -431,7 +441,9 @@ test('A1: a back-edge head points at its real target after a straight in-stem', 
   }) as Placed
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
-  const r = rs.find(r => r.edge === 'e3')!, a = p.boxes.get('A')!, h = r.ends[0]!
+  const r = rs.find(r => r.edge === 'e3')!
+const  a = p.boxes.get('A')!
+const  h = r.ends[0]!
   assert.equal(h.ch, '◄')
   assert.equal(h.c, a.col + a.cols)
   assert.ok(h.r >= a.row && h.r < a.row + a.rows)
@@ -451,9 +463,9 @@ test('A1: routes avoid every node, label and foreign dummy box', () => {
   assert.ok(Array.isArray(rs))
   assert.equal(rs.length, 1)
   assert.ok(linked(rs[0]!))
-  for (const c of [...rs[0]!.cells, ...rs[0]!.ends]) for (const b of boxes.values()) {
+  for (const c of [...rs[0]!.cells, ...rs[0]!.ends]) { for (const b of boxes.values()) {
     assert.ok(c.r < b.row || c.r >= b.row + b.rows || c.c < b.col || c.c >= b.col + b.cols)
-  }
+  } }
   assert.ok(rs[0]!.cells[0]!.dirs & 1)
   assert.ok([5, 10].includes(rs[0]!.cells.at(-1)!.dirs))
 })
@@ -466,7 +478,7 @@ test('A1: frame borders are crossed straight and perpendicular', () => {
   assert.ok(Array.isArray(rs))
   const f = p.frames.get('s')!
   let crossed = 0
-  for (const r of rs) for (const c of r.cells) {
+  for (const r of rs) { for (const c of r.cells) {
     if (c.c >= f.col && c.c < f.col + f.cols && (c.r === f.row || c.r === f.row + f.rows - 1)) {
       assert.equal(c.dirs, 5)
       crossed++
@@ -475,7 +487,7 @@ test('A1: frame borders are crossed straight and perpendicular', () => {
       assert.equal(c.dirs, 10)
       crossed++
     }
-  }
+  } }
   assert.ok(crossed > 0)
 })
 
@@ -485,7 +497,8 @@ test('A1: routes avoid the full display width of frame title cells', () => {
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
-  const f = p.frames.get('s')!, r = rs[0]!
+  const f = p.frames.get('s')!
+const  r = rs[0]!
   assert.ok(linked(r))
   for (const c of [...r.cells, ...r.ends]) {
     assert.ok(c.r !== f.row || c.c < f.col + 2 || c.c > f.col + 5)
@@ -499,7 +512,10 @@ test('A1: a back-edge head on a bottom border enters a side face instead', () =>
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
-  const r = rs.find(r => r.edge === 'e2')!, h = r.ends[0]!, a = p.boxes.get('A')!, f = p.frames.get('s')!
+  const r = rs.find(r => r.edge === 'e2')!
+const  h = r.ends[0]!
+const  a = p.boxes.get('A')!
+const  f = p.frames.get('s')!
   assert.notEqual(h.r, f.row + f.rows - 1)
   assert.ok(h.r >= a.row && h.r < a.row + a.rows)
   assert.ok(h.c === a.col - 1 || h.c === a.col + a.cols)
@@ -515,7 +531,8 @@ test('A1: impossible border heads report route-conflict', () => {
   const graph = g('TB', ['A>B'])
   graph.clusters = [{ id: 's', title: null, dir: null, nodes: ['B'], clusters: [] }]
   const p = layoutGraph(graph, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
-  const b = p.boxes.get('B')!, f = p.frames.get('s')!
+  const b = p.boxes.get('B')!
+const  f = p.frames.get('s')!
   const frames = new Map(p.frames).set('s', { ...f, row: b.row - 1, rows: 3 })
   const boxes = new Map(p.boxes).set('left', { row: b.row, col: 0, rows: 1, cols: b.col })
     .set('right', { row: b.row, col: b.col + b.cols, rows: 1, cols: p.cols - b.col - b.cols })
@@ -577,7 +594,8 @@ test('A1: unrelated routes cannot share a one-cell obstacle passage', () => {
   const p = layoutGraph(g('TB', ['A>C', 'B>D']), { rankGap: 8, nodeGap: 4, wrapAt: null }) as Placed
   const boxes = new Map(p.boxes).set('left-wall', { row: 4, col: 0, rows: 1, cols: 2 })
     .set('right-wall', { row: 4, col: 3, rows: 1, cols: p.cols - 3 })
-  const q = { ...p, boxes }, rs = routeGraph(q)
+  const q = { ...p, boxes }
+const  rs = routeGraph(q)
   if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
   assert.equal(validate(drawGraph(q, rs, 120)), null)
   assert.ok(![...at(rs[0]!)].some(k => at(rs[1]!).has(k)))
@@ -605,11 +623,11 @@ test('A1: crossings cannot turn the cell behind a head into a junction', () => {
   const p = { graph, boxes, frames: new Map(), rows: 9, cols: 11 }
   const rs = routeGraph(p)
   if (!Array.isArray(rs)) { assert.equal(rs.reason, 'route-conflict'); return }
-  for (const r of rs) for (const h of r.ends) {
+  for (const r of rs) { for (const h of r.ends) {
     const stem = r.cells.find(c => Math.abs(c.r - h.r) + Math.abs(c.c - h.c) === 1)!
     const dirs = rs.flatMap(s => s.cells).filter(c => c.r === stem.r && c.c === stem.c).reduce((d, c) => d | c.dirs, 0)
     assert.ok([5, 10].includes(dirs))
-  }
+  } }
 })
 
 test('A1: routing is deterministic with ties in source order', () => {
@@ -625,8 +643,10 @@ test('A1: routing is deterministic with ties in source order', () => {
 
 test('A1: unrelated nets have distinct channel tracks', () => {
   const p = layoutGraph(g('TB', ['A>C', 'B>D']), { rankGap: 4, nodeGap: 4, wrapAt: null }) as Placed
-  const a = p.boxes.get('A')!, b = p.boxes.get('B')!
-  const c = p.boxes.get('C')!, d = p.boxes.get('D')!
+  const a = p.boxes.get('A')!
+const  b = p.boxes.get('B')!
+  const c = p.boxes.get('C')!
+const  d = p.boxes.get('D')!
   const rs = routeGraph({ ...p, boxes: new Map(p.boxes).set('C', { ...c, col: b.col })
     .set('D', { ...d, col: a.col }) }) as Route[]
   assert.equal(rs.length, 2)
@@ -635,7 +655,7 @@ test('A1: unrelated nets have distinct channel tracks', () => {
   assert.notEqual(tracks[0]![0], tracks[1]![0])
   for (const c of rs[0]!.cells) {
     const other = rs[1]!.cells.find(d => c.r === d.r && c.c === d.c)
-    if (other) assert.deepEqual(new Set([c.dirs, other.dirs]), new Set([5, 10]))
+    if (other) { assert.deepEqual(new Set([c.dirs, other.dirs]), new Set([5, 10])) }
   }
 })
 
@@ -648,7 +668,9 @@ test('A1: routes are 4-connected and end in one allowed head', () => {
   }
   assert.deepEqual(R('LR', ['A>B'])[0]!.ends.map(e => e.ch), ['►'])
   for (const dir of ['TB', 'LR'] as const) {
-    const r = R(dir, ['A>B'])[0]!, head = r.ends[0]!, last = r.cells.at(-1)!
+    const r = R(dir, ['A>B'])[0]!
+const  head = r.ends[0]!
+const  last = r.cells.at(-1)!
     assert.equal(r.cells.length, 2)
     assert.ok(r.cells.every(c => c.dirs === (dir === 'TB' ? 5 : 10)))
     assert.equal(Math.abs(last.r - head.r) + Math.abs(last.c - head.c), 1)

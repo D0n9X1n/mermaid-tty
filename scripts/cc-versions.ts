@@ -4,13 +4,14 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { record, recorded, untested, verdict } from './lib/cc-versions.ts';
-const [mode, a = '', b = '', extra = ''] = process.argv.slice(2), read = (f: string) => (existsSync(f) ? readFileSync(f, 'utf8') : '');
-if (mode === 'list') console.log(JSON.stringify(/^\d+\.\d+\.\d+$/.test(extra) ? [extra] : untested(JSON.parse(read(a) || '[]'), recorded(read(b)))));
+const [mode, a = '', b = '', extra = ''] = process.argv.slice(2)
+const  read = (f: string) => (existsSync(f) ? readFileSync(f, 'utf8') : '');
+if (mode === 'list') { console.log(JSON.stringify(/^\d+\.\d+\.\d+$/.test(extra) ? [extra] : untested(JSON.parse(read(a) || '[]'), recorded(read(b))))); }
 else if (mode === 'record') {
   const legs: Record<string, Record<string, string>> = Object.fromEntries((JSON.parse(extra || '[]') as string[]).map((v) => [v, {}]));
   for (const d of existsSync(a) ? readdirSync(a) : []) {
     const [v = '', os = '', status = ''] = read(join(a, d, 'leg.txt')).trim().split(/\s+/);
-    if (legs[v]) legs[v]![os] = status;
+    if (legs[v]) { legs[v]![os] = status; }
   }
   writeFileSync(b, record(read(b), Object.fromEntries(Object.entries(legs).map(([v, l]) => [v, verdict(l)]))));
   console.log(`cc-versions: recorded ${Object.keys(legs).join(', ') || 'nothing'}`);

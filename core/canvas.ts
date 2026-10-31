@@ -35,8 +35,9 @@ const BACKGROUND: ReadonlySet<Kind> = new Set<Kind>(['frame', 'lifeline'])
 function mergeArms(a: string, b: string): string | null {
   let out = ''
   for (let i = 0; i < 4; i++) {
-    const x = a[i]!, y = b[i]!
-    if (x !== '0' && y !== '0' && x !== y) return null
+    const x = a[i]!
+const  y = b[i]!
+    if (x !== '0' && y !== '0' && x !== y) { return null }
     out += x === '0' ? y : x
   }
   return out
@@ -54,64 +55,65 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
   // A write outside [0, rows) × [0, cols), or at a non-integer row or column, is a Conflict and is skipped: it never throws and
   // never grows the grid, so validation fails closed and the render falls back.
   const inGrid = (r: number, c: number, by: string): boolean => {
-    if (Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < rows && c >= 0 && c < cols) return true
+    if (Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < rows && c >= 0 && c < cols) { return true }
     conflicts.push({ row: r, col: c, had: 'out-of-bounds', by })
     return false
   }
   // An exclusive write takes an empty or background cell; on any other cell it logs a conflict and keeps the old cell.
   const put = (r: number, c: number, cell: Cell): void => {
-    if (!inGrid(r, c, cell.owners[0]!)) return
+    if (!inGrid(r, c, cell.owners[0]!)) { return }
     const old = cells[r]![c]
-    if (old && !BACKGROUND.has(old.kind)) conflicts.push({ row: r, col: c, had: old.owners[0]!, by: cell.owners[0]! })
-    else cells[r]![c] = cell
+    if (old && !BACKGROUND.has(old.kind)) { conflicts.push({ row: r, col: c, had: old.owners[0]!, by: cell.owners[0]! }) }
+    else { cells[r]![c] = cell }
   }
   // A frame or lifeline writes only into an empty cell: on a drawn cell it is a no-op, not a Conflict, which sequence layering relies on.
-  const under = (r: number, c: number, cell: Cell): void => { if (inGrid(r, c, cell.owners[0]!) && !cells[r]![c]) cells[r]![c] = cell }
+  const under = (r: number, c: number, cell: Cell): void => { if (inGrid(r, c, cell.owners[0]!) && !cells[r]![c]) { cells[r]![c] = cell } }
   const canvas: Canvas = {
     // text('') writes no cell, so it carries no join.
     text(r, c, s, role, owner, join) {
       const owners = typeof owner === 'string' ? [owner] : owner
-      let col = c, lead: Cell | null = null            // the lead cell this call made last; a zero-width character joins only it
+      let col = c
+let  lead: Cell | null = null            // the lead cell this call made last; a zero-width character joins only it
       let em = 0                                       // an emphasis marker's em, for the next character that takes a column
       for (const ch of s) {
         if (emOf(ch)) { em = emOf(ch); continue }
         const w = width(ch)
-        if (w === 0) { if (lead) lead.ch += ch; continue }   // with no lead cell it drops; the validator's text compare catches that
+        if (w === 0) { if (lead) { lead.ch += ch; } continue }   // with no lead cell it drops; the validator's text compare catches that
         lead = { ch, role, kind: 'text', owners, dirs: 0, ...(col === c && join !== undefined ? { join } : {}), ...(em ? { em } : {}) }
         em = 0
         put(r, col, lead)
-        if (w === 2) put(r, col + 1, { ch: '', role, kind: 'cont', owners, dirs: 0 })
+        if (w === 2) { put(r, col + 1, { ch: '', role, kind: 'cont', owners, dirs: 0 }) }
         col += w
       }
       return col - c
     },
     cap(r, c, s, role, owner) {
       let col = c
-      for (const ch of s) put(r, col++, { ch, role, kind: 'cap', owners: [owner], dirs: 0 })
+      for (const ch of s) { put(r, col++, { ch, role, kind: 'cap', owners: [owner], dirs: 0 }) }
     },
     // C: a keyed item's key, in place (legend false) or in its legend row. Exclusive like a cap, one cell per character, each
     // owned by every owner given: a member's in-place key by [id, parent], an edge label's by [`${id}:label`, id].
     key(r, c, s, role, owner, legend) {
       const owners = [owner].flat()
       let col = c
-      for (const ch of s) put(r, col++, { ch, role, kind: 'key', owners, dirs: 0, ...(legend ? { legend: true as const } : {}) })
+      for (const ch of s) { put(r, col++, { ch, role, kind: 'key', owners, dirs: 0, ...(legend ? { legend: true as const } : {}) }) }
       return col - c
     },
     fill(r, c, n, role, owner) {
-      for (let i = 0; i < n; i++) put(r, c + i, { ch: ' ', role, kind: 'fill', owners: [owner], dirs: 0 })
+      for (let i = 0; i < n; i++) { put(r, c + i, { ch: ' ', role, kind: 'fill', owners: [owner], dirs: 0 }) }
     },
     // An arrow on an arrow of the same glyph merges owners when shares holds for an old owner, so edges into one node end in
     // one head that each owns. Any other write on an arrow is a Conflict (put).
     arrow(r, c, ch, owner) {
       const old = cells[r]?.[c]
       if (old?.kind === 'arrow' && old.ch === ch && old.owners.some(o => shares(o, owner))) {
-        if (!old.owners.includes(owner)) cells[r]![c] = { ...old, owners: [...old.owners, owner] }
+        if (!old.owners.includes(owner)) { cells[r]![c] = { ...old, owners: [...old.owners, owner] } }
         return
       }
       put(r, c, { ch, role: 'arrow', kind: 'arrow', owners: [owner], dirs: 0 })
     },
     line(r, c, dirs, weight, role, owner) {
-      if (!inGrid(r, c, owner)) return
+      if (!inGrid(r, c, owner)) { return }
       const k = weight === 'heavy' ? '2' : '1'
       const arms = [1, 2, 4, 8].map(b => (dirs & b ? k : '0')).join('')
       const old = cells[r]![c]
@@ -128,7 +130,8 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       const all = old.dirs | dirs
       const style = old.style === 'dotted' ? weight : old.style!   // a dotted cell takes the new line's style: dotted only while every line in it is
       const owners = old.owners.includes(owner) ? old.owners : [...old.owners, owner]
-      const had = old.segs ?? [], seg = had.find(s => s.owner === owner)
+      const had = old.segs ?? []
+const  seg = had.find(s => s.owner === owner)
       const segs = seg ? had.map(s => (s === seg ? { owner, dirs: s.dirs | dirs } : s)) : [...had, { owner, dirs }]
       cells[r]![c] = { ...old, ch: lineGlyph(all, merged, style), owners, dirs: all, arms: merged, style, segs }
     },
@@ -138,7 +141,7 @@ export function createCanvas(rows: number, cols: number, columns: number, shares
       for (let c = left + 1; c < right; c++) { edge(top, c, 10); edge(bottom, c, 10) }
       for (let r = top + 1; r < bottom; r++) { edge(r, left, 5); edge(r, right, 5) }
       edge(top, left, 6); edge(top, right, 12); edge(bottom, left, 3); edge(bottom, right, 9)
-      if (title) canvas.text(top, left + 2, title, role, owner)
+      if (title) { canvas.text(top, left + 2, title, role, owner) }
     },
     toDrawing(expect) { return { columns, cells, conflicts, expect } },
   }

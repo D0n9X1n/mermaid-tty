@@ -57,7 +57,8 @@ test('widest is the widest right-trimmed row in display columns', () => {
 
 // goldenGlyphs on one golden with the given content: each flag as 'line ch'.
 function scanGolden(content: string): string[] {
-  const dir = mkdtempSync(join(tmpdir(), 'golden-lib-')), p = join(dir, 'x.golden')
+  const dir = mkdtempSync(join(tmpdir(), 'golden-lib-'))
+const  p = join(dir, 'x.golden')
   try {
     writeFileSync(p, content)
     return goldenGlyphs(dir).map(s => s.slice(p.length + 1))
@@ -68,7 +69,8 @@ function scanGolden(content: string): string[] {
 // goldenGlyphs on one golden holding a single text row and its role row.
 const scanRow = (text: string, roles: string): string[] => scanGolden(`@60\n${text}\n@60 roles\n${roles}\n`)
 
-const ACUTE = String.fromCodePoint(0x301), ZWSP = String.fromCodePoint(0x200b)   // a combining mark and a zero-width space: both take no column
+const ACUTE = String.fromCodePoint(0x301)
+const  ZWSP = String.fromCodePoint(0x200b)   // a combining mark and a zero-width space: both take no column
 
 test('goldenGlyphs flags a zero-width code point joined to a drawn cell, an empty one or none', () => {
   assert.deepEqual(scanRow(`─${ACUTE}A`, 'eL'), [`2 ${ACUTE}`])      // ─ plus U+0301 is no allow-listed glyph
@@ -88,7 +90,7 @@ test('goldenGlyphs skips a zero-width code point that joins source text, CJK con
 
 test('goldenGlyphs passes the golden of a label that ends in a combining mark, as in café', () => {
   const r = explain(`flowchart LR\nA[cafe${ACUTE}] --> B[end]`, { columns: 80, theme: 'mono' })
-  if (isFail(r)) return assert.fail(r.reason)
+  if (isFail(r)) { return assert.fail(r.reason) }
   const g = goldenOf([[80, r.drawing]])
   assert.ok(g.includes(`[ cafe${ACUTE} ]`), g)                       // the mark joins the e cell; drawn padding follows
   assert.deepEqual(scanGolden(g), [])
@@ -108,7 +110,7 @@ test('drawnGlyphs names each drawn cell that is not one allow-listed glyph, by r
 })
 
 test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph always takes its own column', () => {
-  for (const g of GLYPHS) assert.ok(width(g) === 1 && !/\p{M}/u.test(g), `U+${g.codePointAt(0)!.toString(16)}`)
+  for (const g of GLYPHS) { assert.ok(width(g) === 1 && !/\p{M}/u.test(g), `U+${g.codePointAt(0)!.toString(16)}`) }
 })
 
 // X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b (bold),

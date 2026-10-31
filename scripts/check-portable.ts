@@ -31,9 +31,9 @@ type Specifier = { at: number; text: string }
 // The last non-blank character of out, and the word that ends there ('' when that is not a word character).
 function before(out: string[]): { char: string; word: string } {
   let i = out.length - 1
-  while (i >= 0 && /\s/.test(out[i]!)) i--
+  while (i >= 0 && /\s/.test(out[i]!)) { i-- }
   let word = ''
-  for (let j = i; j >= 0 && /[\w$]/.test(out[j]!); j--) word = out[j] + word
+  for (let j = i; j >= 0 && /[\w$]/.test(out[j]!); j--) { word = out[j] + word }
   return { char: out[i] ?? '', word }
 }
 
@@ -44,9 +44,9 @@ function before(out: string[]): { char: string; word: string } {
 // a < /x/.test(s); and anywhere else, after }, an operator, punctuation, a keyword or nothing.
 function regexStarts(out: string[], next: string, headClosed: boolean): boolean {
   const { char, word } = before(out)
-  if (word) return BEFORE_REGEX.has(word)
-  if (char === ')') return headClosed
-  if (char === '<') return !(out.at(-1) === '<' && /[\w$>]/.test(next))
+  if (word) { return BEFORE_REGEX.has(word) }
+  if (char === ')') { return headClosed }
+  if (char === '<') { return !(out.at(-1) === '<' && /[\w$>]/.test(next)) }
   return char !== ']'
 }
 
@@ -54,7 +54,7 @@ function regexStarts(out: string[], next: string, headClosed: boolean): boolean 
 // that cuts it short. A backslash escapes the next character, a line break included.
 function closeQuote(code: string, i: number): number {
   let j = i + 1
-  while (j < code.length && code[j] !== code[i] && code[j] !== '\n') j += code[j] === '\\' ? 2 : 1
+  while (j < code.length && code[j] !== code[i] && code[j] !== '\n') { j += code[j] === '\\' ? 2 : 1 }
   return Math.min(j, code.length)
 }
 
@@ -64,10 +64,10 @@ function closeRegex(code: string, i: number): number {
   let inClass = false
   for (let j = i + 1; j < code.length && code[j] !== '\n'; j++) {
     const c = code[j]
-    if (c === '\\') j++
-    else if (c === '[') inClass = true
-    else if (c === ']') inClass = false
-    else if (c === '/' && !inClass) return j
+    if (c === '\\') { j++ }
+    else if (c === '[') { inClass = true }
+    else if (c === ']') { inClass = false }
+    else if (c === '/' && !inClass) { return j }
   }
   return -1
 }
@@ -81,41 +81,48 @@ function closeRegex(code: string, i: number): number {
 // specifiers are returned apart, blanked in the text too, to be checked as imports rather than scanned
 // for tokens.
 function lex(code: string): { text: string; specifiers: Specifier[] } {
-  const out: string[] = [], specifiers: Specifier[] = [], subs: number[] = [], heads: boolean[] = []
-  let i = 0, depth = 0, headClosed = false
+  const out: string[] = []
+const  specifiers: Specifier[] = []
+const  subs: number[] = []
+const  heads: boolean[] = []
+  let i = 0
+let  depth = 0
+let  headClosed = false
   // Copies code from i up to end, kept or blanked, and moves i there.
-  const take = (end: number, keep: boolean) => { for (; i < end; i++) out.push(keep || code[i] === '\n' ? code[i]! : ' ') }
+  const take = (end: number, keep: boolean) => { for (; i < end; i++) { out.push(keep || code[i] === '\n' ? code[i]! : ' ') } }
   // From the ` or } at i, blanks template text up to the closing `, or up to a ${ that opens a substitution.
   const template = () => {
     take(i + 1, true)
     while (i < code.length) {
       const c = code[i]
-      if (c === '\\') take(Math.min(i + 2, code.length), false)
+      if (c === '\\') { take(Math.min(i + 2, code.length), false) }
       else if (c === '`') { take(i + 1, true); return }
       else if (c === '$' && code[i + 1] === '{') { take(i + 2, true); subs.push(depth); depth = 0; return }
-      else take(i + 1, false)
+      else { take(i + 1, false) }
     }
   }
   while (i < code.length) {
-    const c = code[i], next = code[i + 1]
+    const c = code[i]
+const  next = code[i + 1]
     if (c === '/' && next === '/') { const end = code.indexOf('\n', i); take(end < 0 ? code.length : end, false) }
     else if (c === '/' && next === '*') { const end = code.indexOf('*/', i + 2); take(end < 0 ? code.length : end + 2, false) }
     else if (c === "'" || c === '"') {
-      const { word } = before(out), end = closeQuote(code, i)
-      if (word === 'from' || word === 'import') specifiers.push({ at: i, text: code.slice(i + 1, end) })
+      const { word } = before(out)
+const  end = closeQuote(code, i)
+      if (word === 'from' || word === 'import') { specifiers.push({ at: i, text: code.slice(i + 1, end) }) }
       take(i + 1, true); take(end, false)
-      if (code[end] === c) take(end + 1, true)
-    } else if (c === '`') template()
+      if (code[end] === c) { take(end + 1, true) }
+    } else if (c === '`') { template() }
     else if (c === '/' && regexStarts(out, next ?? '', headClosed)) {
       const end = closeRegex(code, i)
       take(i + 1, true)
       if (end >= 0) { take(end, false); take(end + 1, true) }
     } else if (c === '}' && depth === 0 && subs.length) { depth = subs.pop()!; template() }
     else {
-      if (c === '{') depth++
-      else if (c === '}') depth--
-      else if (c === '(') heads.push(CONTROL.has(before(out).word))
-      else if (c === ')') headClosed = heads.pop() ?? false
+      if (c === '{') { depth++ }
+      else if (c === '}') { depth-- }
+      else if (c === '(') { heads.push(CONTROL.has(before(out).word)) }
+      else if (c === ')') { headClosed = heads.pop() ?? false }
       take(i + 1, true)
     }
   }
@@ -127,7 +134,7 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
 function statement(text: string, at: number): string {
   const head = text.slice(0, at)
   let start = 0
-  for (const m of head.matchAll(/\b(?:import|export)\b/g)) start = m.index!
+  for (const m of head.matchAll(/\b(?:import|export)\b/g)) { start = m.index! }
   return head.slice(start)
 }
 // A type-only statement, which TypeScript erases. `import type from 'x'` imports a binding named type,
@@ -158,20 +165,20 @@ export function scanRepo(root: string): string[] {
   for (const dir of ['core', 'hooks']) {
     const files = readdirSync(join(root, dir), { recursive: true, encoding: 'utf8' })
       .map(f => `${dir}/${f.replaceAll('\\', '/')}`).filter(f => /\.tsx?$/.test(f)).sort()
-    for (const f of files) problems.push(...scanSource(readFileSync(join(root, f), 'utf8')).map(p => `${f}:${p}`))
+    for (const f of files) { problems.push(...scanSource(readFileSync(join(root, f), 'utf8')).map(p => `${f}:${p}`)) }
   }
   const pkg = readFileSync(join(root, 'package.json'), 'utf8')
-  if ('dependencies' in JSON.parse(pkg)) problems.push(`package.json:${lineOf(pkg, Math.max(0, pkg.indexOf('"dependencies"')))} dependencies`)
+  if ('dependencies' in JSON.parse(pkg)) { problems.push(`package.json:${lineOf(pkg, Math.max(0, pkg.indexOf('"dependencies"')))} dependencies`) }
   return problems
 }
 
 function main(): number {
   const problems = scanRepo('.')
-  for (const p of problems) console.error(p)
-  if (problems.length) return 1
+  for (const p of problems) { console.error(p) }
+  if (problems.length) { return 1 }
   console.log('check-portable: core/ and hooks/ are portable, and package.json has no dependencies')
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

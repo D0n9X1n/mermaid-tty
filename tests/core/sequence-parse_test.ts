@@ -17,7 +17,7 @@ test('A5.errors: malformed, order, box and ZWJ rejections', () => {
   for (const [t, r] of [['A->>: hi', /^syntax:2/], ['loop x\nA->>B: y', /^unclosed-frame/], ['create participant C\nA->>B: x', /^create/],
     ['destroy B\nA-xB: bye\nA->>B: again', /^destroyed/], ['A->>C: hi\nbox G\nparticipant A\nparticipant B\nend', /^box-split/],
     ['title A\ntitle B\nA->>B: x', /^title/],
-    ['A->>B: 👨‍👩', /^unsupported-char/]] as const) assert.match(P(t).reason, r, t)
+    ['A->>B: 👨‍👩', /^unsupported-char/]] as const) { assert.match(P(t).reason, r, t) }
 })
 
 // Beyond the plan's three: each matrix row this task covers, checked whole, then each rule's edges.
@@ -109,11 +109,11 @@ const REJECT: [string, string, string][] = [
 
 test('A2: every covered sequence-ok row, 01-25, 30-37 and 39-46, parses to its exact model', () => {
   assert.deepEqual(OK.map(([id]) => id), '01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 30 31 32 33 34 35 36 37 39 40 41 42 43 44 45 46'.split(' ').map(n => `sequence-ok-${n}`))
-  for (const [id, body, want] of OK) assert.deepEqual([id, P(body)], [id, want])
+  for (const [id, body, want] of OK) { assert.deepEqual([id, P(body)], [id, want]) }
 })
 test('A5.errors: every covered sequence-reject row, 01-03 and 05-08, fails with its exact reason', () => {
   assert.deepEqual(REJECT.map(([id]) => id), '01 02 03 05 06 07 08'.split(' ').map(n => `sequence-reject-${n}`))
-  for (const [id, text, reason] of REJECT) assert.deepEqual([id, parseSequence(readSource(text) as Source)], [id, { reason }])
+  for (const [id, text, reason] of REJECT) { assert.deepEqual([id, parseSequence(readSource(text) as Source)], [id, { reason }]) }
 })
 
 // The 148 CSS named colors of CSS Color 4: the test's own copy, checked against the W3C list, not read from the parser.
@@ -257,7 +257,8 @@ test('A2: CJK ids and labels are letters like any other', () => {
     seq([part('用户', 'participant', '终端用户'), part('서버', 'actor', 'サーバー')], [msg('用户', '서버', '读取配置'), note('over', ['用户', '서버'], '完成')]))
 })
 test('A5.errors: every drawn label is checked: alias, message, note, condition, divider, box label, title statement and frontmatter title', () => {
-  const zwj = '\u{1F468}\u{200D}\u{1F469}', vs16 = '\u{2764}\u{FE0F}'
+  const zwj = '\u{1F468}\u{200D}\u{1F469}'
+const  vs16 = '\u{2764}\u{FE0F}'
   const bad: [string, string][] = [[`participant A as ${zwj}`, 'U+200D'], [`A->>B: ${vs16}`, 'U+FE0F'], [`Note over A: ${zwj}`, 'U+200D'],
     [`alt ${zwj}\nA->>B: x\nend`, 'U+200D'], [`alt ok\nA->>B: x\nelse ${vs16}\nA->>B: y\nend`, 'U+FE0F'], [`box ${zwj}\nparticipant A\nend`, 'U+200D'],
     [`box Aqua ${vs16}\nparticipant A\nend`, 'U+FE0F'], [`title ${zwj}\nA->>B: x`, 'U+200D']]

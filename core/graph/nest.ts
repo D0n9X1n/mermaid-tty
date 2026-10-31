@@ -9,9 +9,10 @@ export function nest(items: readonly Item[], val: ReadonlyMap<string, number>, p
   fixed: ReadonlyMap<string, number>, d = 0): Item[] {
   const blocks: Block[] = []
   for (const it of items) {
-    const c = path(it.owner)[d] ?? null, b = c === null ? undefined : blocks.find(x => x.c === c)
-    if (b) b.items.push(it)
-    else blocks.push({ c, items: [it], v: 0, key: 0 })
+    const c = path(it.owner)[d] ?? null
+const  b = c === null ? undefined : blocks.find(x => x.c === c)
+    if (b) { b.items.push(it) }
+    else { blocks.push({ c, items: [it], v: 0, key: 0 }) }
   }
   for (const b of blocks) {
     b.v = b.items.reduce((a, it) => a + val.get(it.id)!, 0) / b.items.length

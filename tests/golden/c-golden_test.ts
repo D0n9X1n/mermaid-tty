@@ -4,7 +4,8 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import { 
 import { join } from 'node:path'; import { tmpdir } from 'node:os'; import { explain } from '../../core/render.ts'; import { createCanvas } from '../../core/canvas.ts'
 import { TIER1, TIER2_PASSED } from '../../core/registry.ts'; import { goldenOf, goldenGlyphs, widest, roleCode } from './golden-lib.ts'
 import { GATED_DIRS, LADDER, expectLines, fx, borderRows, unlistedFrames, drawingFaults, spanOf, hrun, vrun } from './c-lib.ts'
-const W = [60, 80, 120], X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
+const W = [60, 80, 120]
+const  X = (s: string, w: number) => explain(s, { columns: w, theme: 'mono' }) as any
 for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
   const ids = readdirSync(`fixtures/${type}`).filter(f => f.endsWith('.mmd')).map(f => f.slice(0, -4)).sort()
   test(`A5: each ${type} ladder fixture's expect lines cover exactly its LADDER widths`, () => {
@@ -12,10 +13,11 @@ for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
       assert.deepEqual([...new Set(expectLines(fx(id)).map(e => e.cols))].sort((a, b) => a - b), widths, id) }
   })
   for (const id of ids) {
-    const src = fx(id), lines = expectLines(src)
+    const src = fx(id)
+const  lines = expectLines(src)
     if (id.includes('-reject-')) { test(`A5.errors: ${id} falls back`, () => {
       for (const e of lines.length ? lines : W.map(cols => ({ cols, step: 'fallback' as const }))) {
-        const r = X(src, e.cols); if (e.step === 'fallback') assert.ok('reason' in r, `${id}@${e.cols}`); else assert.equal(r.step, e.step, `${id}@${e.cols}`) }
+        const r = X(src, e.cols); if (e.step === 'fallback') { assert.ok('reason' in r, `${id}@${e.cols}`); } else { assert.equal(r.step, e.step, `${id}@${e.cols}`) } }
     }); continue }
     test(`A4: ${id} renders, validates and matches its golden at 60/80/120, with no border-only rows, every frame listed and every drawn glyph allow-listed`, () => {
       const g = goldenOf(W.map(w => { const r = X(src, w); assert.ok(!('reason' in r), `${id}@${w} ${r.reason}`)
@@ -24,11 +26,11 @@ for (const type of GATED_DIRS.filter(t => existsSync(`fixtures/${t}`))) {
       if (process.env.UPDATE_GOLDEN === '1') { mkdirSync(join('goldens', type), { recursive: true }); writeFileSync(p, g) }
       assert.equal(g, readFileSync(p, 'utf8'))
     })
-    if (lines.length) test(`A4.fit-ladder: ${id} takes its expected step at each width`, () => {
+    if (lines.length) { test(`A4.fit-ladder: ${id} takes its expected step at each width`, () => {
       for (const e of lines) { const r = X(src, e.cols)
         if (e.step === 'fallback') { assert.ok('reason' in r, `${id}@${e.cols}`); continue }
-        assert.equal(r.step, e.step, `${id}@${e.cols}`); if (e.widest !== undefined) assert.equal(widest(r.drawing), e.widest, `${id}@${e.cols}`) }
-    })
+        assert.equal(r.step, e.step, `${id}@${e.cols}`); if (e.widest !== undefined) { assert.equal(widest(r.drawing), e.widest, `${id}@${e.cols}`) } }
+    }) }
   }
 }
 test('A4.fit-ladder: expect lines parse', () => assert.deepEqual(expectLines('pie\n%% expect 60 natural widest 60\n%% expect 59 wrap\n%% expect 58 fallback\n"a" : 1'),
@@ -50,14 +52,16 @@ test('A3: borderRows flags an item row with caps and no text; glyph-only owners 
   assert.deepEqual(borderRows(c.toDrawing({ labels: [{ owner: 'A', text: 'x' }], edges: [], edgeLabels: [], frames: [] })), ['A@1'])
 })
 test('A3: unlistedFrames names a frame owner that expect.frames does not list', () => {
-  const c = createCanvas(3, 4, 4), e = { labels: [], edges: [], edgeLabels: [], frames: [] as string[] }; c.frame(0, 0, 2, 3, 'frame', 'S')
+  const c = createCanvas(3, 4, 4)
+const  e = { labels: [], edges: [], edgeLabels: [], frames: [] as string[] }; c.frame(0, 0, 2, 3, 'frame', 'S')
   assert.deepEqual(unlistedFrames(c.toDrawing(e)), ['S']); assert.deepEqual(unlistedFrames(c.toDrawing({ ...e, frames: ['S'] })), [])
 })
 test("VR.reviewers: vr-A covers only A's goldens and the themes", () => assert.deepEqual(JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))['vr-A'],
   ['goldens/flowchart/**', 'goldens/sequence/**', 'core/themes.ts']))
 // goldenGlyphs on one golden holding content, each flag as 'line ch'. Its temp dir is removed after.
 function scanGolden(content: string): string[] {
-  const dir = mkdtempSync(join(tmpdir(), 'cg-')), p = join(dir, 'x.golden')
+  const dir = mkdtempSync(join(tmpdir(), 'cg-'))
+const  p = join(dir, 'x.golden')
   try { writeFileSync(p, content); return goldenGlyphs(dir).map(s => s.slice(p.length + 1)) } finally { rmSync(dir, { recursive: true, force: true }) }
 }
 test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as 1–8, and the glyph scan skips source text', () => {
@@ -85,7 +89,7 @@ test('A3: borderRows flags a fill row with no text too', () => {
 })
 test('A5: GATED_DIRS is Tier 1 then the passed Tier 2 types, each with a fixture folder', () => {
   assert.deepEqual(GATED_DIRS, [...TIER1, ...TIER2_PASSED])
-  for (const t of GATED_DIRS) assert.ok(existsSync(`fixtures/${t}`), t)
+  for (const t of GATED_DIRS) { assert.ok(existsSync(`fixtures/${t}`), t) }
 })
 test('A5: fx reads a fixture from its type folder', () =>
   assert.equal(fx('flowchart-reject-04'), readFileSync('fixtures/flowchart/flowchart-reject-04.mmd', 'utf8')))

@@ -8,8 +8,9 @@ import { REPLY, REPLY_LEAD } from './reply.ts'
 
 // text in runs of at most 64 code points, one per text delta. A string iterates by code point, so no run splits a surrogate pair.
 export function chunks(text: string): string[] {
-  const points = [...text], out: string[] = []
-  for (let i = 0; i < points.length; i += 64) out.push(points.slice(i, i + 64).join(''))
+  const points = [...text]
+const  out: string[] = []
+  for (let i = 0; i < points.length; i += 64) { out.push(points.slice(i, i + 64).join('')) }
   return out
 }
 
@@ -30,7 +31,7 @@ function parse(raw: string): Body {
 // Whether the last user message contains lead. Its content is a string or an array of blocks, of which a text block has
 // text; any other block, a malformed message and a malformed block are skipped.
 function wantsLead(messages: unknown): boolean {
-  if (!Array.isArray(messages)) return false
+  if (!Array.isArray(messages)) { return false }
   const content = messages.findLast(m => m?.role === 'user')?.content
   const texts = typeof content === 'string' ? [content] : Array.isArray(content) ? content.map(b => b?.text) : []
   return texts.some(t => typeof t === 'string' && t.includes('lead'))
@@ -43,9 +44,10 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
     if (req.method !== 'POST' || req.url?.split('?')[0] !== '/v1/messages') { res.writeHead(404).end(); return }
     const parts: Buffer[] = []
     // A request aborted before its body is whole, as stop() aborts one, has no client left to answer.
-    try { for await (const c of req) parts.push(c) } catch { return }
+    try { for await (const c of req) { parts.push(c) } } catch { return }
     const body = parse(Buffer.concat(parts).toString('utf8'))
-    const text = wantsLead(body.messages) ? REPLY_LEAD : REPLY, pieces = chunks(text)
+    const text = wantsLead(body.messages) ? REPLY_LEAD : REPLY
+const  pieces = chunks(text)
     const message = { id: `msg_mock_${++n}`, type: 'message', role: 'assistant', content: [], model: body.model ?? '', stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } }
     if (body.stream !== true) {
       res.writeHead(200, { 'content-type': 'application/json' })

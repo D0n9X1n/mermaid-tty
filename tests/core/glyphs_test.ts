@@ -8,7 +8,7 @@ const RULE_12: ReadonlySet<string> = new Set([...range(0x20, 0x7e), ...range(0x2
   ...'▏▎▍▌▋▊▉█▁▂▃▄▅▆▇', ...'✓▸◆·', ...'■○△□', ...'▷◁▽«»', ...'⊗◎', ...'↑↓'])
 test('A8.platforms: GLYPHS is rule 12: ASCII, Box Drawing, section-named glyphs; no non-ASCII Emoji', () => {
   assert.deepEqual(GLYPHS, RULE_12); assert.equal(GLYPHS.size, 262)
-  for (const g of GLYPHS) if (g > '~') assert.ok(!/\p{Emoji}/u.test(g), `emoji: ${g}`)
+  for (const g of GLYPHS) { if (g > '~') { assert.ok(!/\p{Emoji}/u.test(g), `emoji: ${g}`) } }
   assert.ok([...RULE_12].every(isAllowed))
   for (const g of ['\u0001', '\u007f', '▶', '◀', '中']) {   // a control, DEL, two Emoji triangles, CJK
     assert.ok(!GLYPHS.has(g) && !isAllowed(g), `allowed: U+${g.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`)
@@ -30,17 +30,18 @@ const PINNED: Readonly<Record<string, string>> = {
 }
 test('A8.platforms: box glyphs by arm weight (up right down left; 0 none, 1 light, 2 heavy)', () => {
   assert.equal(Object.keys(PINNED).length, 80); assert.deepEqual(BOX, PINNED); assert.ok(!Object.hasOwn(BOX, '0000'), 'BOX has 0000')
-  for (const [arms, g] of Object.entries(PINNED)) assert.equal(boxGlyph(arms), g, arms)
+  for (const [arms, g] of Object.entries(PINNED)) { assert.equal(boxGlyph(arms), g, arms) }
 })
 // dirs bits 1 up, 2 right, 4 down, 8 left → arms 'urdl', each present arm at weight k.
 const armsOf = (dirs: number, k: string) => [1, 2, 4, 8].map(b => (dirs & b ? k : '0')).join('')
 test('A8.platforms: junction() for every dirs 1–15, light, heavy and dotted', () => {
   const wrong: string[] = []
   for (let dirs = 1; dirs <= 15; dirs++) {
-    const light = PINNED[armsOf(dirs, '1')], heavy = PINNED[armsOf(dirs, '2')]
+    const light = PINNED[armsOf(dirs, '1')]
+const  heavy = PINNED[armsOf(dirs, '2')]
     const dotted = [1, 4, 5].includes(dirs) ? '┆' : [2, 8, 10].includes(dirs) ? '┄' : light   // no dashed corners: bend light
     for (const [w, want] of [['light', light], ['heavy', heavy], ['dotted', dotted]] as const) {
-      const got = junction(dirs, w); if (got !== want) wrong.push(`junction(${dirs}, '${w}') = ${got}, want ${want}`)
+      const got = junction(dirs, w); if (got !== want) { wrong.push(`junction(${dirs}, '${w}') = ${got}, want ${want}`) }
     }
   }
   assert.deepEqual(wrong, [])

@@ -26,7 +26,7 @@ const PARENT: Record<string, string> = {
 // f's result, computed with vars set on process.env, each undefined one deleted; process.env is restored after.
 function withParent<T>(vars: Record<string, string | undefined>, f: () => T): T {
   const saved = Object.fromEntries(Object.keys(vars).map(k => [k, process.env[k]]))
-  const put = (v: Record<string, string | undefined>) => { for (const [k, x] of Object.entries(v)) if (x === undefined) delete process.env[k]; else process.env[k] = x }
+  const put = (v: Record<string, string | undefined>) => { for (const [k, x] of Object.entries(v)) { if (x === undefined) { delete process.env[k]; } else { process.env[k] = x } } }
   put(vars)
   try { return f() } finally { put(saved) }
 }
@@ -38,7 +38,8 @@ const UNIX = {
   CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_TELEMETRY: '1', DISABLE_AUTOUPDATER: '1',
 }
 test('A9.harness: on Linux and macOS the session env is exactly the recipe, its locale by OS and its color keys by color and driver', () => {
-  const linux = { ...UNIX, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }, mac = { ...UNIX, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' }
+  const linux = { ...UNIX, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' }
+const  mac = { ...UNIX, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' }
   const got = withParent(PARENT, () => [
     E({ platform: 'darwin' }),
     E({ platform: 'linux', color: '256' }),

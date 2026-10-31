@@ -46,8 +46,8 @@ const hex = (s: string): string => [...s].map(ch => 'U+' + ch.codePointAt(0)!.to
 export function drawnGlyphs(d: Drawing): string[] {
   const out: string[] = []
   d.cells.forEach((row, r) => row.forEach((cell, c) => {
-    if (!cell || cell.kind === 'text' || cell.kind === 'cont') return
-    if (!GLYPHS.has(cell.ch) || width(cell.ch) < 1 || [...cell.ch].some(ch => width(ch) === 0)) out.push(`row ${r} col ${c} ${hex(cell.ch)}`)
+    if (!cell || cell.kind === 'text' || cell.kind === 'cont') { return }
+    if (!GLYPHS.has(cell.ch) || width(cell.ch) < 1 || [...cell.ch].some(ch => width(ch) === 0)) { out.push(`row ${r} col ${c} ${hex(cell.ch)}`) }
   }))
   return out
 }
@@ -59,12 +59,13 @@ export function goldenGlyphs(dir: string): string[] {
   const out: string[] = []
   const files = (readdirSync(dir, { recursive: true }) as string[]).filter(f => f.endsWith('.golden')).sort()
   for (const f of files) {
-    const p = join(dir, f), lines = readFileSync(p, 'utf8').split('\n')
+    const p = join(dir, f)
+const  lines = readFileSync(p, 'utf8').split('\n')
     for (let i = 0; i < lines.length; i++) {
       const w = /^@(\d+)$/.exec(lines[i]!)?.[1]
       const r = w === undefined ? -1 : lines.indexOf(`@${w} roles`, i + 1)
-      if (r < 0) continue
-      for (let k = i + 1; k < r; k++) scan(lines[k]!, lines[r + k - i] ?? '', `${p}:${k + 1}`, out)
+      if (r < 0) { continue }
+      for (let k = i + 1; k < r; k++) { scan(lines[k]!, lines[r + k - i] ?? '', `${p}:${k + 1}`, out) }
       i = 2 * r - i - 1   // the section's last role row
     }
   }
@@ -82,12 +83,13 @@ const sourceText = (code: string | undefined): boolean => code !== undefined && 
 // can take it. A drawn cell whose whole ch is zero-width reads the same in a golden as a mark in the source text before it;
 // drawnGlyphs catches that one on the drawing.
 function scan(text: string, roles: string, where: string, out: string[]): void {
-  let col = 0, lead = -1                        // lead: the column of the last character that took a column
+  let col = 0
+let  lead = -1                        // lead: the column of the last character that took a column
   for (const ch of text) {
     const w = width(ch)
     const bad = w > 0 ? drawn(roles[col]) && !GLYPHS.has(ch) : !sourceText(roles[lead])
-    if (bad) out.push(`${where} ${ch}`)
-    if (w > 0) lead = col
+    if (bad) { out.push(`${where} ${ch}`) }
+    if (w > 0) { lead = col }
     col += w
   }
 }

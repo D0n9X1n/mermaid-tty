@@ -27,13 +27,14 @@ const LITERALS = '-/.:T '
 export function parseDateFormat(f: string): DateFmt | Fail {
   const out: string[] = []
   for (let i = 0; i < f.length;) {
-    const c = f.charAt(i), token = [...TOKENS.keys()].find(k => f.startsWith(k, i)) ?? (LITERALS.includes(c) ? c : null)
-    if (token === null) return fail('format-token')
+    const c = f.charAt(i)
+const  token = [...TOKENS.keys()].find(k => f.startsWith(k, i)) ?? (LITERALS.includes(c) ? c : null)
+    if (token === null) { return fail('format-token') }
     out.push(token); i += token.length
   }
   const fields = out.flatMap(t => TOKENS.get(t)?.field ?? [])
   const greedy = out.some((t, i) => t.length === 1 && TOKENS.has(t) && TOKENS.has(out[i + 1] ?? ''))
-  if (new Set(fields).size < fields.length || greedy) return fail('format-token')
+  if (new Set(fields).size < fields.length || greedy) { return fail('format-token') }
   const ymd = fields.filter(field => field <= 2).length
   return ymd === 0 || ymd === 3 ? out : fail('format-ymd')
 }
@@ -45,12 +46,12 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 export function parseDate(s: string, fmt: DateFmt): number | null {
   const pattern = fmt.map(p => { const t = TOKENS.get(p); return t ? `(${t.digits})` : escapeRegExp(p) }).join('')
   const match = new RegExp(`^${pattern}$`).exec(s)
-  if (!match) return null
+  if (!match) { return null }
   const v: [number, number, number, number, number, number, number] = [1970, 0, 1, 0, 0, 0, 0]
   let group = 1
   for (const p of fmt) {
     const t = TOKENS.get(p)
-    if (t) v[t.field] = Number(match[group++]) - (t.field === 1 ? 1 : 0)   // Date.UTC's months start at 0
+    if (t) { v[t.field] = Number(match[group++]) - (t.field === 1 ? 1 : 0) }   // Date.UTC's months start at 0
   }
   const d = new Date(Date.UTC(...v))
   const back = [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()]
@@ -59,7 +60,8 @@ export function parseDate(s: string, fmt: DateFmt): number | null {
 
 // Each axisFormat token's printer, with d3-time-format's widths (Mermaid draws its axis with d3): %e pads with a space,
 // %Y is the year mod 10000 and %y the year mod 100, so every token has a fixed width; %b and %a print English names.
-const MONTHS = 'JanFebMarAprMayJunJulAugSepOctNovDec', DAYS = 'SunMonTueWedThuFriSat'
+const MONTHS = 'JanFebMarAprMayJunJulAugSepOctNovDec'
+const  DAYS = 'SunMonTueWedThuFriSat'
 const pad = (n: number, width: number, fill = '0') => String(n).padStart(width, fill)
 // The day of d's year, from 1. Its 1 January is set with setUTCFullYear, since Date.UTC reads years 0–99 as 19xx.
 function dayOfYear(d: Date): number {
@@ -99,9 +101,11 @@ const UNIT_MS = new Map([['ms', 1], ['s', 1000], ['m', 60_000], ['h', 3_600_000]
 // the subset gives d and w none.
 export function parseDuration(s: string): number | null {
   const [, num = '', unit = ''] = /^(\d+(?:\.\d+)?)(ms|s|m|h|d|w)$/.exec(s) ?? []
-  const n = parseDec(num), per = UNIT_MS.get(unit)
-  if (n === null || per === undefined || ((unit === 'd' || unit === 'w') && num.includes('.'))) return null
-  const ms = mul(n, dec(per)), whole = Number(ms.n)
+  const n = parseDec(num)
+const  per = UNIT_MS.get(unit)
+  if (n === null || per === undefined || ((unit === 'd' || unit === 'w') && num.includes('.'))) { return null }
+  const ms = mul(n, dec(per))
+const  whole = Number(ms.n)
   return ms.d === 1n && Number.isSafeInteger(whole) ? whole : null
 }
 
@@ -117,6 +121,6 @@ const STEPS = [
 // so a label l cells wide fits between them: ⌊w·step/m⌋ ≥ l + 1, exact, as the matrix's cells are. Null when no step
 // qualifies, and then only t0 is labeled; null too when m or w is not an integer, since dec takes only integers.
 export function tickStep(m: number, w: number, l: number): number | null {
-  if (!Number.isInteger(m) || !Number.isInteger(w)) return null
+  if (!Number.isInteger(m) || !Number.isInteger(w)) { return null }
   return STEPS.find(step => { const cells = div(mul(dec(w), dec(step)), dec(m)); return cells !== null && floor(cells) >= l + 1 }) ?? null
 }

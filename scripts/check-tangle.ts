@@ -55,7 +55,8 @@ const typeOf = (id: string): string => id.slice(0, id.indexOf('-'))
 // 'types' is 'hits' with a <type>: <n> ok line per type after the counts, in first-seen order: n counts its blocks with no hit.
 export function report(label: string, blocks: readonly Block[], show: 'hits' | 'types' | 'ids' | 'counts', draw: typeof explain = explain):
   { lines: string[]; hits: number } {
-  const found = scan(blocks, draw), hit = new Set(found.map(f => f.id))
+  const found = scan(blocks, draw)
+const  hit = new Set(found.map(f => f.id))
   const types = show === 'types' ? [...new Set(blocks.map(b => typeOf(b.id)))]
     .map(t => `${t}: ${blocks.filter(b => typeOf(b.id) === t && !hit.has(b.id)).length} ok`) : []
   const more = show === 'hits' || show === 'types' ? found.map(f => f.hit) : show === 'ids' ? [...hit] : []
@@ -67,19 +68,21 @@ const USAGE = 'usage: node scripts/check-tangle.ts [--corpus] [--private DIR]'
 
 // Reports the goldens, then the corpus with --corpus and DIR's blocks with --private DIR. 1 on any hit, 2 on a bad argument.
 export function main(argv: readonly string[] = process.argv.slice(2), draw: typeof explain = explain): number {
-  let withCorpus = false, priv: string | undefined
+  let withCorpus = false
+let  priv: string | undefined
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!, next = argv[i + 1]
-    if (a === '--corpus' && !withCorpus) withCorpus = true
+    const a = argv[i]!
+const  next = argv[i + 1]
+    if (a === '--corpus' && !withCorpus) { withCorpus = true }
     else if (a === '--private' && priv === undefined && next !== undefined && !next.startsWith('--')) { priv = next; i++ }
     else { console.error(USAGE); return 2 }
   }
   const reports = [report('check-tangle', fixtures(), 'types', draw),
     ...(withCorpus ? [report('check-tangle --corpus', corpus(), 'ids', draw)] : []),
     ...(priv !== undefined ? [report('check-tangle --private', fences(priv), 'counts', draw)] : [])]
-  for (const line of reports.flatMap(r => r.lines)) console.log(line)
+  for (const line of reports.flatMap(r => r.lines)) { console.log(line) }
   return reports.some(r => r.hits > 0) ? 1 : 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

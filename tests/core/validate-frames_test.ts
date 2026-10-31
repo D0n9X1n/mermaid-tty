@@ -17,7 +17,7 @@ const show = (d: Drawing) => text(d).join('\n')
 test('A5.mutation-tests: QA\'s cluster-border repro, its edge through S0 and back, falls back', () => {
   const src = 'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
   assert.deepEqual(flowchart.layout(parseFlowchart(readSource(src) as Source) as any, 'natural', 80), { reason: 'route-conflict' })
-  for (const columns of [60, 80, 120]) assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
+  for (const columns of [60, 80, 120]) { assert.ok(!('drawing' in explain(src, { columns })), `${columns}`) }
 })
 test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {
   const label = (r: number, col: number) => framed(c => { straight(c); c.text(r, col, 'L', 'label', 'L1') }, ['F'], [{ owner: 'L1', text: 'L' }])
@@ -76,7 +76,7 @@ test('A5.mutation-tests: a frame whose top border or sides text erased fails fra
   const repro = box(7, c => { c.text(0, 0, 'two row', 'label', 'L'); c.text(1, 0, 'message', 'label', 'L', '\n') }, 'two row\nmessage')
   assert.equal(repro.conflicts.length, 0)
   assert.equal(validate(repro)?.reason, 'frame-broken')
-  for (const w of [2, 7]) assert.equal(validate(box(w, c => c.text(0, 0, 'x'.repeat(w), 'label', 'L'), 'x'.repeat(w)))?.reason, 'frame-broken', `${w}`)
+  for (const w of [2, 7]) { assert.equal(validate(box(w, c => c.text(0, 0, 'x'.repeat(w), 'label', 'L'), 'x'.repeat(w)))?.reason, 'frame-broken', `${w}`) }
 })
 // framed(straight) above is the intact, crossed and titled case. A corner may be light or heavy, but not text or a ─.
 test('A5.mutation-tests: a frame needs its four corners: one overwritten, by text or by its own ─, fails frame-broken', () => {
@@ -149,8 +149,9 @@ test('A self-loop on a frame never runs over the frame\'s border', () => {
   const src = 'flowchart BT\nsubgraph S\nX\nY\nend\nB --> F\nS --> F\nF --> S\nS --> B\nS --> S'
   for (const columns of [60, 80, 120]) {
     const r = explain(src, { columns, theme: 'mono' })
-    if (!('drawing' in r)) continue   // falling back is fine
-    const d = r.drawing, b = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'frame' && x.owners[0] === 'S' ? [[y, c]] : [])))
+    if (!('drawing' in r)) { continue }   // falling back is fine
+    const d = r.drawing
+const  b = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'frame' && x.owners[0] === 'S' ? [[y, c]] : [])))
     const [top, bottom] = [Math.min(...b.map(q => q[0]!)), Math.max(...b.map(q => q[0]!))]
     const [left, right] = [Math.min(...b.map(q => q[1]!)), Math.max(...b.map(q => q[1]!))]
     const onBorder = (y: number, c: number) => y >= top && y <= bottom && c >= left && c <= right && (y === top || y === bottom || c === left || c === right)

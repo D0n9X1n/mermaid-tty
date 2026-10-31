@@ -29,7 +29,7 @@ const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && 
 // title text with no <br>, as Mermaid shows a title. explain never throws: a throw below
 // it is a bug, which falls back as 'internal-error'.
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
-  if (!drawable(o.columns)) return fail('bad-columns')
+  if (!drawable(o.columns)) { return fail('bad-columns') }
   try {
     const p = parsed(source)
     return isFail(p) ? p : fitLadder(p.mod, p.model, o.columns)
@@ -41,11 +41,11 @@ export function explain(source: string, o: Options): { step: Step; drawing: Draw
 // The source's module and model, or the first Fail of source, title, lookup and parse: explain before the fit ladder.
 function parsed(source: string): { mod: DiagramModule; model: unknown } | Fail {
   const src = readSource(source)
-  if (isFail(src)) return src
+  if (isFail(src)) { return src }
   const title = src.title === null ? null : drawableText(src.title, 'sanitized', 'none')
-  if (title) return title
+  if (title) { return title }
   const mod = lookup(src.header)
-  if (isFail(mod)) return mod
+  if (isFail(mod)) { return mod }
   const model = mod.parse(src)
   return isFail(model) ? model : { mod, model }
 }
@@ -75,13 +75,14 @@ export function renderMermaid(source: string, o: Options): Rows | null {
 function cellSpan(cell: Cell, p: Palette): Span {
   const ink = (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
   const pill = p.fill && (cell.role === 'node' || cell.role === 'decision') && (cell.kind === 'text' || cell.kind === 'fill')
-  const color = pill ? p.onFill : ink, backgroundColor = pill ? ink : null
+  const color = pill ? p.onFill : ink
+const  backgroundColor = pill ? ink : null
   const span: Span = { text: cell.ch, role: cell.role }
-  if (color !== null) span.color = color
-  if (backgroundColor !== null) span.backgroundColor = backgroundColor
-  if (cell.role === 'title' || (cell.em ?? 0) & BOLD) span.bold = true
-  if ((cell.em ?? 0) & ITALIC) span.italic = true
-  if ((p.dim as readonly Ink[]).includes(cell.role)) span.dimColor = true
+  if (color !== null) { span.color = color }
+  if (backgroundColor !== null) { span.backgroundColor = backgroundColor }
+  if (cell.role === 'title' || (cell.em ?? 0) & BOLD) { span.bold = true }
+  if ((cell.em ?? 0) & ITALIC) { span.italic = true }
+  if ((p.dim as readonly Ink[]).includes(cell.role)) { span.dimColor = true }
   return span
 }
 
@@ -94,13 +95,13 @@ export function toRows(d: Drawing, p: Palette): Rows {
   return d.cells.map(row => {
     const spans: Span[] = []
     for (const cell of row) {
-      if (cell?.kind === 'cont') continue
+      if (cell?.kind === 'cont') { continue }
       const s: Span = cell ? cellSpan(cell, p) : { text: ' ' }
       const last = spans[spans.length - 1]
-      if (last && sameStyle(last, s)) last.text += s.text
-      else spans.push(s)
+      if (last && sameStyle(last, s)) { last.text += s.text }
+      else { spans.push(s) }
     }
-    while (spans.length > 0 && spans[spans.length - 1]!.role === undefined) spans.pop()
+    while (spans.length > 0 && spans[spans.length - 1]!.role === undefined) { spans.pop() }
     return spans
   })
 }
@@ -120,10 +121,10 @@ export function createRenderer(capacity = 64, inner: typeof explain = explain):
       }
       const key = JSON.stringify([s, o.columns, o.theme])
       const hit = cache.get(key)
-      if (hit !== undefined) return hit
+      if (hit !== undefined) { return hit }
       const v = draw(s, o, inner)
       cache.set(key, v)
-      if (isFail(v)) onMiss?.(v)
+      if (isFail(v)) { onMiss?.(v) }
       return v
     },
     get size() { return cache.size },

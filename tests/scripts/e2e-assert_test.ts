@@ -2,10 +2,13 @@
 // prose intact. Node built-ins and the repo's own modules only, so the main suite runs this with nothing installed.
 import test from 'node:test'; import assert from 'node:assert/strict'; import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown } from '../../scripts/e2e/assert.ts'
 import { REPLY } from '../../scripts/e2e/reply.ts'
-const D = { mode: 'default', value: 0 }, rgb = (v: number) => ({ mode: 'rgb', value: v }), p256 = (v: number) => ({ mode: 'p256', value: v })
+const D = { mode: 'default', value: 0 }
+const  rgb = (v: number) => ({ mode: 'rgb', value: v })
+const  p256 = (v: number) => ({ mode: 'p256', value: v })
 const row = (s: string, fg: object = D, bg: object = D) => [...s].map(ch => ({ ch, width: 1, fg, bg }))
 const screen = (pill: object, msg: object) => [row('Here is the config flow:'), row(' 读取配置文件 ', D, pill), row(' ping ', msg)]
-const E = { labels: { '读取配置文件': 'node', ping: 'label' }, prose: ['Here is the config flow:'], diagrams: [] } as const, HEX = { node: 0x88c0d0, label: 0xa3be8c }
+const E = { labels: { '读取配置文件': 'node', ping: 'label' }, prose: ['Here is the config flow:'], diagrams: [] } as const
+const  HEX = { node: 0x88c0d0, label: 0xa3be8c }
 test('A9.harness: labels are checked by role: node background on node labels, role foreground elsewhere, no color under mono', () => {
   assert.deepEqual(checkDiagramScreen(screen(rgb(0x88c0d0), rgb(0xa3be8c)) as never, { ...E, color: 'truecolor', hex: HEX }), [])
   assert.match(checkDiagramScreen(screen(rgb(0x88c0d0), D) as never, { ...E, color: 'truecolor', hex: HEX })[0]!, /ping: expected label foreground/)
@@ -67,7 +70,8 @@ test('A9.harness: under mono, only the cells the diagram draws must carry no col
 
 test('A9.harness: under mono, a blank cell the diagram covers may carry a foreground color: it shows none, as the Claude Code spinner leaves on Windows', () => {
   const cells = lay(FLOW[0]!, FLOW[1]!) as any[][]
-  const y = cells.findIndex(r => r.map((c: any) => c.ch).join('').includes('读取配置文件')), x = cells[y]!.findIndex((c: any, i: number) => i >= 4 && c.ch === ' ')
+  const y = cells.findIndex(r => r.map((c: any) => c.ch).join('').includes('读取配置文件'))
+const  x = cells[y]!.findIndex((c: any, i: number) => i >= 4 && c.ch === ' ')
   cells[y]![x] = tint(cells[y]![x], CLAUDE)
   assert.deepEqual(checkDiagramScreen(cells as never, MONO), [])
   // A background shows on a blank cell, so it is still a problem.
@@ -77,8 +81,10 @@ test('A9.harness: under mono, a blank cell the diagram covers may carry a foregr
 
 test('A9.harness: under mono, a colored cell the diagram draws is a problem, on a label\'s row or not', () => {
   const tinted = (pick: (rows: string[]) => number, n: number) => {
-    const cells = lay(FLOW[0]!, FLOW[1]!) as any[][], text = cells.map(r => r.map((c: any) => c.ch).join(''))
-    const y = pick(text), x = cells[y]!.findIndex((c: any, i: number) => i >= 2 && /[─│►▼]/.test(c.ch))
+    const cells = lay(FLOW[0]!, FLOW[1]!) as any[][]
+const  text = cells.map(r => r.map((c: any) => c.ch).join(''))
+    const y = pick(text)
+const  x = cells[y]!.findIndex((c: any, i: number) => i >= 2 && /[─│►▼]/.test(c.ch))
     cells[y]![x] = tint(cells[y]![x], CLAUDE)
     return checkDiagramScreen(cells as never, MONO).join('\n').match(new RegExp(`diagram ${n}: expected no color, got '.' fg rgb #d77757`))
   }

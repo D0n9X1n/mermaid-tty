@@ -63,9 +63,9 @@ export function register(mod: DiagramModule): void { MODULES[mod.type] = mod }
 export function lookup(header: string): DiagramModule | Fail {
   const kw = (/\S+/.exec(header)?.[0] ?? '').replace(/:$/, '')
   const type = Object.hasOwn(KEYWORDS, kw) ? KEYWORDS[kw] : undefined
-  if (type === undefined) return fail('unknown-type')
-  if (type === null) return fail(`fallback:${kw}`)
-  if (!ENABLED.has(type)) return fail(`disabled:${type}`)
+  if (type === undefined) { return fail('unknown-type') }
+  if (type === null) { return fail(`fallback:${kw}`) }
+  if (!ENABLED.has(type)) { return fail(`disabled:${type}`) }
   return MODULES[type] ?? fail(`unregistered:${type}`)
 }
 

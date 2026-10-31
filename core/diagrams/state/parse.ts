@@ -70,96 +70,99 @@ type NoteStmt = Extract<Stmt, { kind: 'note' }>
 // pass 2 knows a composite at its first mention, even one whose block opens later. Each opener learns whether a --
 // divides its body into regions. Fails with the first line it cannot read, or the first block's opener that has no }.
 function read(src: Source): { stmts: Stmt[]; composites: Map<string, string> } | Fail {
-  const stmts: Stmt[] = [], composites = new Map<string, string>(), open: Extract<Stmt, { kind: 'open' }>[] = []
+  const stmts: Stmt[] = []
+const  composites = new Map<string, string>()
+const  open: Extract<Stmt, { kind: 'open' }>[] = []
   // A multi-line note whose end note has not come, its lines so far, each trimmed, and the last one's source line; the line
   // of an open accDescr {, or 0.
-  let note: { stmt: NoteStmt; lines: string[]; last: number } | null = null, acc = 0
+  let note: { stmt: NoteStmt; lines: string[]; last: number } | null = null
+let  acc = 0
   for (const { n, text } of src.lines) {
     const t = text.trim()
     if (note) {
       // Mermaid ends a note at a line that starts end note in any case, and reads the rest of it as statements.
       if (t.toLowerCase().startsWith('end note')) {
-        if (t !== 'end note') return fail(`syntax:${n}`)
-        if (note.lines.length === 0) return fail(`syntax:${note.stmt.n}`)
+        if (t !== 'end note') { return fail(`syntax:${n}`) }
+        if (note.lines.length === 0) { return fail(`syntax:${note.stmt.n}`) }
         const d = drawText(note.lines.join('<br>'))
-        if (isFail(d)) return d
+        if (isFail(d)) { return d }
         stmts.push({ ...note.stmt, text: d }); note = null
         continue
       }
       // Mermaid's lexer reads an opener and a first line that starts with : as a one-line note, and the lines after it as
       // statements, up to an end note it then cannot read.
-      if (note.lines.length === 0 && t.startsWith(':')) return fail(`syntax:${note.stmt.n}`)
+      if (note.lines.length === 0 && t.startsWith(':')) { return fail(`syntax:${note.stmt.n}`) }
       // A line skipped between two of the note's lines (blank, or a %% comment) would be a blank line in it.
-      if (note.lines.length > 0 && n !== note.last + 1) return fail('label-blank-line')
+      if (note.lines.length > 0 && n !== note.last + 1) { return fail('label-blank-line') }
       note.lines.push(t); note.last = n
       continue
     }
     if (acc) {
       const c = closes(t)
-      if (c === false) return fail(`syntax:${n}`)
-      if (c) acc = 0
+      if (c === false) { return fail(`syntax:${n}`) }
+      if (c) { acc = 0 }
       continue
     }
     // A line Mermaid reads as a direction is only that statement.
-    if (DIR_ANY.test(t) && !DIR.test(t)) return fail(`syntax:${n}`)
+    if (DIR_ANY.test(t) && !DIR.test(t)) { return fail(`syntax:${n}`) }
     const opener = NOTE_OPEN.exec(t)
     if (opener) {
       note = { stmt: { n, kind: 'note', id: opener[2]!, side: opener[1] as Note['side'], text: '' }, lines: [], last: n }
       continue
     }
-    if (STYLING.test(t) || (!open.length && ROOT_ONLY.test(t))) continue
+    if (STYLING.test(t) || (!open.length && ROOT_ONLY.test(t))) { continue }
     const block = open.length ? null : ACC_BLOCK.exec(t)
     if (block) {
       const c = closes(block[1]!)
-      if (c === false) return fail(`syntax:${n}`)
-      if (c === null) acc = n
+      if (c === false) { return fail(`syntax:${n}`) }
+      if (c === null) { acc = n }
       continue
     }
     const s = statement(t, n)
-    if (!s) return fail(`syntax:${n}`)
+    if (!s) { return fail(`syntax:${n}`) }
     if ('text' in s && s.text !== null) {
       const d = drawText(s.text, s.kind === 'edge')
-      if (isFail(d)) return d
+      if (isFail(d)) { return d }
       // A blank "" description: Mermaid's lexer reads no text in it, and fails.
-      if (d === '') return fail(`syntax:${n}`)
+      if (d === '') { return fail(`syntax:${n}`) }
       s.text = d
     }
-    if (s.kind === 'open') { if (!composites.has(s.id)) composites.set(s.id, open.at(-1)?.id ?? ''); open.push(s) }
+    if (s.kind === 'open') { if (!composites.has(s.id)) { composites.set(s.id, open.at(-1)?.id ?? ''); } open.push(s) }
     // A } with no block open, and a -- outside a composite, are no statements.
-    if (s.kind === 'close' && !open.pop()) return fail(`syntax:${n}`)
+    if (s.kind === 'close' && !open.pop()) { return fail(`syntax:${n}`) }
     if (s.kind === 'divider') {
       const o = open.at(-1)
-      if (!o) return fail(`syntax:${n}`)
+      if (!o) { return fail(`syntax:${n}`) }
       o.regions = true
     }
     stmts.push(s)
   }
   // A note with no end note swallows the rest of the source, any } too, so it fails first; then an accDescr { with no }.
-  if (note) return fail(`syntax:${note.stmt.n}`)
-  if (acc) return fail(`syntax:${acc}`)
-  if (open[0]) return fail(`syntax:${open[0].n}`)
+  if (note) { return fail(`syntax:${note.stmt.n}`) }
+  if (acc) { return fail(`syntax:${acc}`) }
+  if (open[0]) { return fail(`syntax:${open[0].n}`) }
   return { stmts, composites }
 }
 
 // The statement trimmed line t on source line n reads as, or null if it reads as none.
 function statement(t: string, n: number): Stmt | null {
   let m: RegExpExecArray | null
-  if (t === '}') return { n, kind: 'close' }
-  if (t === '--') return { n, kind: 'divider' }
-  if ((m = DIR.exec(t))) return { n, kind: 'dir', dir: m[1] as Dir }
-  if ((m = OPEN.exec(t))) return { n, kind: 'open', id: m[2]!, text: m[1] ?? null, regions: false }
-  if ((m = ALIAS.exec(t))) return { n, kind: 'state', id: m[2]!, text: m[1]! }
-  if ((m = MARK.exec(t))) return { n, kind: 'mark', id: m[1]!, mark: (m[2] ?? m[3]) === 'choice' ? 'choice' : 'bar' }
+  if (t === '}') { return { n, kind: 'close' } }
+  if (t === '--') { return { n, kind: 'divider' } }
+  if ((m = DIR.exec(t))) { return { n, kind: 'dir', dir: m[1] as Dir } }
+  if ((m = OPEN.exec(t))) { return { n, kind: 'open', id: m[2]!, text: m[1] ?? null, regions: false } }
+  if ((m = ALIAS.exec(t))) { return { n, kind: 'state', id: m[2]!, text: m[1]! } }
+  if ((m = MARK.exec(t))) { return { n, kind: 'mark', id: m[1]!, mark: (m[2] ?? m[3]) === 'choice' ? 'choice' : 'bar' } }
   if ((m = NOTE.exec(t))) {
     return NOTE_TEXT.test(unentity(m[3]!)) ? { n, kind: 'note', id: m[2]!, side: m[1] as Note['side'], text: m[3]! } : null
   }
-  if (KEYWORD.test(t)) return null
+  if (KEYWORD.test(t)) { return null }
   if ((m = EDGE.exec(t))) {
     const ok = m[3] === undefined || COLON_TEXT.test(unentity(m[3]))
     return ok ? { n, kind: 'edge', from: m[1]!, to: m[2]!, text: m[3] ?? null } : null
   }
-  if ((m = BARE.exec(t))) return { n, kind: 'state', id: m[1]!, text: null }
-  if ((m = DESCR.exec(t))) return COLON_TEXT.test(unentity(m[2]!)) ? { n, kind: 'state', id: m[1]!, text: m[2]! } : null
+  if ((m = BARE.exec(t))) { return { n, kind: 'state', id: m[1]!, text: null } }
+  if ((m = DESCR.exec(t))) { return COLON_TEXT.test(unentity(m[2]!)) ? { n, kind: 'state', id: m[1]!, text: m[2]! } : null }
   return null
 }
 
@@ -186,10 +189,10 @@ function closes(rest: string): boolean | null {
 function drawText(raw: string, edge = false): string | Fail {
   const t = raw.trim()
   const f = drawable(t, 'markdown', 'any')
-  if (f && f.reason !== 'markdown') return f
-  if (t.includes(';')) return fail('semicolon')
+  if (f && f.reason !== 'markdown') { return f }
+  if (t.includes(';')) { return fail('semicolon') }
   const d = styled(t, 'any', { breaks: edge })
-  if (isFail(d)) return d
+  if (isFail(d)) { return d }
   const ls = labelLines(d)
   return ls.length > 1 && ls.some(l => !l.trim()) ? fail('label-blank-line') : d
 }
@@ -208,14 +211,20 @@ type Why = 'syntax' | 'scope' | 'repeat' | 'mark-label'
 // an empty region, a mark that is not its id's first mention (Mermaid keeps the shape of the first), or a note on no state;
 // and 'id-collision' for a transition id t<k> that a state or composite also has.
 function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'title'> | Fail {
-  const nodes = new Map<string, Decl>(), descrs = new Map<string, string>(), notes = new Map<string, NoteStmt>()
+  const nodes = new Map<string, Decl>()
+const  descrs = new Map<string, string>()
+const  notes = new Map<string, NoteStmt>()
   // The body each id belongs to (a start or end mark's is its own id), and the composites whose block has opened.
-  const home = new Map<string, string>(), opened = new Set<string>()
+  const home = new Map<string, string>()
+const  opened = new Set<string>()
   // The scope each id was first mentioned in ('' the root), which places it.
   const where = new Map<string, string>()
-  const clusters: GCluster[] = [], edges: GEdge[] = [], open: Frame[] = []
+  const clusters: GCluster[] = []
+const  edges: GEdge[] = []
+const  open: Frame[] = []
   // The root's direction, and the count of transitions so far, which names the next.
-  let dir: Dir = 'TB', t = 0
+  let dir: Dir = 'TB'
+let  t = 0
   const body = () => open.at(-1)?.cluster.id ?? ''
   const scope = (): GCluster | null => { const f = open.at(-1); return f ? f.region ?? f.cluster : null }
   const here = () => scope()?.id ?? ''
@@ -224,10 +233,10 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   // state to the region of its last mention, which this parser would not follow).
   const mention = (id: string): boolean => {
     const h = home.get(id) ?? composites.get(id) ?? body()
-    if (h !== body()) return false
-    if (home.has(id)) return where.get(id) === here()
+    if (h !== body()) { return false }
+    if (home.has(id)) { return where.get(id) === here() }
     home.set(id, h); where.set(id, here())
-    if (composites.has(id)) place(id, 'clusters')
+    if (composites.has(id)) { place(id, 'clusters') }
     else { nodes.set(id, { id }); place(id, 'nodes') }
     return true
   }
@@ -241,10 +250,10 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   const end = (id: string, kind: 'start' | 'end') => (id === '[*]' ? ends(kind) : mention(id) ? id : null)
   // Gives id its description, if the statement has one.
   const describe = (id: string, descr: string | null): Why | null => {
-    if (!mention(id)) return 'scope'
-    if (descr === null) return null
-    if (nodes.get(id)?.mark) return 'mark-label'
-    if (descrs.has(id)) return 'repeat'
+    if (!mention(id)) { return 'scope' }
+    if (descr === null) { return null }
+    if (nodes.get(id)?.mark) { return 'mark-label' }
+    if (descrs.has(id)) { return 'repeat' }
     descrs.set(id, descr)
     return null
   }
@@ -261,42 +270,44 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
     switch (s.kind) {
       case 'open': {
         const why = describe(s.id, s.text)
-        if (why) return why
-        if (opened.has(s.id)) return 'repeat'
+        if (why) { return why }
+        if (opened.has(s.id)) { return 'repeat' }
         opened.add(s.id)
         const f: Frame = { cluster: { id: s.id, title: null, dir: null, nodes: [], clusters: [] }, region: null, k: 0 }
         clusters.push(f.cluster); open.push(f)
-        if (s.regions) region(f)
+        if (s.regions) { region(f) }
         return null
       }
       // A region with no state or composite of its own, from a -- at either end of a body or two together, draws nothing.
       case 'close': { const f = open.pop()!; return f.region && empty(f.region) ? 'syntax' : null }
       case 'divider': {
         // Pass 1 reads a -- only in an open composite, whose first region opened with it.
-        const f = open.at(-1)!, from = f.region!
-        if (empty(from)) return 'syntax'
+        const f = open.at(-1)!
+const  from = f.region!
+        if (empty(from)) { return 'syntax' }
         const id = `${f.cluster.id}:chain${f.k++}`
         region(f); edge(id, from.id, f.region!.id, null, 'invisible')
         return null
       }
-      case 'dir': { const c = scope(); if (c) c.dir = s.dir; else dir = s.dir; return null }
+      case 'dir': { const c = scope(); if (c) { c.dir = s.dir; } else { dir = s.dir; } return null }
       case 'mark': {
-        if (home.has(s.id) || composites.has(s.id)) return 'syntax'
+        if (home.has(s.id) || composites.has(s.id)) { return 'syntax' }
         mention(s.id); nodes.get(s.id)!.mark = s.mark
         return null
       }
       case 'state': return describe(s.id, s.text)
       case 'edge': {
-        const from = end(s.from, 'start'), to = from === null ? null : end(s.to, 'end')
-        if (from === null || to === null) return 'scope'
+        const from = end(s.from, 'start')
+const  to = from === null ? null : end(s.to, 'end')
+        if (from === null || to === null) { return 'scope' }
         edge(`t${t++}`, from, to, s.text, 'solid')
         return null
       }
       case 'note': {
-        if (notes.has(s.id)) return 'repeat'
+        if (notes.has(s.id)) { return 'repeat' }
         // A note mentions its state in source order, as Mermaid reads it: its first mention declares it here. On a state
         // mentioned before, it may stand at the root, where Mermaid leaves the state in place, or in the state's own scope.
-        if (!home.has(s.id) ? !mention(s.id) : here() !== '' && where.get(s.id) !== here()) return 'scope'
+        if (!home.has(s.id) ? !mention(s.id) : here() !== '' && where.get(s.id) !== here()) { return 'scope' }
         notes.set(s.id, s)
         return null
       }
@@ -304,48 +315,49 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
   }
   for (const s of stmts) {
     const why = step(s)
-    if (why) return fail(`${why}:${s.n}`)
+    if (why) { return fail(`${why}:${s.n}`) }
   }
   // A note goes on a state or mark declared anywhere; on a composite, or an id nothing else mentions, it has no place.
   for (const [id, s] of notes) {
     const d = nodes.get(id)
-    if (!d) return fail(`syntax:${s.n}`)
+    if (!d) { return fail(`syntax:${s.n}`) }
     d.note = { id: `${id}:note`, text: s.text, side: s.side }
   }
   // A bar spans max(3, 2·max(in, out) − 1) cells across the flow: its transitions are counted once all are read.
-  const ins = new Map<string, number>(), outs = new Map<string, number>()
-  for (const e of edges) if (e.style === 'solid') { ins.set(e.to, (ins.get(e.to) ?? 0) + 1); outs.set(e.from, (outs.get(e.from) ?? 0) + 1) }
-  for (const d of nodes.values()) if (d.mark === 'bar') d.span = Math.max(3, 2 * Math.max(ins.get(d.id) ?? 0, outs.get(d.id) ?? 0) - 1)
+  const ins = new Map<string, number>()
+const  outs = new Map<string, number>()
+  for (const e of edges) { if (e.style === 'solid') { ins.set(e.to, (ins.get(e.to) ?? 0) + 1); outs.set(e.from, (outs.get(e.from) ?? 0) + 1) } }
+  for (const d of nodes.values()) { if (d.mark === 'bar') { d.span = Math.max(3, 2 * Math.max(ins.get(d.id) ?? 0, outs.get(d.id) ?? 0) - 1) } }
   // A composite's title draws on its frame, on one line: a markdown HTML label no <br> may split. Mermaid 12.2.0 shows
   // **Comp** there as written (JSDOM), so a title with emphasis falls back.
   for (const c of clusters) {
-    if (c.frameless) continue
+    if (c.frameless) { continue }
     c.title = descrs.get(c.id) ?? c.id
-    if (c.title !== plain(c.title)) return fail('markdown')
+    if (c.title !== plain(c.title)) { return fail('markdown') }
     const f = drawable(c.title, 'markdown', 'none')
-    if (f) return f
+    if (f) { return f }
   }
   // A state with no description shows its id, a markdown HTML label too: its bold and italic draw as styled says.
   for (const d of nodes.values()) {
-    if (d.mark || descrs.has(d.id)) continue
+    if (d.mark || descrs.has(d.id)) { continue }
     const f = styled(d.id, 'none')
-    if (isFail(f)) return f
-    if (f !== d.id) descrs.set(d.id, f)
+    if (isFail(f)) { return f }
+    if (f !== d.id) { descrs.set(d.id, f) }
   }
   // A transition's id t<k> that a state or composite also has would give two drawn things one owner.
   const ids = new Set([...nodes.keys(), ...clusters.map(c => c.id)])
-  if (edges.some(e => ids.has(e.id))) return fail('id-collision')
+  if (edges.some(e => ids.has(e.id))) { return fail('id-collision') }
   return { dir, nodes: [...nodes.values()].map((d, i) => node(d, i, descrs.get(d.id))), edges, clusters }
 }
 
 // The model src declares, or why it cannot be drawn: 'header' (not stateDiagram or stateDiagram-v2, alone); pass 1's
 // 'syntax:<n>', or drawText's Fail; or pass 2's Fail.
 export function parseState(src: Source): StateModel | Fail {
-  if (!HEADER.test(src.header)) return fail('header')
+  if (!HEADER.test(src.header)) { return fail('header') }
   const r = read(src)
-  if (isFail(r)) return r
+  if (isFail(r)) { return r }
   const g = walk(r.stmts, r.composites)
-  if (isFail(g)) return g
+  if (isFail(g)) { return g }
   const notes = r.stmts.flatMap(s => (s.kind === 'note' ? [`${s.id}:note`] : []))
   return { graph: { ...g, title: null }, title: src.title, notes }
 }

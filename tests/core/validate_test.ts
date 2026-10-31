@@ -110,12 +110,14 @@ test('A5.mutation-tests: a member row owns its own text, and an edge reaches its
 // Each of ends names an end mark's node, then its glyph: 'B▼'.
 type Step = number | string | null | { text: string; owners: string[] }
 function path(steps: readonly Step[], ends: readonly string[], across = false): Drawing {
-  const n = steps.length + 2, c = across ? createCanvas(1, n, n) : createCanvas(n, 1, 1), extra: { owner: string; text: string }[] = []
+  const n = steps.length + 2
+const  c = across ? createCanvas(1, n, n) : createCanvas(n, 1, 1)
+const  extra: { owner: string; text: string }[] = []
   const pos = (i: number): [number, number] => (across ? [0, i] : [i, 0])
   c.text(...pos(0), 'a', 'node', 'A')
   steps.forEach((s, i) => {
-    if (typeof s === 'number') c.line(...pos(i + 1), s, 'light', 'edge', 'A>B')
-    else if (typeof s === 'string') c.arrow(...pos(i + 1), s, 'A>B')
+    if (typeof s === 'number') { c.line(...pos(i + 1), s, 'light', 'edge', 'A>B') }
+    else if (typeof s === 'string') { c.arrow(...pos(i + 1), s, 'A>B') }
     else if (s) { c.text(...pos(i + 1), s.text, 'label', s.owners); extra.push({ owner: s.owners[0]!, text: s.text }) }
   })
   c.text(...pos(n - 1), 'b', 'node', 'B')
@@ -184,7 +186,7 @@ test('A5.mutation-tests: a blank fill or a cap never connects an edge, even one 
 test('A5.mutation-tests: a fill the edge owns beside its connected line changes nothing', () => {
   const route = (c: Canvas) => c.line(2, 0, 5, 'light', 'edge', 'e')
   assert.equal(validate(gap(route, 2)), null)
-  assert.equal(validate(gap(c => { route(c); for (let r = 1; r < 4; r++) c.fill(r, 1, 1, 'edge', 'e') }, 2)), null)
+  assert.equal(validate(gap(c => { route(c); for (let r = 1; r < 4; r++) { c.fill(r, 1, 1, 'edge', 'e') } }, 2)), null)
 })
 // <--> draws ▲ next to A and ▼ next to B; o--o draws ● at each end.
 test('A5.mutation-tests: each head of a two-headed edge is its own arrow cell next to an end node, and neither sits on a junction', () => {
@@ -250,7 +252,7 @@ test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-
   const draw = (rows: number, cols: number, nodes: [string, number, number][], ink: (c: Canvas) => void,
     edges: { id: string; from: string; to: string; ends: { node: string; glyph: string }[] }[]): Drawing => {
     const c = createCanvas(rows, cols, cols, () => true)
-    for (const [id, r, col] of nodes) c.text(r, col, id, 'node', id)
+    for (const [id, r, col] of nodes) { c.text(r, col, id, 'node', id) }
     ink(c)
     return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edges, edgeLabels: [], frames: [] })
   }
@@ -272,8 +274,8 @@ test('A5.mutation-tests: an arrow cell an edge owns beyond its heads fails head-
 
 // The pipeline at explain's natural step: rankGap 3, nodeGap 4, no wrap, 80 columns.
 function drawn(gr: Graph): Drawing {
-  const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt: null }); if ('reason' in p) throw new Error(p.reason)
-  const routes = routeGraph(p); if ('reason' in routes) throw new Error(routes.reason)
+  const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt: null }); if ('reason' in p) { throw new Error(p.reason) }
+  const routes = routeGraph(p); if ('reason' in routes) { throw new Error(routes.reason) }
   return drawGraph(p, routes, 80)
 }
 // QA's repro: the ┼ under B holds B→D straight down, E's self-loop straight across, and B→E turning inside it, so the ┼
@@ -283,17 +285,17 @@ test('A5.mutation-tests: a crossing that hides a third edge turning inside it jo
   c.text(0, 3, 'B', 'node', 'B')
   c.text(6, 3, 'D', 'node', 'D')
   c.text(3, 7, 'E', 'node', 'E')
-  for (let r = 1; r <= 4; r++) c.line(r, 3, 5, 'light', 'edge', 'B>D')
+  for (let r = 1; r <= 4; r++) { c.line(r, 3, 5, 'light', 'edge', 'B>D') }
   c.arrow(5, 3, '▼', 'B>D')
   for (let r = 4; r <= 6; r++) {
     c.line(r, 7, 5, 'light', 'edge', 'E>E')
     c.line(r, 0, 5, 'light', 'edge', 'E>E')
   }
   c.line(7, 7, 9, 'light', 'edge', 'E>E')
-  for (let col = 1; col <= 6; col++) c.line(7, col, 10, 'light', 'edge', 'E>E')
+  for (let col = 1; col <= 6; col++) { c.line(7, col, 10, 'light', 'edge', 'E>E') }
   c.line(7, 0, 3, 'light', 'edge', 'E>E')
   c.line(3, 0, 6, 'light', 'edge', 'E>E')
-  for (let col = 1; col <= 5; col++) c.line(3, col, 10, 'light', 'edge', 'E>E')
+  for (let col = 1; col <= 5; col++) { c.line(3, col, 10, 'light', 'edge', 'E>E') }
   c.arrow(3, 6, '►', 'E>E')
   c.line(1, 3, 5, 'light', 'edge', 'B>E')
   c.line(2, 3, 5, 'light', 'edge', 'B>E')
@@ -318,8 +320,8 @@ const v = (o: string, c: number, r0: number, r1: number): Mark[] => Array.from({
 const h = (o: string, r: number, c0: number, c1: number): Mark[] => Array.from({ length: c1 - c0 + 1 }, (_, i) => [o, r, c0 + i, 10])
 function sketch(rows: number, cols: number, nodes: [string, number, number, string[]?][], marks: Mark[], edges: string[]): Drawing {
   const c = createCanvas(rows, cols, cols, () => true)
-  for (const [id, r, col, owners] of nodes) c.text(r, col, id, 'node', owners ?? id)
-  for (const [o, r, col, x] of marks) { if (typeof x === 'number') c.line(r, col, x, 'light', 'edge', o); else c.arrow(r, col, x, o) }
+  for (const [id, r, col, owners] of nodes) { c.text(r, col, id, 'node', owners ?? id) }
+  for (const [o, r, col, x] of marks) { if (typeof x === 'number') { c.line(r, col, x, 'light', 'edge', o); } else { c.arrow(r, col, x, o) } }
   return c.toDrawing({ labels: nodes.map(([id]) => ({ owner: id, text: id })), edgeLabels: [], frames: [],
     edges: edges.map(s => { const [id = '', from = '', to = '', head] = s.split(' '); return { id, from, to, ends: head ? [{ node: to, glyph: head }] : [] } }) })
 }
@@ -378,7 +380,7 @@ test('merge-ambiguous: QA repros render after the router separates unsafe merges
 })
 test('merge-ambiguous: fan-out, fan-in, complete bipartite, a self-loop, a two-headed edge and open links still draw', () => {
   for (const src of ['A --> B\nA --> C', 'A --> C\nB --> C', 'A & B --> C & D', 'A --> A', 'A <--> B', 'A --- B\nA --- C'])
-    assert.equal(verdict(`flowchart TB\n${src}`), null, src)
+    { assert.equal(verdict(`flowchart TB\n${src}`), null, src) }
 })
 // sketch, with each edge 'id from to' then its end marks, each its node and glyph: 'e1 B C C▼ B▲'.
 function marked(rows: number, cols: number, nodes: [string, number, number][], marks: Mark[], edges: string[]): Drawing {
@@ -450,7 +452,8 @@ test('merge-ambiguous: a trunk that A→B and B→A share implies the self-loops
 // its target's ▼, which it shares. Every pair the trunk implies is an edge, though two pairs of edges share no endpoint; with
 // B→C gone, B seems to lead to C.
 const trunk = (ids: string[]) => marked(11, 7, [['A', 0, 0], ['B', 0, 6], ['C', 10, 0], ['D', 10, 6]], ids.flatMap((id): Mark[] => {
-  const s = id[0] === 'A' ? 0 : 6, t = id[1] === 'C' ? 0 : 6
+  const s = id[0] === 'A' ? 0 : 6
+const  t = id[1] === 'C' ? 0 : 6
   return [...v(id, s, 1, 2), [id, 3, s, s ? 9 : 3], ...h(id, 3, Math.min(s, 3) + 1, Math.max(s, 3) - 1), [id, 3, 3, s ? 6 : 12],
     ...v(id, 3, 4, 6), [id, 7, 3, t ? 3 : 9], ...h(id, 7, Math.min(t, 3) + 1, Math.max(t, 3) - 1), [id, 7, t, t ? 12 : 6], [id, 8, t, 5], [id, 9, t, '▼']]
 }), ids.map(id => `${id} ${id[0]} ${id[1]} ${id[1]}▼`))
@@ -495,12 +498,13 @@ test('merge-ambiguous: unmarked edges joined in one line pass only when all leav
 // QA's mixed merge: A, B over C, D, each edge on one trunk along row 2 and, to H, down a stem in column 3 into H's ▼. Open
 // A---B runs along the trunk and open A---C down column 0. Edges are named by their ends: 'AB', 'AH'.
 const leg = (id: string, n: string): Mark[] => {
-  const c = 'AC'.includes(n) ? 0 : 6, up = 'AB'.includes(n)
+  const c = 'AC'.includes(n) ? 0 : 6
+const  up = 'AB'.includes(n)
   return [[id, up ? 1 : 3, c, 5], [id, 2, c, (up ? 1 : 4) | (c ? 8 : 2)]]
 }
 const hub = (ids: string[]) => marked(8, 7, [['A', 0, 0], ['B', 0, 6], ['C', 4, 0], ['D', 4, 6], ['H', 7, 3]], ids.flatMap((id): Mark[] => {
   const left = 'AC'.includes(id[0]!)
-  if (id[1] === 'H') return [...leg(id, id[0]!), ...h(id, 2, left ? 1 : 4, left ? 2 : 5), [id, 2, 3, left ? 12 : 6], ...v(id, 3, 3, 5), [id, 6, 3, '▼']]
+  if (id[1] === 'H') { return [...leg(id, id[0]!), ...h(id, 2, left ? 1 : 4, left ? 2 : 5), [id, 2, 3, left ? 12 : 6], ...v(id, 3, 3, 5), [id, 6, 3, '▼']] }
   return id === 'AB' ? [...leg(id, 'A'), ...h(id, 2, 1, 5), ...leg(id, 'B')] : v(id, 0, 1, 3)
 }), ids.map(id => `${id} ${id[0]} ${id[1]}${id[1] === 'H' ? ' H▼' : ''}`))
 test('merge-ambiguous: marked and unmarked edges on one line are one network, and edges that share no node must imply only real links', () => {
@@ -532,7 +536,9 @@ test('lifeline-unbound: a lifeline under another participant\'s pill fails', () 
   const d = structuredClone(r.drawing)
   assert.equal(validate(d), null)
   assert.deepEqual(text(d)[0], '[ A ] [ B ]')
-  const row = d.cells[0]!, a = row.slice(0, 5), b = row.slice(6, 11)
+  const row = d.cells[0]!
+const  a = row.slice(0, 5)
+const  b = row.slice(6, 11)
   row.splice(0, 5, ...b); row.splice(6, 5, ...a)
   assert.deepEqual(text(d)[0], '[ B ] [ A ]')
   assert.equal(validate(d)?.reason, 'lifeline-unbound')
@@ -545,7 +551,7 @@ test('label-unbound: a node label moved off its pill fails', () => {
     const d = structuredClone(r.drawing)
     assert.equal(validate(d), null, src)
     const mine = d.cells.flatMap((row, y) => row.flatMap((x, c) => (x?.kind === 'text' && x.owners[0] === id ? [[y, c] as const] : [])))
-    for (const [y, c] of mine) assert.equal(d.cells[y + dr]?.[c] ?? null, null, src)
+    for (const [y, c] of mine) { assert.equal(d.cells[y + dr]?.[c] ?? null, null, src) }
     for (const [y, c] of mine) { d.cells[y + dr]![c] = d.cells[y]![c]!; d.cells[y]![c] = null }
     assert.equal(validate(d)?.reason, 'label-unbound', src)
   }
@@ -561,12 +567,12 @@ function bipartite(): Drawing {
   const ends: Record<string, [string, string]> = { e1: ['A', 'C'], e2: ['A', 'D'], e3: ['B', 'C'], e4: ['B', 'D'], f: ['P', 'Q'] }
   const c = createCanvas(7, 6, 6, (a, b) => ends[a]!.some(x => ends[b]!.includes(x)))
   const L = (r: number, col: number, dirs: number, ids: string[]) => ids.forEach(id => c.line(r, col, dirs, 'light', 'edge', id))
-  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 5], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 5], ['C', 6, 0], ['D', 6, 4]] as const) { c.text(r, col, id.toLowerCase(), 'node', id) }
   L(1, 0, 3, ['e1', 'e2']); L(1, 1, 10, ['e1', 'e2']); L(1, 2, 12, ['e1', 'e2']); L(1, 2, 6, ['e3', 'e4']); L(1, 3, 10, ['e3', 'e4']); L(1, 4, 9, ['e3', 'e4'])
   L(2, 2, 5, ['e1', 'e2', 'e3', 'e4']); L(3, 2, 5, ['e1', 'e2', 'e3', 'e4'])
   L(4, 2, 9, ['e1', 'e3']); L(4, 2, 3, ['e2', 'e4']); L(4, 1, 10, ['e1', 'e3']); L(4, 0, 6, ['e1', 'e3']); L(4, 3, 10, ['e2', 'e4']); L(4, 4, 12, ['e2', 'e4'])
-  for (const id of ['e1', 'e3']) c.arrow(5, 0, '▼', id)
-  for (const id of ['e2', 'e4']) c.arrow(5, 4, '▼', id)
+  for (const id of ['e1', 'e3']) { c.arrow(5, 0, '▼', id) }
+  for (const id of ['e2', 'e4']) { c.arrow(5, 4, '▼', id) }
   L(2, 1, 10, ['f']); L(2, 2, 10, ['f']); L(2, 3, 10, ['f']); c.arrow(2, 4, '►', 'f')
   const node = (n: string) => ({ node: n, glyph: n === 'Q' ? '►' : '▼' })
   return c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
@@ -580,7 +586,8 @@ test('A complete-bipartite trunk crossed straight by an unrelated edge passes', 
 // A trunk edge that turns inside that ┼ instead, onto P→Q's arm, joins the two lines there: read as one line, P's bare tail
 // seems to lead to c and d, so it still fails, now for merges to judge.
 test('At that crossing, a trunk edge turning onto the crossing edge still fails', () => {
-  const d = bipartite(), x = d.cells[2]![2]!
+  const d = bipartite()
+const  x = d.cells[2]![2]!
   d.cells[2]![2] = { ...x, segs: x.segs!.map(s => (s.owner === 'e1' ? { ...s, dirs: 6 } : s)) }   // e1 turns right inside the ┼
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })
@@ -594,14 +601,14 @@ function drawPath(c: Canvas, id: string, corners: [number, number][], head: stri
   for (const [i, [r, col]] of corners.entries()) {
     if (i === 0) { cells.push({ r, c: col }); continue }
     const [r0, c0] = corners[i - 1]!
-    for (let k = 1; k <= Math.abs(r - r0) + Math.abs(col - c0); k++) cells.push({ r: r0 + Math.sign(r - r0) * k, c: c0 + Math.sign(col - c0) * k })
+    for (let k = 1; k <= Math.abs(r - r0) + Math.abs(col - c0); k++) { cells.push({ r: r0 + Math.sign(r - r0) * k, c: c0 + Math.sign(col - c0) * k }) }
   }
-  for (let i = 1; i < cells.length - 2; i++) c.line(cells[i]!.r, cells[i]!.c, STEP(cells[i]!, cells[i - 1]!) | STEP(cells[i]!, cells[i + 1]!), 'light', 'edge', id)
+  for (let i = 1; i < cells.length - 2; i++) { c.line(cells[i]!.r, cells[i]!.c, STEP(cells[i]!, cells[i - 1]!) | STEP(cells[i]!, cells[i + 1]!), 'light', 'edge', id) }
   const h = cells.at(-2)!; c.arrow(h.r, h.c, head, id)
 }
 function mixedHeads(): Drawing {
   const c = createCanvas(7, 8, 8, () => true)
-  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) { c.text(r, col, id.toLowerCase(), 'node', id) }
   drawPath(c, 'AC', [[0, 0], [1, 0], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
   drawPath(c, 'AD', [[0, 0], [1, 0], [1, 2], [6, 2], [6, 4]], '►')
   drawPath(c, 'BC', [[0, 4], [1, 4], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
@@ -620,13 +627,13 @@ test('A trunk whose heads differ implies links the source lacks, and fails merge
 // style, so any of its implied links may be dotted or solid. One line draws one style.
 test('A trunk whose edges draw different line styles fails merge-ambiguous', () => {
   const c = createCanvas(7, 8, 8, () => true)
-  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) c.text(r, col, id.toLowerCase(), 'node', id)
+  for (const [id, r, col] of [['A', 0, 0], ['B', 0, 4], ['P', 2, 0], ['Q', 2, 7], ['C', 6, 0], ['D', 6, 4]] as const) { c.text(r, col, id.toLowerCase(), 'node', id) }
   drawPath(c, 'AC', [[0, 0], [1, 0], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
   drawPath(c, 'AD', [[0, 0], [1, 0], [1, 2], [6, 2], [6, 4]], '►')
   drawPath(c, 'BC', [[0, 4], [1, 4], [1, 2], [4, 2], [4, 0], [6, 0]], '▼')
   drawPath(c, 'PQ', [[2, 0], [2, 7]], '►')
   c.line(4, 3, 10, 'dotted', 'edge', 'BD'); c.line(4, 4, 12, 'dotted', 'edge', 'BD'); c.arrow(5, 4, '▼', 'BD')
-  for (const [r, col, dirs] of [[1, 4, 9], [1, 3, 10], [1, 2, 6], [2, 2, 5], [3, 2, 5], [4, 2, 3]] as const) c.line(r, col, dirs, 'light', 'edge', 'BD')
+  for (const [r, col, dirs] of [[1, 4, 9], [1, 3, 10], [1, 2, 6], [2, 2, 5], [3, 2, 5], [4, 2, 3]] as const) { c.line(r, col, dirs, 'light', 'edge', 'BD') }
   const e = (id: string, from: string, to: string, glyph: string) => ({ id, from, to, ends: [{ node: to, glyph }] })
   const d = c.toDrawing({ labels: ['A', 'B', 'C', 'D', 'P', 'Q'].map(o => ({ owner: o, text: o.toLowerCase() })),
     edges: [e('AC', 'A', 'C', '▼'), e('AD', 'A', 'D', '►'), e('BC', 'B', 'C', '▼'), e('BD', 'B', 'D', '▼'), e('PQ', 'P', 'Q', '►')], edgeLabels: [], frames: [] })
@@ -657,7 +664,7 @@ test('A merged line implying a self-loop whose head the loop lacks fails merge-a
 test('A merged junction with a heavy arm on a light line fails line-glyph', () => {
   const c = createCanvas(4, 6, 6, () => true)
   c.text(0, 0, 'a', 'node', 'A'); c.text(0, 5, 'b', 'node', 'B'); c.text(3, 2, 'c', 'node', 'C')
-  for (const col of [1, 2, 3]) c.line(0, col, 10, 'light', 'edge', 'AB')
+  for (const col of [1, 2, 3]) { c.line(0, col, 10, 'light', 'edge', 'AB') }
   c.arrow(0, 4, '►', 'AB')
   c.line(0, 1, 10, 'light', 'edge', 'AC'); c.line(0, 2, 8, 'light', 'edge', 'AC'); c.line(0, 2, 4, 'heavy', 'edge', 'AC')
   c.line(1, 2, 5, 'light', 'edge', 'AC'); c.arrow(2, 2, '▼', 'AC')
@@ -693,7 +700,8 @@ test('X3.emphasis: em on any cell but a text cell, or outside BOLD | ITALIC, fai
 test('X3.emphasis: a control character in any cell\'s ch, a marker included, fails emphasis', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   for (const ch of [String.fromCharCode(1), String.fromCharCode(2), String.fromCharCode(3), String.fromCharCode(0), String.fromCharCode(27), String.fromCharCode(0x85)]) {
-    const d = two('a', emphasize('**b**')!), x = d.cells[3]![2]!
+    const d = two('a', emphasize('**b**')!)
+const  x = d.cells[3]![2]!
     const { em: _e, ...rest } = x
     d.cells[3]![2] = { ...rest, ch: ch + x.ch }
     assert.equal(validate(d)?.reason, 'emphasis', JSON.stringify(ch))

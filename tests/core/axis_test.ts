@@ -13,7 +13,8 @@ test('A4: ticks sit at their cells; a label that leaves the field, or meets the 
 // Each drawn cell of row r, as 'col kind role owners'.
 const cellsOf = (g: Drawing, r: number) => g.cells[r]!.flatMap((x, c) => (x ? [`${c} ${x.kind} ${x.role} ${x.owners.join('+')}`] : []))
 test("A4: the rule is frame caps owned by owner, each kept label value text owned by its tick's input index, columns wide", () => {
-  const ticks = [L(0, '08:00'), L(3, '09:00'), L(6, '10:00')], g = axisRows(2, 20, ticks, 24, 'ax')
+  const ticks = [L(0, '08:00'), L(3, '09:00'), L(6, '10:00')]
+const  g = axisRows(2, 20, ticks, 24, 'ax')
   assert.equal(g.columns, 24); assert.equal(validate(g), null)
   assert.deepEqual(g.expect, { labels: [{ owner: 'ax.t0', text: '08:00', at: { r: 1, c: 2 } }, { owner: 'ax.t2', text: '10:00', at: { r: 1, c: 8 } }],
     edges: [], edgeLabels: [], frames: [], glyphs: [{ owner: 'ax', ch: '┬', at: { r: 0, c: 2 } }, { owner: 'ax', ch: '┬', at: { r: 0, c: 8 } }] })

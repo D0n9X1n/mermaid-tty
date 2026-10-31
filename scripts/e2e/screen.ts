@@ -33,7 +33,7 @@ export function createScreen(cols: number, rows: number): Screen {
   // OSC 52 ; Pc ; Pd. Pd is the base64 of the copied text, or ? for a query of the clipboard, which copies nothing.
   term.parser.registerOscHandler(52, data => {
     const pd = data.slice(data.indexOf(';') + 1)
-    if (pd !== '?') copied = Buffer.from(pd, 'base64').toString('utf8')
+    if (pd !== '?') { copied = Buffer.from(pd, 'base64').toString('utf8') }
     return true
   })
   // The active buffer's lines on the screen: those after the baseY lines scrolled off it.
@@ -44,7 +44,8 @@ export function createScreen(cols: number, rows: number): Screen {
   return {
     write: data => new Promise(resolve => term.write(data, resolve)),
     cells: () => lines().map(line => Array.from({ length: cols }, (_, x) => {
-      const c = line.getCell(x)!, width = c.getWidth()
+      const c = line.getCell(x)!
+const  width = c.getWidth()
       return { ch: c.getChars() || (width ? ' ' : ''), width, fg: color(c.getFgColorMode(), c.getFgColor()), bg: color(c.getBgColorMode(), c.getBgColor()) }
     })),
     text: () => lines().map(line => line.translateToString(true)).join('\n'),

@@ -11,7 +11,7 @@ test('check.sh accepts fail-fast bash, including the real header comments', () =
 test('check.sh rejects missing fail-fast settings and commands that mask failure', () => {
   for (const [from, to, want] of [['set -euo pipefail\n', '', 'set -euo pipefail'],
     ['validate .', 'validate . || true', 'masks'], ['validate .', 'set +e\nvalidate .', 'masks']])
-    assert.ok(checkShErrors(SH.replace(from!, to!)).some(e => e.includes(want!)));
+    { assert.ok(checkShErrors(SH.replace(from!, to!)).some(e => e.includes(want!))); }
 });
 test('release: tag equals v + plugin.json version; notes carry both install commands', () => {
   assert.deepEqual([tagErrors('v1.0.0', '1.0.0'), notesErrors(INSTALL.join('\n'))], [[], []]);
@@ -31,7 +31,7 @@ test('coverage map: every check ID maps to an existing step id, and no unknown I
   const { 'A8.no-build': _, ...missing } = coverage;
   for (const [c, want] of [[missing, 'A8.no-build: no CI step'], [{ ...coverage, B9: 'check' }, 'B9: unknown check ID'],
     [{ ...coverage, A8: ['check', 'gone'] }, 'step id gone is missing']] as const)
-    assert.ok(coverageErrors(ids, c, new Set(['check'])).some(e => e.includes(want)), want);
+    { assert.ok(coverageErrors(ids, c, new Set(['check'])).some(e => e.includes(want)), want); }
 });
 test('the check job runs the wiki check and the CI coverage check on every OS (B7); check.sh stays plan A\'s', () => {
   const yml = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');

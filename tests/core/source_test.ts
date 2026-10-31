@@ -53,7 +53,7 @@ test('A1: the header is the first kept line, trimmed, with only a trailing ; rem
 test('A1: a trailing ; is removed only from a flowchart, graph or sequenceDiagram header', () => {
   for (const [h, want] of [['flowchart TD;', 'flowchart TD'], ['graph LR;', 'graph LR'], ['sequenceDiagram;', 'sequenceDiagram'],
     ['pie title Fruit;', 'pie title Fruit;'], ['xychart-beta;', 'xychart-beta;'], ['stateDiagram-v2;', 'stateDiagram-v2;']] as const)
-    assert.equal((readSource(`${h}\nA`) as { header: string }).header, want, h)
+    { assert.equal((readSource(`${h}\nA`) as { header: string }).header, want, h) }
 })
 
 test('A1: indented %% comments and whitespace-only lines are skipped; kept lines keep their indentation', () => {
@@ -133,7 +133,7 @@ test('A5.errors: any other numeric-looking plain config scalar fails config:<dot
   assert.deepEqual(bad.map(v => [v, one(v)]), bad.map(v => [v, { reason: 'config:a' }]))
   // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as frontmatter.
   for (const fm of ['config:\n  a: 1.5\n  a: 2', 'config:\n  a: 1.5\n  b: [1]', 'config:\n  a: 1.5\n  b:'])
-    assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm)
+    { assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm) }
 })
 
 // T41b: the top-level title is one scalar, read by the same rules, and printed as Mermaid's
@@ -159,7 +159,7 @@ test('A5.errors: a true, numeric or numeric-looking frontmatter title falls back
   assert.deepEqual(bad.map(v => [v, titled(v)]), bad.map(v => [v, { reason: 'title' }]))
   // A second title still falls back as title, after a null, false or malformed first one.
   for (const fm of ['title: false\ntitle: B', 'title: ~\ntitle: B', 'title: "a" b\ntitle: B'])
-    assert.deepEqual(readSource(`---\n${fm}\n---\nflowchart TD\nA`), { reason: 'title' }, fm)
+    { assert.deepEqual(readSource(`---\n${fm}\n---\nflowchart TD\nA`), { reason: 'title' }, fm) }
 })
 
 test('A5.errors: a frontmatter title outside the strict YAML subset falls back as frontmatter', () => {
@@ -210,7 +210,8 @@ test('X4: non-ASCII whitespace falls back where Mermaid 12.2.0\'s lexer for the 
   // Jison's \s skips them in flowchart's header line and blank lines, so these read as their ASCII twins; mindmap indents too.
   for (const [odd, plain] of [['flowchart LR\n \nA-->B', 'flowchart LR\n\nA-->B'], ['flowchart LR \nA-->B', 'flowchart LR\nA-->B'],
     ['mindmap\nroot\n  a', 'mindmap\nroot\n  a'], ['pie\n"a b" : 1', 'pie\n"a b" : 1']]) {
-    const a = readSource(odd), b = readSource(plain)
+    const a = readSource(odd)
+const  b = readSource(plain)
     assert.ok(!('reason' in a), JSON.stringify(odd))
     assert.equal(JSON.stringify(a).length, JSON.stringify(b).length, JSON.stringify(odd))
   }

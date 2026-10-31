@@ -3,7 +3,7 @@ import { createCanvas, type Drawing } from '../../core/canvas.ts'; import { vali
 // Three marks: A at (0, 0), B at (1, 0), C at (2, 2), each a cap owned by its id.
 function marks(order: { ids: string[]; column: boolean }[], at: Record<string, [number, number]> = { A: [0, 0], B: [1, 0], C: [2, 2] }): Drawing {
   const c = createCanvas(3, 3, 80)
-  for (const [id, [r, col]] of Object.entries(at)) c.cap(r, col, '●', 'node', id)
+  for (const [id, [r, col]] of Object.entries(at)) { c.cap(r, col, '●', 'node', id) }
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], frames: [], order })
 }
 test('C: order passes owners drawn in strictly increasing rows, in one column when column is set', () => {

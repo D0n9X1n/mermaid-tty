@@ -14,7 +14,7 @@ const straight = (x: Cell | null, dirs: number): boolean =>
 function keep(pass: readonly boolean[], n: number): number[] {
   const out: number[] = []
   let run = 0
-  pass.forEach((p, i) => { run = p ? run + 1 : 0; if (run <= n) out.push(i) })
+  pass.forEach((p, i) => { run = p ? run + 1 : 0; if (run <= n) { out.push(i) } })
   return out
 }
 
@@ -23,9 +23,10 @@ function keep(pass: readonly boolean[], n: number): number[] {
 // run, so a head below a box keeps a │ between them. expect holds no coordinates, so it and conflicts carry over.
 export function compact(d: Drawing): Drawing {
   const rows = keep(d.cells.map(row => row.every(x => straight(x, 5))), 1).map(r => d.cells[r]!)
-  const width = rows[0]?.length ?? 0, column = (c: number) => rows.map(row => row[c] ?? null)
+  const width = rows[0]?.length ?? 0
+const  column = (c: number) => rows.map(row => row[c] ?? null)
   let lead = 0
-  while (lead < width && column(lead).every(x => x === null)) lead++
+  while (lead < width && column(lead).every(x => x === null)) { lead++ }
   const cols = keep(Array.from({ length: width - lead }, (_, i) => column(lead + i).every(x => straight(x, 10))), 2)
   return { ...d, cells: rows.map(row => cols.map(i => row[lead + i] ?? null)) }
 }

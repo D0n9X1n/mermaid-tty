@@ -17,7 +17,10 @@ const SVG = '<svg xmlns="http://www.w3.org/2000/svg"><marker id="arrowhead"/><pa
 // run(argv, init) answers each pass; every call is recorded.
 type Run = (argv: string[], init: any) => Promise<any>
 const fake = (o: { vars?: Record<string, string>; theme?: unknown; run?: Run; w?: number; h?: number; size?: number; svgSize?: number; svg?: string; version?: string | Error } = {}) => {
-  const runs: { argv: string[]; init: any }[] = [], writes: [string, string][] = [], logs: string[] = [], asked: string[] = []
+  const runs: { argv: string[]; init: any }[] = []
+const  writes: [string, string][] = []
+const  logs: string[] = []
+const  asked: string[] = []
   const vars = o.vars ?? { TERM: 'xterm-kitty', TMPDIR: '/tmp/' }
   const mmdc: Run = o.run ?? (async () => ({ exitCode: 0, stdout: '', stderr: '' }))
   const $ = {
@@ -26,11 +29,11 @@ const fake = (o: { vars?: Record<string, string>; theme?: unknown; run?: Run; w?
     process: { run: async (argv: string[], init: any) => {
       runs.push({ argv, init })
       if (argv[0] === 'mmdc' && argv[1] === '--version') {
-        if (o.version instanceof Error) throw o.version
+        if (o.version instanceof Error) { throw o.version }
         return { exitCode: 0, stdout: `${o.version ?? '11.17.1'}\n`, stderr: '' }
       }
-      if (argv[0] === 'mktemp') return { exitCode: 0, stdout: '/tmp/mermaid-tty.Ab12Cd\n', stderr: '' }
-      if (argv[0] === 'rm') return { exitCode: 0, stdout: '', stderr: '' }
+      if (argv[0] === 'mktemp') { return { exitCode: 0, stdout: '/tmp/mermaid-tty.Ab12Cd\n', stderr: '' } }
+      if (argv[0] === 'rm') { return { exitCode: 0, stdout: '', stderr: '' } }
       return mmdc(argv, init)
     } },
     fs: {
@@ -79,7 +82,8 @@ test('A6.hook-tests: the look: dark or light from the Claude Code theme; none fo
 })
 
 test('A6.hook-tests: the terminal is told once per store', async () => {
-  const f = fake(), s = createPictures(); await pictureLook(f.$, s, 'default'); const n = f.asked.length
+  const f = fake()
+const  s = createPictures(); await pictureLook(f.$, s, 'default'); const n = f.asked.length
   await pictureLook(f.$, s, 'default'); assert.equal(f.asked.length, n)
 })
 
@@ -96,12 +100,15 @@ test('A6.hook-tests: the puppeteer config cuts Chromium off the network and sets
 
 // Two passes: an SVG, checked by hooks/svg.ts, then (only if it is clean) the PNG.
 test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background, SVG then PNG with -p and -w, cleans up, and redraws with the picture', async () => {
-  const f = fake(), s = createPictures(), body = fc('A')
+  const f = fake()
+const  s = createPictures()
+const  body = fc('A')
   assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
   await s.idle()
   assert.deepEqual(f.runs.map(r => r.argv.slice(0, 2).join(' ')), ['mmdc --version', 'mktemp -d', 'mmdc -i', 'mmdc -i', 'rm -rf'])
   assert.deepEqual(argvOf(f, 'mktemp')[0]!.argv, ['mktemp', '-d', '/tmp/mermaid-tty.XXXXXX'])
-  const D = '/tmp/mermaid-tty.Ab12Cd', [sv, m] = argvOf(f, 'mmdc')
+  const D = '/tmp/mermaid-tty.Ab12Cd'
+const  [sv, m] = argvOf(f, 'mmdc')
   assert.deepEqual(sv!.argv, ['mmdc', '-i', '-', '-o', `${D}/out.svg`, '-e', 'svg', '-b', 'transparent', '-t', 'dark',
     '-c', `${D}/config.json`, '-p', `${D}/puppeteer.json`, '-q', '-w', '960'])
   assert.deepEqual(m!.argv, ['mmdc', '-i', '-', '-o', `${D}/out.png`, '-e', 'png', '-b', 'transparent', '-t', 'dark',
@@ -117,7 +124,8 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
 // mermaid-cli 12 removed -w: the page width comes from the puppeteer config alone. 12 embeds its fonts in an SVG as
 // data: URLs unless told --no-font-embed; the SVG check allows no data: at all.
 test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed', async () => {
-  const f = fake({ version: '12.0.0' }), s = createPictures()
+  const f = fake({ version: '12.0.0' })
+const  s = createPictures()
   pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
   const [sv, m] = argvOf(f, 'mmdc')
   for (const r of [sv!, m!]) { assert.equal(r.argv.includes('-w'), false); assert.ok(r.argv.includes('-p')) }
@@ -127,7 +135,8 @@ test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed',
 
 test('A5.errors: mmdc missing, or a version that is not one, logs once and renders nothing in that store', async () => {
   for (const version of [new Error('spawn mmdc ENOENT'), 'hello']) {
-    const f = fake({ version }), s = createPictures()
+    const f = fake({ version })
+const  s = createPictures()
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
     pictureFor(f.$, s, fc('B'), 'dark', 80, f.log); await s.idle()
     assert.equal(probes(f), 1); assert.equal(renders(f), 0); assert.equal(argvOf(f, 'mktemp').length, 0)
@@ -138,7 +147,8 @@ test('A5.errors: mmdc missing, or a version that is not one, logs once and rende
 // Only what core parses goes to mmdc: core rejects HTML, icons and image nodes, which Chromium would fetch. A source
 // over Mermaid's 50000-character limit would come back as its error picture, so it is not rendered either.
 test('A5.errors: a source core does not parse, or one over 50000 characters, never reaches mmdc', async () => {
-  const f = fake(), s = createPictures()
+  const f = fake()
+const  s = createPictures()
   for (const body of ['flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
     assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined, body)
   }
@@ -161,7 +171,8 @@ test('A5.errors: an unsafe source never reaches mmdc: the themeCSS repro, and on
     ['flowchart TD\nA[a//b] --> B', 'token //'], ['flowchart TD\nA[a\\b] --> B', 'token \\'], ['flowchart TD\nA[@import x] --> B', 'token @import'],
     ['flowchart TD\nA[data:x] --> B', 'token data:'],
   ] as const) {
-    const f = fake({ run: async () => { throw new Error('mmdc must not run') } }), s = createPictures()
+    const f = fake({ run: async () => { throw new Error('mmdc must not run') } })
+const  s = createPictures()
     f.$.process.run = async (argv: string[]) => { assert.fail(`ran ${argv.join(' ')} for ${JSON.stringify(body)}`) }
     assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined); pictureFor(f.$, s, body, 'dark', 80, f.log); await s.idle()
     assert.deepEqual(f.logs, [`image: unsafe source (${reason})`], body)
@@ -177,26 +188,31 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
     ['<svg><foreignObject><img src="x.png"/></foreignObject></svg>', 'element img'], ['<svg><style>@import "a.css";</style></svg>', 'css @import'],
     ['<svg><script>1</script></svg>', 'element script'], ['<svg><!-- x --></svg>', 'markup'],
   ] as const) {
-    const f = fake({ svg }), s = createPictures()
+    const f = fake({ svg })
+const  s = createPictures()
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
     assert.equal(renders(f), 0, svg); assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
     assert.deepEqual(f.logs, [`image: unsafe svg (${reason})`], svg); assert.equal(argvOf(f, 'rm').length, 1); assert.equal(redraws(f), 0)
   }
-  const f = fake({ svg: SVG }), s = createPictures()
+  const f = fake({ svg: SVG })
+const  s = createPictures()
   pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle(); assert.equal(renders(f), 1); assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
 })
 
 test('A6.hook-tests: requests for one diagram, theme and width share one render; another theme or width is its own', async () => {
-  const f = fake(), s = createPictures(), body = fc('A')
-  for (let i = 0; i < 3; i++) pictureFor(f.$, s, body, 'dark', 80, f.log)
+  const f = fake()
+const  s = createPictures()
+const  body = fc('A')
+  for (let i = 0; i < 3; i++) { pictureFor(f.$, s, body, 'dark', 80, f.log) }
   pictureFor(f.$, s, body, 'default', 80, f.log); pictureFor(f.$, s, body, 'dark', 60, f.log)
   await s.idle(); assert.equal(renders(f), 3); assert.equal(probes(f), 1)
 })
 
 test('A6.hook-tests: renders run one at a time, and a batch redraws once', async () => {
-  let live = 0, most = 0
+  let live = 0
+let  most = 0
   const f = fake({ run: async () => { live++; most = Math.max(most, live); await new Promise(r => setTimeout(r, 5)); live--; return { exitCode: 0, stdout: '', stderr: '' } } })
-  const s = createPictures(); for (const b of ['A', 'B', 'C']) pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+  const s = createPictures(); for (const b of ['A', 'B', 'C']) { pictureFor(f.$, s, fc(b), 'dark', 80, f.log) }
   await s.idle(); assert.equal(most, 1); assert.equal(renders(f), 3); assert.equal(redraws(f), 1)
 })
 
@@ -204,7 +220,8 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
 // own size and is scaled by at least 2/3; one over 90% of it (mmdc's margins take the rest) was shrunk by mmdc to fit,
 // perhaps past reading.
 test('A6.hook-tests: a picture inside 90% of the page is scaled into the columns', async () => {
-  const f = fake({ w: 1700, h: 100 }), s = createPictures()
+  const f = fake({ w: 1700, h: 100 })
+const  s = createPictures()
   pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
   assert.deepEqual(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), { png: png(1700, 100), columns: 80, rows: 2 }); assert.deepEqual(f.logs, [])
 })
@@ -220,7 +237,8 @@ for (const [name, o, reason] of [
   ['a picture as wide as the page (mmdc shrank it to fit)', { w: 1920, h: 100 }, /^image: too wide to read$/],
 ] as [string, object, RegExp][]) {
   test(`A5.errors: ${name} keeps the text drawing, logs why, and cleans up`, async () => {
-    const f = fake(o), s = createPictures()
+    const f = fake(o)
+const  s = createPictures()
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
     assert.equal(f.logs.length, 1); assert.match(f.logs[0]!, reason)
     assert.deepEqual(argvOf(f, 'rm').map(r => r.argv), [['rm', '-rf', '/tmp/mermaid-tty.Ab12Cd']])
@@ -232,7 +250,9 @@ for (const [name, o, reason] of [
 
 test('A5.errors: no temp dir, or a path mktemp should not have made, runs no mmdc and removes nothing', async () => {
   for (const made of [{ exitCode: 1, stdout: '', stderr: 'no' }, { exitCode: 0, stdout: '/\n', stderr: '' }, { exitCode: 0, stdout: '/etc/mermaid-tty.Ab12Cd\n', stderr: '' }]) {
-    const f = fake(), s = createPictures(), run = f.$.process.run
+    const f = fake()
+const  s = createPictures()
+const  run = f.$.process.run
     f.$.process.run = async (argv: string[], init: any) => argv[0] === 'mktemp' ? (f.runs.push({ argv, init }), made) : run(argv, init)
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log); await s.idle()
     assert.deepEqual(f.runs.map(r => r.argv.slice(0, 2).join(' ')), ['mmdc --version', 'mktemp -d'], JSON.stringify(made)); assert.deepEqual(f.logs, ['image: no temp dir'])
@@ -240,10 +260,12 @@ test('A5.errors: no temp dir, or a path mktemp should not have made, runs no mmd
 })
 
 test('A5.errors: a failing log or redraw never escapes the background render', async () => {
-  const f = fake(), s = createPictures(); f.$.ui.invalidate = () => { throw new Error('gone') }
+  const f = fake()
+const  s = createPictures(); f.$.ui.invalidate = () => { throw new Error('gone') }
   pictureFor(f.$, s, fc('A'), 'dark', 80, () => { throw new Error('log down') }); await s.idle()
   assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
-  const g = fake({ run: async () => { throw new Error('x') } }), t = createPictures()
+  const g = fake({ run: async () => { throw new Error('x') } })
+const  t = createPictures()
   pictureFor(g.$, t, fc('A'), 'dark', 80, () => { throw new Error('log down') }); await t.idle()
   assert.equal(argvOf(g, 'mmdc').length, 1)
 })
@@ -251,28 +273,32 @@ test('A5.errors: a failing log or redraw never escapes the background render', a
 // A key is rendered at most once per store: a picture the cache drops is not rendered again, so a reply with more
 // diagrams than the cache holds cannot evict, render and redraw for ever.
 test('A8.cache: the picture cache is bounded by entries; a dropped picture is not rendered again', async () => {
-  const f = fake(), s = createPictures({ entries: 2 })
+  const f = fake()
+const  s = createPictures({ entries: 2 })
   for (const b of ['A', 'B', 'C']) { pictureFor(f.$, s, fc(b), 'dark', 80, f.log); await s.idle() }
   assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log)); assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
   await s.idle(); assert.equal(renders(f), 3)
 })
 
 test('A8.cache: the picture cache is bounded by bytes of PNG', async () => {
-  const f = fake(), s = createPictures({ bytes: 100 }) // each PNG here is 44 base64 characters
+  const f = fake()
+const  s = createPictures({ bytes: 100 }) // each PNG here is 44 base64 characters
   for (const b of ['A', 'B', 'C']) { pictureFor(f.$, s, fc(b), 'dark', 80, f.log); await s.idle() }
   assert.ok(pictureFor(f.$, s, fc('B'), 'dark', 80, f.log)); assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
   assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined); await s.idle(); assert.equal(renders(f), 3)
 })
 
 test('A8.cache: at most 8 renders wait; a request past that is dropped, and asked again on a later draw', async () => {
-  const f = fake(), s = createPictures()
-  for (let i = 0; i < 10; i++) pictureFor(f.$, s, fc(`D${i}`), 'dark', 80, f.log)
+  const f = fake()
+const  s = createPictures()
+  for (let i = 0; i < 10; i++) { pictureFor(f.$, s, fc(`D${i}`), 'dark', 80, f.log) }
   await s.idle(); assert.equal(renders(f), 8)
   pictureFor(f.$, s, fc('D9'), 'dark', 80, f.log); await s.idle(); assert.equal(renders(f), 9)
 })
 
 test('A8.cache: the keys tried are bounded; past that, a new diagram stays text', async () => {
-  const f = fake(), s = createPictures({ tried: 2 })
+  const f = fake()
+const  s = createPictures({ tried: 2 })
   for (const b of ['A', 'B', 'C']) { pictureFor(f.$, s, fc(b), 'dark', 80, f.log); await s.idle() }
   assert.equal(renders(f), 2); assert.equal(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log), undefined)
 })
@@ -280,10 +306,12 @@ test('A8.cache: the keys tried are bounded; past that, a new diagram stays text'
 // The review's repro: 17 diagrams in one reply, a cache of 16, and every redraw asking for all 17 again. Each renders
 // once, redraws come one per batch (8 + 8 + 1), and the loop ends.
 test('A8.cache: 17 diagrams over a 16-picture cache render 17 times and stop', async () => {
-  const f = fake(), s = createPictures({ entries: 16 }), bodies = Array.from({ length: 17 }, (_, i) => fc(`N${i}`))
+  const f = fake()
+const  s = createPictures({ entries: 16 })
+const  bodies = Array.from({ length: 17 }, (_, i) => fc(`N${i}`))
   let shown = 0
   const draw = () => { shown = bodies.filter(b => pictureFor(f.$, s, b, 'dark', 80, f.log)).length }
-  f.$.ui.invalidate = () => { f.asked.push('invalidate'); if (redraws(f) < 50) draw() }
+  f.$.ui.invalidate = () => { f.asked.push('invalidate'); if (redraws(f) < 50) { draw() } }
   draw(); await s.idle()
   assert.equal(renders(f), 17); assert.equal(redraws(f), 3); assert.equal(shown, 16)
 })

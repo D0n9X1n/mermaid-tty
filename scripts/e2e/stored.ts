@@ -8,8 +8,8 @@ export function findReply(jsonl: string, reply: string): boolean {
   return jsonl.split('\n').some(line => {
     let content: unknown
     try { content = JSON.parse(line)?.message?.content } catch { return false }
-    if (typeof content === 'string') return content === reply
-    if (!Array.isArray(content)) return false
+    if (typeof content === 'string') { return content === reply }
+    if (!Array.isArray(content)) { return false }
     return content.filter(b => b?.type === 'text').map(b => b.text).join('') === reply
   })
 }

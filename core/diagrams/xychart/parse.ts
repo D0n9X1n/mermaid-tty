@@ -40,7 +40,8 @@ const ACC = /^acc(?:Title|Descr)\s*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
 // A list's items, in order.
-const TEXTS = new RegExp(TEXT, 'g'), NUMS = new RegExp(NUM, 'g')
+const TEXTS = new RegExp(TEXT, 'g')
+const  NUMS = new RegExp(NUM, 'g')
 const ZERO = dec(0)
 const below = (a: Dec, b: Dec): boolean => cmp(a, b) < 0
 
@@ -53,7 +54,7 @@ function stop(reason: string): never { throw fail(reason) }
 // n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal draws reliably), 'length' (a series without one value per
 // group), 'series' (more than 8 line series or 26 bar series) or 'domain' (no y range that holds every value: see domain).
 export function parseXy(src: Source): Xy | Fail {
-  try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
+  try { return walk(src) } catch (e) { if (isFail(e)) { return e; } throw e }
 }
 
 function walk(src: Source): Xy {
@@ -66,12 +67,12 @@ function walk(src: Source): Xy {
   let descr = 0
   for (const { n, text: raw } of src.lines) {
     const t = raw.trim()
-    if (descr) { if (closes(t, n)) descr = 0; continue }
-    if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`); continue }
-    if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) descr = n; continue }
+    if (descr) { if (closes(t, n)) { descr = 0; } continue }
+    if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) { stop(`syntax:${n}`); } continue }
+    if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) { descr = n; } continue }
     statement(t, n, xy, seen)
   }
-  if (descr) stop(`syntax:${descr}`)
+  if (descr) { stop(`syntax:${descr}`) }
   lengths(xy); counts(xy); domain(xy)
   return xy
 }
@@ -79,15 +80,15 @@ function walk(src: Source): Xy {
 // Whether an accDescr block's text closes in rest: at its first }, after which the line must end.
 function closes(rest: string, n: number): boolean {
   const i = rest.indexOf('}')
-  if (i < 0) return false
-  if (rest.slice(i + 1).trim()) stop(`syntax:${n}`)
+  if (i < 0) { return false }
+  if (rest.slice(i + 1).trim()) { stop(`syntax:${n}`) }
   return true
 }
 
 // Reads trimmed source line n into xy.
 function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
   // A second title, x-axis or y-axis fails on its line.
-  const once = (key: string) => { if (seen.has(key)) stop(`repeat:${n}`); seen.add(key) }
+  const once = (key: string) => { if (seen.has(key)) { stop(`repeat:${n}`); } seen.add(key) }
   let m: RegExpExecArray | null
   if ((m = TITLE.exec(t))) {
     once('title'); xy.title = text(m[1]!, n)
@@ -97,17 +98,18 @@ function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
     once('y-axis'); xy.yTitle = optText(m[1] ?? m[2], n); xy.range = m[3] === undefined ? null : { lo: num(m[3], n), hi: num(m[4]!, n) }
   } else if ((m = SERIES.exec(t))) {
     xy.series.push({ kind: m[1] as Series['kind'], name: optText(m[2], n), values: [...m[3]!.matchAll(NUMS)].map(v => num(v[0], n)) })
-  } else stop(`syntax:${n}`)
+  } else { stop(`syntax:${n}`) }
 }
 
 // A text's content. A "…" is trimmed, as Mermaid's xychart database trims each text; a "`…`" markdown string fails, and
 // so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. Text Mermaid
 // shows otherwise fails as drawable says: each text is sanitized, with no <br>, as the title is ('entity' or 'html').
 function text(s: string, n: number): string {
-  const quoted = s.startsWith('"'), t = quoted ? s.slice(1, -1).trim() : s
-  if (quoted ? s.startsWith('"`') || t === '' : KEYWORD.test(s)) stop(`syntax:${n}`)
+  const quoted = s.startsWith('"')
+const  t = quoted ? s.slice(1, -1).trim() : s
+  if (quoted ? s.startsWith('"`') || t === '' : KEYWORD.test(s)) { stop(`syntax:${n}`) }
   const f = drawable(t, 'sanitized', 'none')
-  if (f) stop(f.reason)
+  if (f) { stop(f.reason) }
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }
@@ -116,7 +118,7 @@ const optText = (s: string | undefined, n: number): string | null => (s === unde
 // An x-axis list's categories, in order. A repeated one fails on line n.
 function categories(items: string, n: number): string[] {
   const cs = [...items.matchAll(TEXTS)].map(c => text(c[0], n))
-  if (new Set(cs).size < cs.length) stop(`repeat:${n}`)
+  if (new Set(cs).size < cs.length) { stop(`repeat:${n}`) }
   return cs
 }
 
@@ -129,13 +131,13 @@ function num(raw: string, n: number): Num {
 // Each series has one value per group: per category or, with no categories, per value of the first series.
 function lengths(xy: Xy): void {
   const groups = xy.categories?.length ?? xy.series[0]?.values.length ?? 0
-  if (xy.series.some(s => s.values.length !== groups)) stop('length')
+  if (xy.series.some(s => s.values.length !== groups)) { stop('length') }
 }
 
 // More than 8 line series (their markers would repeat) or 26 bar series fail.
 function counts(xy: Xy): void {
   const k = (kind: Series['kind']) => xy.series.filter(s => s.kind === kind).length
-  if (k('line') > 8 || k('bar') > 26) stop('series')
+  if (k('line') > 8 || k('bar') > 26) { stop('series') }
 }
 
 // The y range: the explicit one, else y0 = min(0, smallest value) and y1 = max(0, largest). It must hold every value
@@ -146,5 +148,5 @@ function domain(xy: Xy): void {
   const y1 = xy.range?.hi.value ?? values.reduce((a, v) => (below(a, v) ? v : a), ZERO)
   const outside = values.some(v => below(v, y0) || below(y1, v))
   const bars = xy.series.some(s => s.kind === 'bar')
-  if (outside || !below(y0, y1) || (bars && below(y0, ZERO))) stop('domain')
+  if (outside || !below(y0, y1) || (bars && below(y0, ZERO))) { stop('domain') }
 }

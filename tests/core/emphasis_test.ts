@@ -14,8 +14,9 @@ function show(s: string): string {
     cs.push({ ch, em }); em = 0
   }
   // A space takes the style of its two neighbours when they share one.
-  cs.forEach((c, i) => { if (c.ch === ' ' && cs[i - 1]?.em && cs[i - 1]!.em === cs[i + 1]?.em) c.em = cs[i - 1]!.em })
-  let out = '', cur = 0
+  cs.forEach((c, i) => { if (c.ch === ' ' && cs[i - 1]?.em && cs[i - 1]!.em === cs[i + 1]?.em) { c.em = cs[i - 1]!.em } })
+  let out = ''
+let  cur = 0
   for (const c of cs) {
     if (c.em !== cur) { out += (cur ? '}' : '') + (c.em ? `{${CODE[c.em]}:` : ''); cur = c.em }
     out += c.ch
@@ -51,7 +52,7 @@ test('X3.emphasis: nesting a style in itself, escapes, code, links, strikethroug
   for (const t of ['**a **b** c**', '*a *b* c*', 'a\\*b* *c*', '`x` **b**', '[x](y) **b**', '~~s~~ **b**', 'www.x.com **b**',
     'a@b.co **b**', 'http://x **b**', 'a < **b**', 'a > **b**', '# **h**', '- **l**', '1. **l**', '> **q**', 'a\n**b**', 'a\t**b**',
     '<b>x</b> **b**', '&amp; **b**', '**b** \u{1}'])
-    assert.equal(E(t), null, t)
+    { assert.equal(E(t), null, t) }
 })
 
 // X3. Mermaid 12.2.0 (JSDOM) turns each <br> spelling in an edge, transition or relation label into a newline before marked
@@ -67,5 +68,5 @@ test('X3.emphasis: in an edge label each <br> is a newline as Mermaid makes it; 
   assert.equal(B('a</br>**b**'), 'a<br>{b:b}')
   for (const t of ['a<br>- **b**', 'a<br># **h**', '**a**<br>===', '*a*<br>---', 'a<br>1. **b**', 'a<br>> **b**', 'a  <br>**b**',
     'a<br><br>**b**', '<br>**b**', '- **a**<br>b', 'a<br>|-|-|<br>**b**'])
-    assert.equal(B(t), null, t)
+    { assert.equal(B(t), null, t) }
 })

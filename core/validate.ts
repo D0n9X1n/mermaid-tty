@@ -57,7 +57,7 @@ const owns = (x: Cell | null, id: string): boolean => x?.owners.includes(id) ?? 
 const degree = (x: Cell | null): number => SIDES.filter(s => ((x?.dirs ?? 0) & s.bit) !== 0).length
 function spots(d: Drawing): Spot[] {
   const out: Spot[] = []
-  d.cells.forEach((row, r) => row.forEach((cell, c) => { if (cell) out.push({ r, c, cell }) }))
+  d.cells.forEach((row, r) => row.forEach((cell, c) => { if (cell) { out.push({ r, c, cell }) } }))
   return out
 }
 
@@ -73,10 +73,12 @@ function instances(d: Drawing): Map<string, string[]> {
     let prev: string | undefined                                  // the owner of the run the last cell belongs to
     for (const x of row) {
       if (x?.kind !== 'text' && x?.kind !== 'cont') { prev = undefined; continue }
-      const owner = x.owners[0]!, list = drawn.get(owner) ?? [], ch = marker(x.em ?? 0) + x.ch
-      if (owner === prev) list.push(list.pop()! + ch)
-      else if (x.join === undefined || list.length === 0) list.push(ch)
-      else list.push(list.pop()! + x.join + ch)
+      const owner = x.owners[0]!
+const  list = drawn.get(owner) ?? []
+const  ch = marker(x.em ?? 0) + x.ch
+      if (owner === prev) { list.push(list.pop()! + ch) }
+      else if (x.join === undefined || list.length === 0) { list.push(ch) }
+      else { list.push(list.pop()! + x.join + ch) }
       drawn.set(owner, list); prev = owner
     }
   }
@@ -98,12 +100,12 @@ function labels(d: Drawing): Fail | null {
   const drawn = instances(d)
   for (const { owner, text } of d.expect.labels) {
     const got = drawn.get(owner) ?? []
-    if (norm(text) === '') { if (got.length > 0) return fail('label-dup'); continue }
-    if (got.length === 0 || got.some(t => norm(t) !== norm(text))) return fail('label-missing')
-    if (got.length > 1) return fail('label-dup')
+    if (norm(text) === '') { if (got.length > 0) { return fail('label-dup'); } continue }
+    if (got.length === 0 || got.some(t => norm(t) !== norm(text))) { return fail('label-missing') }
+    if (got.length > 1) { return fail('label-dup') }
   }
   const listed = new Set(d.expect.labels.map(l => l.owner))
-  for (const owner of drawn.keys()) if (!listed.has(owner)) return fail('label-dup')
+  for (const owner of drawn.keys()) { if (!listed.has(owner)) { return fail('label-dup') } }
   return null
 }
 
@@ -114,10 +116,10 @@ function labels(d: Drawing): Fail | null {
 function walk(mine: readonly Spot[], starts: readonly Spot[]): Spot[] {
   const byPos = new Map(mine.map(p => [`${p.r},${p.c}`, p]))
   const reached = new Set(starts)
-  for (const p of reached) for (const s of SIDES) {               // a Set's for…of also visits what the loop adds
+  for (const p of reached) { for (const s of SIDES) {               // a Set's for…of also visits what the loop adds
     const q = byPos.get(`${p.r + s.dr},${p.c + s.dc}`)
-    if (q && (p.cell.kind !== 'line' || (p.cell.dirs & s.bit) !== 0) && (q.cell.kind !== 'line' || (q.cell.dirs & s.back) !== 0)) reached.add(q)
-  }
+    if (q && (p.cell.kind !== 'line' || (p.cell.dirs & s.bit) !== 0) && (q.cell.kind !== 'line' || (q.cell.dirs & s.back) !== 0)) { reached.add(q) }
+  } }
   return [...reached]
 }
 
@@ -144,8 +146,9 @@ function path(d: Drawing, all: readonly Spot[], e: Expect['edges'][number]): { m
 // and dangling, which name an open spur or a misplaced mark more exactly.
 function strays(d: Drawing, all: readonly Spot[]): Fail | null {
   for (const e of d.expect.edges) {
-    const { mine, reached } = path(d, all, e), got = new Set(reached)
-    if (mine.some(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && !got.has(p))) return fail('edge-disconnected')
+    const { mine, reached } = path(d, all, e)
+const  got = new Set(reached)
+    if (mine.some(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && !got.has(p))) { return fail('edge-disconnected') }
   }
   return null
 }
@@ -157,21 +160,22 @@ function edges(d: Drawing, all: readonly Spot[]): Fail | null {
   const aim = (p: Spot, node: string) => { const s = POINT.get(p.cell.ch); return toward(p, [node], s ? [s] : SIDES) }
   for (const e of d.expect.edges) {
     const { mine, reached } = path(d, all, e)
-    if (!reached.some(p => toward(p, [e.to]))) return fail('edge-disconnected')
+    if (!reached.some(p => toward(p, [e.to]))) { return fail('edge-disconnected') }
     // Every end claims its own arrow cell first; only then is the cell behind each, opposite the side it meets its node on,
     // checked. An end whose glyph the edge draws fewer times than its ends need is missing; any other unclaimed end has its
     // mark drawn somewhere else: beside the other node, or pointing away from its own.
-    const pool = mine.filter(p => p.cell.kind === 'arrow'), claimed: [Spot, Side][] = []
+    const pool = mine.filter(p => p.cell.kind === 'arrow')
+const  claimed: [Spot, Side][] = []
     const drawn = (g: string) => mine.filter(p => p.cell.kind === 'arrow' && p.cell.ch === g).length
     for (const end of e.ends) {
       const i = pool.findIndex(p => p.cell.ch === end.glyph && aim(p, end.node))
-      if (i < 0) return fail(drawn(end.glyph) < e.ends.filter(x => x.glyph === end.glyph).length ? 'edge-disconnected' : 'end-misplaced')
+      if (i < 0) { return fail(drawn(end.glyph) < e.ends.filter(x => x.glyph === end.glyph).length ? 'edge-disconnected' : 'end-misplaced') }
       const p = pool.splice(i, 1)[0]!
       claimed.push([p, aim(p, end.node)!])
     }
     // Any arrow cell of the edge no end claimed is an extra head, as when the canvas merged it into another edge's head.
-    if (pool.length > 0) return fail('head-extra')
-    for (const [p, s] of claimed) if (degree(at(d, p.r - s.dr, p.c - s.dc)) >= JUNCTION) return fail('head-on-junction')
+    if (pool.length > 0) { return fail('head-extra') }
+    for (const [p, s] of claimed) { if (degree(at(d, p.r - s.dr, p.c - s.dc)) >= JUNCTION) { return fail('head-on-junction') } }
   }
   return null
 }
@@ -179,19 +183,20 @@ function edges(d: Drawing, all: readonly Spot[]): Fail | null {
 function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Map(d.expect.edges.map(e => [e.id, e]))
   for (const p of all) {
-    if (p.cell.kind !== 'line') continue
+    if (p.cell.kind !== 'line') { continue }
     const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
-    if (mine.length === 0) continue
-    if (degree(p.cell) < 2) return fail('line-dangling')
+    if (mine.length === 0) { continue }
+    if (degree(p.cell) < 2) { return fail('line-dangling') }
     for (const s of SIDES.filter(s => p.cell.dirs & s.bit)) {
       // The owners that draw this arm, by the dirs the cell records for each; all of them if it records none.
       const by = p.cell.segs ? p.cell.segs.filter(x => x.dirs & s.bit).map(x => x.owner) : p.cell.owners
-      const n = beside(d, p, s), others = by.filter(id => !edges.has(id))
+      const n = beside(d, p, s)
+const  others = by.filter(id => !edges.has(id))
       const connected = n && ((n.kind === 'line' && (n.dirs & s.back) !== 0 && n.owners.some(id => by.includes(id))) ||
         (n.kind !== 'line' && n.owners.some(id => others.includes(id))) ||
         mine.filter(e => by.includes(e.id)).some(e => (n.kind === 'arrow' && owns(n, e.id)) ||
           ((n.kind === 'text' || n.kind === 'cont' || n.kind === 'key') && n.owners[0] === `${e.id}:label`) || owns(n, e.from) || owns(n, e.to)))
-      if (!connected) return fail('line-dangling')
+      if (!connected) { return fail('line-dangling') }
     }
   }
   return null
@@ -205,53 +210,57 @@ function dangling(d: Drawing, all: readonly Spot[]): Fail | null {
 // read as light, as canvas.line records a light line.
 const ROUND: Readonly<Record<string, string>> = { '┐': '╮', '┌': '╭', '┘': '╯', '└': '╰' }
 function lineGlyphs(d: Drawing, all: readonly Spot[]): Fail | null {
-  const marks = new Set((d.expect.rows ?? []).map(x => x.mark)), weight = new Map<string, string>()
-  const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : []))), hidden = new Set(d.expect.hidden ?? [])
+  const marks = new Set((d.expect.rows ?? []).map(x => x.mark))
+const  weight = new Map<string, string>()
+  const styles = new Map(d.expect.edges.flatMap(e => (e.style ? [[e.id, e.style] as const] : [])))
+const  hidden = new Set(d.expect.hidden ?? [])
   // An invisible edge draws no cell of any kind: no line, head or label.
-  if (all.some(({ cell: x }) => x.owners.some(o => hidden.has(o) || hidden.has(o.replace(/:(label|tail|head)$/, ''))))) return fail('line-glyph')
+  if (all.some(({ cell: x }) => x.owners.some(o => hidden.has(o) || hidden.has(o.replace(/:(label|tail|head)$/, ''))))) { return fail('line-glyph') }
   // Each listed edge's line cells, and those of a dotted or thick edge that show its style: any cell but a straight crossing.
-  const lines = new Map<string, number>(), shown = new Set<string>()
+  const lines = new Map<string, number>()
+const  shown = new Set<string>()
   for (const { cell: x } of all) {
-    if (x.kind !== 'line') continue
+    if (x.kind !== 'line') { continue }
     const arms = x.arms ?? [1, 2, 4, 8].map(b => (x.dirs & b ? '1' : '0')).join('')
-    if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) return fail('line-glyph')
+    if ([1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0) !== x.dirs) { return fail('line-glyph') }
     // A cell joins its arms in one weight unless it is a straight crossing, ┼ of one │ and one ─ by the dirs it records for
     // each owner: a corner or tee of two weights shows a thick branch on a thin line.
     const crossing = x.dirs === 15 && (x.segs ?? []).length > 1 && x.segs!.every(s => s.dirs === 5 || s.dirs === 10)
-    if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) return fail('line-glyph')
+    if (!crossing && new Set([...arms].filter(a => a !== '0')).size > 1) { return fail('line-glyph') }
     // An edge draws in its own style. Each arm it draws has its weight, heavy for thick and light otherwise, and a cell
     // drawn dotted is drawn only for dotted edges. A dotted edge's cell may draw solid only at a straight crossing, where the
     // canvas draws the other line's style and ┼ shows no dash.
     for (const o of x.owners) {
       lines.set(o, (lines.get(o) ?? 0) + 1)
       const style = styles.get(o)
-      if (!style) continue
+      if (!style) { continue }
       // Its style shows in a cell of its own path: a dotted edge's in a straight ┄ or ┆ (a corner draws solid), a thick
       // edge's in any heavy cell but a crossing.
-      if (style === 'dotted' ? x.style === 'dotted' && (x.dirs === 5 || x.dirs === 10) : !crossing) shown.add(o)
+      if (style === 'dotted' ? x.style === 'dotted' && (x.dirs === 5 || x.dirs === 10) : !crossing) { shown.add(o) }
       const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
-      if ([1, 2, 4, 8].some((b, i) => (dirs & b) !== 0 && arms[i] !== (style === 'thick' ? '2' : '1'))) return fail('line-glyph')
-      if ((x.style === 'dotted') !== (style === 'dotted') && !(style === 'dotted' && crossing)) return fail('line-glyph')
+      if ([1, 2, 4, 8].some((b, i) => (dirs & b) !== 0 && arms[i] !== (style === 'thick' ? '2' : '1'))) { return fail('line-glyph') }
+      if ((x.style === 'dotted') !== (style === 'dotted') && !(style === 'dotted' && crossing)) { return fail('line-glyph') }
     }
     // Each owner draws one weight in every arm it draws, by the dirs the cell records for it (all of them if none), so no
     // arm shows a thick branch on a thin line or a thin one on a thick line. A crossing's two owners may differ.
     for (const o of x.owners) {
       const dirs = x.segs?.find(s => s.owner === o)?.dirs ?? x.dirs
       for (const [i, b] of [1, 2, 4, 8].entries()) {
-        if (!(dirs & b) || arms[i] === '0') continue
-        if ((weight.get(o) ?? arms[i]) !== arms[i]) return fail('line-glyph')
+        if (!(dirs & b) || arms[i] === '0') { continue }
+        if ((weight.get(o) ?? arms[i]) !== arms[i]) { return fail('line-glyph') }
         weight.set(o, arms[i]!)
       }
     }
-    const g = lineGlyph(x.dirs, arms, x.style ?? 'light'), want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
-    if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) return fail('line-glyph')
+    const g = lineGlyph(x.dirs, arms, x.style ?? 'light')
+const  want = x.owners.some(o => marks.has(o)) ? ROUND[g] ?? g : g
+    if (x.ch !== want || (x.segs && x.segs.reduce((m, s) => m | s.dirs, 0) !== x.dirs)) { return fail('line-glyph') }
   }
   // Every edge draws at least one line cell, so a head alone (A►B) cannot hide its style; the router never
   // draws one. A dotted edge draws a straight ┄ or ┆, and a thick edge a heavy cell that is not a crossing: a corner shows no
   // dash, and ┼ shows neither dash nor weight. edges keeps every cell on the path, so this cell is on it too.
   for (const e of d.expect.edges) {
-    if (!lines.get(e.id)) return fail('line-glyph')
-    if ((e.style === 'dotted' || e.style === 'thick') && !shown.has(e.id)) return fail('line-glyph')
+    if (!lines.get(e.id)) { return fail('line-glyph') }
+    if ((e.style === 'dotted' || e.style === 'thick') && !shown.has(e.id)) { return fail('line-glyph') }
   }
   return null
 }
@@ -266,14 +275,14 @@ const related = (a: Edge, b: Edge): boolean => [a.from, a.to].some(x => x === b.
 // of its edges, so it fails closed.
 function joined(d: Drawing, all: readonly Spot[]): (id: string) => string {
   const root = new Map(d.expect.edges.map(e => [e.id, e.id]))
-  const find = (id: string): string => { let r = id; while (root.get(r) !== r) r = root.get(r)!; return r }
+  const find = (id: string): string => { let r = id; while (root.get(r) !== r) { r = root.get(r)!; } return r }
   for (const p of all) {
     const mine = p.cell.owners.filter(id => root.has(id))
     const drew = (id: string) => p.cell.segs?.find(s => s.owner === id)?.dirs
     const crossing = p.cell.dirs === 15 && mine.every(id => drew(id) === 5 || drew(id) === 10)
-    for (const [i, a] of mine.entries()) for (const b of mine.slice(i + 1)) {
-      if (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (!crossing || drew(a) === drew(b)))) root.set(find(a), find(b))
-    }
+    for (const [i, a] of mine.entries()) { for (const b of mine.slice(i + 1)) {
+      if (p.cell.kind === 'arrow' || (p.cell.kind === 'line' && (!crossing || drew(a) === drew(b)))) { root.set(find(a), find(b)) }
+    } }
   }
   return find
 }
@@ -285,16 +294,17 @@ function joined(d: Drawing, all: readonly Spot[]): (id: string) => string {
 // merges to judge. Only pairs on different lines must cross: unrelated edges of one line, a complete-bipartite trunk's,
 // run one axis through a ┼ another line crosses, and merges judges them as it does anywhere else on that line.
 function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
-  const edges = new Map(d.expect.edges.map(e => [e.id, e])), line = joined(d, all)
+  const edges = new Map(d.expect.edges.map(e => [e.id, e]))
+const  line = joined(d, all)
   for (const p of all) {
-    if (p.cell.kind !== 'line') continue
+    if (p.cell.kind !== 'line') { continue }
     const mine = p.cell.owners.flatMap(id => edges.has(id) ? [edges.get(id)!] : [])
-    if (new Set(mine.map(e => line(e.id))).size === 1) continue
+    if (new Set(mine.map(e => line(e.id))).size === 1) { continue }
     const pairs = mine.flatMap((a, i) => mine.slice(i + 1).filter(b => !related(a, b) && line(a.id) !== line(b.id)).map(b => [a, b] as const))
-    if (pairs.length === 0) continue
+    if (pairs.length === 0) { continue }
     const drew = (e: Edge) => p.cell.segs?.find(s => s.owner === e.id)?.dirs
-    if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) return fail('crossing-ambiguous')
-    if (pairs.some(([a, b]) => drew(a) === drew(b))) return fail('crossing-ambiguous')
+    if (mine.some(e => drew(e) !== 5 && drew(e) !== 10)) { return fail('crossing-ambiguous') }
+    if (pairs.some(([a, b]) => drew(a) === drew(b))) { return fail('crossing-ambiguous') }
   }
   return null
 }
@@ -310,8 +320,9 @@ function crossings(d: Drawing, all: readonly Spot[]): Fail | null {
 // other merge seems to draw a link that is not there, as two two-headed edges A <--> B and A <--> C on one line seem to link
 // B and C.
 function merges(d: Drawing, all: readonly Spot[]): Fail | null {
-  const line = joined(d, all), groups = new Map<string, Edge[]>()
-  for (const e of d.expect.edges) groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e])
+  const line = joined(d, all)
+const  groups = new Map<string, Edge[]>()
+  for (const e of d.expect.edges) { groups.set(line(e.id), [...(groups.get(line(e.id)) ?? []), e]) }
   // How many of e's end marks name n; e's endpoints at a node no mark covers, a self-loop's node counting twice.
   const marks = (e: Edge, n: string) => e.ends.filter(x => x.node === n).length
   const bare = (e: Edge) => [...new Set([e.from, e.to])].filter(n => Number(e.from === n) + Number(e.to === n) > marks(e, n))
@@ -328,22 +339,23 @@ function merges(d: Drawing, all: readonly Spot[]): Fail | null {
   // style of every other such cell of that line, so no implied link reads solid where its own edge is dotted.
   const styles = new Map<string, string>()
   for (const p of all) {
-    if (p.cell.kind !== 'line') continue
+    if (p.cell.kind !== 'line') { continue }
     const mine = p.cell.owners.filter(id => groups.has(line(id)) && d.expect.edges.some(e => e.id === id))
-    if (mine.length === 0 || new Set(mine.map(line)).size !== 1 || (groups.get(line(mine[0]!))?.length ?? 0) < 2) continue
-    const k = line(mine[0]!), style = p.cell.style ?? 'light'
-    if ((styles.get(k) ?? style) !== style) return fail('merge-ambiguous')
+    if (mine.length === 0 || new Set(mine.map(line)).size !== 1 || (groups.get(line(mine[0]!))?.length ?? 0) < 2) { continue }
+    const k = line(mine[0]!)
+const  style = p.cell.style ?? 'light'
+    if ((styles.get(k) ?? style) !== style) { return fail('merge-ambiguous') }
     styles.set(k, style)
   }
   for (const group of groups.values()) {
-    for (const a of group) for (const b of group) {
-      if (a === b) continue
+    for (const a of group) { for (const b of group) {
+      if (a === b) { continue }
       for (const t of starts(a)) {
-        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node, x.glyph))) return fail('merge-ambiguous')
-        if (a.ends.length > 0 && b.ends.length === 0 && (!linked(t.n, b.from) || !linked(t.n, b.to))) return fail('merge-ambiguous')
+        if (b.ends.some(x => !(t.head && t.n === x.node) && !real(t.n, x.node, x.glyph))) { return fail('merge-ambiguous') }
+        if (a.ends.length > 0 && b.ends.length === 0 && (!linked(t.n, b.from) || !linked(t.n, b.to))) { return fail('merge-ambiguous') }
       }
-    }
-    if (!fans(group.filter(e => e.ends.length === 0))) return fail('merge-ambiguous')
+    } }
+    if (!fans(group.filter(e => e.ends.length === 0))) { return fail('merge-ambiguous') }
   }
   return null
 }
@@ -367,7 +379,7 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   for (const { owner, edge } of d.expect.edgeLabels) {
     const route = all.filter(p => (p.cell.kind === 'line' || p.cell.kind === 'arrow') && owns(p.cell, edge))
     const near = all.some(p => owns(p.cell, owner) && route.some(q => Math.max(Math.abs(p.r - q.r), Math.abs(p.c - q.c)) <= 1))
-    if (!near) return fail('label-not-adjacent')
+    if (!near) { return fail('label-not-adjacent') }
   }
   return null
 }
@@ -376,8 +388,9 @@ function edgeLabels(d: Drawing, all: readonly Spot[]): Fail | null {
 type FrameBox = { top: number; bottom: number; left: number; right: number }
 function frameBox(all: readonly Spot[], id: string): FrameBox | null {
   const mine = all.filter(p => p.cell.kind === 'frame' && p.cell.owners[0] === id)
-  if (mine.length === 0) return null
-  const rs = mine.map(p => p.r), cs = mine.map(p => p.c)
+  if (mine.length === 0) { return null }
+  const rs = mine.map(p => p.r)
+const  cs = mine.map(p => p.c)
   const [top, bottom, left, right] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)]
   return top < bottom && left < right ? { top, bottom, left, right } : null
 }
@@ -397,14 +410,14 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
   const edges = new Set(d.expect.edges.map(e => e.id))
   for (const id of d.expect.frames) {
     const b = frameBox(all, id)
-    if (!b) return fail('frame-broken')
+    if (!b) { return fail('frame-broken') }
     const { top, bottom, left, right } = b
     // Corner i, in CORNERS order, is its own frame cell drawing that corner's glyph.
     const corner = ([r, c]: readonly [number, number], i: number) => {
       const x = at(d, r, c)
       return x?.kind === 'frame' && x.owners[0] === id && CORNERS[i]!.has(x.ch)
     }
-    if (!([[top, left], [top, right], [bottom, left], [bottom, right]] as const).every(corner)) return fail('frame-broken')
+    if (!([[top, left], [top, right], [bottom, left], [bottom, right]] as const).every(corner)) { return fail('frame-broken') }
     const divider = (o: string) => o.startsWith(`${id}.`) && /^\d+$/.test(o.slice(id.length + 1))
     // Whether the line cell at (r, c) is this frame's divider and points back, by bit, at the border cell beside it.
     const stem = (r: number, c: number, bit: number) => {
@@ -416,17 +429,19 @@ function frames(d: Drawing, all: readonly Spot[]): Fail | null {
       ? '─━'.includes(ch) || ch === (r === top ? '┬' : '┴') && stem(r === top ? r + 1 : r - 1, c, r === top ? 1 : 4)
       : '│┃'.includes(ch) || ch === (c === left ? '├' : '┤') && stem(r, c === left ? c + 1 : c - 1, c === left ? 8 : 2)
     const kept = (r: number, c: number): boolean => {
-      const x = at(d, r, c), across = r === top || r === bottom, side = c === left || c === right
-      if (x?.kind === 'frame') return x.owners[0] === id && (across && side || drawn(x.ch, r, c, across))
-      if (!x || (across && side)) return false
-      if (x.kind === 'text' || x.kind === 'cont') return r === top && x.owners[0] === id
-      if (x.kind !== 'line' || x.owners.length === 0) return false
-      if (side && x.dirs === (c === left ? 7 : 13) && x.owners.every(divider)) return true
+      const x = at(d, r, c)
+const  across = r === top || r === bottom
+const  side = c === left || c === right
+      if (x?.kind === 'frame') { return x.owners[0] === id && (across && side || drawn(x.ch, r, c, across)) }
+      if (!x || (across && side)) { return false }
+      if (x.kind === 'text' || x.kind === 'cont') { return r === top && x.owners[0] === id }
+      if (x.kind !== 'line' || x.owners.length === 0) { return false }
+      if (side && x.dirs === (c === left ? 7 : 13) && x.owners.every(divider)) { return true }
       const dirs = across ? 5 : 10
       return x.dirs === dirs && x.owners.every(o => edges.has(o) && x.segs?.find(s => s.owner === o)?.dirs === dirs)
     }
-    for (let c = left; c <= right; c++) if (!kept(top, c) || !kept(bottom, c)) return fail('frame-broken')
-    for (let r = top + 1; r < bottom; r++) if (!kept(r, left) || !kept(r, right)) return fail('frame-broken')
+    for (let c = left; c <= right; c++) { if (!kept(top, c) || !kept(bottom, c)) { return fail('frame-broken') } }
+    for (let r = top + 1; r < bottom; r++) { if (!kept(r, left) || !kept(r, right)) { return fail('frame-broken') } }
   }
   return null
 }
@@ -440,13 +455,13 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const boxes = d.expect.frames.flatMap(id => frameBox(all, id) ?? [])
   const within = (p: Spot, b: FrameBox) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
   const drawn = new Map<string, Spot[]>()
-  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  for (const p of all) { for (const o of p.cell.owners) { drawn.set(o, [...(drawn.get(o) ?? []), p]) } }
   const holds = (b: FrameBox, n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(p => within(p, b))
   for (const e of d.expect.edges) {
     const held = boxes.filter(b => holds(b, e.from) && holds(b, e.to))
-    if (held.length === 0) continue
+    if (held.length === 0) { continue }
     const mine = all.filter(p => connects(p.cell, e.id))
-    if (held.some(b => !mine.every(p => within(p, b)))) return fail('edge-outside-frame')
+    if (held.some(b => !mine.every(p => within(p, b)))) { return fail('edge-outside-frame') }
   }
   return null
 }
@@ -459,16 +474,16 @@ function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
 // self-loop on a frame that ran through it). Run after frames, so every listed frame spans a box.
 function crossFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const drawn = new Map<string, Spot[]>()
-  for (const p of all) for (const o of p.cell.owners) drawn.set(o, [...(drawn.get(o) ?? []), p])
+  for (const p of all) { for (const o of p.cell.owners) { drawn.set(o, [...(drawn.get(o) ?? []), p]) } }
   for (const id of d.expect.frames) {
     const b = frameBox(all, id)
-    if (!b) continue
+    if (!b) { continue }
     const within = (p: Spot) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
     const onBorder = (p: Spot) => !within(p) && p.r >= b.top && p.r <= b.bottom && p.c >= b.left && p.c <= b.right
     const holds = (n: string) => (drawn.get(n) ?? []).length > 0 && drawn.get(n)!.every(within)
     for (const e of d.expect.edges) {
       const got = all.filter(p => p.cell.kind === 'line' && owns(p.cell, e.id) && onBorder(p)).length
-      if (got !== (holds(e.from) !== holds(e.to) ? 1 : 0)) return fail('edge-crosses-frame')
+      if (got !== (holds(e.from) !== holds(e.to) ? 1 : 0)) { return fail('edge-crosses-frame') }
     }
   }
   return null
@@ -487,14 +502,17 @@ const gap = (ps: readonly Spot[], qs: readonly Spot[]): number => ps.reduce((m, 
 function endLabels(d: Drawing, all: readonly Spot[]): Fail | null {
   const lines = all.filter(p => p.cell.kind === 'line' || p.cell.kind === 'arrow')
   for (const e of d.expect.edges) {
-    if (!e.endLabels) continue
-    const route = lines.filter(p => owns(p.cell, e.id)), others = lines.filter(p => !owns(p.cell, e.id))
+    if (!e.endLabels) { continue }
+    const route = lines.filter(p => owns(p.cell, e.id))
+const  others = lines.filter(p => !owns(p.cell, e.id))
     const terminal = (node: string) => route.filter(p => SIDES.some(s => owns(beside(d, p, s), node)))
     for (const { node, owner } of e.endLabels) {
-      const mine = all.filter(p => owns(p.cell, owner)), own = terminal(node), near = gap(mine, own)
+      const mine = all.filter(p => owns(p.cell, owner))
+const  own = terminal(node)
+const  near = gap(mine, own)
       const rivals = [...terminal(node === e.from ? e.to : e.from), ...others]
       const shared = own.some(p => p.cell.owners.some(o => o !== e.id) && gap(mine, [p]) <= 1)
-      if (!(near <= 1 && near < gap(mine, rivals)) || shared) return fail('end-label')
+      if (!(near <= 1 && near < gap(mine, rivals)) || shared) { return fail('end-label') }
     }
   }
   return null
@@ -506,20 +524,22 @@ const PART = { h: [...'▏▎▍▌▋▊▉'], v: [...'▁▂▃▄▅▆▇'] 
 const BAR: ReadonlySet<string> = new Set([FULL, ...PART.h, ...PART.v])
 // The eighths a run's glyphs show, in reading order: full cells, then at most one partial of its axis. NaN for any other run.
 function eighthsOf(gs: readonly string[], axis: 'h' | 'v'): number {
-  const last = gs.at(-1)!, part = PART[axis].indexOf(last) + 1
-  if (gs.slice(0, -1).some(g => g !== FULL) || (last !== FULL && part === 0)) return NaN
+  const last = gs.at(-1)!
+const  part = PART[axis].indexOf(last) + 1
+  if (gs.slice(0, -1).some(g => g !== FULL) || (last !== FULL && part === 0)) { return NaN }
   return 8 * (gs.length - 1) + (last === FULL ? 8 : part)
 }
 // Maximal runs of cells: row runs (h) or column runs (v). A run's lane is its row (h) or column (v); its base, the reading
 // position of its axis-side end, its left column (h) or its bottom row (v); its glyphs, left to right (h) or bottom to top (v).
 type Run = { lane: number; base: number; glyphs: string[] }
 function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
-  const lane = (p: Spot) => (axis === 'h' ? p.r : p.c), pos = (p: Spot) => (axis === 'h' ? p.c : -p.r)
+  const lane = (p: Spot) => (axis === 'h' ? p.r : p.c)
+const  pos = (p: Spot) => (axis === 'h' ? p.c : -p.r)
   const out: Run[] = []
   for (const p of [...cells].sort((a, b) => lane(a) - lane(b) || pos(a) - pos(b))) {
     const run = out.at(-1)
-    if (run?.lane === lane(p) && run.base + run.glyphs.length === pos(p)) run.glyphs.push(p.cell.ch)
-    else out.push({ lane: lane(p), base: pos(p), glyphs: [p.cell.ch] })
+    if (run?.lane === lane(p) && run.base + run.glyphs.length === pos(p)) { run.glyphs.push(p.cell.ch) }
+    else { out.push({ lane: lane(p), base: pos(p), glyphs: [p.cell.ch] }) }
   }
   return out
 }
@@ -532,14 +552,16 @@ function runs(cells: readonly Spot[], axis: 'h' | 'v'): Run[] {
 // a bar cannot leave the row or column of its category, slice or task. A bar cell whose owners[0] is no listed bar's owner
 // is bar-stray.
 function bars(d: Drawing, all: readonly Spot[]): Fail | null {
-  const cells = all.filter(p => p.cell.kind === 'cap' && BAR.has(p.cell.ch)), listed = d.expect.bars ?? []
+  const cells = all.filter(p => p.cell.kind === 'cap' && BAR.has(p.cell.ch))
+const  listed = d.expect.bars ?? []
   for (const { owner, eighths, axis, lanes, at: pos } of listed) {
-    const rs = runs(cells.filter(p => p.cell.owners[0] === owner), axis), n = lanes ?? 1
+    const rs = runs(cells.filter(p => p.cell.owners[0] === owner), axis)
+const  n = lanes ?? 1
     const ok = eighths === 0 ? rs.length === 0 : n >= 1 && rs.length === n &&
       rs.every((x, i) => x.lane === rs[0]!.lane + i && x.base === rs[0]!.base && eighthsOf(x.glyphs, axis) === eighths)
-    if (!ok) return fail('bar')
+    if (!ok) { return fail('bar') }
     const base = rs[0] && (axis === 'h' ? { r: rs[0].lane, c: rs[0].base } : { r: -rs[0].base, c: rs[0].lane })
-    if (pos && base && (base.r !== pos.r || base.c !== pos.c)) return fail('bar-misplaced')
+    if (pos && base && (base.r !== pos.r || base.c !== pos.c)) { return fail('bar-misplaced') }
   }
   const owners = new Set(listed.map(b => b.owner))
   return cells.some(p => !owners.has(p.cell.owners[0]!)) ? fail('bar-stray') : null
@@ -553,14 +575,14 @@ function bars(d: Drawing, all: readonly Spot[]): Fail | null {
 // cell. A keyed ER comment's text lives only in its legend row.
 function members(d: Drawing): Fail | null {
   const listed = d.expect.members
-  if (!listed) return null
+  if (!listed) { return null }
   const cells = d.cells.flat().filter((x): x is Cell => !!x)
   const keyed = new Set((d.expect.keys ?? []).map(k => k.item))
   for (const { id, parent } of listed) {
     const mine = cells.filter(x => x.owners[0] === id)
     const row = (x: Cell) => x.owners.length === 2 && x.owners[1] === parent
     const legend = (x: Cell) => keyed.has(id) && x.owners.length === 1 && (x.kind === 'key' ? x.legend === true : x.kind === 'text' || x.kind === 'cont')
-    if (!mine.some(row) || mine.some(x => !row(x) && !legend(x))) return fail('member')
+    if (!mine.some(row) || mine.some(x => !row(x) && !legend(x))) { return fail('member') }
   }
   const edges = new Set(d.expect.edges.map(e => e.id))
   const unlisted = (x: Cell) => (x.kind === 'text' || x.kind === 'key') && new Set(x.owners).size >= 2 && !edges.has(x.owners[1]!) &&
@@ -574,14 +596,16 @@ function members(d: Drawing): Fail | null {
 // rows or columns, keeps it; and a member on another's row, out of source order, or off its left edge is misplaced.
 function memberPlaces(d: Drawing, all: readonly Spot[]): Fail | null {
   for (const { id, parent, place } of d.expect.members ?? []) {
-    if (!place) continue
+    if (!place) { continue }
     const box = all.filter(p => (p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && p.cell.owners[0] === parent)
     const mine = all.filter(p => p.cell.owners[0] === id && p.cell.owners[1] === parent)
-    if (box.length === 0 || mine.length === 0) return fail('member-outside')
-    const top = Math.min(...box.map(p => p.r)), bottom = Math.max(...box.map(p => p.r))
-    const left = Math.min(...box.map(p => p.c)), right = Math.max(...box.map(p => p.c))
-    if (mine.some(p => p.r < top || p.r > bottom || p.c < left || p.c > right)) return fail('member-outside')
-    if (mine[0]!.r !== top + place.r || mine[0]!.c !== left + place.c) return fail('member-misplaced')
+    if (box.length === 0 || mine.length === 0) { return fail('member-outside') }
+    const top = Math.min(...box.map(p => p.r))
+const  bottom = Math.max(...box.map(p => p.r))
+    const left = Math.min(...box.map(p => p.c))
+const  right = Math.max(...box.map(p => p.c))
+    if (mine.some(p => p.r < top || p.r > bottom || p.c < left || p.c > right)) { return fail('member-outside') }
+    if (mine[0]!.r !== top + place.r || mine[0]!.c !== left + place.c) { return fail('member-misplaced') }
   }
   return null
 }
@@ -592,11 +616,12 @@ type KeyRun = { owner: string; legend: boolean; owners: Set<string>; text: strin
 function keyRuns(all: readonly Spot[]): KeyRun[] {
   const out: KeyRun[] = []
   for (const { r, c, cell } of all) {                             // spots come row by row, left to right
-    if (cell.kind !== 'key') continue
-    const run = out.at(-1), legend = cell.legend === true
+    if (cell.kind !== 'key') { continue }
+    const run = out.at(-1)
+const  legend = cell.legend === true
     if (run?.r === r && run.end === c && run.owner === cell.owners[0] && run.legend === legend) {
-      run.text += cell.ch; run.end++; for (const o of cell.owners) run.owners.add(o)
-    } else out.push({ owner: cell.owners[0]!, legend, owners: new Set(cell.owners), text: cell.ch, r, c, end: c + 1 })
+      run.text += cell.ch; run.end++; for (const o of cell.owners) { run.owners.add(o) }
+    } else { out.push({ owner: cell.owners[0]!, legend, owners: new Set(cell.owners), text: cell.ch, r, c, end: c + 1 }) }
   }
   return out
 }
@@ -615,25 +640,33 @@ function keyRuns(all: readonly Spot[]): KeyRun[] {
 // key-partial, so keying an item in another class keys none of this one. labels checks the legend text, which the item
 // itself owns.
 function keys(d: Drawing, all: readonly Spot[]): Fail | null {
-  const runs = keyRuns(all), listed = d.expect.keys ?? [], items = new Set(listed.map(k => k.item)), home = new Map<string, number>()
+  const runs = keyRuns(all)
+const  listed = d.expect.keys ?? []
+const  items = new Set(listed.map(k => k.item))
+const  home = new Map<string, number>()
   for (const { key, item, at: pos } of listed) {
-    const mine = runs.filter(x => x.owners.has(item)), here = mine.filter(x => !x.legend), there = mine.filter(x => x.legend)
-    if (here.length === 0 || there.length === 0) return fail('key-missing')
-    if (here.length > 1 || there.length > 1) return fail('key-dup')
-    if (here[0]!.text !== key || there[0]!.text !== key) return fail('key-mismatch')
-    const { r, c: from, end } = there[0]!, x = at(d, r, end + 1)
-    if (d.cells[r]!.slice(0, from).some(y => y) || at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) return fail('key-unbound')
-    const h = here[0]!, shared = [...h.owners].filter(o => items.has(o)).length > 1
+    const mine = runs.filter(x => x.owners.has(item))
+const  here = mine.filter(x => !x.legend)
+const  there = mine.filter(x => x.legend)
+    if (here.length === 0 || there.length === 0) { return fail('key-missing') }
+    if (here.length > 1 || there.length > 1) { return fail('key-dup') }
+    if (here[0]!.text !== key || there[0]!.text !== key) { return fail('key-mismatch') }
+    const { r, c: from, end } = there[0]!
+const  x = at(d, r, end + 1)
+    if (d.cells[r]!.slice(0, from).some(y => y) || at(d, r, end) || x?.kind !== 'text' || x.owners[0] !== item) { return fail('key-unbound') }
+    const h = here[0]!
+const  shared = [...h.owners].filter(o => items.has(o)).length > 1
     // at is the producer's statement of its item's cell, as expect.labels is: a point is drawn only as its key; goldens pin it.
-    if (pos ? pos.r !== h.r || pos.c < h.c - 1 || pos.c > h.end : shared) return fail('key-unplaced')
+    if (pos ? pos.r !== h.r || pos.c < h.c - 1 || pos.c > h.end : shared) { return fail('key-unplaced') }
     home.set(item, r)
   }
-  if (runs.some(x => at(d, x.r, x.end)?.kind === 'key')) return fail('key-adjacent')
-  const starts = runs.filter(x => x.legend).map(x => x.r), block = (r: number) => starts.findLast(s => s <= r)
-  if (all.some(({ r, cell: x }) => x.kind === 'text' && home.has(x.owners[0]!) && block(r) !== home.get(x.owners[0]!))) return fail('key-unbound')
-  if (runs.some(x => !items.has(x.owner))) return fail('key-stray')
+  if (runs.some(x => at(d, x.r, x.end)?.kind === 'key')) { return fail('key-adjacent') }
+  const starts = runs.filter(x => x.legend).map(x => x.r)
+const  block = (r: number) => starts.findLast(s => s <= r)
+  if (all.some(({ r, cell: x }) => x.kind === 'text' && home.has(x.owners[0]!) && block(r) !== home.get(x.owners[0]!))) { return fail('key-unbound') }
+  if (runs.some(x => !items.has(x.owner))) { return fail('key-stray') }
   const keyable = d.expect.keyable ?? []
-  if (listed.some(k => !keyable.some(a => a.item === k.item && a.cls === k.cls))) return fail('key-class')
+  if (listed.some(k => !keyable.some(a => a.item === k.item && a.cls === k.cls))) { return fail('key-class') }
   const has = (a: { item: string; cls: string }) => listed.some(k => k.item === a.item && k.cls === a.cls)
   const partial = keyable.some(a => keyable.some(b => a.cls === b.cls && has(a) !== has(b)))
   return partial ? fail('key-partial') : null
@@ -642,14 +675,14 @@ function keys(d: Drawing, all: readonly Spot[]): Fail | null {
 // C: each order list's owners are each drawn on exactly one cell, in strictly increasing rows, and all in one column when
 // column is set, so marks that only their position links (a gitGraph's commits on adjacent rows of a lane) cannot swap.
 function order(d: Drawing, all: readonly Spot[]): Fail | null {
-  if (!d.expect.order) return null
+  if (!d.expect.order) { return null }
   const cells = new Map<string, Spot[]>()
-  for (const p of all) for (const o of p.cell.owners) cells.set(o, [...(cells.get(o) ?? []), p])
+  for (const p of all) { for (const o of p.cell.owners) { cells.set(o, [...(cells.get(o) ?? []), p]) } }
   for (const { ids, column } of d.expect.order) {
     const ps = ids.map(id => cells.get(id) ?? [])
-    if (ps.some(x => x.length !== 1)) return fail('order-broken')
+    if (ps.some(x => x.length !== 1)) { return fail('order-broken') }
     const at = ps.map(x => x[0]!)
-    if (at.some((p, i) => i > 0 && (p.r <= at[i - 1]!.r || (column && p.c !== at[0]!.c)))) return fail('order-broken')
+    if (at.some((p, i) => i > 0 && (p.r <= at[i - 1]!.r || (column && p.c !== at[0]!.c)))) { return fail('order-broken') }
   }
   return null
 }
@@ -662,12 +695,12 @@ function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
   const placed = new Map<string, Set<string>>()
   for (const { owner, ch, at: pos } of d.expect.glyphs ?? []) {
     const mine = all.filter(p => p.cell.owners[0] === owner)
-    if (pos) placed.set(`${owner}|${ch}`, (placed.get(`${owner}|${ch}`) ?? new Set()).add(`${pos.r},${pos.c}`))
-    else if (mine.length !== 1 || mine[0]!.cell.ch !== ch) return fail('glyph-wrong')
+    if (pos) { placed.set(`${owner}|${ch}`, (placed.get(`${owner}|${ch}`) ?? new Set()).add(`${pos.r},${pos.c}`)) }
+    else if (mine.length !== 1 || mine[0]!.cell.ch !== ch) { return fail('glyph-wrong') }
   }
   for (const [k, want] of placed) {
     const got = all.filter(p => `${p.cell.owners[0]}|${p.cell.ch}` === k && p.cell.kind !== 'text' && p.cell.kind !== 'cont')
-    if (got.length !== want.size || got.some(p => !want.has(`${p.r},${p.c}`))) return fail('glyph-misplaced')
+    if (got.length !== want.size || got.some(p => !want.has(`${p.r},${p.c}`))) { return fail('glyph-misplaced') }
   }
   return null
 }
@@ -678,13 +711,13 @@ function glyphs(d: Drawing, all: readonly Spot[]): Fail | null {
 // first, from the top-left cell: the title's first cell, in the title ink, is there, so a title cannot move.
 function places(d: Drawing, all: readonly Spot[]): Fail | null {
   const first = new Map<string, Spot>()
-  for (const p of all) if (p.cell.kind === 'text' && !first.has(p.cell.owners[0]!)) first.set(p.cell.owners[0]!, p)
+  for (const p of all) { if (p.cell.kind === 'text' && !first.has(p.cell.owners[0]!)) { first.set(p.cell.owners[0]!, p) } }
   const title = first.get('title')
-  if (title && title.cell.role === 'title' && (title.r !== 0 || title.c !== 0)) return fail('label-misplaced')
+  if (title && title.cell.role === 'title' && (title.r !== 0 || title.c !== 0)) { return fail('label-misplaced') }
   for (const { owner, text, at: pos } of d.expect.labels) {
-    if (!pos || norm(text) === '') continue
+    if (!pos || norm(text) === '') { continue }
     const p = first.get(owner)
-    if (!p || p.r !== pos.r || p.c !== pos.c) return fail('label-misplaced')
+    if (!p || p.r !== pos.r || p.c !== pos.c) { return fail('label-misplaced') }
   }
   return null
 }
@@ -693,15 +726,17 @@ function places(d: Drawing, all: readonly Spot[]): Fail | null {
 // strictly increasing rows; its block runs from its row to the row before the next mark's. Every text or cont cell its
 // owners draw lies in its block, right of its mark, in reading order owner by owner, the first on the mark's own row.
 function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
-  if (!d.expect.rows) return null
+  if (!d.expect.rows) { return null }
   const text = (o: string) => all.filter(p => (p.cell.kind === 'text' || p.cell.kind === 'cont') && p.cell.owners[0] === o)
   const marks = d.expect.rows.map(x => all.filter(p => owns(p.cell, x.mark)))
-  if (marks.some(m => m.length !== 1)) return fail('label-unbound')
+  if (marks.some(m => m.length !== 1)) { return fail('label-unbound') }
   const at = marks.map(m => m[0]!)
   for (const [i, { owners }] of d.expect.rows.entries()) {
-    const m = at[i]!, next = at[i + 1]?.r ?? d.cells.length, ps = owners.flatMap(text)   // spots run in reading order
-    if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) return fail('label-unbound')
-    if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) return fail('label-unbound')
+    const m = at[i]!
+const  next = at[i + 1]?.r ?? d.cells.length
+const  ps = owners.flatMap(text)   // spots run in reading order
+    if ((i > 0 && m.r <= at[i - 1]!.r) || (ps.length > 0 && ps[0]!.r !== m.r)) { return fail('label-unbound') }
+    if (ps.some((p, j) => p.r >= next || p.c <= m.c || (j > 0 && (p.r < ps[j - 1]!.r || (p.r === ps[j - 1]!.r && p.c <= ps[j - 1]!.c))))) { return fail('label-unbound') }
   }
   return null
 }
@@ -712,20 +747,23 @@ function rowLabels(d: Drawing, all: readonly Spot[]): Fail | null {
 // them, which the widest row fills. A keyed note, whose text is its legend row's, is bound by keys instead; a link of line
 // cells is an edge's, checked as one.
 function notes(all: readonly Spot[]): Fail | null {
-  const text = new Map<string, Spot[]>(), link = new Map<string, Spot[]>()
+  const text = new Map<string, Spot[]>()
+const  link = new Map<string, Spot[]>()
   for (const p of all) {
     const o = p.cell.owners[0]!
-    if (p.cell.kind === 'text' || p.cell.kind === 'cont') text.set(o, [...(text.get(o) ?? []), p])
-    else if (p.cell.kind === 'cap' && o.endsWith(':link')) link.set(o.slice(0, -5), [...(link.get(o.slice(0, -5)) ?? []), p])
+    if (p.cell.kind === 'text' || p.cell.kind === 'cont') { text.set(o, [...(text.get(o) ?? []), p]) }
+    else if (p.cell.kind === 'cap' && o.endsWith(':link')) { link.set(o.slice(0, -5), [...(link.get(o.slice(0, -5)) ?? []), p]) }
   }
   for (const [id, ls] of link) {
     const ps = text.get(id)
-    if (!ps || all.some(p => p.cell.kind === 'key' && p.cell.owners[0] === id)) continue
-    const lo = Math.min(...ls.map(p => p.c)), hi = Math.max(...ls.map(p => p.c)), c0 = ps[0]!.c   // spots run in reading order
+    if (!ps || all.some(p => p.cell.kind === 'key' && p.cell.owners[0] === id)) { continue }
+    const lo = Math.min(...ls.map(p => p.c))
+const  hi = Math.max(...ls.map(p => p.c))
+const  c0 = ps[0]!.c   // spots run in reading order
     const aligned = ps.every((p, j) => j === 0 || p.r !== ps[j - 1]!.r || p.c > ps[j - 1]!.c) &&
       ps.every((p, j) => (j > 0 && p.r === ps[j - 1]!.r) || p.c === c0)
     const against = c0 > hi ? c0 === hi + 1 : Math.max(...ps.map(p => p.c)) === lo - 1
-    if (ps[0]!.r !== ls[0]!.r || !aligned || !against) return fail('note-unbound')
+    if (ps[0]!.r !== ls[0]!.r || !aligned || !against) { return fail('note-unbound') }
   }
   return null
 }
@@ -734,14 +772,15 @@ function notes(all: readonly Spot[]): Fail | null {
 // cap cells its owner draws: pills of one width swapped over their lifelines would reverse every message.
 function lifelines(all: readonly Spot[]): Fail | null {
   const span = new Map<string, [number, number]>()
-  for (const p of all) if (p.cell.kind === 'cap') {
-    const id = p.cell.owners[0]!, [lo, hi] = span.get(id) ?? [p.c, p.c]
+  for (const p of all) { if (p.cell.kind === 'cap') {
+    const id = p.cell.owners[0]!
+const  [lo, hi] = span.get(id) ?? [p.c, p.c]
     span.set(id, [Math.min(lo, p.c), Math.max(hi, p.c)])
-  }
-  for (const p of all) if (p.cell.kind === 'lifeline') {
+  } }
+  for (const p of all) { if (p.cell.kind === 'lifeline') {
     const s = span.get(p.cell.owners[0]!)
-    if (!s || p.c < s[0] || p.c > s[1]) return fail('lifeline-unbound')
-  }
+    if (!s || p.c < s[0] || p.c > s[1]) { return fail('lifeline-unbound') }
+  } }
   return null
 }
 
@@ -751,15 +790,17 @@ function lifelines(all: readonly Spot[]): Fail | null {
 // node (C), whose pill shows its key and whose text is its legend row's, is bound by keys instead. A node is an edge's end,
 // or any owner that draws a fill cell, as a pill no edge reaches and a sequence note do.
 function inPills(d: Drawing, all: readonly Spot[]): Fail | null {
-  const nodes = new Set([...d.expect.edges.flatMap(e => [e.from, e.to]), ...all.flatMap(p => (p.cell.kind === 'fill' ? [p.cell.owners[0]!] : []))]), box = new Map<string, [number, number, number, number]>()
-  for (const p of all) if ((p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && nodes.has(p.cell.owners[0]!)) {
-    const id = p.cell.owners[0]!, b = box.get(id) ?? [p.r, p.r, p.c, p.c]
+  const nodes = new Set([...d.expect.edges.flatMap(e => [e.from, e.to]), ...all.flatMap(p => (p.cell.kind === 'fill' ? [p.cell.owners[0]!] : []))])
+const  box = new Map<string, [number, number, number, number]>()
+  for (const p of all) { if ((p.cell.kind === 'cap' || p.cell.kind === 'fill' || p.cell.kind === 'frame') && nodes.has(p.cell.owners[0]!)) {
+    const id = p.cell.owners[0]!
+const  b = box.get(id) ?? [p.r, p.r, p.c, p.c]
     box.set(id, [Math.min(b[0], p.r), Math.max(b[1], p.r), Math.min(b[2], p.c), Math.max(b[3], p.c)])
-  }
-  for (const p of all) if (p.cell.kind === 'key') box.delete(p.cell.owners[0]!)
-  for (const p of all) if (p.cell.kind === 'text' || p.cell.kind === 'cont') {
+  } }
+  for (const p of all) { if (p.cell.kind === 'key') { box.delete(p.cell.owners[0]!) } }
+  for (const p of all) { if (p.cell.kind === 'text' || p.cell.kind === 'cont') {
     const b = box.get(p.cell.owners[0]!)
-    if (b && (p.r < b[0] || p.r > b[1] || p.c < b[2] || p.c > b[3])) return fail('label-unbound')
-  }
+    if (b && (p.r < b[0] || p.r > b[1] || p.c < b[2] || p.c > b[3])) { return fail('label-unbound') }
+  } }
   return null
 }

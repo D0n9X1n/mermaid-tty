@@ -15,5 +15,6 @@ registerHooks({
   },
 })
 // process.getBuiltinModule finds a builtin by id, past the hooks, so for these ids it loads the shim too.
-const load = createRequire(import.meta.url), builtin = process.getBuiltinModule.bind(process)
+const load = createRequire(import.meta.url)
+const  builtin = process.getBuiltinModule.bind(process)
 process.getBuiltinModule = ((id: string) => { const url = SHIMS.get(id); return url ? load(fileURLToPath(url)) : builtin(id) }) as typeof builtin

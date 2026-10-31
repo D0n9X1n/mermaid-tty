@@ -8,7 +8,8 @@ test('A4: er-ok-06…09 print each cardinality pair at its two ends', () => {
   }
 })
 test('A7: entity headers fill with the node role; comments carry note; cardinality carries arrow', () => {
-  const n = THEMES.nord.roles, r = renderMermaid(fx('er-ok-04'), { columns: 80, theme: 'nord' })!
+  const n = THEMES.nord.roles
+const  r = renderMermaid(fx('er-ok-04'), { columns: 80, theme: 'nord' })!
   assert.equal(spanOf(r, /^ *CAR *$/)?.backgroundColor, n.node); assert.equal(spanOf(r, /the plate/)?.color, n.note)
   assert.equal(spanOf(r, /^0\.\.\*$/)?.color, n.arrow)
 })

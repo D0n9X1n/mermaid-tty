@@ -22,15 +22,20 @@ export type Pictures = {
 }
 
 const QUEUE = 8                                      // renders waiting or running; a request past that is asked again later
-const CSS = 8, SCALE = 2, PX = CSS * SCALE           // CSS px per column, drawn at 2x: 16 PNG px a column
+const CSS = 8
+const  SCALE = 2
+const  PX = CSS * SCALE           // CSS px per column, drawn at 2x: 16 PNG px a column
 // mmdc's page is 12 CSS px a column, wider than the 8 shown, and Mermaid shrinks a diagram wider than its page to fit:
 // so a picture inside 90% of the page (its margins take the rest) is drawn at its own size and scaled down by at most
 // 2/3; a wider one was shrunk, perhaps past reading, and the text drawing stands.
-const PAGE = 12, FULL = 0.9
+const PAGE = 12
+const  FULL = 0.9
 const MAX_PNG = 2 * 1024 * 1024                      // what an Image's { png } takes, decoded
 const MAX_SVG = 4 * 1024 * 1024                      // what $.fs.read reads
 const MAX_SOURCE = 50000                             // Mermaid's maxTextSize: past it, mmdc draws an error picture and exits 0
-const MMDC_MS = 30000, SHORT_MS = 5000, PROBE_MS = 10000
+const MMDC_MS = 30000
+const  SHORT_MS = 5000
+const  PROBE_MS = 10000
 
 // Chromium's launch flags under mmdc: every request goes to a proxy at the discard port, loopback included (Chromium
 // bypasses the proxy for loopback unless told <-loopback>), no host name resolves, and nothing is prefetched or sent
@@ -69,9 +74,9 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
 // store); and Claude Code's theme must say dark or light, since the background is transparent and a guess could draw
 // dark lines on a dark terminal.
 export async function pictureLook($: any, s: Pictures, theme: string): Promise<Look | null> {
-  if (theme === 'mono') return null
+  if (theme === 'mono') { return null }
   s.pixels ??= showsPixels($)
-  if (!await s.pixels) return null
+  if (!await s.pixels) { return null }
   try {
     const v = (await $.config.list()).find((r: any) => r.key === 'theme')?.value
     return typeof v !== 'string' ? null : v.startsWith('dark') ? 'dark' : v.startsWith('light') ? 'default' : null
@@ -82,15 +87,16 @@ export async function pictureLook($: any, s: Pictures, theme: string): Promise<L
 // unless the queue is full (then a later draw asks again): only a source within Mermaid's size limit that the safety
 // gate passes (`image: unsafe source (<rule>)` is logged once when it does not) and core parses, while mmdc answers. A failure logs `image: <why>`; a finished batch redraws ui.render once.
 export function pictureFor($: any, s: Pictures, body: string, look: Look, columns: number, log: (reason: string) => void): Picture | undefined {
-  const key = JSON.stringify([body, look, columns]), hit = s.cache.get(key)
+  const key = JSON.stringify([body, look, columns])
+const  hit = s.cache.get(key)
   if (hit) { s.cache.delete(key); s.cache.set(key, hit); return hit }
   const id = hash(key)
-  if (s.noMmdc || s.tried.has(id) || s.inflight.has(key) || s.inflight.size >= QUEUE || s.tried.size >= s.limits.tried) return undefined
+  if (s.noMmdc || s.tried.has(id) || s.inflight.has(key) || s.inflight.size >= QUEUE || s.tried.size >= s.limits.tried) { return undefined }
   s.tried.add(id)
   if (body.length > MAX_SOURCE) { say(log, `source over ${MAX_SOURCE} characters`); return undefined }
   const unsafe = unsafeReason(body)
   if (unsafe) { say(log, `unsafe source (${unsafe})`); return undefined }
-  if (parseFail(body)) return undefined              // the text renderer logs why it falls back
+  if (parseFail(body)) { return undefined }              // the text renderer logs why it falls back
   s.inflight.add(key)
   s.tail = s.tail.then(() => job($, s, key, body, look, columns, log)).catch(() => {})
   return undefined
@@ -102,9 +108,9 @@ async function job($: any, s: Pictures, key: string, body: string, look: Look, c
   const major = await s.mmdc
   let r: Picture | string | null
   if (typeof major === 'string') { r = s.noMmdc ? null : `no usable mmdc (${major})`; s.noMmdc = true }
-  else r = await draw($, body, look, columns, major).catch((e: unknown) => oneLine(e instanceof Error ? e.message : String(e)))
+  else { r = await draw($, body, look, columns, major).catch((e: unknown) => oneLine(e instanceof Error ? e.message : String(e))) }
   s.inflight.delete(key)
-  if (typeof r === 'string') say(log, r)
+  if (typeof r === 'string') { say(log, r) }
   else if (r) { keep(s, key, r); s.fresh = true }
   if (s.inflight.size === 0 && s.fresh) { s.fresh = false; try { $.ui.invalidate('ui.render') } catch {} }
 }
@@ -122,7 +128,7 @@ async function mmdcMajor($: any): Promise<number | string> {
 function keep(s: Pictures, key: string, p: Picture) {
   s.cache.set(key, p); s.bytes += p.png.length
   for (const [k, v] of s.cache) {
-    if (s.cache.size <= s.limits.entries && s.bytes <= s.limits.bytes) break
+    if (s.cache.size <= s.limits.entries && s.bytes <= s.limits.bytes) { break }
     s.cache.delete(k); s.bytes -= v.png.length
   }
 }
@@ -133,26 +139,29 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
   const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
   const made = await $.process.run(['mktemp', '-d', `${base}XXXXXX`], { timeoutMs: SHORT_MS })
   const dir = made.stdout.trim()
-  if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) return 'no temp dir'
+  if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) { return 'no temp dir' }
   try {
-    const config = `${dir}/config.json`, puppeteer = `${dir}/puppeteer.json`, svg = `${dir}/out.svg`, out = `${dir}/out.png`
+    const config = `${dir}/config.json`
+const  puppeteer = `${dir}/puppeteer.json`
+const  svg = `${dir}/out.svg`
+const  out = `${dir}/out.png`
     await $.fs.write(config, JSON.stringify(mermaidConfig(look)))
     await $.fs.write(puppeteer, JSON.stringify(puppeteerConfig(columns)))
     const mmdc = (o: string, format: 'svg' | 'png') =>
       $.process.run(mmdcArgs({ out: o, format, look, config, puppeteer, columns, major }), { stdin: body, timeoutMs: MMDC_MS })
     const v = await mmdc(svg, 'svg')
-    if (v.exitCode !== 0) return `mmdc exited ${v.exitCode}: ${oneLine(v.stderr)}`
-    if ((await $.fs.stat(svg)).size > MAX_SVG) return 'svg over 4 MiB'
+    if (v.exitCode !== 0) { return `mmdc exited ${v.exitCode}: ${oneLine(v.stderr)}` }
+    if ((await $.fs.stat(svg)).size > MAX_SVG) { return 'svg over 4 MiB' }
     const text = await $.fs.read(svg)
     const unsafe = typeof text === 'string' ? svgUnsafe(text) : 'unreadable'
-    if (unsafe) return `unsafe svg (${unsafe})`
+    if (unsafe) { return `unsafe svg (${unsafe})` }
     const r = await mmdc(out, 'png')
-    if (r.exitCode !== 0) return `mmdc exited ${r.exitCode}: ${oneLine(r.stderr)}`
-    if ((await $.fs.stat(out)).size > MAX_PNG) return 'png over 2 MiB'
+    if (r.exitCode !== 0) { return `mmdc exited ${r.exitCode}: ${oneLine(r.stderr)}` }
+    if ((await $.fs.stat(out)).size > MAX_PNG) { return 'png over 2 MiB' }
     const { base64 } = await $.fs.read(out, { as: 'bytes' })
     const size = pngSize(base64)
-    if (!size) return 'not a png'
-    if (size.width > columns * PAGE * SCALE * FULL) return 'too wide to read'
+    if (!size) { return 'not a png' }
+    if (size.width > columns * PAGE * SCALE * FULL) { return 'too wide to read' }
     const box = fit(size.width, size.height, columns)
     return box ? { png: base64, ...box } : 'over 255 rows'
   } finally {
@@ -172,21 +181,24 @@ export function fit(w: number, h: number, columns: number): { columns: number; r
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10]
 export function pngSize(base64: string): { width: number; height: number } | null {
-  const b: number[] = []; let acc = 0, bits = 0
+  const b: number[] = []; let acc = 0
+let  bits = 0
   for (const ch of base64.slice(0, 32)) {
-    const v = B64.indexOf(ch); if (v < 0) return null
+    const v = B64.indexOf(ch); if (v < 0) { return null }
     acc = (acc << 6) | v; bits += 6
     if (bits >= 8) { bits -= 8; b.push((acc >> bits) & 255); acc &= (1 << bits) - 1 }
   }
-  if (b.length < 24 || SIGNATURE.some((x, i) => b[i] !== x) || String.fromCharCode(...b.slice(12, 16)) !== 'IHDR') return null
+  if (b.length < 24 || SIGNATURE.some((x, i) => b[i] !== x) || String.fromCharCode(...b.slice(12, 16)) !== 'IHDR') { return null }
   const u32 = (i: number) => b[i]! * 16777216 + b[i + 1]! * 65536 + b[i + 2]! * 256 + b[i + 3]!
-  const width = u32(16), height = u32(20)
+  const width = u32(16)
+const  height = u32(20)
   return width > 0 && height > 0 ? { width, height } : null
 }
 
 // A short id for a key (cyrb53), so the tried set holds no sources. A collision only leaves a diagram as text.
 function hash(s: string): string {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57
+  let h1 = 0xdeadbeef
+let  h2 = 0x41c6ce57
   for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677) }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)

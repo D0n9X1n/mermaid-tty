@@ -20,7 +20,8 @@ const TRUTH = {
   title: row('= | = | a &lt; b | MISS | = | = | = | = | ♥ | = | a<br>b | a<br>b | a<br>b | = | ab | &x;'),
 }
 // The <br> cases, and <b>z</b>.
-const BRS = [9, 10, 11, 12], TAG = 13
+const BRS = [9, 10, 11, 12]
+const  TAG = 13
 
 // A drawn field: the text it draws for a case, one string per row, or its Fail. strict: the cases it falls back on though
 // Mermaid shows them as written or split, where the drawing cannot match (a <br> in one-line text) or the field's mode
@@ -31,7 +32,7 @@ type Field = { name: string; truth: readonly string[]; draw: (c: string) => stri
 // The rows that owner's text cells draw of src at 120 columns, in the mono theme, or the Fail.
 function drawn(src: string, owner: string): string[] | Fail {
   const r = explain(src, { columns: 120, theme: 'mono' })
-  if (isFail(r)) return r
+  if (isFail(r)) { return r }
   return r.drawing.cells.flatMap(cells => {
     const t = cells.flatMap(c => ((c?.kind === 'text' || c?.kind === 'cont') && c.owners[0] === owner ? [c.ch] : [])).join('')
     return t ? [t] : []
@@ -65,8 +66,8 @@ test('A5.errors: ground truth: a sequence message, note, alias, frame label and 
   // a ;, so &lt; alone draws &lt as Mermaid shows it, while X&lt;Y fails in both.
   const S = (body: string, owner: string) => drawn(`sequenceDiagram\n${body}`, owner)
   const xy = (d: string[] | Fail): string[] | Fail => {
-    if (isFail(d)) return d
-    if (!d[0]?.startsWith('X') || !d.at(-1)?.endsWith('Y')) return { reason: 'not X…Y' } as Fail
+    if (isFail(d)) { return d }
+    if (!d[0]?.startsWith('X') || !d.at(-1)?.endsWith('Y')) { return { reason: 'not X…Y' } as Fail }
     return d.map((t, i) => (i === 0 ? t.slice(1) : t)).map((t, i, a) => (i === a.length - 1 ? t.slice(0, -1) : t))
   }
   const frame = (c: string) => { const d = S(`alt X${c}Y\nA->>B: x\nend`, 'f0'); return isFail(d) ? d : xy(d.map(t => t.replace(/^alt \[(.*)\]$/, '$1'))) }
@@ -95,7 +96,8 @@ test('A5.errors: ground truth: a pie slice and title, on the header or a stateme
 // Mermaid's axis titles were not probed, so they take the title's truth.
 test('A5.errors: ground truth: an xychart title, category and axis titles keep each case as Mermaid shows it, or fall back', () => {
   const X = (body: string, pick: (m: Xy) => string | null | undefined) => (c: string): string[] | Fail => {
-    const s = readSource(`xychart-beta\n${body.replace('$', c)}`), m = isFail(s) ? s : parseXy(s)
+    const s = readSource(`xychart-beta\n${body.replace('$', c)}`)
+const  m = isFail(s) ? s : parseXy(s)
     return isFail(m) ? m : [pick(m) ?? '']
   }
   const fields: Field[] = [
@@ -158,9 +160,12 @@ test('A5.errors: ground truth: an ER entity label, relation label, attribute com
 // <br> as a space, so any <br falls back; a title is sanitized with no <br>. Every field falls back on a marker.
 test('A5.errors: ground truth: a journey task, section, actor and title draw as Mermaid shows them, or fall back', () => {
   const J = (body: string, owner: string) => (c: string) => drawn(`journey\n${body.replace('$', c)}`, owner)
-  const task = J('section s\n$: 3: me', 't0'), section = J('section $\nt: 3: me', 'sec0')
-  const actor = J('section s\nt: 3: $', 't0.a0'), title = J('title $\nsection s\nt: 3: me', 'title')
-  const fb = { reason: 'html' }, ent = { reason: 'entity' }
+  const task = J('section s\n$: 3: me', 't0')
+const  section = J('section $\nt: 3: me', 'sec0')
+  const actor = J('section s\nt: 3: $', 't0.a0')
+const  title = J('title $\nsection s\nt: 3: me', 'title')
+  const fb = { reason: 'html' }
+const  ent = { reason: 'entity' }
   const cases: [string, (c: string) => string[] | Fail, string, string[] | Fail][] = [
     ['task', task, 'ﬂ°x¶ß', ent], ['task', task, 'a<br>b', ['a<br>b']], ['task', task, 'a<!--c-->b', ['a<!--c-->b']],
     ['task', task, 'Q&A', ['Q&A']], ['task', task, 'a < b', ['a < b']],
@@ -177,7 +182,8 @@ test('A5.errors: ground truth: a journey task, section, actor and title draw as 
 // quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
 test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text keep each case as Mermaid shows it, or fall back', () => {
   const Q = (body: string, pick: (m: Quadrant) => string | null | undefined) => (c: string): string[] | Fail => {
-    const s = readSource(`quadrantChart\n${body.replace('$', c)}`), m = isFail(s) ? s : parseQuadrant(s)
+    const s = readSource(`quadrantChart\n${body.replace('$', c)}`)
+const  m = isFail(s) ? s : parseQuadrant(s)
     return isFail(m) ? m : [pick(m) ?? '']
   }
   const fields: Field[] = [

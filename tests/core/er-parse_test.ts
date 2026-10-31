@@ -21,32 +21,33 @@ test('A5: subgraphs nest, take a direction and a title, and can be relation ends
 test('A5.errors: unsupported, malformed and repeated statements fall back with their line', () => {
   for (const [body, why] of [['A ||--|| B : x\nA u--|| B : x', 'syntax:3'], ['A ||--|| B : x\n"This **is** _Markdown_"', 'markdown:3'], ['A ||--o{ B', 'syntax:2'],
     ['CAR {\nstring id', 'syntax:2'], ['p[Person]\np[Human]', 'repeat:3'], ['subgraph s1\nCAR\nend\nsubgraph s2\nCAR\nend', 'repeat:6'],
-    ['Sales\nsubgraph Sales\nX\nend', 'repeat:3']] as const) assert.deepEqual(P(body), { reason: why }, body)
+    ['Sales\nsubgraph Sales\nX\nend', 'repeat:3']] as const) { assert.deepEqual(P(body), { reason: why }, body) }
   assert.deepEqual(P('A ||--o{ B : x %% note'), { reason: 'directive' })
 })
 
 // Beyond the plan's three: the shared rules (matrix, Common rules) as ER reads them.
 test('A5.common: entities, unsupported characters and blank label lines fall back; a lone # is text', () => {
   for (const body of ['"I #9829; you"', 'A ||--|| B : "#9829;"', 'p["#9829;"]', 'CAR {\n  string id "x #9829;"\n}', 'subgraph s ["#9829;"]\nA\nend',
-    'subgraph "#9829;"\nA\nend']) assert.deepEqual(P(body), { reason: 'entity' }, body)
+    'subgraph "#9829;"\nA\nend']) { assert.deepEqual(P(body), { reason: 'entity' }, body) }
   const m = P('"C#" ||--|| B : "a # b"\nB {\n  string id "c#"\n}')
   assert.deepEqual([m.entities[0].label, m.relations[0].label, m.entities[1].attrs[0].comment], ['C#', 'a # b', 'c#'])
   assert.deepEqual(P('A ||--|| B : "x\u200Dy"'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(P('CAR {\n  string id "a\u200Db"\n}'), { reason: 'unsupported-char U+200D' })
   assert.deepEqual(P('A ||--|| B : "a<br><br>b"'), { reason: 'label-blank-line' })
   // An alias and a comment draw on one line, so any <br> there falls back first (X2).
-  for (const body of ['p["a<br/><br>b"]', 'CAR {\n  string id "a<br><br>b"\n}']) assert.deepEqual(P(body), { reason: 'html' }, body)
+  for (const body of ['p["a<br/><br>b"]', 'CAR {\n  string id "a<br><br>b"\n}']) { assert.deepEqual(P(body), { reason: 'html' }, body) }
 })
 test('A5.common: headers and keywords are case-sensitive and whole; styling and accessibility are ignored', () => {
   for (const h of ['erdiagram', 'ERDIAGRAM', 'erDiagrams', 'erDiagram LR']) {
     const s = readSource(`${h}\nA`); assert.deepEqual('reason' in s ? s : parseEr(s), { reason: 'header' }, h)
   }
   for (const body of ['Endpoint', 'subgraphs', 'END', 'Classroom', 'stylesheet', 'Direction LR', 'direction lr', 'directions', 'Subgraph s\nA\nend', 'accTitle',
-    'Click A', 'click A call cb()', 'A ||--|| B : "direction LR"']) assert.deepEqual(P(body), { reason: 'syntax:2' }, body)   // Mermaid's ER grammar has no click
+    'Click A', 'click A call cb()', 'A ||--|| B : "direction LR"']) { assert.deepEqual(P(body), { reason: 'syntax:2' }, body) }   // Mermaid's ER grammar has no click
   const m = P(['style A fill:#f9f', 'classDef foo fill:#f00;', 'class A foo', 'accTitle: Orders', 'accDescr: All orders', 'accDescr {',
     '  many lines', '}', 'A:::foo ||--|| B:::bar,baz : x', 'C:::foo', 'p[Person]:::foo {', '  int id', '}'].join('\n'))
   assert.deepEqual([m.entities.map((e: any) => e.id), m.relations.length, m.entities[3].attrs.length], [['A', 'B', 'C', 'p'], 1, 1])
-  const s = readSource('---\ntitle: Orders\n---\nerDiagram\nA'), t = 'reason' in s ? s : parseEr(s) as any
+  const s = readSource('---\ntitle: Orders\n---\nerDiagram\nA')
+const  t = 'reason' in s ? s : parseEr(s) as any
   assert.deepEqual([t.title, t.dir], ['Orders', 'TB'])
 })
 test('A5: attribute forms, empty blocks, all four lines, ids, order and keyable texts', () => {
@@ -67,7 +68,7 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
     ['CAR {\n  string pk\n}', 'syntax:3'], ['CAR {\n  string `id`\n}', 'syntax:3'], ['CAR {\n  string id pk\n}', 'syntax:3'],
     ['`CAR`', 'markdown:2'], ['*CAR*', 'markdown:2'], ['p[`Person`]', 'markdown:2'], ['p["**a **b** c**"]', 'markdown:2'], ['A ||--o{ B : "a \\\\* b"', 'markdown:2'],
     ['A ||--o{ B : "*a *b* c*"', 'markdown:2'], ['subgraph s [`T`]\nA\nend', 'markdown:2'], ['subgraph s\nA', 'syntax:2'], ['end', 'syntax:2']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
   assert.deepEqual(P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id), ['12', 'B', 'TOTAL'])
 })
 // Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
@@ -95,7 +96,7 @@ test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, f
     ['A["x~br~"] {\n  s i\n}', 'generic'],
     // erBox runs parseGenericTypes before marked: how a ~ pair and bold or italic mix there is unverified.
     ['A["**List~T~**"] {\n  s i\n}', 'generic'], ['A {\n  string id "a **b** ~c~"\n}', 'generic'], ['A ||--o{ B : "**r** ~T~"', 'generic']] as const)
-    assert.deepEqual(P(body), { reason: why }, body)
+    { assert.deepEqual(P(body), { reason: why }, body) }
 })
 // X3. Mermaid 12.2.0 gives every ER entity, relation and subgraph title labelType 'markdown' (sanitizeNodeLabelType's
 // default), and erBox draws each attribute column through createText with markdown on: marked renders all of them, and
@@ -103,7 +104,7 @@ test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, f
 test('X3: Markdown the emphasis port cannot match, icons and math in an attribute column or any ER text fall back', () => {
   for (const [body, why] of [['A {\n  string id "**a **b** c**"\n}', 'markdown'], ['A {\n  string __id__ "c"\n}', 'markdown'], ['A {\n  string id "a\\\\*b"\n}', 'markdown'],
     ['A ||--o{ B : "a\\\\#b"', 'markdown'], ['A {\n  string id "fa:fa-book"\n}', 'icon'], ['A["fa:fa-book"]', 'icon'],
-    ['A ||--o{ B : "$$x^2$$"', 'math']] as const) assert.deepEqual(P(body), { reason: why }, body)
+    ['A ||--o{ B : "$$x^2$$"', 'math']] as const) { assert.deepEqual(P(body), { reason: why }, body) }
   assert.equal(P('A {\n  string id "snake_case a\\nb"\n}').entities[0].attrs[0].comment, 'snake_case a\\nb')
 })
 

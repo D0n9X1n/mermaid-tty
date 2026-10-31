@@ -18,7 +18,7 @@ export type ScreenSpec = { labels: Readonly<Record<string, string>>; prose: read
 export function drawnDiagrams(reply: string, columns: number, theme: string): string[][] {
   return splitFences(reply).flatMap(f => {
     const r = f.kind === 'mermaid' ? explain(f.body, { columns, theme }) : null
-    if (r === null || isFail(r)) return []
+    if (r === null || isFail(r)) { return [] }
     return [r.drawing.cells.map(row => row.map(c => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)).join('').trimEnd())]
   })
 }
@@ -28,16 +28,17 @@ export function drawnDiagrams(reply: string, columns: number, theme: string): st
 function findRows(cells: Cell[][], rows: readonly string[], from: number): { at: number; m: number } | null {
   const rest = (row: Cell[], m: number) => row.slice(m).map(c => c.ch).join('').trimEnd()
   const margin = (row: Cell[], m: number) => /^⏺?$/.test(row.slice(0, m).map(c => c.ch).join('').trim())
-  for (let i = from; i + rows.length <= cells.length; i++) for (let m = 0; m <= 8; m++) {
-    if (rows.every((r, k) => margin(cells[i + k]!, m) && rest(cells[i + k]!, m) === r)) return { at: i, m }
-  }
+  for (let i = from; i + rows.length <= cells.length; i++) { for (let m = 0; m <= 8; m++) {
+    if (rows.every((r, k) => margin(cells[i + k]!, m) && rest(cells[i + k]!, m) === r)) { return { at: i, m } }
+  } }
   return null
 }
 
 // The cells of a screen row, from m on, that a drawn row of text covers, a wide character's second cell included.
 function span(row: Cell[], m: number, text: string): Cell[] {
-  let n = m, got = ''
-  while (n < row.length && (got.length < text.length || row[n]!.ch === '')) got += row[n++]!.ch
+  let n = m
+let  got = ''
+  while (n < row.length && (got.length < text.length || row[n]!.ch === '')) { got += row[n++]!.ch }
   return row.slice(m, n)
 }
 
@@ -48,7 +49,7 @@ const PILLS = new Set(['node', 'decision'])
 function joined(row: Cell[]): { text: string; at: number[] } {
   let text = ''
   const at: number[] = []
-  row.forEach((c, i) => { for (let k = 0; k < c.ch.length; k++) at.push(i); text += c.ch })
+  row.forEach((c, i) => { for (let k = 0; k < c.ch.length; k++) { at.push(i); } text += c.ch })
   return { text, at }
 }
 const show = (c: Color) => `${c.mode} ${c.mode === 'rgb' ? `#${c.value.toString(16).padStart(6, '0')}` : c.value}`
@@ -66,7 +67,7 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
   // counts: Claude Code's spinner can leave its color on one, on Windows.
   const colored = (c: Cell) => (c.ch.trim() !== '' && !plain(c.fg)) || !plain(c.bg)
   const noColor = (what: string, c: Cell | undefined) => {
-    if (c) problems.push(`${what}: expected no color, got '${c.ch}' fg ${show(c.fg)} bg ${show(c.bg)}`)
+    if (c) { problems.push(`${what}: expected no color, got '${c.ch}' fg ${show(c.fg)} bg ${show(c.bg)}`) }
   }
   spec.diagrams.forEach((rows, n) => {
     const found = findRows(cells, rows, from)
@@ -74,21 +75,24 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
     const { at, m } = found
     from = at + rows.length
     rows.forEach((_, k) => drawn.add(at + k))
-    if (spec.color === 'none') noColor(`diagram ${n + 1}`, rows.flatMap((r, k) => span(cells[at + k]!, m, r)).find(colored))
+    if (spec.color === 'none') { noColor(`diagram ${n + 1}`, rows.flatMap((r, k) => span(cells[at + k]!, m, r)).find(colored)) }
   })
   const all = cells.map((row, y) => ({ row, y, ...joined(row) }))
   for (const [label, role] of Object.entries(spec.labels)) {
     const holds = (r: typeof all[number]) => r.text.includes(label)
     const found = all.find(r => drawn.has(r.y) && holds(r)) ?? all.find(holds)
     if (!found) { problems.push(`${label}: not drawn`); continue }
-    const from = found.text.indexOf(label), own = [...new Set(found.at.slice(from, from + label.length))].map(i => found.row[i]!)
+    const from = found.text.indexOf(label)
+const  own = [...new Set(found.at.slice(from, from + label.length))].map(i => found.row[i]!)
     if (spec.color === 'none') { noColor(label, own.find(colored)); continue }
-    const pill = PILLS.has(role), want = spec.hex?.[role], mode = spec.color === 'truecolor' ? 'rgb' : 'p256'
+    const pill = PILLS.has(role)
+const  want = spec.hex?.[role]
+const  mode = spec.color === 'truecolor' ? 'rgb' : 'p256'
     const bad = own.map(c => (pill ? c.bg : c.fg)).find(c => c.mode !== mode || (mode === 'rgb' && want !== undefined && c.value !== want))
-    if (bad) problems.push(`${label}: expected ${role} ${pill ? 'background' : 'foreground'} ${want === undefined ? mode : show({ mode: 'rgb', value: want })}, got ${show(bad)}`)
+    if (bad) { problems.push(`${label}: expected ${role} ${pill ? 'background' : 'foreground'} ${want === undefined ? mode : show({ mode: 'rgb', value: want })}, got ${show(bad)}`) }
   }
   const text = cells.map(row => row.map(c => c.ch).join('').trimEnd()).join('\n')
-  for (const line of spec.prose) if (text.split(line).length !== 2) problems.push(`${line}: prose`)
+  for (const line of spec.prose) { if (text.split(line).length !== 2) { problems.push(`${line}: prose`) } }
   return problems
 }
 

@@ -29,8 +29,8 @@ function unclosed(text: string): boolean {
 // unclosed one.
 function blocks(dir: string): (string | null)[] {
   return readdirSync(dir).sort().flatMap(name => {
-    if (name.endsWith('.mmd')) return [readFileSync(join(dir, name), 'utf8')]
-    if (!name.endsWith('.md')) return []
+    if (name.endsWith('.mmd')) { return [readFileSync(join(dir, name), 'utf8')] }
+    if (!name.endsWith('.md')) { return [] }
     const text = readFileSync(join(dir, name), 'utf8')
     return [...fences(text), ...(unclosed(text) ? [null] : [])]
   })
@@ -42,8 +42,8 @@ function blocks(dir: string): (string | null)[] {
 export function gate(dir: string): { total: number; failed: string[] } {
   const all = blocks(dir)
   const failed = all.flatMap((source, i) => {
-    if (source === null) return [`${i + 1}@- unclosed-fence`]
-    if (source.trim() === '') return [`${i + 1}@- empty`]
+    if (source === null) { return [`${i + 1}@- unclosed-fence`] }
+    if (source.trim() === '') { return [`${i + 1}@- empty`] }
     return COLUMNS.flatMap(columns => {
       const r = explain(source, { columns, theme: 'default' })
       return isFail(r) ? [`${i + 1}@${columns} ${r.reason}`] : []
@@ -67,11 +67,11 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
   }
   const pub = gate(dir)
   console.log(counts('corpus-gate', pub))
-  for (const f of pub.failed) console.log(`  ${f}`)
+  for (const f of pub.failed) { console.log(`  ${f}`) }
   const hidden = priv === undefined ? null : gate(priv)
-  if (hidden) console.log(counts('corpus-gate --private', hidden))
+  if (hidden) { console.log(counts('corpus-gate --private', hidden)) }
   return pub.failed.length + (hidden?.failed.length ?? 0) > 0 ? 1 : 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

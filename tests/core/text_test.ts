@@ -65,13 +65,14 @@ test('A4.fit-ladder: a piece split off between W/F characters joins with nothing
 })
 
 // drawable: whether text draws as Mermaid 12.2.0 shows it.
-const MODES: Mode[] = ['html', 'plain', 'sanitized', 'escaped', 'member'], BRS: Br[] = ['any', 'lower', 'literal', 'none']
+const MODES: Mode[] = ['html', 'plain', 'sanitized', 'escaped', 'member']
+const  BRS: Br[] = ['any', 'lower', 'literal', 'none']
 const D = (t: string, mode: Mode, br: Br = 'any') => drawable(t, mode, br)?.reason ?? null
 test('A5.errors: drawable: a #…; entity or a ﬂ° or ¶ß marker fails entity in every mode and br; a lone #, ﬂ, ° or ¶ is text', () => {
-  for (const m of MODES) for (const b of BRS) {
+  for (const m of MODES) { for (const b of BRS) {
     assert.deepEqual(['#9829;', 'I #quot; x', 'aﬂ°b', 'a¶ßb', 'ﬂ°x¶ß'].map(t => D(t, m, b)), Array(5).fill('entity'), `${m} ${b}`)
     assert.equal(D('C# 1; ﬂ ° ¶ ß', m, b), null, `${m} ${b}`)
-  }
+  } }
 })
 test('A5.errors: drawable: br any splits every <br> spelling, lower only <br>, literal leaves them to the mode, none fails html', () => {
   const all = ['a<br>b', 'a<BR>b', 'a<br/>b', 'a<br />b', 'a<Br  />b']
@@ -111,7 +112,7 @@ test('A3: <br> splits only with HTML whitespace before its slash', () => {
 // splits would draw them as written, so it falls back, as a field with no <br> does.
 test('A5.errors: drawable: a <br> with another space, or a </br>, fails html where a <br> splits or none may be drawn', () => {
   const odd = [...ODD, 'a</br>b', 'a</BR >b']
-  for (const m of MODES) assert.deepEqual(odd.map(t => [D(t, m, 'any'), D(t, m, 'none')]), odd.map(() => ['html', 'html']), m)
+  for (const m of MODES) { assert.deepEqual(odd.map(t => [D(t, m, 'any'), D(t, m, 'none')]), odd.map(() => ['html', 'html']), m) }
   assert.deepEqual(odd.map(t => D(t, 'plain', 'literal')), odd.map(() => null))
 })
 test('A5.errors: drawable: br any and lower remove every <br>, not only the first', () => {
@@ -135,14 +136,14 @@ test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in eve
     assert.deepEqual(['$$x^2$$', 'a $$b$$ c', '$$$$'].map(t => D(t, m)), ['math', 'math', 'math'], m)
     assert.deepEqual(['fa:book', 'fa-book', 'fa:fa-', '$5', 'a $$ b', '$$$'].map(t => D(t, m)), Array(6).fill(null), m)
   }
-  for (const m of ['plain', 'sanitized', 'escaped'] as Mode[]) assert.deepEqual(['fa:fa-book', '$$x$$'].map(t => D(t, m)), [null, null], m)
+  for (const m of ['plain', 'sanitized', 'escaped'] as Mode[]) { assert.deepEqual(['fa:fa-book', '$$x$$'].map(t => D(t, m)), [null, null], m) }
 })
 test('X3: drawable: markdown and member fail emphasis marked renders and a \\ escaping punctuation; html does not', () => {
   const md = ['**bold**', '*a*', '_a_', '__init__', '+__init__()', 'x._y_', '(_a_)', 'a*b*c', 'a\\*b', 'a\\\\b', 'a \\# b', 'a * b * c']
-  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(md.map(t => D(t, m)), md.map(() => 'markdown'), m)
+  for (const m of ['markdown', 'member'] as Mode[]) { assert.deepEqual(md.map(t => D(t, m)), md.map(() => 'markdown'), m) }
   const ok = ['bold', 'snake_case', 'my_var_name', 'a_b_c', '_private', 'x_', 'a*b', '+someMethod()*', 'C:\\Users', 'a\\nb', '`code`',
     '# h', '- item', '[x](y)', 'Q&A']
-  for (const m of ['markdown', 'member'] as Mode[]) assert.deepEqual(ok.map(t => D(t, m)), ok.map(() => null), m)
+  for (const m of ['markdown', 'member'] as Mode[]) { assert.deepEqual(ok.map(t => D(t, m)), ok.map(() => null), m) }
   assert.equal(D('a < b', 'markdown'), null)
   assert.deepEqual(md.map(t => D(t, 'html')), md.map(() => null))
 })
@@ -164,7 +165,8 @@ test('X3.emphasis: wrap measures a marked line by what it shows and keeps each m
 // cannot match keeps the Fail drawable gives; an unsupported character fails before any marker is written, so a marker
 // can never come from the source.
 test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every other Fail', async () => {
-  const { styled } = await import('../../core/text.ts'), { emphasize } = await import('../../core/emphasis.ts')
+  const { styled } = await import('../../core/text.ts')
+const  { emphasize } = await import('../../core/emphasis.ts')
   const R = (t: string, br: Br = 'any', decode = false) => { const r = styled(t, br, { decode }); return typeof r === 'string' ? r : r.reason }
   assert.equal(R('**b** _i_'), emphasize('**b** _i_'))
   assert.equal(R('a<br>**b**'), emphasize('a<br>**b**'))
@@ -182,7 +184,8 @@ test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every ot
 // X3. styled's breaks: an edge label, where Mermaid makes each <br> a newline before marked. A line that would start a
 // block, underline a heading, or end in a hard break falls back as markdown, emphasis or not.
 test('X3.emphasis: styled with breaks falls back on a block start after a <br>, and reads emphasis across one', async () => {
-  const { styled } = await import('../../core/text.ts'), { emphasize } = await import('../../core/emphasis.ts')
+  const { styled } = await import('../../core/text.ts')
+const  { emphasize } = await import('../../core/emphasis.ts')
   const R = (t: string, breaks: boolean) => { const r = styled(t, 'any', { breaks }); return typeof r === 'string' ? r : r.reason }
   assert.deepEqual(['a<br>- b', 'a<br>===', 'a  <br>b', 'a<br>- **b**'].map(t => R(t, true)), ['markdown', 'markdown', 'markdown', 'markdown'])
   assert.equal(R('a<br>- b', false), 'a<br>- b')

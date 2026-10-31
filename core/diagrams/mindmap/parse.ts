@@ -18,22 +18,23 @@ function stop(reason: string): never { throw fail(reason) }
 // the grammar reads otherwise or rejects); 'markdown:<n>', 'blank:<n>', 'entity:<n>', 'html:<n>' (a label Mermaid shows
 // otherwise or this layout cannot draw); or 'unsupported-char U+XXXX'.
 export function parseMindmap(src: Source): Mindmap | Fail {
-  try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
+  try { return walk(src) } catch (e) { if (isFail(e)) { return e; } throw e }
 }
 
 function walk(src: Source): Mindmap {
-  if (src.header !== 'mindmap') stop('header')
+  if (src.header !== 'mindmap') { stop('header') }
   // Each node so far, with its indent: Mermaid's SPACELIST, every \s before the node, a tab counting one.
   const seen: { indent: number; node: MNode }[] = []
   for (const { n, text } of src.lines) {
-    const t = text.trim(), indent = text.length - text.trimStart().length
+    const t = text.trim()
+const  indent = text.length - text.trimStart().length
     // The lexer reads ::icon( in any case at a token's start; mindmapDb draws the icon.
     // U+2028 and U+2029 end no line for us but break Mermaid's lexer anywhere, a :::class line too.
-    if (/^::icon\(/i.test(t) || /[\u2028\u2029]/.test(t)) stop(`syntax:${n}`)
+    if (/^::icon\(/i.test(t) || /[\u2028\u2029]/.test(t)) { stop(`syntax:${n}`) }
     // A :::class line decorates the last node and is not drawn. Before any node Mermaid throws; with no name the
     // lexer's CLASS state swallows the line break.
     if (t.startsWith(':::')) {
-      if (seen.length === 0 || t === ':::') stop(`syntax:${n}`)
+      if (seen.length === 0 || t === ':::') { stop(`syntax:${n}`) }
       continue
     }
     const node = { k: seen.length, ...shaped(t, n), children: [] }
@@ -60,28 +61,30 @@ const CLOSERS = ['))', ')', ']', '}}', '(-', '-)', '((', '(']
 // lexer's NODE_DESCR runs on over the line break, so Mermaid reads a node across lines.
 function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
   // The lexer reads mindmap, in any case, as its header keyword wherever a token starts.
-  if (/^mindmap/i.test(t) || /[\u2028\u2029]/.test(t) || /^(?:-\)|\(-)/.test(t)) stop(`syntax:${n}`)
-  const id = /^[^([){}]*/.exec(t)![0], rest = t.slice(id.length)
+  if (/^mindmap/i.test(t) || /[\u2028\u2029]/.test(t) || /^(?:-\)|\(-)/.test(t)) { stop(`syntax:${n}`) }
+  const id = /^[^([){}]*/.exec(t)![0]
+const  rest = t.slice(id.length)
   // A bare text runs to the line's end, so a ::: in it is text to Mermaid, not a class.
-  if (rest === '') return t.includes(':::') ? stop(`syntax:${n}`) : { shape: 'plain', lines: label(t, n) }
+  if (rest === '') { return t.includes(':::') ? stop(`syntax:${n}`) : { shape: 'plain', lines: label(t, n) } }
   const [open, shape, close] = OPENERS.find(([o]) => rest.startsWith(o)) ?? stop(`syntax:${n}`)
-  if (/^(?:-\)|\(-)/.test(rest)) stop(`syntax:${n}`)
+  if (/^(?:-\)|\(-)/.test(rest)) { stop(`syntax:${n}`) }
   const inner = rest.slice(open.length)
-  if (inner.startsWith('"`')) stop(`markdown:${n}`)
-  let text: string, after: string
+  if (inner.startsWith('"`')) { stop(`markdown:${n}`) }
+  let text: string
+let  after: string
   if (inner.startsWith('"')) {
     // The NSTR state: a "…" of at least one character, then the closer.
     const end = inner.indexOf('"', 1)
-    if (end < 2) stop(`syntax:${n}`)
+    if (end < 2) { stop(`syntax:${n}`) }
     text = inner.slice(1, end); after = inner.slice(end + 1)
   } else {
     // A closer is tried before any text, so text that starts with one is empty and fails.
     text = CLOSERS.some(c => inner.startsWith(c)) ? '' : /^[^)\](}]*/.exec(inner)![0]
-    if (text === '') stop(`syntax:${n}`)
+    if (text === '') { stop(`syntax:${n}`) }
     after = inner.slice(text.length)
   }
   const closer = CLOSERS.find(c => after.startsWith(c))
-  if (closer !== close || after.slice(close.length).trim() !== '') stop(`syntax:${n}`)
+  if (closer !== close || after.slice(close.length).trim() !== '') { stop(`syntax:${n}`) }
   return { shape, lines: label(text, n) }
 }
 
@@ -98,13 +101,13 @@ function label(raw: string, n: number): string[] {
   if (MARKDOWN.test(s)) {
     // Bold and italic draw marked, as styled says; Markdown that styles nothing, or that the port cannot match, fails.
     const r = styled(s, 'any')
-    if (isFail(r) || r === s) stop(`markdown:${n}`)
+    if (isFail(r) || r === s) { stop(`markdown:${n}`) }
     d = r
   } else {
     const f = drawable(s, 'markdown', 'any')
-    if (f) stop(`${f.reason}:${n}`)
+    if (f) { stop(`${f.reason}:${n}`) }
     const bad = unsupported(s)
-    if (bad) stop(`unsupported-char ${bad}`)
+    if (bad) { stop(`unsupported-char ${bad}`) }
   }
   const lines = labelLines(d).map(l => l.trim())
   return lines.some(l => l === '') ? stop(`blank:${n}`) : lines

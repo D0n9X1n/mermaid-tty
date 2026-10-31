@@ -22,7 +22,7 @@ export const dec = (i: number): Dec => ({ n: BigInt(i), d: 1n })
 // hex are null, so every Dec is finite (spec C rule 5).
 const DECIMAL = /^[+-]?(\d+(\.\d+)?|\.\d+)$/
 export function parseDec(s: string): Dec | null {
-  if (!DECIMAL.test(s)) return null
+  if (!DECIMAL.test(s)) { return null }
   const [whole = '', frac = ''] = s.replace(/^[+-]/, '').split('.')
   const n = BigInt(whole + frac)
   return make(s.startsWith('-') ? -n : n, pow10(frac.length))
@@ -34,7 +34,8 @@ export const mul = (a: Dec, b: Dec): Dec => make(a.n * b.n, a.d * b.d)
 export const div = (a: Dec, b: Dec): Dec | null => (b.n === 0n ? null : make(a.n * b.d, a.d * b.n))
 // Both d are positive, so cross-multiplying keeps the order.
 export function cmp(a: Dec, b: Dec): -1 | 0 | 1 {
-  const l = a.n * b.d, r = b.n * a.d
+  const l = a.n * b.d
+const  r = b.n * a.d
   return l < r ? -1 : l > r ? 1 : 0
 }
 
@@ -63,8 +64,9 @@ function strip(x: bigint, p: bigint): [number, bigint] {
 // The shortest decimal, or null unless d's only prime factors are 2 and 5. A reduced n/d
 // then ends in a nonzero digit after max(twos, fives) decimals, so none can be dropped.
 export function toExact(a: Dec): string | null {
-  const [twos, rest] = strip(a.d, 2n), [fives, one] = strip(rest, 5n)
-  if (one !== 1n) return null
+  const [twos, rest] = strip(a.d, 2n)
+const  [fives, one] = strip(rest, 5n)
+  if (one !== 1n) { return null }
   const k = Math.max(twos, fives)
   return digits(a.n * pow10(k) / a.d, k)
 }

@@ -16,7 +16,7 @@ const src = (t: string, acc: string) => { const [h, a, b] = T[t]!; return `${h}\
 test('A5.errors: an empty accTitle: or accDescr: falls back where Mermaid reads the next line as its text', () => {
   for (const t of Object.keys(T)) {
     assert.ok(drawn(src(t, 'accTitle: x')), `${t}: control draws`)
-    for (const acc of ['accTitle:', 'accDescr:', 'accTitle :  ', '  accDescr:\t']) assert.ok(!drawn(src(t, acc)), `${t}: ${JSON.stringify(acc)}`)
+    for (const acc of ['accTitle:', 'accDescr:', 'accTitle :  ', '  accDescr:\t']) { assert.ok(!drawn(src(t, acc)), `${t}: ${JSON.stringify(acc)}`) }
   }
 })
 test('A1: pie and gitGraph keep the line after an empty acc statement, as Mermaid does, so they still draw', () => {

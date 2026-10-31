@@ -22,10 +22,11 @@ test('A8.benchmark: nearest-rank percentiles; ceiling 50 ms on the Mac and 200 m
   assert.equal(ceiling({}), 50); assert.equal(ceiling({ CI: 'true' }), 200); assert.equal(ceiling({ BENCH_P90_MS: '80' }), 80)
 })
 test('A8.benchmark: a BENCH_P90_MS that is not a positive number throws rather than passing every run', () => {
-  for (const v of ['fast', '', '0', '-5', 'Infinity']) assert.throws(() => ceiling({ BENCH_P90_MS: v }), RangeError, JSON.stringify(v))
+  for (const v of ['fast', '', '0', '-5', 'Infinity']) { assert.throws(() => ceiling({ BENCH_P90_MS: v }), RangeError, JSON.stringify(v)) }
 })
 test('A8.benchmark: p = 100 is the largest sample and p = 0 the smallest; xs is not mutated', () => {
-  const xs = [5, 1, 4, 2, 3, 10, 9, 8, 7, 6], before = [...xs]
+  const xs = [5, 1, 4, 2, 3, 10, 9, 8, 7, 6]
+const  before = [...xs]
   assert.equal(percentile(xs, 100), 10); assert.equal(percentile(xs, 0), 1)
   assert.deepEqual(xs, before)
 })
@@ -47,7 +48,8 @@ test('A8.benchmark: --private adds each closed mermaid fence of the .md files un
   assert.deepEqual(diagrams([], dir), [{ name: `${md}#1`, src: 'P' }, { name: `${md}#2`, src: 'Q' }])
 })
 test('A8.benchmark: timeAll times each diagram as the mean of exactly 20 render calls at 80 columns, with no cache between', () => {
-  const calls: unknown[] = [], count: typeof explain = (s, o) => { calls.push(o); return explain(s, o) }
+  const calls: unknown[] = []
+const  count: typeof explain = (s, o) => { calls.push(o); return explain(s, o) }
   // The clock reads the number of render calls so far: a diagram's mean is 1 only when all 20 of its calls fall in its
   // timed window, and the same source twice is rendered twice.
   assert.deepEqual(timeAll([{ name: 'a', src: OK }, { name: 'b', src: OK }], count, () => calls.length), { ms: [1, 1], errors: [] })
@@ -60,7 +62,7 @@ test('A8.benchmark: timeAll reports a diagram that falls back as an error, by na
 test('A8.benchmark: timeAll reports a timing that is not a finite number >= 0 as an error, by name, and gives it no timing', () => {
   const at = (t0: number, t1: number) => { const ts = [t0, t1]; return () => ts.shift()! }
   for (const [t0, t1, mean] of [[0, NaN, 'NaN'], [0, Infinity, 'Infinity'], [20, 0, '-1']] as const)
-    assert.deepEqual(timeAll([{ name: 'a', src: OK }], explain, at(t0, t1)), { ms: [], errors: [`a: timing ${mean} ms is not a finite number >= 0`] })
+    { assert.deepEqual(timeAll([{ name: 'a', src: OK }], explain, at(t0, t1)), { ms: [], errors: [`a: timing ${mean} ms is not a finite number >= 0`] }) }
 })
 
 // scripts/bench.ts run with args, its env extended by env.
@@ -72,12 +74,13 @@ const untimed = (s: string) => s.replace(/\d+\.\d{2} ms/g, 'T ms')
 test('A8.benchmark: the CLI prints n, p50, p90 and the machine, and exits 1 only when p90 is over BENCH_P90_MS', (t) => {
   const dir = tree(t, { 'flowchart-ok-01.mmd': OK, 'flowchart-reject-01.mmd': 'flowchart TD\nA[open --> B' })
   const machine = `cpu ${cpus()[0]?.model ?? 'unknown'}, node ${process.version}, ${process.platform}`
-  const over = bench([dir], { BENCH_P90_MS: '0.001' }), under = bench([dir], { BENCH_P90_MS: '1e9' })
+  const over = bench([dir], { BENCH_P90_MS: '0.001' })
+const  under = bench([dir], { BENCH_P90_MS: '1e9' })
   assert.equal(over.status, 1, over.stderr)
   assert.match(over.stderr, /^bench: p90 \d+\.\d{2} ms is over the 0\.001 ms ceiling\n$/)
   assert.equal(under.status, 0, under.stderr)
   assert.equal(under.stderr, '')
-  for (const r of [over, under]) assert.equal(untimed(r.stdout), `bench: n=1 p50=T ms p90=T ms\nbench: ${machine}\n`)
+  for (const r of [over, under]) { assert.equal(untimed(r.stdout), `bench: n=1 p50=T ms p90=T ms\nbench: ${machine}\n`) }
 })
 test('A8.benchmark: with no diagram to time, the CLI prints its usage and exits 2', (t) => {
   for (const r of [bench([]), bench([tree(t, { 'notes.txt': 'T', 'x-reject-01.mmd': 'R' })])]) {

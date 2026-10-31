@@ -15,7 +15,7 @@ function build(m: StateModel, { dir, keyed }: Parameters<Build>[0]): ReturnType<
   const byId = new Map(m.graph.nodes.flatMap(n => (n.note ? [[n.note.id, n.note] as const] : [])))
   const noted = m.notes.map(id => byId.get(id)!)
   const keyable = noted.map(n => ({ item: n.id, cls: 'note' }))
-  if (!keyed) return { graph: { ...m.graph, dir }, legend: [], keyable }
+  if (!keyed) { return { graph: { ...m.graph, dir }, legend: [], keyable } }
   const keys = new Map(noted.map((n, k) => [n.id, fieldKey(k)]))
   const nodes = m.graph.nodes.map(n => (n.note ? { ...n, note: { ...n.note, key: keys.get(n.note.id)! } } : n))
   const legend: LegendRow[] = noted.map(n => ({ key: keys.get(n.id)!, keyInk: 'note', item: n.id, cls: 'note',

@@ -31,16 +31,17 @@ function pills(m: Mindmap, node: MNode, parent: Pill | null, i: number, max: num
   const rows: Piece[] = []
   for (const [j, line] of node.lines.entries()) {
     const ps = wrap(line, max)
-    if (!ps) return fail('too-wide')
+    if (!ps) { return fail('too-wide') }
     ps.forEach((p, n) => rows.push(n > 0 ? p : { text: p.text, join: j > 0 ? '\n' : '' }))
   }
-  const [l, r] = CAPS[node.shape], inner = Math.max(...rows.map(p => width(p.text)))
+  const [l, r] = CAPS[node.shape]
+const  inner = Math.max(...rows.map(p => width(p.text)))
   const pill: Pill = { node, depth, ink, rows, width: l.length + r.length + 2 + inner, sub: 0, kids: [], parent, next: null }
   for (const [n, child] of node.children.entries()) {
     const kid = pills(m, child, pill, n, max)
-    if (isFail(kid)) return kid
+    if (isFail(kid)) { return kid }
     const prev = pill.kids.at(-1)
-    if (prev) prev.next = kid
+    if (prev) { prev.next = kid }
     pill.kids.push(kid)
   }
   pill.sub = Math.max(rows.length, pill.kids.reduce((s, k) => s + k.sub, 0))
@@ -49,7 +50,9 @@ function pills(m: Mindmap, node: MNode, parent: Pill | null, i: number, max: num
 
 // A pill at (r, c): on each row its caps, a pad cell each side and its text, all owned by m<k> in its ink.
 function drawPill(cv: Canvas, { p, r, c }: At): void {
-  const [l, rc] = CAPS[p.node.shape], id = `m${p.node.k}`, inner = p.width - l.length - rc.length - 2
+  const [l, rc] = CAPS[p.node.shape]
+const  id = `m${p.node.k}`
+const  inner = p.width - l.length - rc.length - 2
   p.rows.forEach((piece, j) => {
     cv.cap(r + j, c, l, p.ink, id); cv.fill(r + j, c + l.length, 1, p.ink, id)
     const w = cv.text(r + j, c + l.length + 1, piece.text, p.ink, id, j > 0 ? piece.join : undefined)
@@ -69,20 +72,23 @@ const down = (r: number, c: number, n: number) => Array.from({ length: n }, (_, 
 // row under ─── or ─┬─, the rest under ├─ or └─ on a │ trunk below the ┬, each after the subtrees above it. natural: a
 // depth's column is as wide as its widest pill, and connectors stretch to the next; compact: right after the parent.
 function tree(cv: Canvas | null, root: Pill, step: 'natural' | 'compact'): number {
-  const widest: number[] = [], start = [0]
+  const widest: number[] = []
+const  start = [0]
   const measure = (p: Pill): void => { widest[p.depth] = Math.max(widest[p.depth] ?? 0, p.width); p.kids.forEach(measure) }
   measure(root)
-  for (let d = 1; d < widest.length; d++) start[d] = start[d - 1]! + widest[d - 1]! + 3
+  for (let d = 1; d < widest.length; d++) { start[d] = start[d - 1]! + widest[d - 1]! + 3 }
   let right = 0
   const place = (p: Pill, r: number, c: number): void => {
-    if (cv) drawPill(cv, { p, r, c })
+    if (cv) { drawPill(cv, { p, r, c }) }
     right = Math.max(right, c + p.width)
-    const e = c + p.width, kc = step === 'natural' ? start[p.depth + 1]! : e + 3, t = kc - 2
+    const e = c + p.width
+const  kc = step === 'natural' ? start[p.depth + 1]! : e + 3
+const  t = kc - 2
     let rr = r
     p.kids.forEach((kid, i) => {
       // ─── into a lone child; else ─┬─ into the first, and ─┐, the │ trunk, └─ into each later one.
-      if (cv) con(cv, kid, p.kids.length === 1 || i === 0 ? across(r, e, kc - e)
-        : [...across(r, e, t - e), [r, t, 12], ...down(r + 1, t, rr - r - 1), [rr, t, 3], [rr, t + 1, 10]])
+      if (cv) { con(cv, kid, p.kids.length === 1 || i === 0 ? across(r, e, kc - e)
+        : [...across(r, e, t - e), [r, t, 12], ...down(r + 1, t, rr - r - 1), [rr, t, 3], [rr, t + 1, 10]]) }
       place(kid, rr, kc)
       rr += kid.sub
     })
@@ -94,14 +100,15 @@ function tree(cv: Canvas | null, root: Pill, step: 'natural' | 'compact'): numbe
 // The outline: the root, then each node in preorder on its own rows, at 3 columns per depth below the root's children:
 // │ or blank per ancestor below the root, by whether a sibling follows it, then ├─ or └─, a continuation row │ or blank.
 function outline(cv: Canvas | null, root: Pill): number {
-  let right = 0, r = 0
+  let right = 0
+let  r = 0
   const below = new Map<Pill, number>()                 // each pill's first row past its own rows
   const visit = (p: Pill): void => {
     const c = p.depth === 0 ? 0 : 3 * (p.depth - 1) + 2
     // The link: from the row below its parent, │ down its column to └─ on its own row; a later sibling's makes it ├ and the
     // │ beside this subtree's rows.
-    if (cv && p.parent) con(cv, p, [...down(below.get(p.parent)!, c - 2, r - below.get(p.parent)!), [r, c - 2, 3], [r, c - 1, 10]])
-    if (cv) drawPill(cv, { p, r, c })
+    if (cv && p.parent) { con(cv, p, [...down(below.get(p.parent)!, c - 2, r - below.get(p.parent)!), [r, c - 2, 3], [r, c - 1, 10]]) }
+    if (cv) { drawPill(cv, { p, r, c }) }
     below.set(p, r + p.rows.length)
     right = Math.max(right, c + p.width); r += p.rows.length
     p.kids.forEach(visit)
@@ -114,20 +121,22 @@ function outline(cv: Canvas | null, root: Pill): number {
 // than columns.
 function draw(m: Mindmap, form: 'natural' | 'compact' | 'outline', max: number, columns: number): Drawing | Fail {
   const root = pills(m, m.root, null, 0, max)
-  if (isFail(root)) return root
+  if (isFail(root)) { return root }
   const lay = (cv: Canvas | null) => (form === 'outline' ? outline(cv, root) : tree(cv, root, form))
   const w = lay(null)
-  if (w > columns) return fail('too-wide')
-  const all: Pill[] = [], gather = (p: Pill): void => { all.push(p); p.kids.forEach(gather) }
+  if (w > columns) { return fail('too-wide') }
+  const all: Pill[] = []
+const  gather = (p: Pill): void => { all.push(p); p.kids.forEach(gather) }
   gather(root)
   // Each child's link, an edge from its parent with no end mark; siblings' links, and only theirs, may share a line cell.
-  const kids = all.filter(p => p.parent), from = new Map(kids.map(p => [link(p), `m${p.parent!.node.k}`]))
+  const kids = all.filter(p => p.parent)
+const  from = new Map(kids.map(p => [link(p), `m${p.parent!.node.k}`]))
   const shares = (a: string, b: string) => from.has(a) && from.get(a) === from.get(b)
   const cv = createCanvas(form === 'outline' ? all.reduce((s, p) => s + p.rows.length, 0) : root.sub, w, columns, shares)
   lay(cv)
   const edges = kids.map(p => ({ id: link(p), from: from.get(link(p))!, to: `m${p.node.k}`, ends: [], style: 'solid' as const }))   // links draw light
   const body = cv.toDrawing({ labels: all.map(p => ({ owner: `m${p.node.k}`, text: p.node.lines.join('\n') })), edges, edgeLabels: [], frames: [] })
-  if (m.title === null) return body
+  if (m.title === null) { return body }
   const head = heading(m.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
 }
@@ -137,7 +146,7 @@ function first(m: Mindmap, form: 'compact' | 'outline', maxes: readonly number[]
   let last: Drawing | Fail = fail('too-wide')
   for (const max of maxes) {
     last = draw(m, form, max, columns)
-    if (!isFail(last) && !validate(last)) return last
+    if (!isFail(last) && !validate(last)) { return last }
   }
   return last
 }
@@ -145,9 +154,9 @@ function first(m: Mindmap, form: 'compact' | 'outline', maxes: readonly number[]
 const WRAPS = [24, 20, 16, 12, 8]
 
 function layout(m: Mindmap, step: Step, columns: number): Drawing | Fail {
-  if (step === 'natural' || step === 'compact') return draw(m, step, Infinity, columns)
-  if (step === 'wrap') return first(m, 'compact', WRAPS, columns)
-  if (step === 'outline') return first(m, 'outline', [Infinity, ...WRAPS], columns)
+  if (step === 'natural' || step === 'compact') { return draw(m, step, Infinity, columns) }
+  if (step === 'wrap') { return first(m, 'compact', WRAPS, columns) }
+  if (step === 'outline') { return first(m, 'outline', [Infinity, ...WRAPS], columns) }
   return fail('step')
 }
 

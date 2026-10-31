@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const version: string = JSON.parse(readFileSync(join(root, '.claude-plugin/plugin.json'), 'utf8')).version;
 const NO_BASH = spawnSync('bash', ['-c', 'exit 0']).status !== 0 && 'needs bash on PATH (Git Bash on Windows)';
-const OURS = 'mermaid-tty@mermaid-tty', OK = `local install: ok (mermaid-tty ${version})\n`;
+const OURS = 'mermaid-tty@mermaid-tty'
+const  OK = `local install: ok (mermaid-tty ${version})\n`;
 // The fake claude writes a marker, fake-claude-<pid>-<n> for its nth call, into the config dir it is handed, CLAUDE_CONFIG_DIR or,
 // unset or empty, claude's default ~/.claude, by that path as the shell resolves it. It logs to claude.log beside it, tab-separated:
 // the marker's name, the markers the dir held before, and argv. A dir it cannot enter or write in fails the call. It fails an add
@@ -62,7 +63,8 @@ const LAG = 200;
 // none from before run: it waits until the watch has been quiet for LAG ms, at most 25 times, since macOS can deliver the
 // creation of dir's own files well after the watch starts.
 async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
-  const changes: string[] = [], watcher = watch(dir, { recursive: RECURSIVE }, (event, name) => changes.push(`${event} ${name}`));
+  const changes: string[] = []
+const  watcher = watch(dir, { recursive: RECURSIVE }, (event, name) => changes.push(`${event} ${name}`));
   watcher.on('error', (e) => changes.push(`error ${e.message}`));
   try {
     for (let i = 0, seen = -1; i < 25 && seen !== changes.length; i++) { seen = changes.length; await sleep(LAG); }
@@ -78,12 +80,16 @@ async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
 // the fake claude's calls, what the sentinel holds after the run and the changes watched in it during the run, and what is left
 // in TMPDIR.
 async function localInstall(pluginList: string, { cygpath = false } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'mtty-')), bin = join(dir, 'bin'), tmp = join(dir, 'tmp'), home = join(dir, 'home'), sentinel = join(home, '.claude');
+  const dir = mkdtempSync(join(tmpdir(), 'mtty-'))
+const  bin = join(dir, 'bin')
+const  tmp = join(dir, 'tmp')
+const  home = join(dir, 'home')
+const  sentinel = join(home, '.claude');
   try {
     mkdirSync(bin); mkdirSync(tmp); mkdirSync(sentinel, { recursive: true });
-    for (const [name, text] of SENTINEL) writeFileSync(join(sentinel, name), text);
+    for (const [name, text] of SENTINEL) { writeFileSync(join(sentinel, name), text); }
     writeFileSync(join(bin, 'claude'), CLAUDE, { mode: 0o755 });
-    if (cygpath) writeFileSync(join(bin, 'cygpath'), CYGPATH, { mode: 0o755 });
+    if (cygpath) { writeFileSync(join(bin, 'cygpath'), CYGPATH, { mode: 0o755 }); }
     // Windows names it Path: drop every spelling, so the child gets one PATH, with the scratch bin first. MTTY_REPO has /
     // separators, a form Git Bash's cd takes too.
     const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toUpperCase() !== 'PATH'));
@@ -91,9 +97,11 @@ async function localInstall(pluginList: string, { cygpath = false } = {}) {
       env: { ...env, PATH: [bin, process.env.PATH].join(delimiter), TMPDIR: tmp, HOME: home, CLAUDE_CONFIG_DIR: sentinel,
         MTTY_REPO: root.replaceAll(sep, '/'), MTTY_PLUGIN_LIST: pluginList } }));
     // Each call as its argv after a label: one dir if the dir it was handed held exactly the markers of the calls before it.
-    const log = lines(join(bin, 'claude.log')).map((l) => l.split('\t')), names = log.map(([name = '']) => name);
+    const log = lines(join(bin, 'claude.log')).map((l) => l.split('\t'))
+const  names = log.map(([name = '']) => name);
     const calls = log.map(([, found = '', ...argv], i) => {
-      const got = found.split(' ').filter(Boolean).sort().join(' '), want = names.slice(0, i).sort().join(' ');
+      const got = found.split(' ').filter(Boolean).sort().join(' ')
+const  want = names.slice(0, i).sort().join(' ');
       return [got === want ? 'one dir' : `found ${got || 'no marker'}, not ${want || 'none'}`, ...argv];
     });
     // Left behind: TMPDIR's entries. TMPDIR starts empty, so anything the script left under it, at any depth, shows here.

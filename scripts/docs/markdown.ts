@@ -20,8 +20,9 @@ export const headings = (md: string) => all(parse(md), 'heading').map((h) => ({ 
 export const links = (md: string) => all(parse(md), 'link').map((l) => ({ line: lineOf(l), label: text(l), target: l.url! }));
 // The raw text of a level-2 section, from the line after its heading to the next h1 or h2.
 export function section(md: string, title: string): string | null {
-  const hs = all(parse(md), 'heading').filter((h) => h.depth! <= 2), i = hs.findIndex((h) => h.depth === 2 && text(h) === title);
-  if (i < 0) return null;
+  const hs = all(parse(md), 'heading').filter((h) => h.depth! <= 2)
+const  i = hs.findIndex((h) => h.depth === 2 && text(h) === title);
+  if (i < 0) { return null; }
   const nl = md.indexOf('\n', hs[i]!.position!.end.offset);
   return md.slice(nl < 0 ? md.length : nl + 1, hs[i + 1]?.position!.start.offset ?? md.length);
 }

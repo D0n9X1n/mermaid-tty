@@ -32,18 +32,19 @@ export function readLink(text: string, at: number): RawLink | null {
   BASIC.lastIndex = at
   const b = BASIC.exec(text)
   // An id@ the lexer reads as a keyword first (end@, style.x@, default.x@) is no edge id.
-  if (b && b[1] !== undefined && misread(b[1], '@', 'edge')) return null
-  if (b) return { id: b[1], end: BASIC.lastIndex, raw: b[3], ...(b[3] === undefined ? {} : { pipe: true as const }), ...ends(endLink(b[2]!)) }
+  if (b && b[1] !== undefined && misread(b[1], '@', 'edge')) { return null }
+  if (b) { return { id: b[1], end: BASIC.lastIndex, raw: b[3], ...(b[3] === undefined ? {} : { pipe: true as const }), ...ends(endLink(b[2]!)) } }
   for (const f of FORMS) {
     f.open.lastIndex = at
     const o = f.open.exec(text)
-    if (!o) continue
-    if (o[1] !== undefined && misread(o[1], '@', 'edge')) return null
+    if (!o) { continue }
+    if (o[1] !== undefined && misread(o[1], '@', 'edge')) { return null }
     const t = edgeText(text, f.open.lastIndex, f.close, f.ch)
-    if (!t) return null
-    const s = startLink(o[2]!), e = endLink(t.closer)
+    if (!t) { return null }
+    const s = startLink(o[2]!)
+const  e = endLink(t.closer)
     // Mermaid's destructLink: strokes must match; an opener mark must match the closer's head, and then marks both ends.
-    if (s.stroke !== e.stroke || (s.type !== 'open' && s.type !== e.type)) return null
+    if (s.stroke !== e.stroke || (s.type !== 'open' && s.type !== e.type)) { return null }
     return { id: o[1], end: t.end, raw: t.raw, ...ends({ ...e, type: s.type === 'open' ? e.type : `double_${e.type}` }) }
   }
   return null
@@ -54,14 +55,14 @@ export function readLink(text: string, at: number): RawLink | null {
 function edgeText(text: string, i: number, close: RegExp, ch: RegExp): { raw: string; closer: string; end: number } | null {
   let j = i
   STRING.lastIndex = j
-  if (STRING.test(text)) j = STRING.lastIndex
+  if (STRING.test(text)) { j = STRING.lastIndex }
   for (;;) {
-    if (text[j] === '"') return null
+    if (text[j] === '"') { return null }
     close.lastIndex = j
     const c = close.exec(text)
-    if (c) return j > i ? { raw: text.slice(i, j), closer: c[1]!, end: close.lastIndex } : null
+    if (c) { return j > i ? { raw: text.slice(i, j), closer: c[1]!, end: close.lastIndex } : null }
     ch.lastIndex = j
-    if (!ch.test(text)) return null
+    if (!ch.test(text)) { return null }
     j = ch.lastIndex
   }
 }
@@ -71,16 +72,19 @@ function edgeText(text: string, i: number, close: RegExp, ch: RegExp): { raw: st
 // (= first thick, ~ first invisible, any dot dotted) and the length (dots, or the line's length less 1). An unpaired mark
 // stays in the line: <==o is a normal line of length 2.
 function endLink(token: string): { type: string; stroke: string; length: number } {
-  const last = token.at(-1)!, type = last === 'x' ? 'cross' : last === '>' ? 'point' : last === 'o' ? 'circle' : 'open'
+  const last = token.at(-1)!
+const  type = last === 'x' ? 'cross' : last === '>' ? 'point' : last === 'o' ? 'circle' : 'open'
   const paired = type !== 'open' && token[0] === (last === '>' ? '<' : last)
-  const line = token.slice(paired ? 1 : 0, -1), dots = line.replace(/[^.]/g, '').length
+  const line = token.slice(paired ? 1 : 0, -1)
+const  dots = line.replace(/[^.]/g, '').length
   const stroke = dots ? 'dotted' : line[0] === '=' ? 'thick' : line[0] === '~' ? 'invisible' : 'normal'
   return { type: paired ? `double_${type}` : type, stroke, length: dots || line.length - 1 }
 }
 
 // A text form's opener as destructStartLink reads it: a leading <, x or o its type, and its stroke (= thick, . dotted).
 function startLink(token: string): { type: string; stroke: string } {
-  const t = token.trim(), type = t[0] === '<' ? 'point' : t[0] === 'x' ? 'cross' : t[0] === 'o' ? 'circle' : 'open'
+  const t = token.trim()
+const  type = t[0] === '<' ? 'point' : t[0] === 'x' ? 'cross' : t[0] === 'o' ? 'circle' : 'open'
   return { type, stroke: t.includes('.') ? 'dotted' : t.includes('=') ? 'thick' : 'normal' }
 }
 

@@ -17,7 +17,7 @@ const SAME = [
   ['accDescr {} '.repeat(50) + 'A', 'A'],
 ]
 test('A1: after an accDescr {…} block closes, its line reads on as statements, a direction there included', () => {
-  for (const [line, plain] of SAME) assert.deepEqual(P(line!), P(plain!), line)
+  for (const [line, plain] of SAME) { assert.deepEqual(P(line!), P(plain!), line) }
 })
 // A line where direction X appears is only that statement: anywhere at its start, or after a block closes on it.
 const FAILS = [
@@ -27,5 +27,5 @@ const FAILS = [
   ['A["direction LR"]; accDescr { x } B', 'syntax:2'],
 ]
 test('A5.errors: a line where direction X appears is only that statement, after a closed accDescr {…} block too', () => {
-  for (const [line, reason] of FAILS) assert.deepEqual(P(line!), { reason }, line)
+  for (const [line, reason] of FAILS) { assert.deepEqual(P(line!), { reason }, line) }
 })

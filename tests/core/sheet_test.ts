@@ -20,7 +20,8 @@ test("A4: stack keeps every expect field, each asserted alone, so a heading over
   const extra = { frames: ['S'], members: [{ id: 'b.m0', parent: 'b' }], keys: [{ key: 'a', item: 'b', cls: 'note' }], keyable: [{ item: 'b', cls: 'note' }],
     bars: [{ owner: 'x0', eighths: 8, axis: 'h' }], edgeLabels: [{ owner: 'e0:label', edge: 'e0' }],
     edges: [{ id: 'e0', from: 'b', to: 'c', ends: [{ node: 'c', glyph: '▼' }], endLabels: [{ node: 'c', owner: 'e0:c' }] }] }
-  const d = stack([heading('Title', 'title', 'title', 10) as Drawing, { ...part('b', 'y'), expect: { ...part('b', 'y').expect, ...extra } } as Drawing], 10), e = d.expect as any
+  const d = stack([heading('Title', 'title', 'title', 10) as Drawing, { ...part('b', 'y'), expect: { ...part('b', 'y').expect, ...extra } } as Drawing], 10)
+const  e = d.expect as any
   assert.deepEqual(e.frames, extra.frames); assert.deepEqual(e.members, extra.members); assert.deepEqual(e.keys, extra.keys)
   assert.deepEqual(e.keyable, extra.keyable); assert.deepEqual(e.bars, extra.bars); assert.deepEqual(e.edges, extra.edges)   // edges carry their ends
   assert.deepEqual(e.edgeLabels, extra.edgeLabels); assert.deepEqual(e.labels.map((l: any) => l.owner), ['title', 'b'])
@@ -53,7 +54,8 @@ const clashing = (owner: string, rows: number, cols: number): Drawing => {
   return c.toDrawing({ labels: [{ owner, text: owner }], edges: [], edgeLabels: [], frames: [] })
 }
 test("A4: stack pads each row with null to the widest part, shifts each part's conflicts by its row offset, and keeps its parts", () => {
-  const parts = [clashing('a', 2, 4), clashing('b', 1, 12), clashing('c', 1, 3)], d = stack(parts, 20)
+  const parts = [clashing('a', 2, 4), clashing('b', 1, 12), clashing('c', 1, 3)]
+const  d = stack(parts, 20)
   assert.deepEqual(d.cells.map(r => Array.from(r, x => (x === null ? '.' : x === undefined ? '?' : x.ch)).join('')),
     ['............', 'a...........', 'b...........', 'c...........'])
   assert.deepEqual(d.conflicts, [{ row: 1, col: 0, had: 'a', by: 'x' }, { row: 2, col: 0, had: 'b', by: 'x' }, { row: 3, col: 0, had: 'c', by: 'x' }])
@@ -74,9 +76,10 @@ const full = (i: number): Drawing => ({ ...part(`p${i}`, 'z'), expect: { labels:
   edgeLabels: [{ owner: `e${i}:label`, edge: `e${i}` }], members: [{ id: `m${i}`, parent: 'a' }], keys: [{ key: `k${i}`, item: 'a', cls: 'note' }],
   keyable: [{ item: `i${i}`, cls: 'note' }], bars: [{ owner: `b${i}`, eighths: i, axis: 'h' }] } } as Drawing)
 test("A4: stack concatenates each expect field in part order, so neither part's entries drop or win", () => {
-  const [a, b] = [full(0), full(1)], e = stack([a, b], 10).expect as any
+  const [a, b] = [full(0), full(1)]
+const  e = stack([a, b], 10).expect as any
   for (const k of ['labels', 'edges', 'edgeLabels', 'frames', 'members', 'keys', 'keyable', 'bars'])
-    assert.deepEqual(e[k], [...(a.expect as any)[k], ...(b.expect as any)[k]], k)
+    { assert.deepEqual(e[k], [...(a.expect as any)[k], ...(b.expect as any)[k]], k) }
 })
 // A field Expect does not list yet merges by name, from whichever parts have it; a field no part has stays absent.
 test('A4: stack carries a field Expect does not list yet, from the middle parts that have it, and adds none', () => {

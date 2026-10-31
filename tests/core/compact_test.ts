@@ -24,9 +24,9 @@ function picture(...rows: string[]): Drawing {
     let c = 0
     for (const ch of row) {
       const dirs = DIRS[ch]
-      if (dirs !== undefined) cv.line(r, c, dirs, 'light', 'edge', 'e')
-      else if ('▼►▲◄'.includes(ch)) cv.arrow(r, c, ch, 'e')
-      else if (ch !== ' ') cv.text(r, c, ch, 'label', 'n')
+      if (dirs !== undefined) { cv.line(r, c, dirs, 'light', 'edge', 'e') }
+      else if ('▼►▲◄'.includes(ch)) { cv.arrow(r, c, ch, 'e') }
+      else if (ch !== ' ') { cv.text(r, c, ch, 'label', 'n') }
       c += width(ch)
     }
   })
@@ -47,7 +47,7 @@ test('Q2a: a one-column jog stays, though each of its cells has a vertical arm',
 
 test('Q2a: a │ where one edge only starts or stops is not pass-through', () => {
   const cv = createCanvas(4, 1, 80, () => true)
-  for (const r of [0, 1, 2, 3]) cv.line(r, 0, 5, 'light', 'edge', 'e1')
+  for (const r of [0, 1, 2, 3]) { cv.line(r, 0, 5, 'light', 'edge', 'e1') }
   cv.line(2, 0, 4, 'light', 'edge', 'e2')
   assert.deepEqual(compact(cv.toDrawing(E)).cells.map(row => row[0]?.segs?.length), [1, 2, 1])
 })
@@ -87,12 +87,14 @@ test('Q2a: drawGraph compacts by default; given d => d it returns the drawing at
 // Compaction runs only on a drawing that already validates, apart from width, which is what compaction changes. Repro A:
 // an A→B route with a middle cell gone. Uncompacted it is disconnected; compacted, its ── ──► would close up to ──►.
 const gapped = () => {
-  const p = layoutGraph(g('LR', ['A>B']), { rankGap: 6, nodeGap: 1, wrapAt: null }) as Placed, [r] = routeGraph(p) as Route[]
+  const p = layoutGraph(g('LR', ['A>B']), { rankGap: 6, nodeGap: 1, wrapAt: null }) as Placed
+const  [r] = routeGraph(p) as Route[]
   return { p, routes: [{ ...r!, cells: r!.cells.filter((_, i) => i !== r!.cells.length >> 1) }] }
 }
 
 test('Q2a: a route with a gap stays rejected through drawGraph: the default finish leaves an invalid drawing as it is', () => {
-  const { p, routes } = gapped(), raw = drawGraph(p, routes, 80, d => d)
+  const { p, routes } = gapped()
+const  raw = drawGraph(p, routes, 80, d => d)
   assert.equal(validate(raw)?.reason, 'edge-disconnected')
   assert.equal(validate(compact(raw)), null)                  // the break compaction alone would hide
   const d = drawGraph(p, routes, 80)
@@ -115,7 +117,8 @@ test('Q2a: a frame with a side cell gone stays rejected by the default finish', 
 })
 
 test('Q2a: a drawing too wide only uncompacted is still compacted, and fits', () => {
-  const p = layoutGraph(g('LR', ['A>B']), { rankGap: 6, nodeGap: 1, wrapAt: null }) as Placed, rs = routeGraph(p) as Route[]
+  const p = layoutGraph(g('LR', ['A>B']), { rankGap: 6, nodeGap: 1, wrapAt: null }) as Placed
+const  rs = routeGraph(p) as Route[]
   const fit = Math.max(...shown(compact(drawGraph(p, rs, 80, d => d))).map(r => width(r)))
   assert.equal(validate(drawGraph(p, rs, fit, d => d))?.reason, 'row-too-wide')
   const d = drawGraph(p, rs, fit)
@@ -127,9 +130,9 @@ test('Q2a: a drawing too wide only uncompacted is still compacted, and fits', ()
 test('Q2a: a ─ where one edge ends and another starts is not pass-through', () => {
   const cv = createCanvas(1, 9, 80, () => true)
   cv.text(0, 0, 'A', 'label', 'n'); cv.text(0, 8, 'B', 'label', 'n'); cv.arrow(0, 7, '►', 'e2')
-  for (const c of [1, 2, 3]) cv.line(0, c, 10, 'light', 'edge', 'e1')
+  for (const c of [1, 2, 3]) { cv.line(0, c, 10, 'light', 'edge', 'e1') }
   cv.line(0, 4, 8, 'light', 'edge', 'e1'); cv.line(0, 4, 2, 'light', 'edge', 'e2')
-  for (const c of [5, 6]) cv.line(0, c, 10, 'light', 'edge', 'e2')
+  for (const c of [5, 6]) { cv.line(0, c, 10, 'light', 'edge', 'e2') }
   const d = compact(cv.toDrawing(E))
   assert.deepEqual(shown(d), ['A─────►B'])
   assert.deepEqual(d.cells[0]!.find(x => x?.segs?.length === 2)?.segs, [{ owner: 'e1', dirs: 8 }, { owner: 'e2', dirs: 2 }])

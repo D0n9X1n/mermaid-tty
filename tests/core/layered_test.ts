@@ -1,7 +1,8 @@
 import test from 'node:test'; import assert from 'node:assert/strict'
 import { layoutGraph, type Placed } from '../../core/graph/layered.ts'; import { g } from './graph-fixture.ts'
 import { crossings, order } from '../../core/graph/order.ts'; import type { Item } from '../../core/graph/chains.ts'
-const S = { rankGap: 3, nodeGap: 4, wrapAt: null }, L = (...a: Parameters<typeof g>) => layoutGraph(g(...a), S) as Placed
+const S = { rankGap: 3, nodeGap: 4, wrapAt: null }
+const  L = (...a: Parameters<typeof g>) => layoutGraph(g(...a), S) as Placed
 const hit = (a: any, b: any) => a.row < b.row + b.rows && b.row < a.row + a.rows && a.col < b.col + b.cols && b.col < a.col + a.cols
 test('A1: TB ranks go down, LR ranks go right, cycles lay out', () => {
   const t = L('TB', ['A>B', 'B>C']); assert.ok(t.boxes.get('A')!.row < t.boxes.get('B')!.row && t.boxes.get('B')!.row < t.boxes.get('C')!.row)
@@ -9,11 +10,13 @@ test('A1: TB ranks go down, LR ranks go right, cycles lay out', () => {
   const c = L('TB', ['A>B', 'B>C', 'C>A']); assert.ok(c.boxes.get('A')!.row < c.boxes.get('C')!.row)
 })
 test('A1: no boxes overlap; an edge label has a rank of its own; cluster strips keep outsiders out', () => {
-  const p = L('TB', ['A>B', 'A>C', 'A>D', 'B>E', 'C>E', 'D>E|done']), bs = [...p.boxes.values()]
+  const p = L('TB', ['A>B', 'A>C', 'A>D', 'B>E', 'C>E', 'D>E|done'])
+const  bs = [...p.boxes.values()]
   bs.forEach((x, i) => bs.slice(i + 1).forEach(y => assert.ok(!hit(x, y))))
   const lab = p.boxes.get('e5:label')!; assert.ok(p.boxes.get('D')!.row < lab.row && lab.row < p.boxes.get('E')!.row)
   const x = g('TB', ['A>B', 'X>B']); x.clusters.push({ id: 's', title: 'S', dir: null, nodes: ['A', 'B'], clusters: [] })
-  const q = layoutGraph(x, S) as Placed, f = q.frames.get('s')!
+  const q = layoutGraph(x, S) as Placed
+const  f = q.frames.get('s')!
   assert.ok(hit(f, q.boxes.get('A')) && hit(f, q.boxes.get('B')) && !hit(f, q.boxes.get('X')))
 })
 test('A3: a box is its widest row, a pad cell each side and its caps wide, with one row per line', () => {
@@ -25,7 +28,8 @@ test('A3: a box is its widest row, a pad cell each side and its caps wide, with 
   assert.equal((layoutGraph(x, S) as Placed).boxes.get('A')!.cols, 9)
 })
 test('A3: wrapAt wraps rows into pieces; a word wider than wrapAt fails word-too-wide', () => {
-  const w = { ...S, wrapAt: 3 }, p = layoutGraph(g('TB', ['A>B|ab cd'], { A: 'ab cd' }), w) as Placed
+  const w = { ...S, wrapAt: 3 }
+const  p = layoutGraph(g('TB', ['A>B|ab cd'], { A: 'ab cd' }), w) as Placed
   assert.deepEqual([p.boxes.get('A')!.cols, p.boxes.get('A')!.rows], [6, 2])
   assert.deepEqual([p.boxes.get('e0:label')!.cols, p.boxes.get('e0:label')!.rows], [4, 2])
   assert.deepEqual(layoutGraph(g('TB', ['A>B'], { A: 'abcd' }), w), { reason: 'word-too-wide' })
@@ -43,7 +47,8 @@ test('A3: an edge label breaks at <br/> as node rows do: a<br/>bb is 2 rows, 4 w
   assert.deepEqual([p.boxes.get('e0:label')!.rows, p.boxes.get('e0:label')!.cols], [2, 4])
 })
 test('A1: barycenter sweeps clear the crossing that source order has (D before E under B before C)', () => {
-  const p = L('TB', ['A>B', 'A>C', 'C>D', 'B>E']), col = (id: string) => p.boxes.get(id)!.col
+  const p = L('TB', ['A>B', 'A>C', 'C>D', 'B>E'])
+const  col = (id: string) => p.boxes.get(id)!.col
   assert.ok(col('B') < col('C'))
   assert.ok(col('E') < col('D'))
 })
@@ -102,8 +107,8 @@ test('A1: BT and RL mirror TB and LR along the main axis, frames included', () =
   }
   const [tb, bt, lr, rl] = (['TB', 'BT', 'LR', 'RL'] as const).map(run)
   assert.deepEqual([bt.rows, bt.cols, bt.boxes.size, rl.rows, rl.cols, rl.boxes.size], [tb.rows, tb.cols, 5, lr.rows, lr.cols, 5])
-  for (const k of ['boxes', 'frames'] as const) for (const [id, b] of tb[k]) assert.deepEqual(bt[k].get(id), { ...b, row: tb.rows - b.row - b.rows })
-  for (const k of ['boxes', 'frames'] as const) for (const [id, b] of lr[k]) assert.deepEqual(rl[k].get(id), { ...b, col: lr.cols - b.col - b.cols })
+  for (const k of ['boxes', 'frames'] as const) { for (const [id, b] of tb[k]) { assert.deepEqual(bt[k].get(id), { ...b, row: tb.rows - b.row - b.rows }) } }
+  for (const k of ['boxes', 'frames'] as const) { for (const [id, b] of lr[k]) { assert.deepEqual(rl[k].get(id), { ...b, col: lr.cols - b.col - b.cols }) } }
   assert.ok(bt.boxes.get('Y')!.row < bt.boxes.get('X')!.row && rl.boxes.get('Y')!.col < rl.boxes.get('X')!.col)
 })
 test('A1: the same input always gives the same Placed', () => {
@@ -115,7 +120,9 @@ test('A1: the same input always gives the same Placed', () => {
 })
 test('A1: a top border sits at the top of the gap above its first band, so an edge into the strip has its in-stem and head inside', () => {
   const x = g('TB', ['A>B']); x.clusters.push({ id: 's', title: 'S', dir: null, nodes: ['B'], clusters: [] })
-  const p = layoutGraph(x, S) as Placed, f = p.frames.get('s')!, b = p.boxes.get('B')!
+  const p = layoutGraph(x, S) as Placed
+const  f = p.frames.get('s')!
+const  b = p.boxes.get('B')!
   assert.deepEqual([f, b.row, p.rows], [{ row: 1, col: 0, rows: 6, cols: 9 }, 5, 7])
   assert.ok(b.row - f.row - 1 >= 2)
 })
@@ -126,17 +133,22 @@ test('A1: where borders meet in one gap, the ending bottom border comes first, t
   assert.deepEqual([p.frames.get('s1'), p.frames.get('s2')], [{ row: 0, col: 0, rows: 3, cols: 9 }, { row: 3, col: 0, rows: 6, cols: 9 }])
 })
 test('A1: a back edge is reversed with its ends swapped, so its head still points at its own target', () => {
-  const x = g('TB', ['A>B', 'B>C', 'C>A']), y = g('TB', ['A>B', 'B>C', 'C>A']); y.edges[2]!.tail = 'arrow'; y.edges[2]!.head = 'circle'
-  const p = layoutGraph(x, S) as Placed, q = layoutGraph(y, S) as Placed
+  const x = g('TB', ['A>B', 'B>C', 'C>A'])
+const  y = g('TB', ['A>B', 'B>C', 'C>A']); y.edges[2]!.tail = 'arrow'; y.edges[2]!.head = 'circle'
+  const p = layoutGraph(x, S) as Placed
+const  q = layoutGraph(y, S) as Placed
   assert.deepEqual(p.graph.edges[2], { ...x.edges[2], from: 'A', to: 'C', tail: 'arrow', head: 'none', reversed: true })
   assert.deepEqual(q.graph.edges[2], { ...y.edges[2], from: 'A', to: 'C', tail: 'circle', head: 'arrow', reversed: true })
   assert.deepEqual([p.graph.edges.slice(0, 2), q.graph.edges.slice(0, 2)], [x.edges.slice(0, 2), y.edges.slice(0, 2)])
 })
 test('A1: a frame is at least its title + 4 wide; a narrower strip or block widens, its members centred', () => {
-  const T = '很长的子图标题', x = g('TB', ['X>A']), y = g('TB', ['B>C'])
+  const T = '很长的子图标题'
+const  x = g('TB', ['X>A'])
+const  y = g('TB', ['B>C'])
   x.clusters.push({ id: 's', title: T, dir: null, nodes: ['A'], clusters: [] })
   y.clusters.push({ id: 'h', title: T, dir: null, nodes: ['B', 'C'], clusters: [] })
-  const p = layoutGraph(x, S) as Placed, q = layoutGraph(y, S) as Placed
+  const p = layoutGraph(x, S) as Placed
+const  q = layoutGraph(y, S) as Placed
   assert.deepEqual([p.frames.get('s'), p.boxes.get('A'), p.boxes.get('X'), p.cols], [
     { row: 1, col: 0, rows: 6, cols: 18 }, { row: 5, col: 6, rows: 1, cols: 5 }, { row: 0, col: 6, rows: 1, cols: 5 }, 18])
   assert.deepEqual([q.frames.get('h'), q.boxes.get('B'), q.cols], [{ row: 0, col: 0, rows: 7, cols: 18 }, { row: 1, col: 6, rows: 1, cols: 5 }, 18])
@@ -147,11 +159,14 @@ test('A1: in LR a title runs along the ranks, so a strip too short for it grows 
   assert.deepEqual([p.frames.get('s'), p.boxes.get('A'), p.cols], [{ row: 0, col: 5, rows: 5, cols: 18 }, { row: 2, col: 13, rows: 1, cols: 5 }, 23])
 })
 test('A1: every frame is at least its title + 4 wide, with an empty or null title and for an empty cluster, in all four directions', () => {
-  for (const dir of ['TB', 'BT', 'LR', 'RL'] as const) for (const title of ['', null]) {
-    const x = g(dir, []), y = g(dir, ['A>B'])
+  for (const dir of ['TB', 'BT', 'LR', 'RL'] as const) { for (const title of ['', null]) {
+    const x = g(dir, [])
+const  y = g(dir, ['A>B'])
     x.clusters.push({ id: 'e', title, dir: null, nodes: [], clusters: [] })
     y.clusters.push({ id: 'm', title, dir: null, nodes: ['A'], clusters: [] }, { id: 'e', title, dir: null, nodes: [], clusters: [] })
-    const p = layoutGraph(x, S) as Placed, q = layoutGraph(y, S) as Placed, rows = dir === 'TB' || dir === 'BT' ? 2 : 4
+    const p = layoutGraph(x, S) as Placed
+const  q = layoutGraph(y, S) as Placed
+const  rows = dir === 'TB' || dir === 'BT' ? 2 : 4
     assert.deepEqual([p.frames.get('e'), p.cols, q.frames.get('e')!.cols, q.frames.get('m')!.cols >= 4], [{ row: 0, col: 0, rows, cols: 4 }, 4, 4, true])
-  }
+  } }
 })

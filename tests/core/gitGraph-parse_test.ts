@@ -20,7 +20,7 @@ test('A5.errors: what Mermaid throws on falls back, and so do repeated ids and a
   for (const [body, why] of [['commit\ncheckout nope', 'checkout:3'], ['commit\nbranch develop\ncheckout main\nmerge develop', 'merge:5'],
     ['branch develop\nbranch develop', 'branch:3'], ['commit id: "Boston"\ncommit id: "Boston"', 'repeat:3'], ['commit id: "a" id: "b"', 'repeat:2'],
     ['commit type: BOLD', 'syntax:2'], ['commit\nbranch b\ncommit\ncheckout main\nmerge b id: "m"\nbranch c\ncommit\ncherry-pick id: "m"', 'pick:9']] as const)
-    assert.deepEqual(P(`gitGraph\n${body}`), { reason: why }, body)
+    { assert.deepEqual(P(`gitGraph\n${body}`), { reason: why }, body) }
 })
 const E = (body: string) => P(`gitGraph\n${body}`).reason
 test('A5.errors: every merge gitGraphAst throws on', () => {
@@ -28,7 +28,7 @@ test('A5.errors: every merge gitGraphAst throws on', () => {
     ['branch b\ncheckout main\ncommit\nmerge b', 'merge:5'], ['commit\nbranch b\ncheckout main\nmerge b', 'merge:5'],
     ['commit\nbranch dev\ncommit\nbranch feat\ncheckout dev\ncommit\ncheckout feat\nmerge dev', 'merge:9'],   // feat's head sits on dev
     ['commit id: "a"\nbranch b\ncommit\ncheckout main\nmerge b id: "a"', 'repeat:6'], ['commit\nbranch main', 'branch:3'], ['checkout "nope"', 'checkout:2']] as const)
-    assert.equal(E(body), why, body)
+    { assert.equal(E(body), why, body) }
 })
 test('A5.errors: every cherry-pick gitGraphAst throws on', () => {
   const M = 'commit id: "Z"\nbranch dev\ncommit id: "A"\ncheckout main\ncommit id: "B"\nmerge dev id: "M"\nbranch rel\ncommit id: "R"\n'
@@ -36,7 +36,7 @@ test('A5.errors: every cherry-pick gitGraphAst throws on', () => {
     ['commit id: "a"\nbranch b\ncommit id: "x"\ncherry-pick id: "x"', 'pick:5'], ['branch e\ncheckout main\ncommit id: "a"\ncheckout e\ncherry-pick id: "a"', 'pick:6'],
     ['commit id: "x"\ncommit id: "a"\nbranch b\ncommit\ncherry-pick id: "a" parent: "a"', 'pick:6'], [M + 'cherry-pick id: "M" parent: "Z"', 'pick:10'],
     [M + 'cherry-pick id: "M"', 'pick:10']] as const)
-    assert.equal(E(body), why, body)
+    { assert.equal(E(body), why, body) }
   const tags = (b: string) => P(`gitGraph\n${b}`).events.at(-1).tags
   assert.deepEqual([tags(M + 'cherry-pick id: "M" parent: "B"'), tags(M + 'cherry-pick id: "M" parent: "A"')], [['cherry-pick:M|parent:B'], ['cherry-pick:M|parent:A']])
   assert.deepEqual(tags('commit id: "x"\ncommit id: "a"\nbranch b\ncommit\ncherry-pick id: "a" parent: "x"'), ['cherry-pick:a'])
@@ -63,7 +63,7 @@ test('A5.errors: ids, tags, parents and branch names are escaped; a #…; entity
   for (const [body, why] of [['commit id: "a<b"', 'html:2'], ['commit\ncommit tag: "x>y"', 'html:3'], ['branch "a<b"', 'html:2'],
     ['commit msg: "#9829;"', 'entity:2'], ['commit tag: "ﬂ°x"', 'entity:2'], ['title #9829;', 'entity:2'], ['title a<b', 'html:2'],
     ['commit id: "a‍b"', 'unsupported-char U+200D'], ['commit id: "a  b"', 'syntax:2'], ['commit tag: " t"', 'syntax:2'], ['branch "x "', 'syntax:2']] as const)
-    assert.equal(E(body), why, body)
+    { assert.equal(E(body), why, body) }
   const g = P('gitGraph\ncommit id: "Q&A" msg: "a<br>b" tag: "x y"\nbranch "分支"\ncommit id: "提交"')
   assert.deepEqual(g.events.slice(1).map((e: any) => [e.branch, e.id, e.msg, e.tags]), [['main', 'Q&A', 'a<br>b', ['x y']], ['分支', null, null, []], ['分支', '提交', null, []]])
 })
@@ -72,9 +72,9 @@ test('A5.errors: what Mermaid\'s lexer reads another way, or its grammar rejects
     'commit parent: "a"', 'branch', 'branch ""', 'branch commit', 'branch LR', 'branch 1x', 'branch titled', 'branch a/', 'branch 分支', 'branch a order: 01',
     'branch a order: -1', 'branch a tag: "t"', 'checkout', 'checkout main main', 'merge', 'commit\nmerge main msg: "x"', 'cherry-pick id: "a" type: NORMAL',
     'gitGraph', 'title', 'title "a %% b"', 'commit id: "a\\nb"', 'commit msg: "a\\\\"'])
-    assert.match(E(body), /^syntax:\d+$/, body)
+    { assert.match(E(body), /^syntax:\d+$/, body) }
   for (const body of ['commit "a" "b"', 'commit "a" msg: "b"', 'branch a order: 1 order: 2', 'commit\nbranch b\ncommit\ncheckout main\nmerge b type: NORMAL type: REVERSE'])
-    assert.match(E(body), /^repeat:\d+$/, body)
+    { assert.match(E(body), /^repeat:\d+$/, body) }
   const g = P('gitGraph\ncommit id:"a" tag:"t"\nbranch a-b_c.d/e order:3\ncheckout "main"\ncommit "m" type:REVERSE tag: "u" id: "b"')
   assert.deepEqual([g.branches[1], g.events.at(-1)], [{ name: 'a-b_c.d/e', order: 3 }, { kind: 'commit', branch: 'main', id: 'b', msg: 'm', tags: ['u'], type: 'REVERSE', line: 5 }])
 })
@@ -89,7 +89,7 @@ test('A5: accTitle and accDescr are ignored; an unclosed accDescr block falls ba
   assert.equal(E('commit\naccDescr {\nopen'), 'syntax:3')
   assert.equal(E('commit\naccDescr { a } x'), 'syntax:3')
   for (const h of ['gitGraph RL:', 'gitGraph LR', 'gitgraph', 'gitGraph :', 'gitGraph  TB:', 'gitGraph:LR'])
-    assert.deepEqual(P(`${h}\ncommit`), { reason: 'header' }, h)
+    { assert.deepEqual(P(`${h}\ncommit`), { reason: 'header' }, h) }
 })
 // X3. Mermaid 12.2.0's gitGraph grammar hides only WS /[ \t]+/ and ends a line at NEWLINE /\r?\n/: any other whitespace
 // (U+00A0, U+2028, a form feed) is a lexer error, between tokens or at either end of a line.
@@ -105,6 +105,6 @@ test('X3: whitespace other than space and tab fails, where Mermaid throws a lexe
 test('X4: whitespace Mermaid 12.2.0\'s Langium lexer rejects (U+00A0 and other non-ASCII) falls back, outside quotes', () => {
   for (const s of ['gitGraph\n \ncommit id: "a"', 'gitGraph \ncommit id: "a"', 'gitGraph\n commit id: "a"', 'gitGraph\ncommit\n　',
     'gitGraph\ncommit id: "a"﻿', 'gitGraph\n\v\ncommit'])
-    assert.deepEqual(P(s), { reason: 'whitespace' }, JSON.stringify(s))
+    { assert.deepEqual(P(s), { reason: 'whitespace' }, JSON.stringify(s)) }
   assert.equal(P(' gitGraph\ncommit id: "a"').events.at(-1).id, 'a')   // before the header, Mermaid's trimStart drops it
 })

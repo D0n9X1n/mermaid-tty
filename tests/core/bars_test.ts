@@ -9,7 +9,8 @@ test('A4: eighths are round(8·v/M·W), half up (pie-ok-01, pie-ok-03)', () => {
 })
 test('A4: cells floor, unclamped; rows ceil with a floor of 1 (xychart-ok-03); percentages half up', () => {
   assert.deepEqual([cellOf(dec(10), dec(30), 60), cellOf(dec(10), dec(30), 55), cellOf(dec(30), dec(30), 35)], [20, 18, 35])
-  const y0 = D('-0.34'), m = sub(D('2.4'), y0)
+  const y0 = D('-0.34')
+const  m = sub(D('2.4'), y0)
   assert.deepEqual(['+1.3', '.6', '2.4', '-.34'].map(v => rowAt(sub(D(v), y0), m, 8)), [5, 3, 8, 1])
   assert.deepEqual([percent(D('386'), D('486')), percent(D('1'), D('16')), percent(dec(1), dec(1))], ['79.4%', '6.3%', '100.0%'])
 })

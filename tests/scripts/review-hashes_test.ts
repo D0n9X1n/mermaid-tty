@@ -28,7 +28,7 @@ const parsed = (path: string): ReviewRecord =>
 
 test('VR.reviewers: a CRLF or lone-CR record parses as its LF twin, but each reviewed file hashes by its raw bytes, CR included', () => {
   assert.deepEqual(parseRecord('ci/reviews/x.md', REC), parsed('ci/reviews/x.md'))
-  for (const eol of ['\r\n', '\r']) assert.deepEqual(parseRecord('ci/reviews/x.md', REC.replaceAll('\n', eol)), parsed('ci/reviews/x.md'), JSON.stringify(eol))
+  for (const eol of ['\r\n', '\r']) { assert.deepEqual(parseRecord('ci/reviews/x.md', REC.replaceAll('\n', eol)), parsed('ci/reviews/x.md'), JSON.stringify(eol)) }
   const crlf = parseRecord('c.md', REC.replace(sha('A'), sha('A\r\n'))) as ReviewRecord
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\r\n')), [])
   assert.deepEqual(checkRecords([crlf], () => Buffer.from('A\n')), [`goldens/a.golden: recorded ${sha('A\r\n')} actual ${sha('A\n')}`])
@@ -47,22 +47,22 @@ test('VR.reviewers: front matter has exactly the keys scope, verdict, date and r
   assert.deepEqual(parseRecord('r.md', withFront(...FRONT.slice(0, 3), 'reviewer: [PM]')), keys(['scope', 'verdict', 'date', 'reviewer']))
   assert.deepEqual(parseRecord('r.md', withFront('scope vr-A', ...FRONT.slice(1))), { error: 'r.md: bad front matter line "scope vr-A"' })
   for (const text of [REC.slice('---\n'.length), REC.replace('\n---\n## Files', '\n## Files')])
-    assert.deepEqual(parseRecord('r.md', text), { error: 'r.md: no front matter between --- lines' })
+    { assert.deepEqual(parseRecord('r.md', text), { error: 'r.md: no front matter between --- lines' }) }
 })
 
 test('VR.reviewers: scope is a slug, verdict pass or fail, date a real YYYY-MM-DD, reviewers a [list] of names, none empty', () => {
   const at = (key: string, value: string) => parseRecord('r.md', withFront(...FRONT.map(l => (l.startsWith(`${key}:`) ? `${key}: ${value}` : l))))
   const bad = (key: string, value: string) => ({ error: `r.md: bad ${key} ${JSON.stringify(value)}` })
-  for (const scope of ['vr-C-flowchart', 'beauty', 'translation']) assert.equal((at('scope', scope) as ReviewRecord).scope, scope)
-  for (const scope of ['vr A', 'vr_A', '-vr', 'vr-A-', 'vr--A', '']) assert.deepEqual(at('scope', scope), bad('scope', scope))
+  for (const scope of ['vr-C-flowchart', 'beauty', 'translation']) { assert.equal((at('scope', scope) as ReviewRecord).scope, scope) }
+  for (const scope of ['vr A', 'vr_A', '-vr', 'vr-A-', 'vr--A', '']) { assert.deepEqual(at('scope', scope), bad('scope', scope)) }
   assert.equal((at('verdict', 'fail') as ReviewRecord).verdict, 'fail')
-  for (const verdict of ['Pass', 'passed', 'FAIL', '']) assert.deepEqual(at('verdict', verdict), bad('verdict', verdict))
+  for (const verdict of ['Pass', 'passed', 'FAIL', '']) { assert.deepEqual(at('verdict', verdict), bad('verdict', verdict)) }
   assert.equal((at('date', '2028-02-29') as ReviewRecord).date, '2028-02-29')
   for (const date of ['2026-11-2', '26-11-02', '2026-02-30', '2027-02-29', '2026-13-01', '2026-00-10', '2026-11-02x', 'x2026-11-02'])
-    assert.deepEqual(at('date', date), bad('date', date))
+    { assert.deepEqual(at('date', date), bad('date', date)) }
   assert.deepEqual((at('reviewers', '[PM, cross-family:gemini-3.5]') as ReviewRecord).reviewers, ['PM', 'cross-family:gemini-3.5'])
   for (const reviewers of ['[]', '[ ]', 'PM', '[PM', 'PM]', '[PM,]', '[PM, , gpt-6]', '[,PM]'])
-    assert.deepEqual(at('reviewers', reviewers), bad('reviewers', reviewers))
+    { assert.deepEqual(at('reviewers', reviewers), bad('reviewers', reviewers)) }
 })
 
 // The acceptance doc: the PM inspects the PNGs; a cross-family reviewer, cross-family:<model id> with an id of
@@ -71,7 +71,7 @@ test('VR.reviewers: vr-A reviewers include PM and a cross-family:<model id>', ()
   const at = (reviewers: string) => parseRecord('r.md', withFront(...FRONT.slice(0, 3), `reviewers: ${reviewers}`))
   assert.deepEqual((at('[PM, cross-family:gpt-6-astra]') as ReviewRecord).reviewers, ['PM', 'cross-family:gpt-6-astra'])
   for (const reviewers of ['[PM]', '[cross-family:gpt-6]', '[PM, cross-family:]', '[pm, cross-family:gpt-6]', '[PM, xcross-family:gpt-6]', '[PM, cross-family:gpt 6]'])
-    assert.deepEqual(at(reviewers), { error: `r.md: reviewers must include PM and a cross-family:<model id>; got ${JSON.stringify(reviewers)}` })
+    { assert.deepEqual(at(reviewers), { error: `r.md: reviewers must include PM and a cross-family:<model id>; got ${JSON.stringify(reviewers)}` }) }
 })
 
 // Beauty is the PM's review of the rendered GitHub page, alone; translation and every vr-* scope need a cross-family reviewer too.
@@ -80,7 +80,7 @@ test('VR.reviewers: PM always; only beauty may omit a cross-family reviewer', ()
   assert.deepEqual((at('beauty', '[PM]') as ReviewRecord).reviewers, ['PM'])
   assert.deepEqual(at('beauty', '[cross-family:gpt-6]'), { error: 'r.md: reviewers must include PM; got "[cross-family:gpt-6]"' })
   for (const scope of ['translation', 'vr-A'])
-    assert.deepEqual(at(scope, '[PM]'), { error: 'r.md: reviewers must include PM and a cross-family:<model id>; got "[PM]"' })
+    { assert.deepEqual(at(scope, '[PM]'), { error: 'r.md: reviewers must include PM and a cross-family:<model id>; got "[PM]"' }) }
 })
 
 // REC with its one Files row replaced by rows.
@@ -92,16 +92,17 @@ test('VR.reviewers: ## Files is a | path | sha256 | table whose rows each hold a
     [{ path: 'goldens/a.golden', sha256: sha('A') }, { path: 'core/themes.ts', sha256: sha('T') }])
   for (const row of [`| goldens/a.golden | ${sha('A').toUpperCase()} |`, `| goldens/a.golden | ${sha('A').slice(1)} |`, `| goldens/a.golden | ${sha('A')}0 |`,
     `|  | ${sha('A')} |`, `| goldens/a.golden | ${sha('A')} | x |`, '| goldens/a.golden |', 'goldens/a.golden was reviewed too', '### More'])
-    assert.deepEqual(parseRecord('r.md', withRows(ROW, row)), { error: `r.md: bad Files row ${JSON.stringify(row)}` })
+    { assert.deepEqual(parseRecord('r.md', withRows(ROW, row)), { error: `r.md: bad Files row ${JSON.stringify(row)}` }) }
   const table = { error: 'r.md: the Files table must start with | path | sha256 | and a |---|---| row' }
   for (const text of [REC.replace('| path | sha256 |\n', ''), REC.replace('|---|---|\n', ''), REC.replace('| path |', '| file |')])
-    assert.deepEqual(parseRecord('r.md', text), table)
+    { assert.deepEqual(parseRecord('r.md', text), table) }
   assert.deepEqual(parseRecord('r.md', REC.replace('## Files', '## Reviewed')), { error: 'r.md: no ## Files table' })
 })
 
 test('VR.passes: a fail verdict, or a pass of another scope, never satisfies requirePass', () => {
   const pass = parseRecord('p.md', REC) as ReviewRecord
-  const failed: ReviewRecord = { ...pass, verdict: 'fail' }, beauty: ReviewRecord = { ...pass, scope: 'beauty' }
+  const failed: ReviewRecord = { ...pass, verdict: 'fail' }
+const  beauty: ReviewRecord = { ...pass, scope: 'beauty' }
   assert.deepEqual(requirePass([failed, beauty], { 'vr-A': ['goldens/a.golden'] }), ['vr-A: goldens/a.golden'])
   assert.deepEqual(requirePass([failed, pass], { 'vr-A': ['goldens/a.golden'] }), [])
 })
@@ -172,7 +173,8 @@ test('VR.passes: --require-pass exits 1 naming each required path that no passin
 })
 
 test('VR.reviewers: --table prints a Files row for each file at or under each path, sorted, hashing raw bytes; a path with no files fails', t => {
-  const crlf = Buffer.from('flow\r\nchart\r\n'), latin1 = Buffer.from([0x63, 0x61, 0x66, 0xe9, 0x0a])
+  const crlf = Buffer.from('flow\r\nchart\r\n')
+const  latin1 = Buffer.from([0x63, 0x61, 0x66, 0xe9, 0x0a])
   const dir = tree(t, { 'goldens/z.golden': latin1, 'goldens/flowchart/b.golden': crlf, 'core/themes.ts': 'T\n' })
   const r = cli(dir, '--table', 'goldens/', './core/themes.ts')
   assert.deepEqual([r.status, r.stdout, r.stderr], [0, [`| core/themes.ts | ${sha('T\n')} |`, `| goldens/flowchart/b.golden | ${sha(crlf)} |`,
@@ -206,14 +208,14 @@ test('VR.reviewers: a second ## Files table fails the record, so --require-pass 
 test('VR.reviewers: a table row outside ## Files, under ## Notes, indented or before the heading, fails the record', () => {
   const stray = (line: string) => ({ error: `r.md: table row outside ## Files ${JSON.stringify(line)}` })
   for (const row of [`| absent | ${Z} |`, `  | absent | ${Z} |`])
-    assert.deepEqual(parseRecord('r.md', `${REC}${row}\n`), stray(row))
+    { assert.deepEqual(parseRecord('r.md', `${REC}${row}\n`), stray(row)) }
   const before = `| goldens/b.golden | ${Z} |`
   assert.deepEqual(parseRecord('r.md', REC.replace('## Files', () => `${before}\n## Files`)), stray(before))
 })
 
 test('VR.reviewers: a Files row whose path appears twice fails the record, whether its hash repeats or differs', () => {
   for (const twice of [ROW, `| goldens/a.golden | ${Z} |`])
-    assert.deepEqual(parseRecord('r.md', withRows(ROW, twice)), { error: 'r.md: goldens/a.golden appears twice in ## Files' })
+    { assert.deepEqual(parseRecord('r.md', withRows(ROW, twice)), { error: 'r.md: goldens/a.golden appears twice in ## Files' }) }
 })
 
 // The strict grammar still takes a real record: a title, blank lines, an aligned table, and prose sections that hold | mid-line.
@@ -249,12 +251,12 @@ const outside = (line: string) => ({ error: `r.md: table row outside ## Files ${
 test('VR.reviewers: a table outside ## Files fails the record, its delimiter row aligned, one hyphen a cell, or in a blockquote', () => {
   for (const table of [['path | sha256', ':--- | ---:', `absent | ${Z}`], ['path | sha256', ':-: | -', `absent | ${Z}`],
     ['> path | sha256', '> --- | ---', `> absent | ${Z}`]])
-    assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(table[1]!))
+    { assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(table[1]!)) }
 })
 
 test('VR.reviewers: a single-column table outside ## Files fails the record, with or without outer pipes', () => {
   const tables: [string[], string][] = [[['path |', '--- |', 'absent |'], '--- |'], [['path', ':---', 'absent'], ':---'], [['| path |', '|---|', '| absent |'], '| path |']]
-  for (const [table, line] of tables) assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(line))
+  for (const [table, line] of tables) { assert.deepEqual(parseRecord('r.md', withNotes(...table)), outside(line)) }
 })
 
 // A --- alone on a line is a thematic break, not a table's delimiter row.
@@ -267,12 +269,12 @@ const html = (line: string) => ({ error: `r.md: raw HTML ${JSON.stringify(line)}
 // A record is plain prose, list items and the one Files table: raw HTML could show a reader files the check never reads.
 test('VR.reviewers: an HTML table under ## Notes fails the record', () => {
   for (const tag of ['<table>', '<TABLE>'])
-    assert.deepEqual(parseRecord('r.md', withNotes(tag, `<tr><td>absent</td><td>${Z}</td></tr>`, '</table>')), html(tag))
+    { assert.deepEqual(parseRecord('r.md', withNotes(tag, `<tr><td>absent</td><td>${Z}</td></tr>`, '</table>')), html(tag)) }
 })
 
 test('VR.reviewers: an HTML comment, a lone closing tag or a processing instruction fails the record', () => {
   for (const line of [`<!-- | absent | ${Z} | -->`, '</details>', '<?x absent ?>'])
-    assert.deepEqual(parseRecord('r.md', withNotes('Notes.', line)), html(line))
+    { assert.deepEqual(parseRecord('r.md', withNotes('Notes.', line)), html(line)) }
 })
 
 test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes', () =>

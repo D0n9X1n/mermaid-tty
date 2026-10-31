@@ -14,12 +14,13 @@ export type Member = { text: string; method: boolean }
 // wrapAt, a member wraps at wrapAt - 1, so that a continuation, indented one cell and joined as its piece, still fits; a word
 // wider than that fails word-too-wide.
 export function classRows(id: string, members: readonly Member[], wrapAt: number | null): NodeRow[] | Fail {
-  const keys = [...members.keys()], order = [...keys.filter(k => !members[k]!.method), ...keys.filter(k => members[k]!.method)]
+  const keys = [...members.keys()]
+const  order = [...keys.filter(k => !members[k]!.method), ...keys.filter(k => members[k]!.method)]
   const rows: NodeRow[] = []
   for (const k of order) {
     const text = members[k]!.text
     const pieces: Piece[] | null = wrapAt === null ? [{ text, join: '' }] : wrap(text, wrapAt - 1)
-    if (!pieces) return fail('word-too-wide')
+    if (!pieces) { return fail('word-too-wide') }
     pieces.forEach((p, i) => rows.push({ text: p.text, role: 'label', align: 'left', id: `${id}.m${k}`, fixed: true,
       ...(i > 0 ? { indent: 1, join: p.join } : {}) }))
   }
@@ -46,7 +47,7 @@ export function erRows(id: string, attrs: readonly Attr[], wrapAt: number | null
   const lines: { k: number; text: Attr; join: Piece['join'] | null }[] = []
   for (const [k, a] of attrs.entries()) {
     const pieces: Piece[] | null = wrapAt === null ? [{ text: a.comment, join: '' }] : wrap(a.comment, wrapAt)
-    if (!pieces) return fail('word-too-wide')
+    if (!pieces) { return fail('word-too-wide') }
     pieces.forEach((p, i) => lines.push(i === 0 ? { k, text: { ...a, comment: p.text }, join: null }
       : { k, text: { type: '', name: '', keys: '', comment: p.text }, join: p.join }))
   }

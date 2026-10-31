@@ -14,12 +14,13 @@ type Part = { dirs: number[], weight: number | undefined }
 function parsePart(text: string, name: string): Part {
   const part: Part = { dirs: [], weight: undefined }
   for (const word of text.split(' ')) {
-    const dirs = DIRS[word], weight = WEIGHTS[word]
-    if (dirs) part.dirs.push(...dirs)
-    else if (weight !== undefined && part.weight === undefined) part.weight = weight
-    else throw new Error(`unexpected '${word}' in ${name}`)
+    const dirs = DIRS[word]
+const  weight = WEIGHTS[word]
+    if (dirs) { part.dirs.push(...dirs) }
+    else if (weight !== undefined && part.weight === undefined) { part.weight = weight }
+    else { throw new Error(`unexpected '${word}' in ${name}`) }
   }
-  if (part.dirs.length === 0) throw new Error(`no direction in ${name}`)
+  if (part.dirs.length === 0) { throw new Error(`no direction in ${name}`) }
   return part
 }
 
@@ -27,13 +28,13 @@ function parsePart(text: string, name: string): Part {
 // A part without a weight takes the other part's.
 function armsOf(name: string): string {
   const parts = name.split(' AND ').map(text => parsePart(text, name))
-  if (parts.length > 2) throw new Error(`more than one AND in ${name}`)
+  if (parts.length > 2) { throw new Error(`more than one AND in ${name}`) }
   const arms = [0, 0, 0, 0]
   for (const [i, part] of parts.entries()) {
     const weight = part.weight ?? parts[1 - i]?.weight
-    if (weight === undefined) throw new Error(`no weight in ${name}`)
+    if (weight === undefined) { throw new Error(`no weight in ${name}`) }
     for (const d of part.dirs) {
-      if (arms[d]) throw new Error(`arm named twice in ${name}`)
+      if (arms[d]) { throw new Error(`arm named twice in ${name}`) }
       arms[d] = weight
     }
   }
@@ -41,16 +42,16 @@ function armsOf(name: string): string {
 }
 
 const file = process.argv[2]
-if (!file) throw new Error('usage: node scripts/gen-box-table.ts <UnicodeData.txt> > core/box-table.ts')
+if (!file) { throw new Error('usage: node scripts/gen-box-table.ts <UnicodeData.txt> > core/box-table.ts') }
 const rows: string[] = []
 const seen = new Set<string>()
 for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
   const [hex, name] = line.split(';')
-  if (hex === undefined || name === undefined) continue
+  if (hex === undefined || name === undefined) { continue }
   const cp = parseInt(hex, 16)
-  if (!(cp >= 0x2500 && cp <= 0x257f) || SKIP.test(name)) continue
+  if (!(cp >= 0x2500 && cp <= 0x257f) || SKIP.test(name)) { continue }
   const arms = armsOf(name.replace(/^BOX DRAWINGS /, ''))
-  if (seen.has(arms)) throw new Error(`arms ${arms} named twice, again by ${name}`)
+  if (seen.has(arms)) { throw new Error(`arms ${arms} named twice, again by ${name}`) }
   seen.add(arms)
   rows.push(`  '${arms}': '${String.fromCodePoint(cp)}', // U+${hex} ${name}`)
 }

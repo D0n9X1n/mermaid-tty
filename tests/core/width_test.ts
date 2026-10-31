@@ -18,7 +18,7 @@ test('A4.width-table: widths', () => {
     ['é', 1], ['​', 0], ['读取配置文件', 12],
     ['Ａ', 2], ['　', 2], ['￥', 2], ['｡', 1],
     ['́', 0], ['⃝', 0], ['a⃝', 1],
-    ['‌', 0], ['⁠', 0], ['﻿', 0], ['a​b', 2], ['中‌文', 4], ['a⁠b', 2], ['a﻿b', 2]] as const) assert.equal(width(s), w, cps(s))
+    ['‌', 0], ['⁠', 0], ['﻿', 0], ['a​b', 2], ['中‌文', 4], ['a⁠b', 2], ['a﻿b', 2]] as const) { assert.equal(width(s), w, cps(s)) }
   assert.equal(isWide(0x1F680), true)
 })
 
@@ -28,34 +28,34 @@ const RANGES = [[0x1100, 0x115F], [0x23F0, 0x23F0], [0x26F2, 0x26F3], [0x26F5, 0
 
 test('A4.width-table: isWide is true at lo and hi, false at lo-1 and hi+1', () => {
   const bounds = (lo: number, hi: number) => assert.deepEqual([lo - 1, lo, hi, hi + 1].map(cp => isWide(cp)), [false, true, true, false], `${hex(lo)}..${hex(hi)}`)
-  for (const [lo, hi] of RANGES) bounds(lo, hi)
+  for (const [lo, hi] of RANGES) { bounds(lo, hi) }
   assert.deepEqual([WIDE[0], WIDE[1], WIDE.at(-2), WIDE.at(-1)], [0x1100, 0x115F, 0x30000, 0x3FFFD], 'the first and last ranges')
-  for (let i = 0; i < WIDE.length; i += 2) bounds(WIDE[i]!, WIDE[i + 1]!)
+  for (let i = 0; i < WIDE.length; i += 2) { bounds(WIDE[i]!, WIDE[i + 1]!) }
 })
 
 // Each case names its first offending code point: uppercase hex, at least 4 digits.
 test('A4.width-table: unsupported text falls back', () => {
   for (const [s, cp] of [['👨\u{200D}👩', 'U+200D'], ['✔\u{FE0F}', 'U+FE0F'], ['✔\u{FE0E}', 'U+FE0E'], ['a\u{FE00}', 'U+FE00'],
     ['a\u{E0100}', 'U+E0100'], ['🇨🇳', 'U+1F1E8'], ['👍🏽', 'U+1F3FD'], ['a\u0007b', 'U+0007'], ['a\u{200F}b', 'U+200F'],
-    ['a\nb', 'U+000A'], ['a­b', 'U+00AD'], ['a⁡b', 'U+2061']] as const) assert.equal(unsupported(s), cp, cps(s))
-  for (const s of ['plain', '中文', 'é', 'a​b']) assert.equal(unsupported(s), null, s)
+    ['a\nb', 'U+000A'], ['a­b', 'U+00AD'], ['a⁡b', 'U+2061']] as const) { assert.equal(unsupported(s), cp, cps(s)) }
+  for (const s of ['plain', '中文', 'é', 'a​b']) { assert.equal(unsupported(s), null, s) }
 })
 
 test('A4.width-table: of two offenders, the first is named', () => {
-  for (const [s, cp] of [['🇨🇳', 'U+1F1E8'], ['a‍\u0007b', 'U+200D'], ['a\u0007‍b', 'U+0007']] as const) assert.equal(unsupported(s), cp, cps(s))
+  for (const [s, cp] of [['🇨🇳', 'U+1F1E8'], ['a‍\u0007b', 'U+200D'], ['a\u0007‍b', 'U+0007']] as const) { assert.equal(unsupported(s), cp, cps(s)) }
 })
 
 test('A4.width-table: variation selectors U+FE00-FE0F and U+E0100-E01EF are unsupported', () => {
   for (const [cp, want] of [[0xFE00, 'U+FE00'], [0xFE0F, 'U+FE0F'], [0xE0100, 'U+E0100'], [0xE01EF, 'U+E01EF'],
-    [0xFDFF, null], [0xFE10, null], [0xE01F0, null]] as const) assert.equal(alone(cp), want, hex(cp))
+    [0xFDFF, null], [0xFE10, null], [0xE01F0, null]] as const) { assert.equal(alone(cp), want, hex(cp)) }
 })
 
 test('A4.width-table: regional indicators U+1F1E6-1F1FF are unsupported', () => {
-  for (const [cp, want] of [[0x1F1E6, 'U+1F1E6'], [0x1F1FF, 'U+1F1FF'], [0x1F1E5, null], [0x1F200, null]] as const) assert.equal(alone(cp), want, hex(cp))
+  for (const [cp, want] of [[0x1F1E6, 'U+1F1E6'], [0x1F1FF, 'U+1F1FF'], [0x1F1E5, null], [0x1F200, null]] as const) { assert.equal(alone(cp), want, hex(cp)) }
 })
 
 test('A4.width-table: emoji modifiers U+1F3FB-1F3FF are unsupported', () => {
-  for (const [cp, want] of [[0x1F3FB, 'U+1F3FB'], [0x1F3FF, 'U+1F3FF'], [0x1F3FA, null], [0x1F400, null]] as const) assert.equal(alone(cp), want, hex(cp))
+  for (const [cp, want] of [[0x1F3FB, 'U+1F3FB'], [0x1F3FF, 'U+1F3FF'], [0x1F3FA, null], [0x1F400, null]] as const) { assert.equal(alone(cp), want, hex(cp)) }
 })
 
 test('A4.width-table: plain pictographic emoji are wide, not unsupported', () => {
@@ -63,7 +63,7 @@ test('A4.width-table: plain pictographic emoji are wide, not unsupported', () =>
 })
 
 test('A4.width-table: U+200B, U+200C, U+2060 and U+FEFF are allowed', () => {
-  for (const s of ['​', '‌', '⁠', '﻿', 'a​b', 'a‌b', 'a⁠b', 'a﻿b']) assert.equal(unsupported(s), null, cps(s))
+  for (const s of ['​', '‌', '⁠', '﻿', 'a​b', 'a‌b', 'a⁠b', 'a﻿b']) { assert.equal(unsupported(s), null, cps(s)) }
 })
 
 test('X3.emphasis: an emphasis marker takes no column', async () => {

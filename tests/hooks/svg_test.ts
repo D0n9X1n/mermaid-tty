@@ -37,7 +37,7 @@ test('A5.errors: the review\'s five canned SVGs are unsafe', () => {
     [doc('<rect fill="&constructor;"/>'), 'entity'], [doc('<text>&constructor;</text>'), 'entity'],
     [doc('<rect fill="&#55296;"/>'), 'entity'], [doc('<text>&#xD800;</text>'), 'entity'],
     [doc('<text>&#182;&#223;</text>'), 'marker'], [doc(`<text>${ch(0xb6)}${ch(0xdf)}</text>`), 'marker'], [doc(`<rect id="a${ch(0xfb02)}"/>`), 'marker'],
-  ] as const) assert.equal(svgUnsafe(svg), reason, svg)
+  ] as const) { assert.equal(svgUnsafe(svg), reason, svg) }
 })
 
 test('A5.errors: an element inside <style> is unsafe, so its text is checked whole (review: @im<g/>port)', () => {
@@ -47,7 +47,7 @@ test('A5.errors: an element inside <style> is unsafe, so its text is checked who
 })
 test('A5.errors: an element not on the list, a prefixed one, or one in the wrong context is unsafe', () => {
   for (const el of ['use', 'image', 'script', 'set', 'animate', 'feImage', 'a', 'iframe', 'svg:set', 'x:image', 'Rect', 'div'])
-    assert.equal(svgUnsafe(doc(`<${el}/>`)), `element ${el}`, el)
+    { assert.equal(svgUnsafe(doc(`<${el}/>`)), `element ${el}`, el) }
   assert.equal(svgUnsafe(doc('<svg/>')), 'element svg')
   assert.equal(svgUnsafe(doc('<foreignObject><rect/></foreignObject>')), 'element rect')
   assert.equal(svgUnsafe(doc(`<foreignObject><div ${XHTML}><img/></div></foreignObject>`)), 'element img')
@@ -63,13 +63,13 @@ test('A5.errors: an attribute not on the list, or a namespace declaration anywhe
     [doc('<foreignObject><div xmlns="http://www.w3.org/2000/svg"/></foreignObject>'), 'namespace xmlns'],
     [doc(`<foreignObject><div ${XHTML}><span ${XHTML}/></div></foreignObject>`), 'namespace xmlns'],
     [doc(`<foreignObject><div ${XHTML} id="x"/></foreignObject>`), 'attribute id'],
-  ] as const) assert.equal(svgUnsafe(svg), reason, svg)
+  ] as const) { assert.equal(svgUnsafe(svg), reason, svg) }
 })
 
 test('A5.errors: comments, CDATA, a DTD and processing instructions are unsafe; so is an XML declaration not first', () => {
   for (const svg of [doc('<!-- x -->'), doc('<style><![CDATA[a{}]]></style>'), '<!DOCTYPE svg>' + CLEAN, doc('<?php x?>'),
     '<?xml-stylesheet href="x.css"?>' + CLEAN, ' <?xml version="1.0"?>' + CLEAN, CLEAN + '<!-- x -->'])
-    assert.equal(svgUnsafe(svg), 'markup', svg)
+    { assert.equal(svgUnsafe(svg), 'markup', svg) }
 })
 
 test('A5.errors: an entity XML does not define, a raw &, a control character or a lone surrogate is unsafe', () => {
@@ -77,7 +77,7 @@ test('A5.errors: an entity XML does not define, a raw &, a control character or 
     [doc('<text>a & b</text>'), 'entity'], [doc('<rect id="a&b"/>'), 'entity'], [doc('<text>&lpar;</text>'), 'entity'],
     [doc('<text>&#1;</text>'), 'entity'], [doc('<text>&#xFFFE;</text>'), 'entity'], [doc('<text>&#1114112;</text>'), 'entity'],
     [doc(`<text>a${ch(1)}</text>`), 'char'], [doc(`<text>a${ch(0xd800)}</text>`), 'char'], [doc(`<rect id="a${ch(0xdc00)}"/>`), 'char'],
-  ] as const) assert.equal(svgUnsafe(svg), reason, svg)
+  ] as const) { assert.equal(svgUnsafe(svg), reason, svg) }
 })
 
 test('A5.errors: a url( that is not exactly url(#id), or CSS that loads, escapes or hides, is unsafe in <style> and in values', () => {
@@ -85,7 +85,7 @@ test('A5.errors: a url( that is not exactly url(#id), or CSS that loads, escapes
     [doc('<rect fill="url(other.svg#paint)"/>'), 'url'], [doc('<rect fill="URL(x)"/>'), 'url'], [doc('<rect fill="url( #a)"/>'), 'url'],
     [doc('<rect fill="url(#a )"/>'), 'url'], [doc('<rect fill="url(\'#a&quot;)"/>'), 'url'], [doc('<rect fill="url(#)"/>'), 'url'],
     ['<svg><style>.a{background:url(file:///tmp/x.svg)}</style></svg>', 'url'], ['<svg><style>.a{fill:url(&#35;a)}</style></svg>', null],
-  ] as const) assert.equal(svgUnsafe(svg), reason, svg)
+  ] as const) { assert.equal(svgUnsafe(svg), reason, svg) }
   for (const token of ['@import', '@font-face', '@namespace', '\\', '/*', 'image(', 'image-set(', 'cross-fade(', 'element(', 'src('] as const) {
     assert.equal(svgUnsafe(`<svg><style>.a{x:${token}y}</style></svg>`), `css ${token}`, token)
     assert.equal(svgUnsafe(doc(`<rect style="x:${token.replace('\\', '&#92;')}y"/>`)), `css ${token}`, token)
@@ -96,5 +96,5 @@ test('A5.errors: a url( that is not exactly url(#id), or CSS that loads, escapes
 test('A5.errors: malformed XML is unsafe', () => {
   for (const svg of ['', '<svg>', doc('<g>'), doc('</g>'), CLEAN + CLEAN, CLEAN + 'x', 'x' + CLEAN, doc('<rect fill=red/>'), doc('<rect fill="a" fill="b"/>'),
     doc('<rect fill="a<b"/>'), doc('<rect fill="a"x="1"/>'), doc('<rect fill = "a" / >'), doc(`<rect${ch(0xa0)}fill="a"/>`)])
-    assert.equal(svgUnsafe(svg), 'syntax', JSON.stringify(svg))
+    { assert.equal(svgUnsafe(svg), 'syntax', JSON.stringify(svg)) }
 })

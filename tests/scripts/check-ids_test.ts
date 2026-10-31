@@ -98,11 +98,11 @@ test('A8.validation: check.ts and check-ids.ts run main() when argv[1] reaches t
     } finally { unlinkSync(link) }
   }))
 test('A8.validation: importing check.ts or check-ids.ts runs nothing, whether argv[1] is absent or names no file', () => {
-  for (const file of ['scripts/check.ts', 'scripts/check-ids.ts']) for (const argv of [[], ['no-such-file']]) {
+  for (const file of ['scripts/check.ts', 'scripts/check-ids.ts']) { for (const argv of [[], ['no-such-file']]) {
     const r = spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(pathToFileURL(resolve(file)).href)})`, ...argv], { encoding: 'utf8' })
     const what = `${file} ${argv.join(' ')}`
     assert.equal(r.status, 0, what); assert.equal(r.stdout, '', what); assert.doesNotMatch(r.stderr, /unknown check|Error/, what)
-  }
+  } }
 })
 test("A8.validation: a node step runs this Node, not PATH's, and returns its exit code", () =>
   assert.equal(emptyPath(() => run(['node', '-e', 'process.exit(3)'])), 3))
@@ -114,7 +114,7 @@ test('A8.validation: a claude step goes through lib/claude.ts, and a claude that
   assert.equal(run(['claude', '--version']), 0)
   const error = t.mock.method(console, 'error', () => {})
   assert.equal(emptyPath(() => claude(['--version'])), 1)
-  if (process.platform !== 'win32') assert.equal((error.mock.calls[0]?.arguments[0] as { code?: string }).code, 'ENOENT')
+  if (process.platform !== 'win32') { assert.equal((error.mock.calls[0]?.arguments[0] as { code?: string }).code, 'ENOENT') }
 })
 test('A8.validation: @nt runs the *_test.ts files under tests/, nested ones too, filtered to titles that start with the ID', () =>
   scratch({ ...DECOYS, 'tests/a_test.ts': nodeTest("test('B1: top level', () => { assert.ok(true) })"),
@@ -145,11 +145,11 @@ const UNASSERTING: [string, string][] = [
   ['an it placeholder in describe', "describe('A1: x', () => { it('placeholder') })"],
 ]
 for (const [what, tests] of UNASSERTING)
-  test(`A8.validation: @nt fails on a test that executes no assertion: ${what}`, () =>
+  { test(`A8.validation: @nt fails on a test that executes no assertion: ${what}`, () =>
     scratch({ 'tests/a_test.ts': nodeTest(tests) }, dir => {
       const r = check(dir, 'A1')
       assert.equal(r.status, 1); assert.deepEqual(r.steps, ['> @nt']); assert.match(r.stdout, /error: 'no assertion executed'/)
-    }))
+    })) }
 // Accepted: an EventEmitterAsyncResource runs its listeners in the async context it was made in, so a node:assert call in
 // a listener of one made outside the test counts for no test (count.ts). Such a test must assert in its own flow too.
 test('A8.validation: @nt fails on a test whose only assertion is in a listener of an EventEmitterAsyncResource made outside it', () =>
@@ -177,11 +177,11 @@ const ASSERTING: [string, Record<string, string>, string][] = [
     "test('A1: x', () => runInNewContext('new Promise(r => setTimeout(r, 1))', { setTimeout }).then(() => { assert.ok(1) }))"],
 ]
 for (const [what, files, tests] of ASSERTING)
-  test(`A8.validation: @nt passes a test that executes an assertion: ${what}`, () =>
+  { test(`A8.validation: @nt passes a test that executes an assertion: ${what}`, () =>
     scratch({ ...files, 'tests/a_test.ts': nodeTest(tests) }, dir => {
       const r = check(dir, 'A1')
       assert.equal(r.status, 0, r.stdout); assert.doesNotMatch(r.stdout, /^not ok/m)
-    }))
+    })) }
 // node:assert's Assert, from Node 24.6: an instance's assertion counts whether the instance has it, as a strict one has
 // equal, or inherits it, as each inherits deepStrictEqual; and the options reach node's Assert.
 test("A8.validation: @nt passes a test that executes an assertion: an Assert instance's own or inherited method, configured or not",
@@ -223,7 +223,7 @@ test('A8.validation: @nt matches a dotted ID only to itself: the dot is literal,
 test('A8.validation: @nt counts a passing test in a suite, matched by its own name or by its suite', () =>
   scratch({ 'tests/a_test.ts': nodeTest("describe('helpers', () => { it('A1: own name', () => { assert.ok(true) }) })",
     "describe('A3: suite', () => { describe('deeper', () => { it('by ancestry', () => { assert.ok(true) }) }) })") }, dir => {
-    for (const id of ['A1', 'A3']) assert.equal(check(dir, id).status, 0, id)
+    for (const id of ['A1', 'A3']) { assert.equal(check(dir, id).status, 0, id) }
   }))
 // The rows whose steps run the Node tests, in table order: all proves each one's ID from its one unfiltered run.
 const NT_IDS = ('A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 A6.hook-tests A6.command A7 A8.cache ' +

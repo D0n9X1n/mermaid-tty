@@ -35,7 +35,8 @@ test('A4: gantt-ok-04: milestones at start + duration/2 list 0 eighths; bars sta
   const r = X('dateFormat HH:mm\naxisFormat %H:%M\nInitial milestone : milestone, m1, 17:49, 2m\nTask A : 10m\nTask B : 5m\n' +
     'Final milestone : milestone, m2, 18:08, 4m', 120)
   assert.equal(r.step, 'natural')
-  const rows = text(r.drawing), left = 17 + 10 + 5
+  const rows = text(r.drawing)
+const  left = 17 + 10 + 5
   assert.deepEqual(rows.slice(0, 4).map(t => [t.slice(0, left), t.slice(left)]), [
     ['   Initial milestone 17:49 · 2m ', ' '.repeat(2) + '◆'], ['   Task A            10m        ', ' '.repeat(5) + '█'.repeat(26) + '▏'],
     ['   Task B            5m         ', ' '.repeat(31) + '█'.repeat(13)], ['   Final milestone   18:08 · 4m ', ' '.repeat(54) + '◆']])
@@ -72,6 +73,6 @@ test('A4: a section splits at every <br> spelling; a task name draws <br>, tags 
 // X2: Mermaid 12.2.0 draws no header for a section with no task, so one falls back wherever it stands.
 test('A5.errors: a section with no task falls back', () => {
   for (const body of ['section A\nT :2024-01-01, 1d\nsection B', 'section A\nsection B\nT :2024-01-01, 1d', 'T :2024-01-01, 1d\nsection A'])
-    assert.deepEqual(X(body, 80), { reason: 'section-empty' }, body)
+    { assert.deepEqual(X(body, 80), { reason: 'section-empty' }, body) }
   assert.equal(X('section A\nT :2024-01-01, 1d\nsection B\nU :2024-01-02, 1d', 80).step, 'natural')
 })

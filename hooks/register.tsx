@@ -28,9 +28,10 @@ export const register: Register = (on, options) => {
   // CommandRunInput types args as a string, yet $.command.run passes any value as given
   // (undefined when left out); parseModeArgs coerces none of them.
   on('command.run', { command: 'mermaid-tty' }, async ($, e) => {
-    const a = parseModeArgs(e.args), cur = await mode($)
-    if ('error' in a) return { text: a.error }
-    if ('report' in a) return { text: modeReply(cur, false) }
+    const a = parseModeArgs(e.args)
+const  cur = await mode($)
+    if ('error' in a) { return { text: a.error } }
+    if ('report' in a) { return { text: modeReply(cur, false) } }
     await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false); $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
   })
@@ -39,15 +40,17 @@ export const register: Register = (on, options) => {
   // sends the reply through next(e) unchanged, so Claude Code draws it as it would without the plugin.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     const plan = await safePlan($, e, theme, () => mode($))
-    if (!plan) return next(e)
-    const { parts, Box, Text, Image } = plan, kids: RenderElement[] = []
-    let first = e.props.isFirstOfReply, n = 0
+    if (!plan) { return next(e) }
+    const { parts, Box, Text, Image } = plan
+const  kids: RenderElement[] = []
+    let first = e.props.isFirstOfReply
+let  n = 0
     for (const p of parts) {
-      if (!('prose' in p) && first) kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))  // D5: keep the bullet
-      if ('picture' in p) kids.push(<Image key={`mermaid-${n++}`} source={{ png: p.picture.png }} columns={p.picture.columns} rows={p.picture.rows} alt="mermaid diagram" />)
-      else if ('rows' in p) kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
-        <Text wrap="truncate-end">{row.map(({ text, role: _r, ...style }) => <Text {...style}>{text}</Text>)}</Text>)}</Box>)
-      else kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } }))
+      if (!('prose' in p) && first) { kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } })) }  // D5: keep the bullet
+      if ('picture' in p) { kids.push(<Image key={`mermaid-${n++}`} source={{ png: p.picture.png }} columns={p.picture.columns} rows={p.picture.rows} alt="mermaid diagram" />) }
+      else if ('rows' in p) { kids.push(<Box key={`mermaid-${n++}`} flexDirection="column">{p.rows.map(row =>
+        <Text wrap="truncate-end">{row.map(({ text, role: _r, ...style }) => <Text {...style}>{text}</Text>)}</Text>)}</Box>) }
+      else { kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } })) }
       first = false
     }
     return <Box flexDirection="column">{kids}</Box>

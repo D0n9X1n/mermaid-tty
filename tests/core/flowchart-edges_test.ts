@@ -7,7 +7,7 @@ test('A1: edge kinds, ends and labels', () => {
     ['A<-->B', 'solid arrow arrow '], ['A--oB', 'solid none circle '], ['A--xB', 'solid none cross '], ['A---B', 'solid none none '],
     ['A~~~B', 'invisible none none '], ['A-->|yes|B', 'solid none arrow yes'], ['A-- yes -->B', 'solid none arrow yes'],
     ['A-. maybe .->B', 'dotted none arrow maybe'], ['A== big ==>B', 'thick none arrow big']] as const)
-    assert.equal(k(E(src)[0]), want, src)
+    { assert.equal(k(E(src)[0]), want, src) }
 })
 test('A1: chains, & fan-out and fan-in, minlen, edge IDs', () => {
   assert.deepEqual(E('A --> B --> C').map((e: any) => e.from + e.to), ['AB', 'BC'])
@@ -48,13 +48,13 @@ test('A1: matrix rows flowchart-ok-23…33, -46 and -47 parse to their graphs', 
 test('A1: a tail mark draws the tail end, as in o--o, x--x, <==> and <-.->', () => {
   for (const [src, want] of [['A o--o B', 'solid circle circle '], ['A x--x B', 'solid cross cross '], ['A <==> B', 'thick arrow arrow '],
     ['A <-.-> B', 'dotted arrow arrow ']] as const)
-    assert.equal(k(E(src)[0]), want, src)
+    { assert.equal(k(E(src)[0]), want, src) }
 })
 
 test('A1: a text form ends in o, x or no mark, as a basic form does', () => {
   for (const [src, want] of [['A-- t --oB', 'solid none circle t'], ['A== t ==xB', 'thick none cross t'], ['A-. t .-oB', 'dotted none circle t'],
     ['A-- t ---B', 'solid none none t']] as const)
-    assert.equal(k(E(src)[0]), want, src)
+    { assert.equal(k(E(src)[0]), want, src) }
 })
 
 test('A1: each link of a chain joins every node of the group before it to every node of the group after it, in source order', () => {
@@ -171,6 +171,6 @@ test('A1: a label that one "…" encloses whole still loses those quotes and kee
 
 // How Mermaid draws a label on ~~~ is unknown, so such a diagram falls back to its source; an unlabelled ~~~ parses (-46).
 test('A5.errors: a label on an invisible link fails invisible-label; an unlabelled ~~~ still parses', () => {
-  for (const s of ['A ~~~|secret| B', 'A ~~~~ |secret| B']) assert.deepEqual(P(`flowchart TD\n${s}`), { reason: 'invisible-label' }, s)
+  for (const s of ['A ~~~|secret| B', 'A ~~~~ |secret| B']) { assert.deepEqual(P(`flowchart TD\n${s}`), { reason: 'invisible-label' }, s) }
   assert.deepEqual(P('flowchart TD\nA ~~~ B').edges.map((e: { style: string }) => e.style), ['invisible'])
 })

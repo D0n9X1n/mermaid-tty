@@ -1,5 +1,6 @@
 import { test, expect } from 'claude-code/testing'
-const FC = '```mermaid\nflowchart TD\nA --> B\n```\n', RUN = ($: any, args: string) => $.command.run({ command: 'mermaid-tty', args })
+const FC = '```mermaid\nflowchart TD\nA --> B\n```\n'
+const  RUN = ($: any, args: string) => $.command.run({ command: 'mermaid-tty', args })
 test('A6.command: source passes replies through; diagram draws again; bare reports', async ($, on) => {
   const logs: string[] = []; on('ui.log', async (_$: any, e: any) => { logs.push(e.text); return { value: undefined } })
   on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => { const { Text } = $.ui.resolve(e); return <Text>{e.props.text}</Text> })
@@ -51,7 +52,9 @@ test('A6.command: a bare run with args left out reports the mode', async ($: any
 // $.command.run passes args as given. Each non-string gets the usage and leaves the mode as it
 // was, checked from both modes; a run that rejects is recorded as its message.
 test('A6.command: an argument that is not a string replies with the usage and keeps the mode', async ($, on) => {
-  echo(on); const ui = await mount($), got: unknown[] = [], want: unknown[] = []
+  echo(on); const ui = await mount($)
+const  got: unknown[] = []
+const  want: unknown[] = []
   for (const m of ['diagram', 'source']) {
     await RUN($, m)
     for (const args of [['source'], { toString: null }, 42, null]) {

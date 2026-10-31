@@ -9,9 +9,9 @@ import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 test('A8.portability: forbidden tokens and imports are found; comments and strings are not', () => {
   for (const s of ["import x from 'node:fs'", "import y from 'lodash'", 'process.env.X', 'const t = `a ${process.env.X} b`', "require('a')", 'Buffer.from(s)', 'window.x',
-    'document.x', 'eval(s)', 'new Function(s)', "await import('./a.ts')", "import { w } from './width'"]) assert.notDeepEqual(scanSource(s), [], s)
+    'document.x', 'eval(s)', 'new Function(s)', "await import('./a.ts')", "import { w } from './width'"]) { assert.notDeepEqual(scanSource(s), [], s) }
   for (const s of ["import type { Register } from 'claude-code'", "import { width } from './width.ts'", '// process.env', "const s = 'require(x)'", 'const t = `process.env is ${n} here`'])
-    assert.deepEqual(scanSource(s), [], s)
+    { assert.deepEqual(scanSource(s), [], s) }
   assert.deepEqual(scanRepo('.'), [])
 })
 test('A8.platforms: .gitattributes keeps text files LF', () => assert.match(readFileSync('.gitattributes', 'utf8'), /^\* text=auto eol=lf$/m))
@@ -136,7 +136,7 @@ const RULES: [string, [string, string[]][]][] = [
     ['$ .process.run(x); x.process', ['1 process', '1 process']]]],
 ]
 for (const [rule, cases] of RULES)
-  test(`A8.portability: ${rule}`, () => { for (const [s, want] of cases) assert.deepEqual(scanSource(s), want, s) })
+  { test(`A8.portability: ${rule}`, () => { for (const [s, want] of cases) { assert.deepEqual(scanSource(s), want, s) } }) }
 
 // Ordinary code that mixes regex literals, comparisons, generic calls, arrows, TSX, ?. and templates. Each
 // FLAGGED case ends with process.cwd(), which the scan finds on its last line, and finds nothing else;
@@ -228,11 +228,13 @@ test("A8.no-build: testCount reads the last 'ℹ tests N' line of node --test's 
 // and arguments, and TMPDIR is a dir of the test's own, so the clone's removal can be seen.
 const FRESH_CLONE = fileURLToPath(new URL('../../scripts/fresh-clone.ts', import.meta.url))
 for (const smoke of [0, 3])
-  test(`A8.no-build: fresh-clone.ts runs each step in a clone of HEAD, fails when one fails (smoke exits ${smoke}), and removes the clone`, { skip: POSIX_ONLY }, () =>
+  { test(`A8.no-build: fresh-clone.ts runs each step in a clone of HEAD, fails when one fails (smoke exits ${smoke}), and removes the clone`, { skip: POSIX_ONLY }, () =>
     scratch({ 'repo/package.json': '{ "type": "module" }\n',
       'repo/tests/a_test.ts': "import test from 'node:test'\nimport assert from 'node:assert/strict'\ntest('a', () => assert.ok(true))\n",
       'repo/scripts/smoke.ts': `console.log('smoke cwd ' + process.cwd()); process.exitCode = ${smoke}\n` }, dir => {
-      const repo = join(dir, 'repo'), tmp = join(dir, 'tmp'), log = join(dir, 'claude.log')
+      const repo = join(dir, 'repo')
+const  tmp = join(dir, 'tmp')
+const  log = join(dir, 'claude.log')
       writeFakeClaude(dir, `#!/bin/sh\necho "$(pwd -P) $*" >> '${log}'\n`)
       const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false',
         '-c', 'core.hooksPath=/dev/null', ...args], { cwd: repo, stdio: 'pipe' })
@@ -252,4 +254,4 @@ for (const smoke of [0, 3])
         `fresh-clone: ${smoke ? 'FAIL' : 'ok'} node scripts/smoke.ts: exit ${smoke}`,
       ])
       assert.deepEqual(readdirSync(tmp), [])
-    }))
+    })) }

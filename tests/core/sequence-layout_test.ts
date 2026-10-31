@@ -7,11 +7,11 @@ const L = (t: string) => sequence.layout(parseSequence(readSource(`sequenceDiagr
 test('A2: base design: caps, lifelines, solid and dotted, self-message, activation, note', () => {
   const d = L('actor U as User\nparticipant S as Server\nU->>+S: req\nS-->>-U: res\nS->>S: self\nNote over U,S: both')
   assert.equal(validate(d), null); const t = text(d).join('\n')
-  for (const s of ['([ User ])', '[ Server ]', '─►', '◄┄', '─┐', '◄┘', '┃', 'both']) assert.ok(t.includes(s), s)
+  for (const s of ['([ User ])', '[ Server ]', '─►', '◄┄', '─┐', '◄┘', '┃', 'both']) { assert.ok(t.includes(s), s) }
 })
 test('A2: frames and autonumber', () => {
   const d = L('autonumber 10 5\nalt ok\nA->>B: a\nelse no\nA->>B: b\nend'); assert.equal(validate(d), null)
-  const t = text(d).join('\n'); for (const s of ['alt [ok]', '[no]', '10. a', '15. b']) assert.ok(t.includes(s), s)
+  const t = text(d).join('\n'); for (const s of ['alt [ok]', '[no]', '10. a', '15. b']) { assert.ok(t.includes(s), s) }
 })
 test('A2: the registry resolves sequenceDiagram', () => assert.equal((lookup('sequenceDiagram') as any).type, 'sequence'))
 test('A2: a title statement draws a bold title row', () => { const d = L('title Checkout\nA->>B: x'); assert.equal(validate(d), null); assert.match(text(d)[0]!, /Checkout/) })
@@ -39,13 +39,13 @@ test('A2: autonumber numbers each message start + i × step, and a dotted reply 
   const d = L('autonumber 10 5\nA->>B: a\nA->>A: b\nB-->>A: c')
   assert.equal(validate(d), null)
   const t = text(d).join('\n')
-  for (const s of ['10. a', '15. b', '20. c', '◄┄']) assert.ok(t.includes(s), s)
+  for (const s of ['10. a', '15. b', '20. c', '◄┄']) { assert.ok(t.includes(s), s) }
 })
 test('A2: autonumber off draws a message unnumbered, and a restart draws from its own start', () => {
   const d = L('autonumber 10 5\nA->>B: a\nautonumber off\nA->>B: b\nautonumber\nA->>B: c\nautonumber 3\nA->>B: d')
   assert.equal(validate(d), null)
   const t = text(d).join('\n')
-  for (const s of ['10. a', '20. c', '3. d']) assert.ok(t.includes(s), s)
+  for (const s of ['10. a', '20. c', '3. d']) { assert.ok(t.includes(s), s) }
   assert.ok(!/\d\. b/.test(t), 'b is unnumbered')
 })
 test('A2: a note left of and right of a participant sits one column off its lifeline', () => {
@@ -84,7 +84,7 @@ test('A2: every frame type is titled type [cond]; each and/option/else section a
     'critical lock\nA->>B: c\noption fail\nA->>B: f\nend\nbreak stop\nA->>B: s\nend\nalt\nA->>B: a\nelse\nA->>B: b\nend')
   assert.equal(validate(d), null)
   const t = text(d).join('\n')
-  for (const s of ['opt [maybe]', 'loop [every 5s]', 'par [one]', '[two]', 'critical [lock]', '[fail]', 'break [stop]', '┌─alt─', '├┄┄┄']) assert.ok(t.includes(s), s)
+  for (const s of ['opt [maybe]', 'loop [every 5s]', 'par [one]', '[two]', 'critical [lock]', '[fail]', 'break [stop]', '┌─alt─', '├┄┄┄']) { assert.ok(t.includes(s), s) }
 })
 test('A2: rect draws an untitled note frame, and box a titled frame around its pills from above the header', () => {
   const d = L('box Back\nparticipant A\nparticipant B\nend\nrect rgb(1,2,3)\nA->>B: x\nend')
@@ -123,12 +123,12 @@ test('A2: a participant a self-message creates has its pill on that message\'s r
   assert.deepEqual(text(r.drawing), ['[ A ]', '  │ before', '  │─┐', '  │◄┘', '  │             init', '  │       [ B ]─┐', '  │         │◄──┘'])
 })
 test('A2: create falls back unless the next message is sent to the created participant', () => {
-  for (const t of ['create participant B\nA->>C: x\nA->>B: y', 'create participant B\nB->>A: x']) assert.deepEqual(X(t), { reason: 'create' }, t)
+  for (const t of ['create participant B\nA->>C: x\nA->>B: y', 'create participant B\nB->>A: x']) { assert.deepEqual(X(t), { reason: 'create' }, t) }
 })
 test('A2: autonumber falls back when a number, its start or its step is not a safe integer', () => {
   assert.equal(X('autonumber 9007199254740989\nA->>B: a\nA->>B: b\nA->>B: c').step, 'natural')
   for (const t of ['autonumber 9007199254740991\nA->>B: a\nA->>B: b\nA->>B: c', 'autonumber 1 9007199254740992\nA->>B: a', 'autonumber 9007199254740993\nA->>B: a'])
-    assert.deepEqual(X(t), { reason: 'autonumber' }, t)
+    { assert.deepEqual(X(t), { reason: 'autonumber' }, t) }
 })
 test('A2: a box with no participants falls back', () => assert.deepEqual(X('box Lost\nend\nA->>B: hi'), { reason: 'empty-box' }))
 test('A2: a leftward cross, dotted or solid, puts its x beside the recipient on the left', () => {
@@ -143,31 +143,33 @@ test('A2: a message label crossing a box border sits between two borders, never 
 })
 // Each label cell (text, cont, fill or cap) on another owner's frame border, or beside one of its sides.
 function touching(d: any): string[] {
-  const rects = new Map<string, number[]>(), out: string[] = []
+  const rects = new Map<string, number[]>()
+const  out: string[] = []
   d.cells.forEach((row: any[], y: number) => row.forEach((c: any, x: number) => {
-    if (c?.kind !== 'frame') return
+    if (c?.kind !== 'frame') { return }
     const b = rects.get(c.owners[0]) ?? [y, y, x, x]
     rects.set(c.owners[0], [Math.min(b[0]!, y), Math.max(b[1]!, y), Math.min(b[2]!, x), Math.max(b[3]!, x)])
   }))
   d.cells.forEach((row: any[], y: number) => row.forEach((c: any, x: number) => {
-    if (!['text', 'cont', 'fill', 'cap'].includes(c?.kind)) return
+    if (!['text', 'cont', 'fill', 'cap'].includes(c?.kind)) { return }
     for (const [o, [t, b, l, r]] of rects) {
       const on = y === t || y === b ? x >= l! && x <= r! : y > t! && y < b! && [l!, r!].some(k => Math.abs(x - k) <= 1)
-      if (on && o !== c.owners[0]) out.push(`${c.owners[0]} r${y} c${x} on ${o}`)
+      if (on && o !== c.owners[0]) { out.push(`${c.owners[0]} r${y} c${x} on ${o}`) }
     }
   }))
   return out
 }
 test('A2: no sequence golden draws a label on a frame border or beside one of its sides', () => {
-  for (const f of readdirSync('fixtures/sequence').filter(f => f.includes('-ok-'))) for (const w of [60, 80, 120]) {
+  for (const f of readdirSync('fixtures/sequence').filter(f => f.includes('-ok-'))) { for (const w of [60, 80, 120]) {
     const r = explain(readFileSync(`fixtures/sequence/${f}`, 'utf8'), { columns: w, theme: 'mono' }) as any
     assert.deepEqual(touching(r.drawing), [], `${f}@${w}`)
-  }
+  } }
 })
 // vr-A: mono has no fill, so a note must show itself by glyphs: ┆ caps either side of each line, the note's own.
 const mono = (t: string) => (explain(`sequenceDiagram\n${t}`, { columns: 60, theme: 'mono' }) as any).drawing
 test('A2: in mono a note reads apart from a message label: Note right of A then A->>B differs from A->>B: n<br/>x', () => {
-  const a = mono('Note right of A: n\nA->>B: x'), b = mono('A->>B: n<br/>x')
+  const a = mono('Note right of A: n\nA->>B: x')
+const  b = mono('A->>B: n<br/>x')
   assert.equal(validate(a), null); assert.equal(validate(b), null)
   assert.notDeepEqual(text(a), text(b))
 })
@@ -183,7 +185,8 @@ test('A2: each note line is framed by ┆ caps in the note role, owned by the no
 })
 test('A2: validate rejects a note ┆ cap removed, given to another owner, or redrawn', () => {
   for (const src of ['Note right of A: n\nA->>B: x', 'A->>B: hi\nNote over A,B: n<br/>m', 'A->>B: hi\nNote left of A: n']) {
-    const d = mono(src), caps = d.cells.flatMap((row: any[], r: number) => row.flatMap((c: any, k: number) => (c?.kind === 'cap' && /^n\d/.test(c.owners[0]) ? [[r, k]] : [])))
+    const d = mono(src)
+const  caps = d.cells.flatMap((row: any[], r: number) => row.flatMap((c: any, k: number) => (c?.kind === 'cap' && /^n\d/.test(c.owners[0]) ? [[r, k]] : [])))
     assert.ok(caps.length >= 2, src)
     for (const [r, k] of caps) {
       const old = d.cells[r][k]
@@ -221,7 +224,7 @@ test('A2: in a boxed diagram, a frame Mermaid draws other than we would falls ba
     `${TEAM}participant C\nrect\nrect\nactivate C\nA->>B: hi\ndeactivate C\nend\nend`,
     `${TEAM}rect\nrect\nrect\nA->>A: self\nA->>B: next\nend\nend\nend`,
     `${TEAM}${nest(10, 'A->>B: hi')}`,
-    'box L\nparticipant A\nend\nbox R\nparticipant B\nend\nrect\nA->>B: hi\nend']) for (const w of [60, 80, 120]) assert.deepEqual(X(t, w), { reason: 'box-frame' }, `${t}@${w}`)
+    'box L\nparticipant A\nend\nbox R\nparticipant B\nend\nrect\nA->>B: hi\nend']) { for (const w of [60, 80, 120]) { assert.deepEqual(X(t, w), { reason: 'box-frame' }, `${t}@${w}`) } }
 })
 test('A2: nine nested rects inside a box draw: Mermaid keeps the outer one 9 px inside the box', () => {
   const r = X(`${TEAM}${nest(9, 'A->>B: hi')}`, 120)
@@ -233,7 +236,7 @@ test('A2: in a boxed diagram, a frame a wide note widens over a lifeline beyond 
   const t = `participant C\nparticipant D\nparticipant E\nparticipant F\nparticipant G\nparticipant H\nbox Team\nparticipant A\nend\nrect\nNote over C,D: ${'x'.repeat(20)}\nend\nE->>F: x`
   assert.deepEqual(L(t), { reason: 'box-frame' })
   // The ladder reports its last step's reason: wrap cannot fit the 20-letter word.
-  for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `@${w}`)
+  for (const w of [60, 80, 120]) { assert.ok('reason' in X(t, w), `@${w}`) }
 })
 // Without a box, a frame covers exactly the lifelines Mermaid 12.2.0's frame covers, or the diagram falls back. Mermaid
 // sizes a frame to its contents' bounds, 10 px beyond them per frame open inside it; a self-message reaches max(text / 2,
@@ -244,7 +247,7 @@ test('A2: without a box, a frame that a self-message or a wide note widens over 
   // Repro 2: Mermaid's rect covers B only, x=175 to 375; ours enclosed A to D.
   const two = 'participant A\nparticipant B\nparticipant C\nparticipant D\nrect\nNote over B: xxxxxxxxxxxxxxxxxxxx\nend\nC->>D: x'
   assert.deepEqual(L(two), { reason: 'frame-extent' })
-  for (const t of ['participant A\nparticipant B\nrect\nrect\nA->>A: self\nend\nend', two]) for (const w of [60, 80, 120]) assert.ok('reason' in X(t, w), `${t}@${w}`)
+  for (const t of ['participant A\nparticipant B\nrect\nrect\nA->>A: self\nend\nend', two]) { for (const w of [60, 80, 120]) { assert.ok('reason' in X(t, w), `${t}@${w}`) } }
 })
 test('A2: without a box, a frame whose Mermaid edge turns on text width beside a lifeline falls back', () => {
   for (const t of [
@@ -254,7 +257,7 @@ test('A2: without a box, a frame whose Mermaid edge turns on text width beside a
     'participant A\nparticipant B\nparticipant C\nrect\nNote right of A: n\nA->>B: x\nend\nB->>C: y',
     // A note over one lifeline, 5 frames deep: 50 px beyond it, as far as its gap is sure to reach.
     `participant A\nparticipant B\nparticipant C\nA->>C: x\n${'rect\n'.repeat(5)}Note over B: n\n${'end\n'.repeat(5)}`,
-  ]) assert.deepEqual(L(t), { reason: 'frame-extent' }, t)
+  ]) { assert.deepEqual(L(t), { reason: 'frame-extent' }, t) }
 })
 test('A2: without a box, a self-message or a one-lifeline note draws where Mermaid\'s gaps keep its frame off the next lifeline', () => {
   for (const t of ['participant A\nparticipant B\nrect\nA->>A: self\nA->>B: x\nend', 'participant A\nparticipant B\nrect\nNote right of A: n\nA->>B: x\nend',

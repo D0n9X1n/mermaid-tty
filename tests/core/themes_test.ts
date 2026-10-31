@@ -6,9 +6,9 @@ const T = { default: 'suggestion warning inactive claude text permission subtle'
   nord: '#88C0D0 #EBCB8B #D8DEE9 #BF616A #A3BE8C #B48EAD #5E81AC', dracula: '#8BE9FD #F1FA8C #F8F8F2 #FF79C6 #50FA7B #BD93F9 #FFB86C',
   gruvbox: '#83A598 #FABD2F #928374 #FB4934 #B8BB26 #D3869B #FE8019', solarized: '#268BD2 #B58900 #93A1A1 #CB4B16 #EEE8D5 #D33682 #2AA198' }
 test('A7: the 7 role colors under the default mapping and each palette', () => {
-  for (const [t, cs] of Object.entries(T)) cs.split(' ').forEach((c, i) => assert.equal(THEMES[t as 'nord'].roles[R[i]!], c, `${t}.${R[i]}`))
-  for (const r of R) assert.equal(THEMES.mono.roles[r], null)
-  for (const p of Object.values(THEMES)) assert.equal(Object.keys(p.series).length, 8)
+  for (const [t, cs] of Object.entries(T)) { cs.split(' ').forEach((c, i) => assert.equal(THEMES[t as 'nord'].roles[R[i]!], c, `${t}.${R[i]}`)) }
+  for (const r of R) { assert.equal(THEMES.mono.roles[r], null) }
+  for (const p of Object.values(THEMES)) { assert.equal(Object.keys(p.series).length, 8) }
   assert.equal(palette('nope').name, 'default'); assert.equal(THEMES.mono.fill, false)
 })
 test('VR.in-ci: color math and curated palettes', () => {
@@ -36,8 +36,8 @@ test('A7: every field of every palette matches plan A\'s table', () => {
   assert.deepEqual(Object.keys(THEMES).sort(), Object.keys(MORE).sort())
 })
 test('A7: palette() returns the named theme; any other name, inherited ones too, gives default', () => {
-  for (const t of Object.keys(MORE)) assert.equal(palette(t), THEMES[t as ThemeName], t)
-  for (const n of ['', 'nope', 'constructor', 'toString', '__proto__', 'hasOwnProperty']) assert.equal(palette(n), THEMES.default, n)
+  for (const t of Object.keys(MORE)) { assert.equal(palette(t), THEMES[t as ThemeName], t) }
+  for (const n of ['', 'nope', 'constructor', 'toString', '__proto__', 'hasOwnProperty']) { assert.equal(palette(n), THEMES.default, n) }
 })
 
 // WCAG 2 references: each channel alone on black, the 4.5:1 grey #767676 on white, and the sRGB knee
@@ -60,11 +60,12 @@ type Inks = Record<string, string | null>
 function broken(edits: Inks): typeof THEMES {
   const themes = structuredClone(THEMES)
   for (const [key, color] of Object.entries(edits)) {
-    const [t = '', ink = ''] = key.split('.'), p = themes[t as ThemeName] as { background: string | null, roles: Inks, series: Inks }
-    if (ink === 'background') p.background = color
-    else if (Object.hasOwn(p.roles, ink)) p.roles[ink] = color
-    else if (Object.hasOwn(p.series, ink)) p.series[ink] = color
-    else throw new Error(`no such ink: ${key}`)
+    const [t = '', ink = ''] = key.split('.')
+const  p = themes[t as ThemeName] as { background: string | null, roles: Inks, series: Inks }
+    if (ink === 'background') { p.background = color }
+    else if (Object.hasOwn(p.roles, ink)) { p.roles[ink] = color }
+    else if (Object.hasOwn(p.series, ink)) { p.series[ink] = color }
+    else { throw new Error(`no such ink: ${key}`) }
   }
   return themes
 }
@@ -100,7 +101,8 @@ const run = (...pre: string[]) => spawnSync(process.execPath, [...pre, SCRIPT], 
 const cells = (line: string | undefined) => line?.trim().split(/\s+/)
 // Columns are padded to their widest cell (solarized, background, decision); numbers align right.
 test('VR.in-ci: check-palettes prints every checked color with its contrast and nearest neighbor, then ok, and exits 0', () => {
-  const { status, stdout, stderr } = run(), lines = stdout.trimEnd().split(/\r?\n/)
+  const { status, stdout, stderr } = run()
+const  lines = stdout.trimEnd().split(/\r?\n/)
   assert.equal(stderr, ''); assert.equal(status, 0); assert.equal(lines.length, 1 + 4 * 18 + 1)
   assert.equal(lines[0], 'theme      ink         color    contrast  nearest   distance')
   assert.equal(lines[1], 'nord       background  #2E3440')
@@ -114,7 +116,8 @@ test('VR.in-ci: check-palettes prints every checked color with its contrast and 
 test('VR.in-ci: check-palettes prints each problem on stderr, leaves malformed palettes out of the table, and exits 1', () => {
   const themes = new URL('../../core/themes.ts', import.meta.url).href
   const pre = `import { THEMES } from '${themes}'; THEMES.nord.roles.note = THEMES.nord.background; THEMES.dracula.background = null`
-  const { status, stdout, stderr } = run('--import', 'data:text/javascript,' + encodeURIComponent(pre)), lines = stdout.trimEnd().split(/\r?\n/)
+  const { status, stdout, stderr } = run('--import', 'data:text/javascript,' + encodeURIComponent(pre))
+const  lines = stdout.trimEnd().split(/\r?\n/)
   assert.equal(stderr, 'nord.note #2E3440: contrast 1.00 < 3 on #2E3440\ndracula.background is not #rrggbb: null\n'); assert.equal(status, 1)
   assert.equal(lines.length, 1 + 3 * 18); assert.deepEqual([...new Set(lines.slice(1).map(l => cells(l)?.[0]))], ['nord', 'gruvbox', 'solarized'])
 })

@@ -13,7 +13,8 @@ import type { Expect } from '../../validate.ts'
 import { width } from '../../width.ts'
 import { parseTimeline, type Timeline } from './parse.ts'
 
-const LR: readonly Step[] = ['natural', 'tight', 'wrap', 'lrToTd'], TD: readonly Step[] = ['natural', 'wrap']
+const LR: readonly Step[] = ['natural', 'tight', 'wrap', 'lrToTd']
+const  TD: readonly Step[] = ['natural', 'wrap']
 const ink = (k: number): SeriesKey => `s${k % 8 + 1}` as SeriesKey
 const widest = (ps: readonly Piece[]): number => Math.max(0, ...ps.map(p => width(p.text)))
 
@@ -24,7 +25,7 @@ function pieces(t: string, max: number): Piece[] | null {
   const out: Piece[] = []
   for (const [i, line] of t.split('<br>').entries()) {
     const ps = wrap(line, max)
-    if (!ps) return null
+    if (!ps) { return null }
     ps.forEach((p, j) => out.push(j > 0 || i === 0 ? p : { ...p, join: '\n' }))
   }
   return out
@@ -54,29 +55,36 @@ function items(tl: Timeline): Item[] {
 // column. A section with no period has no column to span, so it fails here and draws at lrToTd. 'too-wide' if a word
 // is wider than its cap, or the columns and gaps are wider than columns: the axis row runs across all of them.
 function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
-  const its = items(tl), n = its.length, gap = step === 'natural' ? 2 : 1
+  const its = items(tl)
+const  n = its.length
+const  gap = step === 'natural' ? 2 : 1
   const w = step === 'wrap' ? Math.floor((columns + 1) / n) - 1 : Infinity
-  const heads = its.map(p => pieces(p.text, w - 2)), evs = its.map(p => p.events.map(e => pieces(e, w - 2)))
-  if (heads.some(h => !h) || evs.flat().some(e => !e)) return fail('too-wide')
+  const heads = its.map(p => pieces(p.text, w - 2))
+const  evs = its.map(p => p.events.map(e => pieces(e, w - 2)))
+  if (heads.some(h => !h) || evs.flat().some(e => !e)) { return fail('too-wide') }
   const cw = its.map((_, i) => Math.max(widest(heads[i]!), ...evs[i]!.map(e => widest(e!))) + 2)
   const spans = tl.sections.map((_, s) => its.filter(p => p.s === s).map(p => p.k))
   const names: Piece[][] = []
   for (const [s, sec] of tl.sections.entries()) {
-    if (sec.name === null) continue
-    const ks = spans[s]!, ps = pieces(sec.name, ks.length * (w + 1) - 3)
-    if (ks.length === 0) return fail('empty-section')
-    if (!ps) return fail('too-wide')
-    const span = ks.reduce((t, k) => t + cw[k]!, 0) + gap * (ks.length - 1), need = widest(ps) + 2
-    if (need > span) cw[ks.at(-1)!]! += need - span
+    if (sec.name === null) { continue }
+    const ks = spans[s]!
+const  ps = pieces(sec.name, ks.length * (w + 1) - 3)
+    if (ks.length === 0) { return fail('empty-section') }
+    if (!ps) { return fail('too-wide') }
+    const span = ks.reduce((t, k) => t + cw[k]!, 0) + gap * (ks.length - 1)
+const  need = widest(ps) + 2
+    if (need > span) { cw[ks.at(-1)!]! += need - span }
     names[s] = ps
   }
   const total = cw.reduce((t, c) => t + c, 0) + gap * Math.max(0, n - 1)
-  if (total > columns) return fail('too-wide')
+  if (total > columns) { return fail('too-wide') }
   const x = cw.map((_, i) => cw.slice(0, i).reduce((t, c) => t + c + gap, 0))
-  const S = Math.max(0, ...names.map(ps => ps?.length ?? 0)), P = Math.max(0, ...heads.map(h => h!.length))
+  const S = Math.max(0, ...names.map(ps => ps?.length ?? 0))
+const  P = Math.max(0, ...heads.map(h => h!.length))
   const E = Math.max(0, ...evs.map(es => es.reduce((t, e) => t + e!.length, 0)))
-  const cv = createCanvas(S + P + 1 + E, total, columns), labels: Labels = []
-  tl.sections.forEach((sec, s) => { if (sec.name !== null) put(cv, labels, sec.name, names[s]!, 0, x[spans[s]![0]!]! + 1, ink(s), `sec${s}`) })
+  const cv = createCanvas(S + P + 1 + E, total, columns)
+const  labels: Labels = []
+  tl.sections.forEach((sec, s) => { if (sec.name !== null) { put(cv, labels, sec.name, names[s]!, 0, x[spans[s]![0]!]! + 1, ink(s), `sec${s}`) } })
   for (const p of its) {
     const at = x[p.k]! + 1
     put(cv, labels, p.text, heads[p.k]!, S, at, p.ink, `p${p.k}`)
@@ -86,8 +94,8 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   const dots = new Map(its.map(p => [x[p.k]!, p]))
   for (let c = 0; c < total; c++) {
     const p = dots.get(c)
-    if (p) cv.cap(S + P, c, '●', p.ink, `p${p.k}:mark`)
-    else cv.cap(S + P, c, '─', 'edge', 'axis')
+    if (p) { cv.cap(S + P, c, '●', p.ink, `p${p.k}:mark`) }
+    else { cv.cap(S + P, c, '─', 'edge', 'axis') }
   }
   const glyphs = its.map(p => ({ owner: `p${p.k}:mark`, ch: '●', at: { r: S + P, c: x[p.k]! } }))
   return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], glyphs })
@@ -98,24 +106,28 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
 // takes, its pill's and its events', starts with │, and an event's pill sits after two blank cells. 'too-wide' if a word
 // is wider than its field, or, unwrapped, a row is wider than columns: rows end at their text, as validate measures them.
 function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
-  const its = items(tl), cap = (less: number) => (wrapped ? columns - less : Infinity)
+  const its = items(tl)
+const  cap = (less: number) => (wrapped ? columns - less : Infinity)
   const names = tl.sections.map(s => (s.name === null ? [] : pieces(s.name, cap(0))))
-  const heads = its.map(p => pieces(p.text, cap(2))), evs = its.map(p => p.events.map(e => pieces(e, cap(4))))
-  if (names.some(x => !x) || heads.some(h => !h) || evs.flat().some(e => !e)) return fail('too-wide')
+  const heads = its.map(p => pieces(p.text, cap(2)))
+const  evs = its.map(p => p.events.map(e => pieces(e, cap(4))))
+  if (names.some(x => !x) || heads.some(h => !h) || evs.flat().some(e => !e)) { return fail('too-wide') }
   const wide = Math.max(...names.map(x => widest(x!)), ...heads.map(h => widest(h!) + 2), ...evs.flat().map(e => widest(e!) + 4))
-  if (wide > columns) return fail('too-wide')
+  if (wide > columns) { return fail('too-wide') }
   const height = names.reduce((t, x) => t + x!.length, 0) + heads.reduce((t, h) => t + h!.length, 0) +
     evs.flat().reduce((t, e) => t + e!.length, 0)
-  const cv = createCanvas(height, wide, columns), labels: Labels = [], glyphs: NonNullable<Expect['glyphs']>[number][] = []
+  const cv = createCanvas(height, wide, columns)
+const  labels: Labels = []
+const  glyphs: NonNullable<Expect['glyphs']>[number][] = []
   let r = 0
   tl.sections.forEach((sec, s) => {
-    if (sec.name !== null) r += put(cv, labels, sec.name, names[s]!, r, 0, ink(s), `sec${s}`)
+    if (sec.name !== null) { r += put(cv, labels, sec.name, names[s]!, r, 0, ink(s), `sec${s}`) }
     for (const p of its.filter(q => q.s === s)) {
       const top = r
       cv.cap(r, 0, '●', p.ink, `p${p.k}:mark`); glyphs.push({ owner: `p${p.k}:mark`, ch: '●', at: { r, c: 0 } })
       r += put(cv, labels, p.text, heads[p.k]!, r, 2, p.ink, `p${p.k}`)
       p.events.forEach((e, j) => { r += put(cv, labels, e, evs[p.k]![j]!, r, 4, p.ink, `p${p.k}.e${j}`) })
-      for (let y = top + 1; y < r; y++) cv.cap(y, 0, '│', 'edge', 'axis')
+      for (let y = top + 1; y < r; y++) { cv.cap(y, 0, '│', 'edge', 'axis') }
     }
   })
   return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], glyphs })
@@ -125,9 +137,9 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
 // lrToTd needs no unwrapped try first: TD unwrapped fits only when every text fits its field, and then wrapping to those
 // fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns (common rule 3).
 function layout(tl: Timeline, step: Step, columns: number): Drawing | Fail {
-  if (!(tl.dir === 'TD' ? TD : LR).includes(step)) return fail('step')
+  if (!(tl.dir === 'TD' ? TD : LR).includes(step)) { return fail('step') }
   const body = tl.dir === 'TD' || step === 'lrToTd' ? td(tl, step !== 'natural', columns) : lr(tl, step, columns)
-  if (isFail(body) || tl.title === null) return body
+  if (isFail(body) || tl.title === null) { return body }
   const head = heading(tl.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
 }

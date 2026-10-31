@@ -1,7 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { createLru } from '../../core/lru.ts'
 test('A8.cache: hit, miss, and LRU eviction on the 65th entry', () => {
   const c = createLru<string, number>(64); c.set('a', 1); assert.equal(c.get('a'), 1); assert.equal(c.get('b'), undefined)
-  for (let i = 0; i < 63; i++) c.set(`k${i}`, i)
+  for (let i = 0; i < 63; i++) { c.set(`k${i}`, i) }
   c.get('a'); c.set('k63', 63)
   assert.equal(c.size, 64); assert.equal(c.get('a'), 1); assert.equal(c.get('k0'), undefined)
 })

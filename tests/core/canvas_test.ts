@@ -131,11 +131,12 @@ test('A5.mutation-tests: a merged line cell keeps its first role and style, list
 })
 // This shares looks up each owner's edge, as a renderer's might, and throws for an owner that has none.
 test('A5.mutation-tests: a line on an exclusive cell conflicts before shares is asked; shares sees only line owners', () => {
-  const edges = new Map([['e', { from: 'A' }], ['f', { from: 'A' }]]), seen: string[][] = []
+  const edges = new Map([['e', { from: 'A' }], ['f', { from: 'A' }]])
+const  seen: string[][] = []
   const c = createCanvas(3, 6, 6, (a, b) => { seen.push([a, b]); return edges.get(a)!.from === edges.get(b)!.from })
   c.text(0, 0, 'A', 'label', 'A'); c.cap(0, 1, '(', 'node', 'A'); c.fill(0, 2, 1, 'node', 'A'); c.arrow(0, 3, '►', 'e'); c.text(0, 4, '中', 'label', 'B')
   c.frame(1, 0, 2, 2, 'frame', 'g1'); c.lifeline(1, 3, false, 'p1'); c.lifeline(2, 3, false, 'p1')
-  for (let col = 0; col < 6; col++) c.line(0, col, 10, 'light', 'edge', 'e')
+  for (let col = 0; col < 6; col++) { c.line(0, col, 10, 'light', 'edge', 'e') }
   c.line(1, 1, 10, 'light', 'edge', 'e'); c.line(1, 1, 4, 'light', 'edge', 'f'); c.line(1, 3, 5, 'light', 'edge', 'e'); c.line(1, 3, 2, 'light', 'edge', 'f')
   const d = c.toDrawing(E)
   assert.deepEqual(rows(d), ['A( ►中', '┌┬┐├  ', '└─┘│  '])
@@ -176,7 +177,7 @@ test('A5.mutation-tests: a frame draws only into empty cells; its title is text 
 test('A5.mutation-tests: a lifeline is │ or ┃ in empty cells only; a line or text on a lifeline replaces it without a conflict', () => {
   const c = createCanvas(5, 3, 3)
   c.line(0, 1, 10, 'light', 'edge', 'e1')
-  for (let r = 0; r < 4; r++) c.lifeline(r, 1, false, 'p1')
+  for (let r = 0; r < 4; r++) { c.lifeline(r, 1, false, 'p1') }
   c.lifeline(4, 1, true, 'p1'); c.line(1, 1, 10, 'heavy', 'edge', 'm1'); c.text(2, 1, 'x', 'label', 'L1')
   const d = c.toDrawing(E)
   assert.deepEqual(rows(d), [' ─ ', ' ━ ', ' x ', ' │ ', ' ┃ '])
@@ -196,18 +197,19 @@ test('A8.platforms: every glyph a busy canvas draws outside text is in GLYPHS: i
   c.arrow(3, 8, CAPS.arrowR[1], 'A>C')
   c.line(2, 6, 5, 'dotted', 'edge', 'e3'); c.line(3, 6, 5, 'dotted', 'edge', 'e3'); c.line(4, 6, 3, 'dotted', 'edge', 'e3'); c.line(4, 7, 10, 'dotted', 'edge', 'e3')
   c.arrow(4, 8, CAPS.arrowR[1], 'e3')
-  for (let col = 9; col < 12; col++) c.line(2, col, 10, 'heavy', 'edge', 'm1')
+  for (let col = 9; col < 12; col++) { c.line(2, col, 10, 'heavy', 'edge', 'm1') }
   c.arrow(2, 12, CAPS.arrowR[1], 'm1')
   const d = c.toDrawing(E)
   const drawn = d.cells.flat().filter((x): x is Cell => x !== null && x.kind !== 'text' && x.kind !== 'cont')
-  for (const x of drawn) assert.ok(GLYPHS.has(x.ch), `${x.kind} ${x.ch}`)
+  for (const x of drawn) { assert.ok(GLYPHS.has(x.ch), `${x.kind} ${x.ch}`) }
   assert.deepEqual(new Set(drawn.map(x => x.kind)), new Set(['frame', 'lifeline', 'line', 'arrow', 'cap', 'fill']))
   assert.deepEqual(rows(d), ['┌─G──────┐    ', '│ ( 中 ) │ │ ┃', '│   ┃ ┆  ━━━►┃', '│   ┠─┼─►│ │ ┃', '│   ▼ └┄►│ │ ┃', '└────────┘    '])
   assert.deepEqual(d.conflicts, [])
 })
 // The canvas does not clip to the budget: the validator's overlong-row check needs a row that can be too wide.
 test('A5.mutation-tests: toDrawing reports the column budget, not the grid width, with the cells, the conflict log and the expect it was given', () => {
-  const c = createCanvas(1, 3, 2), ex = { labels: [{ owner: 'n1', text: 'abc' }], edges: [], edgeLabels: [], frames: [] }
+  const c = createCanvas(1, 3, 2)
+const  ex = { labels: [{ owner: 'n1', text: 'abc' }], edges: [], edgeLabels: [], frames: [] }
   assert.equal(c.text(0, 0, 'abc', 'label', 'n1'), 3)
   assert.deepEqual(c.toDrawing(ex), { columns: 2, cells: [[{ ch: 'a', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 }, { ch: 'b', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 },
     { ch: 'c', role: 'label', kind: 'text', owners: ['n1'], dirs: 0 }]], conflicts: [], expect: ex })
@@ -225,8 +227,8 @@ test('A5.mutation-tests: text outside the grid on any side, or a W/F character w
 })
 test('A5.mutation-tests: a line, cap, fill, arrow or lifeline cell outside the grid on any side is a Conflict; the grid keeps its size', () => {
   const c = createCanvas(2, 2, 2)
-  for (let col = -1; col <= 2; col++) c.line(0, col, 10, 'light', 'edge', 'e1')
-  for (let row = -1; row <= 2; row++) c.line(row, 1, 5, 'heavy', 'edge', 'e2')
+  for (let col = -1; col <= 2; col++) { c.line(0, col, 10, 'light', 'edge', 'e1') }
+  for (let row = -1; row <= 2; row++) { c.line(row, 1, 5, 'heavy', 'edge', 'e2') }
   const sides = [[-1, 0], [2, 0], [0, -1], [0, 2]] as const   // above, below, left of and right of the grid
   for (const [r, col] of sides) { c.cap(r, col, '(', 'node', 'n1'); c.fill(r, col, 1, 'node', 'n2'); c.arrow(r, col, '►', 'e3'); c.lifeline(r, col, false, 'p1') }
   const d = c.toDrawing(E)

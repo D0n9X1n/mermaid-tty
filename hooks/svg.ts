@@ -19,7 +19,9 @@
 // Values and text are decoded once, as XML does; text outside <style> may hold anything else. The lists are the names
 // Mermaid 11 and 12 draw with for the fixtures that reach mmdc (tests/hooks/svg-corpus_test.ts keeps them exact).
 // No Node, so the engine can load it.
-const SVG_NS = 'http://www.w3.org/2000/svg', XLINK_NS = 'http://www.w3.org/1999/xlink', XHTML_NS = 'http://www.w3.org/1999/xhtml'
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const  XLINK_NS = 'http://www.w3.org/1999/xlink'
+const  XHTML_NS = 'http://www.w3.org/1999/xhtml'
 export const SVG_ELEMENTS: ReadonlySet<string> = new Set(['circle', 'defs', 'feDropShadow', 'filter', 'foreignObject', 'g', 'line', 'linearGradient',
   'marker', 'path', 'polygon', 'rect', 'stop', 'style', 'svg', 'switch', 'symbol', 'text', 'title', 'tspan'])
 export const HTML_ELEMENTS: ReadonlySet<string> = new Set(['br', 'div', 'p', 'span'])
@@ -46,99 +48,103 @@ const URL_REF = /^url\((?:#[A-Za-z_][\w.-]*|'#[A-Za-z_][\w.-]*'|"#[A-Za-z_][\w.-
 
 export function svgUnsafe(svg: string): string | null {
   const stack: string[] = []
-  let roots = 0, i = XML_DECL.exec(svg)?.[0].length ?? 0
+  let roots = 0
+let  i = XML_DECL.exec(svg)?.[0].length ?? 0
   while (i < svg.length) {
-    const lt = svg.indexOf('<', i), stop = lt < 0 ? svg.length : lt
-    if (stop > i) { const r = text(svg.slice(i, stop), stack); if (r) return r }
-    if (lt < 0) break
+    const lt = svg.indexOf('<', i)
+const  stop = lt < 0 ? svg.length : lt
+    if (stop > i) { const r = text(svg.slice(i, stop), stack); if (r) { return r } }
+    if (lt < 0) { break }
     i = lt
     if (svg.startsWith('</', i)) {
       CLOSE.lastIndex = i
       const m = CLOSE.exec(svg)
-      if (!m || stack.pop() !== m[1]) return 'syntax'
+      if (!m || stack.pop() !== m[1]) { return 'syntax' }
       i = CLOSE.lastIndex
       continue
     }
-    if (svg[i + 1] === '!' || svg[i + 1] === '?') return 'markup'
+    if (svg[i + 1] === '!' || svg[i + 1] === '?') { return 'markup' }
     OPEN.lastIndex = i
     const open = OPEN.exec(svg)
-    if (!open) return 'syntax'
+    if (!open) { return 'syntax' }
     i = OPEN.lastIndex
     const attrs = new Map<string, string>()
     for (;;) {
       ATTR.lastIndex = i
       const a = ATTR.exec(svg)
-      if (!a) break
-      if (attrs.has(a[1]!)) return 'syntax'
+      if (!a) { break }
+      if (attrs.has(a[1]!)) { return 'syntax' }
       attrs.set(a[1]!, a[2] ?? a[3]!)
       i = ATTR.lastIndex
     }
     END.lastIndex = i
     const end = END.exec(svg)
-    if (!end) return 'syntax'
+    if (!end) { return 'syntax' }
     i = END.lastIndex
-    if (stack.length === 0 && roots++ > 0) return 'syntax'
+    if (stack.length === 0 && roots++ > 0) { return 'syntax' }
     const r = element(open[1]!, attrs, stack)
-    if (r) return r
-    if (!end[1]) stack.push(open[1]!)
+    if (r) { return r }
+    if (!end[1]) { stack.push(open[1]!) }
   }
   return roots === 1 && stack.length === 0 ? null : 'syntax'
 }
 
 // An element's name in its context, then each attribute's name and value.
 function element(name: string, attrs: Map<string, string>, stack: string[]): string | null {
-  const html = stack.includes('foreignObject'), parent = stack[stack.length - 1]
+  const html = stack.includes('foreignObject')
+const  parent = stack[stack.length - 1]
   // A <style> holds text only: an element in it would split the stylesheet into pieces each checked alone.
-  if (parent === 'style') return `element ${name} in style`
+  if (parent === 'style') { return `element ${name} in style` }
   const known =stack.length === 0 ? name === 'svg' : html ? HTML_ELEMENTS.has(name) : name !== 'svg' && SVG_ELEMENTS.has(name)
-  if (!known) return `element ${name}`
+  if (!known) { return `element ${name}` }
   for (const [a, v] of attrs) {
     if (a === 'xmlns' || a.startsWith('xmlns:')) {
       const ok = stack.length === 0 ? (a === 'xmlns' && v === SVG_NS) || (a === 'xmlns:xlink' && v === XLINK_NS)
         : a === 'xmlns' && html && parent === 'foreignObject' && v === XHTML_NS
-      if (!ok) return `namespace ${a}`
+      if (!ok) { return `namespace ${a}` }
       continue
     }
-    if (!(html ? HTML_ATTRIBUTES : SVG_ATTRIBUTES).has(a)) return `attribute ${a}`
+    if (!(html ? HTML_ATTRIBUTES : SVG_ATTRIBUTES).has(a)) { return `attribute ${a}` }
     const r = value(v, true)
-    if (r) return r
+    if (r) { return r }
   }
   return null
 }
 
 // Text between tags: only whitespace outside the root; inside, a value, held to the CSS rules inside <style>.
 function text(t: string, stack: string[]): string | null {
-  if (stack.length === 0) return /^[ \t\r\n]*$/.test(t) ? null : 'syntax'
+  if (stack.length === 0) { return /^[ \t\r\n]*$/.test(t) ? null : 'syntax' }
   return value(t, stack[stack.length - 1] === 'style')
 }
 
 // A value or text, decoded once; with css, also its CSS and url( rules.
 function value(raw: string, css: boolean): string | null {
   const v = decode(raw)
-  if (v === null) return 'entity'
-  if (BAD_CHAR.test(v)) return 'char'
-  if (MARKER.test(v)) return 'marker'
-  if (!css) return null
+  if (v === null) { return 'entity' }
+  if (BAD_CHAR.test(v)) { return 'char' }
+  if (MARKER.test(v)) { return 'marker' }
+  if (!css) { return null }
   const t = CSS.find(([, re]) => re.test(v))
-  if (t) return `css ${t[0]}`
-  for (const m of v.matchAll(/url\(/gi)) if (!URL_REF.test(v.slice(m.index))) return 'url'
+  if (t) { return `css ${t[0]}` }
+  for (const m of v.matchAll(/url\(/gi)) { if (!URL_REF.test(v.slice(m.index))) { return 'url' } }
   return null
 }
 
 // s with each entity decoded once, as XML does; null on any & that does not start an entity XML defines, or a numeric
 // reference to a code point XML does not allow (a C0 control but tab, LF and CR; a surrogate; U+FFFE, U+FFFF; past U+10FFFF).
 function decode(s: string): string | null {
-  let out = '', i = 0
+  let out = ''
+let  i = 0
   for (let j = s.indexOf('&'); j >= 0; j = s.indexOf('&', i)) {
     ENTITY.lastIndex = j
     const m = ENTITY.exec(s)
-    if (!m) return null
+    if (!m) { return null }
     let c: string
-    if (m[1] !== undefined) c = NAMED[m[1]]!
+    if (m[1] !== undefined) { c = NAMED[m[1]]! }
     else {
       const code = m[2] !== undefined ? parseInt(m[2], 10) : parseInt(m[3]!, 16)
       const allowed = code === 9 || code === 10 || code === 13 || (code >= 0x20 && code <= 0xd7ff) || (code >= 0xe000 && code <= 0xfffd) || (code >= 0x10000 && code <= 0x10ffff)
-      if (!allowed) return null
+      if (!allowed) { return null }
       c = String.fromCodePoint(code)
     }
     out += s.slice(i, j) + c

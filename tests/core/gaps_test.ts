@@ -20,7 +20,8 @@ test('A1: gaps reads the bands the layout recorded, so a band a title widened st
     const p = layoutGraph(x, S) as Placed
     return [p.bands?.map(b => [b.block, b.axis, b.from, b.to]), gaps(p).map(q => [q.block, q.axis, q.from, q.to, q.borders])]
   }
-  const rows = [[null, 'row', 0, 0], [null, 'row', 5, 5], [null, 'row', 10, 10]], cols = [[null, 'col', 0, 4], [null, 'col', 9, 21], [null, 'col', 26, 30]]
+  const rows = [[null, 'row', 0, 0], [null, 'row', 5, 5], [null, 'row', 10, 10]]
+const  cols = [[null, 'col', 0, 4], [null, 'col', 9, 21], [null, 'col', 26, 30]]
   assert.deepEqual(run('TB'), [rows, [[null, 'row', 1, 4, [1]], [null, 'row', 6, 9, [6]]]])
   assert.deepEqual(run('BT'), [rows, [[null, 'row', 1, 4, [4]], [null, 'row', 6, 9, [9]]]])
   assert.deepEqual(run('LR'), [cols, [[null, 'col', 5, 8, [5]], [null, 'col', 22, 25, [22]]]])

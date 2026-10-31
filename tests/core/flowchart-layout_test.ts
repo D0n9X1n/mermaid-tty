@@ -14,15 +14,15 @@ import type { Spacing } from '../../core/graph/layered.ts'
 // The flowchart model of src; a source or parse failure throws.
 function graph(src: string): Graph {
   const s = readSource(src)
-  if (isFail(s)) throw new Error(s.reason)
+  if (isFail(s)) { throw new Error(s.reason) }
   const g = flowchart.parse(s)
-  if (isFail(g)) throw new Error(g.reason)
+  if (isFail(g)) { throw new Error(g.reason) }
   return g
 }
 // What layout → route → draw makes of g at spacing s and the given columns, or the first Fail.
 function pipeline(g: Graph, s: Spacing, columns: number): Drawing | Fail {
   const placed = layoutGraph(g, s)
-  if (isFail(placed)) return placed
+  if (isFail(placed)) { return placed }
   const routes = routeGraph(placed)
   return isFail(routes) ? routes : drawGraph(placed, routes, columns)
 }
@@ -42,8 +42,8 @@ test('A1: R2 recentered labels never erase or enter an unrelated cluster frame',
   // Its edge can only reach N1 through S0 more than once here, so the router refuses it (edge-crosses-frame); any
   // routes it does return must validate.
   const rs = routeGraph(p)
-  if (Array.isArray(rs)) assert.equal(validate(drawGraph(p, rs, 80)), null)
-  else assert.equal(rs.reason, 'route-conflict')
+  if (Array.isArray(rs)) { assert.equal(validate(drawGraph(p, rs, 80)), null) }
+  else { assert.equal(rs.reason, 'route-conflict') }
 })
 
 test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarked stems', () => {
@@ -120,7 +120,8 @@ test('A1: R2 label exits keep a one-column-compatible target port on their axis'
   const rs = routeGraph(p)
   assert.ok(Array.isArray(rs))
   for (const r of rs) {
-    const label = p.boxes.get(`${r.edge}:label`)!, head = r.ends.at(-1)!
+    const label = p.boxes.get(`${r.edge}:label`)!
+const  head = r.ends.at(-1)!
     const lastLeg = r.cells.filter(c => c.r > label.row && c.r <= head.r)
     assert.ok(lastLeg.every(c => c.dirs === 5), r.edge)
   }
@@ -146,7 +147,8 @@ test('A1: R2 long labelled edges keep dummy and label axes aligned', () => {
   const g = graph('flowchart TD\nA[Receive request] --> B{Cache hit?}\nB -- Yes --> C[Return data]\nB -- No --> D[Query MySQL]\nD --> E[Write back to cache]\nE --> C\nC --> F([End])')
   const p = layoutGraph(g, { rankGap: 3, nodeGap: 4, wrapAt: null })
   assert.ok(!isFail(p))
-  const edge = p.graph.edges.find(e => e.label === 'Yes')!, label = p.boxes.get(`${edge.id}:label`)!
+  const edge = p.graph.edges.find(e => e.label === 'Yes')!
+const  label = p.boxes.get(`${edge.id}:label`)!
   const dummy = [...p.boxes].find(([id]) => id.startsWith(`${edge.id}#`))![1]
   assert.equal(dummy.col, label.col + (label.cols >> 1))
   const result = explain('flowchart TD\nA[Receive request] --> B{Cache hit?}\nB -- Yes --> C[Return data]\nB -- No --> D[Query MySQL]\nD --> E[Write back to cache]\nE --> C\nC --> F([End])', { columns: 80 })
@@ -278,7 +280,8 @@ test('A4.fit-ladder: each step lays out, routes and draws at its spacing and the
   }
 })
 test('A4.fit-ladder: wrap takes the first of wrapAt 24, 20, 16, 12, 8 that validates, else the last attempt', () => {
-  const g = graph(`flowchart TD\n${LONG}`), at = (wrapAt: number, cols = 22) => pipeline(g, { rankGap: 2, nodeGap: 2, wrapAt }, cols)
+  const g = graph(`flowchart TD\n${LONG}`)
+const  at = (wrapAt: number, cols = 22) => pipeline(g, { rankGap: 2, nodeGap: 2, wrapAt }, cols)
   assert.deepEqual([24, 20, 16, 12].map(w => verdict(at(w))), ['row-too-wide', 'row-too-wide', 'valid', 'valid'])
   assert.deepEqual(flowchart.layout(g, 'wrap', 22), at(16))
   assert.notDeepEqual(at(16), at(12))

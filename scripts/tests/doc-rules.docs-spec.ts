@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { INSTALL, LOCAL, TAGLINE, docsFolderErrors, iconErrors, imageErrors, readmeErrors, grammarErrors, supportedTypes } from '../lib/doc-rules.ts';
 import { publishWikiErrors } from '../docs/workflow-tree.ts';
-const R = 'https://github.com/D0n9X1n/mermaid-tty', S = 'https://img.shields.io/github', SHA = 'a'.repeat(40), IMG = ['assets/readme/after.svg'];
+const R = 'https://github.com/D0n9X1n/mermaid-tty'
+const  S = 'https://img.shields.io/github'
+const  SHA = 'a'.repeat(40)
+const  IMG = ['assets/readme/after.svg'];
 const README = `<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>\n\n**${TAGLINE}**\n\n` +
   `[![CI](${R}/actions/workflows/ci.yml/badge.svg)](${R}/actions/workflows/ci.yml) [![Release](${S}/v/release/D0n9X1n/mermaid-tty)](${R}/releases) ` +
   `[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](${S}/stars/D0n9X1n/mermaid-tty)](${R}/stargazers)\n\n` +
@@ -16,7 +19,8 @@ const PIN = (a: string, v: string) => `      - uses: actions/${a}@${SHA} # ${v}\
 const WIKI = "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\njobs:\n  publish:\n    runs-on: ubuntu-latest\n" +
   `    permissions:\n      contents: write\n    steps:\n${PIN('checkout', 'v7.0.1')}      - id: mirror\n        shell: bash\n        run: scripts/publish-wiki.sh wiki wiki-repo "$GITHUB_SHA"\n` +
   "      - if: steps.mirror.outputs.changed == 'true'\n";
-const png = (w: number, h: number) => { const b = new Uint8Array(33), v = new DataView(b.buffer);
+const png = (w: number, h: number) => { const b = new Uint8Array(33)
+const  v = new DataView(b.buffer);
   b.set([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82]); v.setUint32(16, w); v.setUint32(20, h); return b; };
 const rm = (s: string) => readmeErrors(s, IMG);
 test('complete fixtures pass', () => {
@@ -54,9 +58,10 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [publishWikiErrors, WIKI, 'run: scripts/publish-wiki.sh', 'run: echo ok # scripts/publish-wiki.sh', 'missing publisher call'],
 ];
 for (const [rule, base, from, to, want] of cases)
-  test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`));
+  { test(`rejects: ${want}`, () => assert.ok(rule(base.replace(from, to)).some((e) => e.includes(want)), `${from} -> ${to}`)); }
 test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image is displayed, every link target is known', () => {
-  const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>', G = (md: string, readme = true) => grammarErrors('x.md', md, readme);
+  const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'
+const  G = (md: string, readme = true) => grammarErrors('x.md', md, readme);
   const F = (rest: string) => '``` `\n' + rest; // an invalid fence opener: a backtick info string is not a fence
   assert.deepEqual(G(H + '\n\n[![b](https://img.shields.io/b)](https://github.com/D0n9X1n/mermaid-tty/releases) [w](https://github.com/D0n9X1n/mermaid-tty/wiki) [l](LICENSE)\n\n' +
     '| ![d](assets/readme/a.svg) |\n|---|\n\nx `<b>` y ``![c](x)`` ![u][none]\n\n```sh\n<b> [[x]]\n```\n\n    <i>\n\n````md\n```sh\nx\n```\n````\n'), []);
@@ -82,7 +87,7 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
     ['| a |\n|---|\n| b | ![x](assets/rogue.svg) |', 'more cells than its header', true], [H + '\n![x](assets/readme/after.svg)', 'raw HTML other than', true],
     // D15d: past cmark-gfm's 1,000-backtick code-span limit, and over-long fences
     [LONG + '[c](Usage-zh-CN)' + LONG, 'backtick run longer than 3', false], ['``````sh\nx\n``````', 'fence longer than 5', true]] as const)
-    assert.ok(G(md, readme).some((e) => e.includes(want)), want);
+    { assert.ok(G(md, readme).some((e) => e.includes(want)), want); }
 });
 test('D15b: every autolink literal is reported on its own line, including one the GFM transform leaves with no position', () => {
   // markdown.docs-spec.ts shows the transform gives `say "www.x.example"` no position; the tokenizer positions https://x.dev.

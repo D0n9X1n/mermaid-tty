@@ -9,6 +9,8 @@ test('A4: the matrix bar eighths of pie-ok-01, -02 and -03', () => {
   assert.deepEqual([120, 80, 60].map(w => bars('pie-ok-03', w, 1)), [[450, 30], [450, 30], [368, 25]])
 })
 test('A7: bars take series colors by source order, so sorting keeps them; values carry the value role', () => {
-  const r = renderMermaid(fx('pie-ok-02'), { columns: 80, theme: 'nord' })!, n = THEMES.nord, barOf = (i: number) => r[i]!.find(x => x.text.startsWith('█'))?.color
+  const r = renderMermaid(fx('pie-ok-02'), { columns: 80, theme: 'nord' })!
+const  n = THEMES.nord
+const  barOf = (i: number) => r[i]!.find(x => x.text.startsWith('█'))?.color
   assert.deepEqual([barOf(1), barOf(2)], [n.series.s2, n.series.s1]); assert.equal(spanOf(r, /^50\.05$/)?.color, n.roles.value)
 })

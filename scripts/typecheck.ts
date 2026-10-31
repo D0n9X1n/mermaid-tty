@@ -22,7 +22,7 @@ export function tsconfigFor(root: string, hooks: boolean): Tsconfig {
     noUncheckedIndexedAccess: true, noEmit: true, skipLibCheck: true, allowImportingTsExtensions: true,
     verbatimModuleSyntax: true, erasableSyntaxOnly: true, types: [] as string[],
   }
-  if (!hooks) return { compilerOptions, include: [`${r}/core/**/*.ts`] }
+  if (!hooks) { return { compilerOptions, include: [`${r}/core/**/*.ts`] } }
   return {
     compilerOptions: {
       ...compilerOptions, jsx: 'react', jsxFactory: 'h', jsxFragmentFactory: 'Fragment',
@@ -39,7 +39,7 @@ export interface Invocation { command: string; args: string[]; shell: boolean }
 // string, since Node deprecates passing args with shell: true (DEP0190).
 export function npxInvocation(version: string, config: string, win32: boolean): Invocation {
   const args = ['--yes', '-p', `typescript@${version}`, 'tsc', '-p']
-  if (!win32) return { command: 'npx', args: [...args, config], shell: false }
+  if (!win32) { return { command: 'npx', args: [...args, config], shell: false } }
   const file = config.includes(' ') ? `"${config}"` : config
   return { command: ['npx', ...args, file].join(' '), args: [], shell: true }
 }
@@ -73,4 +73,4 @@ export function main(spawn: Spawn = spawnSync): number {
   return run(ROOT, spawn)
 }
 
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

@@ -34,7 +34,8 @@ test('A3: types and picks draw their glyphs; labels are id: msg, then each tag [
   assert.equal(T('commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\ncherry-pick id: "b"').at(-1), '◎ ╵ [cherry-pick:b]')
 })
 test('A7: a lane inks its glyphs, name, fork and merge connector with its series; ids take label, tags note', () => {
-  const d = X(LOG + ' tag: "t"').drawing, role = (r: number, c: number) => d.cells[r][c].role
+  const d = X(LOG + ' tag: "t"').drawing
+const  role = (r: number, c: number) => d.cells[r][c].role
   assert.deepEqual([role(0, 0), role(0, 4), role(1, 0), role(2, 0)], ['s1', 's1', 's1', 's2'])   // the fork's ├ is dev's
   assert.deepEqual([role(2, 1), role(2, 2), role(2, 4), role(3, 2), role(4, 1), role(4, 2), role(4, 0)], ['s2', 's2', 's2', 's2', 's2', 's2', 's1'])
   assert.deepEqual([role(1, 4), role(4, 4), role(4, 6)], ['label', 'label', 'note'])
@@ -64,7 +65,8 @@ test('A5.mutation-tests: the validator catches two commits swapped, and a merge 
   ;[adj.cells[1][0], adj.cells[2][0]] = [adj.cells[2][0], adj.cells[1][0]]
   assert.deepEqual(validate(adj), { reason: 'order-broken' })
   const M = (b: string) => X(`commit\nbranch a\ncommit\ncheckout main\nbranch b\ncommit\ncheckout main\nmerge ${b}`).drawing
-  const good = M('b'), wrong = M('a')
+  const good = M('b')
+const  wrong = M('a')
   assert.equal(validate(good), null)
   assert.ok(validate({ ...good, cells: wrong.cells }))
 })
@@ -72,7 +74,7 @@ test('A5.errors: a fork point or merged head that replay leaves unclear fails li
   for (const body of ['commit id: "a"\nbranch x\ncheckout main\ncommit id: "c"\ncheckout x\nbranch y',
     'commit id: "a"\nbranch x\ncheckout main\ncommit id: "c"\nmerge x',
     'commit\nbranch dev\ncommit id: "b"\nbranch x\ncheckout dev\ncommit id: "d"\ncheckout main\nmerge x'])
-    assert.deepEqual(X(body), { reason: 'link-ambiguous' }, body)
+    { assert.deepEqual(X(body), { reason: 'link-ambiguous' }, body) }
   assert.deepEqual(T('commit id: "a"\nbranch x\ncheckout main\ncommit id: "c"\ncheckout x\ncommit id: "d"'),
     ['╷   main', '●   a', '├─╮ x', '● │ c', '╵ ● d'])
 })

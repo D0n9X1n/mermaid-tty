@@ -24,7 +24,7 @@ const PLAN_TEXT = [
 test("A8.validation: check.sh is plan A §9's text, byte for byte with LF line endings, and executable", () => {
   assert.equal(readFileSync(CHECK_SH, 'utf8'), PLAN_TEXT)
   // Windows has no execute bit to check; git keeps check.sh's 100755 mode on the other platforms.
-  if (process.platform !== 'win32') assert.doesNotThrow(() => accessSync(CHECK_SH, constants.X_OK), 'check.sh is not executable')
+  if (process.platform !== 'win32') { assert.doesNotThrow(() => accessSync(CHECK_SH, constants.X_OK), 'check.sh is not executable') }
 })
 
 // Runs a copy of check.sh with bash, from outside its repo, so only its cd finds scripts/check.ts.
@@ -34,7 +34,8 @@ test("A8.validation: check.sh is plan A §9's text, byte for byte with LF line e
 function runCheckSh(env: Record<string, string> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'mtty-'))
   try {
-    const repo = join(dir, 'repo'), bin = join(dir, 'bin')
+    const repo = join(dir, 'repo')
+const  bin = join(dir, 'bin')
     mkdirSync(join(repo, 'scripts'), { recursive: true }); mkdirSync(bin)
     writeFileSync(join(repo, 'scripts/check.sh'), readFileSync(CHECK_SH))
     writeFileSync(join(repo, 'scripts/check.ts'), "console.log(['check.ts', ...process.argv.slice(2)].join(' '))\n")

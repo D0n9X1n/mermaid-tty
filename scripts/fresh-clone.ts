@@ -27,7 +27,7 @@ export function testCount(output: string): number | null {
 // exit code and stdout. Every script's main() is synchronous, so the stdout shows when the run ends.
 function capture(args: string[], cwd: string): { status: number; stdout: string } {
   const r = spawnSync(process.execPath, args, { cwd, encoding: 'utf8', maxBuffer: Infinity, stdio: ['inherit', 'pipe', 'inherit'] })
-  if (r.error) console.error(r.error)
+  if (r.error) { console.error(r.error) }
   process.stdout.write(r.stdout ?? '')
   return { status: r.status ?? 1, stdout: r.stdout ?? '' }
 }
@@ -35,14 +35,14 @@ function capture(args: string[], cwd: string): { status: number; stdout: string 
 // Runs this Node with args in cwd, its output shown: its exit code.
 function node(args: string[], cwd: string): number {
   const r = spawnSync(process.execPath, args, { cwd, stdio: 'inherit' })
-  if (r.error) console.error(r.error)
+  if (r.error) { console.error(r.error) }
   return r.status ?? 1
 }
 
 // Runs git with args, its stderr shown: its exit code, and its stdout, trimmed.
 function git(args: string[]): { status: number; stdout: string } {
   const r = spawnSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
-  if (r.error) console.error(r.error)
+  if (r.error) { console.error(r.error) }
   return { status: r.status ?? 1, stdout: (r.stdout ?? '').trim() }
 }
 
@@ -67,10 +67,10 @@ function main(): number {
     for (const [name, run] of steps) { console.error(`> ${name}`); results.push([name, run()]) }
     const n = testCount(bare.stdout)
     console.log(`fresh-clone: bare node --test ran more than 0 tests: ${n === null ? "unknown (no 'ℹ tests' line)" : `${n > 0 ? 'yes' : 'no'} (${n})`}`)
-    for (const [name, status] of results) console.log(`fresh-clone: ${status === 0 ? 'ok' : 'FAIL'} ${name}: exit ${status}`)
+    for (const [name, status] of results) { console.log(`fresh-clone: ${status === 0 ? 'ok' : 'FAIL'} ${name}: exit ${status}`) }
     return results.every(([, status]) => status === 0) ? 0 : 1
   } finally { rmSync(dir, { recursive: true, force: true }) }
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

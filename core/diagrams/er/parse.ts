@@ -64,7 +64,8 @@ const KEYWORD = /^(?:erDiagram|direction|subgraph|end|style|classDef|class|click
 // An attribute: type, name, keys and comment. The type may end in ? and hold (…), [] and a comma, as decimal(10,2); the name
 // may start with *. Either may hold ~, which inBlock checks as Mermaid's lexer reads it. Both are narrower than Mermaid's
 // ATTRIBUTE_WORD, so a backtick word fails.
-const TYPE = String.raw`[\p{L}_~][\p{L}\p{N}_\-\[\]().,~]*\??`, A_NAME = String.raw`\*?[\p{L}_][\p{L}\p{N}_\-\[\]().~]*`
+const TYPE = String.raw`[\p{L}_~][\p{L}\p{N}_\-\[\]().,~]*\??`
+const  A_NAME = String.raw`\*?[\p{L}_][\p{L}\p{N}_\-\[\]().~]*`
 const KEY = '(?:PK|FK|UK)'
 const ATTR = re(String.raw`(?<type>${TYPE})\s+(?<name>${A_NAME})(?:\s+(?<keys>${KEY}(?:\s*,\s*${KEY})*))?(?:\s*(?<comment>"[^"]*"))?`)
 // In a block, Mermaid's lexer reads PK, FK or UK, in any case, before a word boundary, as a key wherever a word starts.
@@ -88,7 +89,7 @@ function stop(reason: string): never { throw fail(reason) }
 // alias, label or title there) or 'repeat:<n>' (a second alias, an entity in two subgraphs, or an id for both an entity and a
 // subgraph, there), or 'generic' (an entity label or attribute column whose ~…~ pairs Mermaid shows as a <br>).
 export function parseEr(src: Source): ErModel | Fail {
-  try { return walk(src) } catch (e) { if (isFail(e)) return e; throw e }
+  try { return walk(src) } catch (e) { if (isFail(e)) { return e; } throw e }
 }
 
 // The walk's state: the model; each entity by id, and those given an alias; each subgraph by id, and those closed; the
@@ -100,31 +101,31 @@ type State = { m: ErModel; byId: Map<string, ErEntity>; aliased: Set<string>; su
 type Groups = Record<string, string | undefined>
 
 function walk(src: Source): ErModel {
-  if (src.header !== 'erDiagram') stop('header')
+  if (src.header !== 'erDiagram') { stop('header') }
   const st: State = { m: { dir: 'TB', title: src.title, entities: [], relations: [], subgraphs: [], keyable: [] },
     byId: new Map(), aliased: new Set(), subs: new Map(), closed: new Set(), parent: new Map(), open: [], block: null }
   // The line of an accDescr { whose } has not come, else 0.
   let descr = 0
   for (const { n, text } of src.lines) {
     const t = text.trim()
-    if (descr) { if (closes(t, n)) descr = 0 }
-    else if (st.block) inBlock(t, n, st)
-    else if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) descr = n }
-    else statement(t, n, st)
+    if (descr) { if (closes(t, n)) { descr = 0 } }
+    else if (st.block) { inBlock(t, n, st) }
+    else if (ACC_BLOCK.test(t)) { if (!closes(t.replace(ACC_BLOCK, ''), n)) { descr = n } }
+    else { statement(t, n, st) }
   }
   // Source lines start at 1, so 0 is none.
   const unclosed = descr || st.block?.n || st.open.at(-1)?.n
-  if (unclosed) stop(`syntax:${unclosed}`)
+  if (unclosed) { stop(`syntax:${unclosed}`) }
   // erBox draws an entity with attributes through addText, which shows ~…~ as <…>; one with none is a plain label.
-  for (const e of st.m.entities) if (e.attrs.length > 0) e.label = generic(e.label)
+  for (const e of st.m.entities) { if (e.attrs.length > 0) { e.label = generic(e.label) } }
   return st.m
 }
 
 // Whether an accDescr block's text closes in rest: at its first }, after which the line must end.
 function closes(rest: string, n: number): boolean {
   const i = rest.indexOf('}')
-  if (i < 0) return false
-  if (rest.slice(i + 1).trim()) stop(`syntax:${n}`)
+  if (i < 0) { return false }
+  if (rest.slice(i + 1).trim()) { stop(`syntax:${n}`) }
   return true
 }
 
@@ -132,28 +133,30 @@ function closes(rest: string, n: number): boolean {
 // direction found anywhere, which must be the whole line.
 function statement(t: string, n: number, st: State): void {
   let m: RegExpExecArray | null
-  if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) stop(`syntax:${n}`); return }
+  if (ACC.test(t)) { if (!t.replace(ACC, '').trim()) { stop(`syntax:${n}`); } return }
   if ((m = DIRECTION.exec(t))) {
     const sub = st.open.at(-1)?.sub
-    if (sub) sub.dir = m[1] as Dir
-    else st.m.dir = m[1] as Dir
-  } else if (DIRECTION_ANY.test(t)) stop(`syntax:${n}`)
-  else if (IGNORED.test(t)) return
-  else if (t === 'end') close(n, st)
-  else if ((m = SUBGRAPH.exec(t))) open(m.groups!, n, st)
-  else if (KEYWORD.test(t)) stop(`syntax:${n}`)
-  else if ((m = REL.exec(t))) relation(m.groups!, n, st)
-  else if ((m = ENTITY.exec(t))) entity(m.groups!, n, st)
-  else stop(`syntax:${n}`)
+    if (sub) { sub.dir = m[1] as Dir }
+    else { st.m.dir = m[1] as Dir }
+  } else if (DIRECTION_ANY.test(t)) { stop(`syntax:${n}`) }
+  else if (IGNORED.test(t)) { return }
+  else if (t === 'end') { close(n, st) }
+  else if ((m = SUBGRAPH.exec(t))) { open(m.groups!, n, st) }
+  else if (KEYWORD.test(t)) { stop(`syntax:${n}`) }
+  else if ((m = REL.exec(t))) { relation(m.groups!, n, st) }
+  else if ((m = ENTITY.exec(t))) { entity(m.groups!, n, st) }
+  else { stop(`syntax:${n}`) }
 }
 
 // Reads trimmed line n of an open block: } closes it, and any other line is one attribute.
 function inBlock(t: string, n: number, st: State): void {
   if (t === '}') { st.block = null; return }
-  const m = ATTR.exec(t) ?? stop(`syntax:${n}`), g = m.groups!
-  if (KEY_WORD.test(g.type!) || KEY_WORD.test(g.name!) || misread(t, g)) stop(`syntax:${n}`)
-  const e = st.block!.e, a = attribute(g)
-  if (a.comment.trim()) st.m.keyable.push({ owner: `${e.id}.a${e.attrs.length}.comment`, text: a.comment })
+  const m = ATTR.exec(t) ?? stop(`syntax:${n}`)
+const  g = m.groups!
+  if (KEY_WORD.test(g.type!) || KEY_WORD.test(g.name!) || misread(t, g)) { stop(`syntax:${n}`) }
+  const e = st.block!.e
+const  a = attribute(g)
+  if (a.comment.trim()) { st.m.keyable.push({ owner: `${e.id}.a${e.attrs.length}.comment`, text: a.comment }) }
   e.attrs.push(a)
 }
 
@@ -162,31 +165,33 @@ function entity(g: Groups, n: number, st: State): void {
   const e = mention(g.name!, n, st)
   classes(g.c1, n)
   if (g.alias !== undefined) {
-    if (st.aliased.has(e.id)) stop(`repeat:${n}`)
+    if (st.aliased.has(e.id)) { stop(`repeat:${n}`) }
     st.aliased.add(e.id); e.label = name(g.alias, n, 'none', true, true)
   }
-  if (g.block === '{') st.block = { e, n }
+  if (g.block === '{') { st.block = { e, n } }
 }
 
 // A relation statement on line n. Its ends are entities, or subgraphs closed before it; a non-blank label is keyable.
 function relation(g: Groups, n: number, st: State): void {
-  const from = end(g.from!, n, st), to = end(g.to!, n, st), k = st.m.relations.length
+  const from = end(g.from!, n, st)
+const  to = end(g.to!, n, st)
+const  k = st.m.relations.length
   classes(g.c1, n); classes(g.c2, n)
   const label = name(g.label!, n, 'any', false, true)
   st.m.relations.push({ id: `r${k}`, from, to, left: CARD[g.left!]!, right: CARD[g.right!]!,
     line: g.line === '--' || g.line === 'to' ? 'solid' : 'dotted', label, order: k })
-  if (label.trim()) st.m.keyable.push({ owner: `r${k}:label`, text: label })
+  if (label.trim()) { st.m.keyable.push({ owner: `r${k}:label`, text: label }) }
 }
 
 // A :::class list on line n, if any: each class must lex as a name, though none draws.
 function classes(list: string | undefined, n: number): void {
-  for (const c of (list ?? '').split(',')) if (c.trim() && !plain(c.trim(), false)) stop(`syntax:${n}`)
+  for (const c of (list ?? '').split(',')) { if (c.trim() && !plain(c.trim(), false)) { stop(`syntax:${n}`) } }
 }
 
 // A relation end's id: a closed subgraph, which joins the open subgraph if it sat outside every one, or else an entity.
 function end(raw: string, n: number, st: State): string {
   const id = unquote(raw)
-  if (!st.closed.has(id)) return mention(raw, n, st).id
+  if (!st.closed.has(id)) { return mention(raw, n, st).id }
   member(id, n, st)
   return id
 }
@@ -194,7 +199,7 @@ function end(raw: string, n: number, st: State): string {
 // The entity a name on line n mentions, added at its first mention. An id a subgraph has fails.
 function mention(raw: string, n: number, st: State): ErEntity {
   const id = name(raw, n)
-  if (st.subs.has(id)) stop(`repeat:${n}`)
+  if (st.subs.has(id)) { stop(`repeat:${n}`) }
   let e = st.byId.get(id)
   if (!e) {
     e = { id, label: id, attrs: [], order: st.m.entities.length }
@@ -208,10 +213,10 @@ function mention(raw: string, n: number, st: State): ErEntity {
 // another subgraph fails: Mermaid keeps only the first.
 function member(id: string, n: number, st: State): void {
   const sub = st.open.at(-1)?.sub
-  if (!sub) return
+  if (!sub) { return }
   const at = st.parent.get(id)
-  if (at === sub.id) return
-  if (at !== undefined) stop(`repeat:${n}`)
+  if (at === sub.id) { return }
+  if (at !== undefined) { stop(`repeat:${n}`) }
   st.parent.set(id, sub.id)
   ;(st.subs.has(id) ? sub.subgraphs : sub.entities).push(id)
 }
@@ -219,7 +224,7 @@ function member(id: string, n: number, st: State): void {
 // A subgraph header on line n. An id an entity or another subgraph has fails.
 function open(g: Groups, n: number, st: State): void {
   const id = name(g.id!, n)
-  if (st.subs.has(id) || st.byId.has(id)) stop(`repeat:${n}`)
+  if (st.subs.has(id) || st.byId.has(id)) { stop(`repeat:${n}`) }
   const sub: ErSubgraph = { id, title: g.title === undefined ? null : title(g.title, n), dir: null, entities: [], subgraphs: [] }
   st.subs.set(id, sub); st.m.subgraphs.push(sub); st.open.push({ sub, n })
 }
@@ -234,10 +239,11 @@ function close(n: number, st: State): void {
 // A subgraph title's text on line n: its words, each a name, joined by one space as Mermaid joins them.
 function title(raw: string, n: number): string {
   const words: string[] = []
-  let at = 0, w: RegExpExecArray | null
+  let at = 0
+let  w: RegExpExecArray | null
   TITLE_WORD.lastIndex = 0
   while ((w = TITLE_WORD.exec(raw))) { words.push(word(w[1]!, n, true)); at = TITLE_WORD.lastIndex }
-  if (words.length === 0 || raw.slice(at).trim() !== '' || ZERO_OR_MORE.test(raw.replace(/"[^"]*"/g, '"'))) stop(`syntax:${n}`)
+  if (words.length === 0 || raw.slice(at).trim() !== '' || ZERO_OR_MORE.test(raw.replace(/"[^"]*"/g, '"'))) { stop(`syntax:${n}`) }
   return text(words.join(' '), n, 'none', true)
 }
 
@@ -251,14 +257,14 @@ const name = (raw: string, n: number, br: Br = 'none', digits = true, shown = fa
 // a subgraph id but not an entity name, so " s " would name two things.
 function word(raw: string, n: number, digits: boolean): string {
   const s = unquote(raw)
-  if (raw.startsWith('"') ? s !== s.trim() : !plain(s, digits)) stop(`syntax:${n}`)
+  if (raw.startsWith('"') ? s !== s.trim() : !plain(s, digits)) { stop(`syntax:${n}`) }
   return s
 }
 
 // Whether Mermaid's lexer reads unquoted word s whole as a name: not as a TOKEN, and, if it starts with a digit, as a number
 // (where digits allows one) other than 1, which can be a cardinality.
 function plain(s: string, digits: boolean): boolean {
-  if (TOKEN.test(s)) return false
+  if (TOKEN.test(s)) { return false }
   return !/^[0-9]/.test(s) || (digits && /^[0-9]+$/.test(s) && s !== '1')
 }
 
@@ -266,8 +272,8 @@ function plain(s: string, digits: boolean): boolean {
 // In shown text (an alias, relation label or subgraph title) its bold and italic draw as styled says; Markdown that
 // changes no style there (a code span, say) still fails, as Mermaid shows it otherwise.
 function text(s: string, n: number, br: Br = 'none', shown = false): string {
-  if (!MARKDOWN.test(s)) return drawn(s, br)
-  if (!shown) stop(`markdown:${n}`)
+  if (!MARKDOWN.test(s)) { return drawn(s, br) }
+  if (!shown) { stop(`markdown:${n}`) }
   let d: string
   try { d = drawn(s, br, true) } catch (e) { throw isFail(e) && e.reason === 'markdown' ? fail(`markdown:${n}`) : e }
   return d === s ? stop(`markdown:${n}`) : d
@@ -282,22 +288,22 @@ function text(s: string, n: number, br: Br = 'none', shown = false): string {
 // shows it as erBox does where it applies.
 function drawn(s: string, br: Br = 'none', emphasis = false): string {
   // erBox runs parseGenericTypes before marked; how a ~…~ pair and bold or italic then mix is unverified, so both fail.
-  if (emphasis && tildes(s) > 1 && MARKDOWN.test(s)) stop('generic')
+  if (emphasis && tildes(s) > 1 && MARKDOWN.test(s)) { stop('generic') }
   let d = s
   // A relation label (br 'any') is an edge label: Mermaid makes each <br> a newline before marked.
-  if (br === 'any' && !oneParagraph(s, true)) stop('markdown')
+  if (br === 'any' && !oneParagraph(s, true)) { stop('markdown') }
   if (emphasis) {
     const r = styled(s, br, { breaks: br === 'any' })
-    if (isFail(r)) throw r
+    if (isFail(r)) { throw r }
     d = r
   } else {
     const f = drawable(s, 'markdown', br)
-    if (f) throw f
+    if (f) { throw f }
     const bad = unsupported(s)
-    if (bad) stop(`unsupported-char ${bad}`)
+    if (bad) { stop(`unsupported-char ${bad}`) }
   }
   const lines = labelLines(d)
-  if (lines.length > 1 && lines.some(l => !l.trim())) stop('label-blank-line')
+  if (lines.length > 1 && lines.some(l => !l.trim())) { stop('label-blank-line') }
   return d
 }
 
@@ -315,9 +321,9 @@ const tildes = (s: string): number => (s.match(/~/g) ?? []).length
 // the line, at least two, with no " after it in its run; and a comment's first run must hold no ~.
 function misread(t: string, g: Groups): boolean {
   const all = tildes(t)
-  if (all < 2) return all === 1 && tildes(g.type! + g.name!) === 1
+  if (all < 2) { return all === 1 && tildes(g.type! + g.name!) === 1 }
   const word = [g.type!, g.name!].find(w => w.includes('~'))
-  if (word !== undefined) return tildes(word) !== all || /~\S*"/.test(t)
+  if (word !== undefined) { return tildes(word) !== all || /~\S*"/.test(t) }
   return /^"\S*~/.test(g.comment ?? '')
 }
 
@@ -325,7 +331,8 @@ function misread(t: string, g: Groups): boolean {
 // one; in each piece with two or more ~, the first and last ~ become < and > until no pair is left, a leading ~ held
 // out when the count is odd. A result that spells a <br> falls back 'generic', as no field here splits there.
 function generic(s: string): string {
-  const sets = s.split(/(,)/), out: string[] = []
+  const sets = s.split(/(,)/)
+const  out: string[] = []
   for (let i = 0; i < sets.length; i++) {
     let set = sets[i]!
     if (set === ',' && i > 0 && i + 1 < sets.length && tildes(sets[i - 1]!) === 1 && tildes(sets[i + 1]!) === 1) {
@@ -334,15 +341,16 @@ function generic(s: string): string {
     out.push(pairs(set))
   }
   const shown = out.join('')
-  if (/<\/?br/i.test(shown)) stop('generic')
+  if (/<\/?br/i.test(shown)) { stop('generic') }
   return shown
 }
 
 // One parseGenericTypes set with each ~ pair, from the outside in, as < and >.
 function pairs(set: string): string {
   const n = tildes(set)
-  if (n <= 1) return set
-  const lead = n % 2 !== 0 && set.startsWith('~'), cs = [...(lead ? set.slice(1) : set)]
+  if (n <= 1) { return set }
+  const lead = n % 2 !== 0 && set.startsWith('~')
+const  cs = [...(lead ? set.slice(1) : set)]
   for (let a = cs.indexOf('~'), b = cs.lastIndexOf('~'); a !== -1 && a !== b; a = cs.indexOf('~'), b = cs.lastIndexOf('~')) {
     cs[a] = '<'; cs[b] = '>'
   }

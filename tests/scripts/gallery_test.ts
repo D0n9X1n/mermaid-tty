@@ -8,7 +8,7 @@ test('VR.gallery: every golden at 80 and 60, the CJK sheet, the palette sheet an
   const out = mkdtempSync(join(tmpdir(), 'mtty-gal-'))
   try {
     assert.deepEqual(gallery(out).problems, []); const files = readdirSync(out)
-    for (const id of ['flowchart-ok-01', 'sequence-ok-38']) for (const w of [80, 60]) assert.ok(files.includes(`${id}@${w}.svg`), `${id}@${w}`)
-    for (const f of ['cjk.svg', 'palettes.svg', 'index.html']) assert.ok(files.includes(f), f)
+    for (const id of ['flowchart-ok-01', 'sequence-ok-38']) { for (const w of [80, 60]) { assert.ok(files.includes(`${id}@${w}.svg`), `${id}@${w}`) } }
+    for (const f of ['cjk.svg', 'palettes.svg', 'index.html']) { assert.ok(files.includes(f), f) }
   } finally { rmSync(out, { recursive: true, force: true }) }
 })

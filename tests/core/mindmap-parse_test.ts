@@ -14,11 +14,11 @@ test('A5: a parent is the nearest earlier node with less indentation; colorBy; :
 })
 test('A5.errors: an icon, a second root, mismatched delimiters, a markdown string and a header alone fall back', () => {
   for (const [src, why] of [['mindmap\nRoot\n  A\n  ::icon(fa fa-book)', 'syntax:4'], ['mindmap\nRoot\nOther', 'root:3'], ['mindmap\nRoot\n  id[Square)', 'syntax:3'],
-    ['mindmap\nRoot\n  "`**bold**`"', 'markdown:3'], ['mindmap', 'empty']] as const) assert.deepEqual(P(src), { reason: why }, src)
+    ['mindmap\nRoot\n  "`**bold**`"', 'markdown:3'], ['mindmap', 'empty']] as const) { assert.deepEqual(P(src), { reason: why }, src) }
 })
 test('A5.errors: text after the header, another case, a trailing %% and a typed non-string colorBy', () => {
   for (const [src, why] of [['mindmap extra\nRoot', 'header'], ['MINDMAP\nRoot', 'header'], ['mindmap\nRoot %% note', 'directive']] as const)
-    assert.deepEqual(P(src), { reason: why }, src)
+    { assert.deepEqual(P(src), { reason: why }, src) }
   const c = (v: string) => P(`---\nconfig:\n  mindmap:\n    colorBy: ${v}\n---\nmindmap\nRoot`).colorBy
   assert.deepEqual(['1', 'true', '"depth"', 'branch'].map(c), ['branch', 'branch', 'depth', 'branch'])
   assert.deepEqual([P('mindmap\nRoot').colorBy, P('mindmap\nRoot').title], ['branch', null])
@@ -38,22 +38,22 @@ test('A5.errors: entities, other HTML, markdown, a blank line and unsupported ch
   for (const [body, why] of [['Root #9829;', 'entity:2'], ['R\n  a[ﬂ°x¶ß]', 'entity:3'], ['R\n  &lt;', 'entity:3'], ['R\n  <b>bold</b>', 'html:3'],
     ['R\n  a</br>b', 'html:3'], ['R\n  a **b *c** d*', 'markdown:3'], ['R\n  `x` _y_', 'markdown:3'], ['R\n  a *b', 'markdown:3'], ['R\n  \\#x', 'markdown:3'], ['R\n  a["`x`"]', 'markdown:3'],
     ['R\n  a<br><br>b', 'blank:3'], ['R\n  a[ ]', 'blank:3'], ['R\n  a‍b', 'unsupported-char U+200D']] as const)
-    assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body)
+    { assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body) }
 })
 test('A5.errors: lines mindmap.jison reads otherwise or rejects fall back as syntax', () => {
   assert.deepEqual(P('mindmap\n:::x\nR'), { reason: 'syntax:2' })
   for (const body of ['R\n:::', 'R\n  A :::urgent', 'R\n  a[x]:::c', 'R\n  a[x] y', 'R\n  a[x]]', 'R\n  Mindmap ideas', 'R\n  ::ICON(x)',
     'R\n  -)x(-', 'R\n  (-x-)', 'R\n  a(-x-)', 'R\n  a[]', 'R\n  a[""]', 'R\n  a["x" y]', 'R\n  a[x', 'R\n  a{x}', 'R\n  a}', 'R\n  ((x)', 'R\n  (x(',
     'R\n  a))x)', 'R\n  a\u2028b'])
-    assert.deepEqual(P(`mindmap\n${body}`), { reason: `syntax:${body.split('\n').length + 1}` }, body)
+    { assert.deepEqual(P(`mindmap\n${body}`), { reason: `syntax:${body.split('\n').length + 1}` }, body) }
 })
 test('A5.errors: U+2028 or U+2029 on any line falls back, a :::class line too (Mermaid throws there)', () => {
-  for (const sep of [' ', ' ']) for (const line of [`:::x${sep}y`, `  A${sep}B`]) assert.deepEqual(P(`mindmap\nR\n${line}`), { reason: 'syntax:3' }, JSON.stringify(line))
+  for (const sep of [' ', ' ']) { for (const line of [`:::x${sep}y`, `  A${sep}B`]) { assert.deepEqual(P(`mindmap\nR\n${line}`), { reason: 'syntax:3' }, JSON.stringify(line)) } }
 })
 // X3. mindmapDb gives every label labelType 'markdown'; createText swaps an icon and renders $$…$$ as KaTeX.
 test('X3: an icon or a $$…$$ formula in a mindmap label falls back as icon or math', () => {
   for (const [body, why] of [['R\n  fa:fa-book', 'icon:3'], ['R\n  a[x fas:fa-car]', 'icon:3'], ['R\n  $$x$$', 'math:3'], ['R\n  a(($$x^2$$))', 'math:3']] as const)
-    assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body)
+    { assert.deepEqual(P(`mindmap\n${body}`), { reason: why }, body) }
 })
 
 // X3. Mermaid 12.2.0 (JSDOM): child __b__ _i_, c2[**bold** *it*] and c4((a **b** c)) show <strong> and <em>. A label whose

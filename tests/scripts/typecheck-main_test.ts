@@ -23,7 +23,9 @@ test('typecheck (no check ID): main returns the status of tsc, and 1 when it has
 function fakeNpx(t: TestContext): { bin: string; tmp: string } {
   const base = mkdtempSync(join(tmpdir(), 'mtty-'))
   t.after(() => rmSync(base, { recursive: true, force: true }))
-  const bin = join(base, 'bin'), tmp = join(base, 'tmp'), out = join(bin, 'cwd')
+  const bin = join(base, 'bin')
+const  tmp = join(base, 'tmp')
+const  out = join(bin, 'cwd')
   mkdirSync(bin); mkdirSync(tmp)
   writeFileSync(join(bin, 'npx'), `#!/bin/sh\npwd -P > '${out}'\nexit 3\n`)
   chmodSync(join(bin, 'npx'), 0o755)

@@ -3,14 +3,17 @@ import { explain } from '../../core/render.ts'; import { text } from './graph-fi
 const X = (body: string, columns: number) => explain(`quadrantChart\n${body}`, { columns, theme: 'mono' }) as any
 const REACH = ['title Reach', 'x-axis Low --> High', 'y-axis Cold --> Hot', 'quadrant-1 Expand', 'quadrant-2 Promote', 'quadrant-3 Rethink', 'quadrant-4 Improve',
   'A: [0.3, 0.6]', 'B: [0.45, 0.23]', 'C: [0.78, 0.34]'].join('\n')
-const H = (l: string, m: string, r: string) => l + '─'.repeat(10) + m + '─'.repeat(10) + r, C = (a: string, b: string) => '│' + a.padEnd(10) + '│' + b.padEnd(10) + '│', E = C('', '')
+const H = (l: string, m: string, r: string) => l + '─'.repeat(10) + m + '─'.repeat(10) + r
+const  C = (a: string, b: string) => '│' + a.padEnd(10) + '│' + b.padEnd(10) + '│'
+const  E = C('', '')
 test('A4: the matrix sketch at q = 10: four quadrants, centered texts, point keys, axis texts and the legend', () => {
   const r = X(REACH, 23); assert.equal(r.step, 'natural')
   assert.deepEqual(text(r.drawing), ['Reach', '↑ Hot', H('┌', '┬', '┐'), C(' Promote', '  Expand'), E, E, E, C('      1', ''), E, H('├', '┼', '┤'), C(' Rethink', ' Improve'),
     E, C('', '     3'), C('         2', ''), E, E, H('└', '┴', '┘'), ' Low' + ' '.repeat(8) + 'High', '↓ Cold', '1 A (0.3, 0.6)', '2 B (0.45, 0.23)', '3 C (0.78, 0.34)'])
 })
 test('A4.fit-ladder: a text wider than q keys every quadrant and x-axis text, in source order; q < 8 falls back', () => {
-  const r = X(REACH.replace('Promote', 'Promote widely'), 23), t = text(r.drawing); assert.equal(r.step, 'keyed')
+  const r = X(REACH.replace('Promote', 'Promote widely'), 23)
+const  t = text(r.drawing); assert.equal(r.step, 'keyed')
   assert.deepEqual([t[3], t[17]], [C('    d', '    c'), ' a' + ' '.repeat(10) + 'b'])
   assert.deepEqual(t.slice(19, 25), ['a Low', 'b High', 'c Expand', 'd Promote widely', 'e Rethink', 'f Improve'])
   assert.deepEqual(X(REACH, 18), { reason: 'too-wide' })
@@ -20,7 +23,7 @@ test('A4: a point in or next to a key on its row joins that key; every point kee
     ['1 A (0.3, 0.6)', '1 B (0.3, 0.6)', '1 C (0.32, 0.6)', '2 A (0.8, 0.2)']))
 test('A5.errors: point styles, bad coordinates, a lone -->, repeats and a keyword-led name fall back', () => {
   for (const [body, why] of [['A: [0.3, 0.6] radius: 12', 'syntax:2'], ['A: [1.2, 0.5]', 'syntax:2'], ['A: [1.0, 0.5]', 'syntax:2'], ['x-axis Low -->', 'syntax:2'],
-    ['quadrant-1 A\nquadrant-1 B', 'repeat:3'], ['A: [0.3 0.6]', 'syntax:2'], ['Titled work: [0.3, 0.6]', 'syntax:2']] as const) assert.deepEqual(X(body, 80), { reason: why }, body)
+    ['quadrant-1 A\nquadrant-1 B', 'repeat:3'], ['A: [0.3 0.6]', 'syntax:2'], ['Titled work: [0.3, 0.6]', 'syntax:2']] as const) { assert.deepEqual(X(body, 80), { reason: why }, body) }
 })
 
 // Beyond the plan's tests. q = 30 at 80 columns: the left half is columns 1…30, the cross 31, the right half 32…61, the
@@ -35,7 +38,7 @@ test("A5.mutation-tests: each point's key entry carries its plotted cell as at, 
     { key: '2', item: 'p1', cls: 'point', at: { r: 13, c: 10 } }, { key: '3', item: 'p2', cls: 'point', at: { r: 12, c: 17 } }]))
 test('A5.mutation-tests: a key that would run into the cross or the frame fails key-collision; one that ends before the cross draws', () => {
   const nine = Array.from({ length: 9 }, (_, i) => `P${i + 1}: [0.1, 0.${i + 1}]`).join('\n')
-  for (const x of ['0.49', '0.99']) assert.deepEqual(X(`${nine}\nJ: [${x}, 0]`, 80), { reason: 'key-collision' }, x)
+  for (const x of ['0.49', '0.99']) { assert.deepEqual(X(`${nine}\nJ: [${x}, 0]`, 80), { reason: 'key-collision' }, x) }
   assert.equal(text(X(`${nine}\nJ: [0.48, 0]`, 80).drawing)[13]!.slice(29, 32), '10│')
 })
 test('A4.fit-ladder: keyed fields follow the source, not the quadrant numbers', () => {
@@ -53,7 +56,7 @@ test('A5.errors: an entity, a keyword in another case or starting a longer word,
   for (const [body, why] of [['quadrant-1 "I #9829; it"', 'entity'], ['title I #9829; it', 'entity'], ['Title Reach', 'syntax:2'], ['titled Reach', 'syntax:2'],
     ['quadrant-1 Big titles', 'syntax:2'], ['X-AXIS Low', 'syntax:2'], ['quadrant-1 "`**A**`"', 'syntax:2'], ['A: [.5, 0.5]', 'syntax:2'], ['quadrant-5 A', 'syntax:2'],
     ['A: [0.9, 0.0] color: #ff3300', 'syntax:2'], ['A: [0.9, 0.0] stroke-width: 5px', 'syntax:2'], ['x-axis A\nx-axis B', 'repeat:3'], ['y-axis A\ny-axis B', 'repeat:3'],
-    ['title A\ntitle B', 'repeat:3']] as const) assert.deepEqual(X(body, 80), { reason: why }, body)
+    ['title A\ntitle B', 'repeat:3']] as const) { assert.deepEqual(X(body, 80), { reason: why }, body) }
   assert.deepEqual(explain('---\ntitle: A\n---\nquadrantChart\ntitle B', { columns: 80 }), { reason: 'repeat:5' })
   assert.deepEqual(explain('quadrantChart x\nA: [0.1, 0.1]', { columns: 80 }), { reason: 'header' })
 })

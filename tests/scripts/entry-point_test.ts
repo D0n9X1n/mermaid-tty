@@ -15,7 +15,7 @@ const IS_MAIN = new URL('../../scripts/lib/is-main.ts', import.meta.url).href
 function tsFiles(dir: string): string[] {
   return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
     const file = `${dir}/${e.name}`
-    if (e.isDirectory()) return e.name === 'node_modules' ? [] : tsFiles(file)
+    if (e.isDirectory()) { return e.name === 'node_modules' ? [] : tsFiles(file) }
     return e.isFile() && e.name.endsWith('.ts') ? [file] : []
   })
 }
@@ -25,7 +25,7 @@ function tsFiles(dir: string): string[] {
 // lib/is-main.ts reads it, and without it falls back to Node's own rule for the main entry.
 test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.meta.main, except lib/is-main.ts', () => {
   const files = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d))
-  for (const f of ['scripts/check-palettes.ts', 'scripts/lib/is-main.ts', 'core/themes.ts', 'hooks/fences.ts']) assert.ok(files.includes(f), `${f} was not scanned`)
+  for (const f of ['scripts/check-palettes.ts', 'scripts/lib/is-main.ts', 'core/themes.ts', 'hooks/fences.ts']) { assert.ok(files.includes(f), `${f} was not scanned`) }
   const uses = files.filter(f => f !== 'scripts/lib/is-main.ts').flatMap(f => readFileSync(join(ROOT, f), 'utf8').split(/\r?\n/)
     .flatMap((line, i) => (line.includes('import.meta.main') ? [`${f}:${i + 1}: ${line.trim()}`] : [])))
   assert.deepEqual(uses, [])
@@ -36,7 +36,7 @@ test('A8.portability: no .ts file under scripts/, core/ or hooks/ uses import.me
 // main() and exited 0 without checking anything.
 test('A8.portability: every script with a main() guards it with isMain(import.meta) from lib/is-main.ts, and none compares argv[1] or realpaths itself', () => {
   const mains = ['scripts', 'core', 'hooks'].flatMap(d => tsFiles(d)).filter(f => /\bfunction main\(/.test(readFileSync(join(ROOT, f), 'utf8')))
-  for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) assert.ok(mains.includes(f), `${f} was not scanned`)
+  for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) { assert.ok(mains.includes(f), `${f} was not scanned`) }
   const bad = mains.flatMap(f => {
     const text = readFileSync(join(ROOT, f), 'utf8')
     return [...(/if \(isMain\(import\.meta\)\) \{?\s*process\.exitCode = (await )?main\([^)]*\)/.test(text) ? [] : [`${f}: no isMain(import.meta) guard`]),
@@ -63,7 +63,7 @@ class LinkRefused extends Error {}
 function makeLink(make: () => void): void {
   try { make() } catch (e) {
     const { code, message } = e as { code?: string; message?: string }
-    if (code === 'EPERM' || code === 'EACCES') throw new LinkRefused(`the OS refused to create a link: ${message}`)
+    if (code === 'EPERM' || code === 'EACCES') { throw new LinkRefused(`the OS refused to create a link: ${message}`) }
     throw e
   }
 }
@@ -71,30 +71,38 @@ function makeLink(make: () => void): void {
 // Each layout builds its modules in dir, a real path, and returns the runs to make.
 const LAYOUTS: { name: string; build: (dir: string) => Run[] }[] = [
   { name: '(a) a direct run, and an import from a module run directly', build: dir => {
-    const file = join(dir, 'probe.mjs'), importer = join(dir, 'importer.mjs')
+    const file = join(dir, 'probe.mjs')
+const  importer = join(dir, 'importer.mjs')
     writeFileSync(file, probe()); writeFileSync(importer, probe(file))
     return [{ cwd: dir, entry: file, native: [true] }, { cwd: dir, entry: importer, native: [false, true] }]
   } },
   { name: '(b) a run through a symlink, and an import through it', build: dir => {
-    const file = join(dir, 'probe.mjs'), symlink = join(dir, 'link.mjs'), importer = join(dir, 'importer.mjs')
+    const file = join(dir, 'probe.mjs')
+const  symlink = join(dir, 'link.mjs')
+const  importer = join(dir, 'importer.mjs')
     writeFileSync(file, probe()); makeLink(() => symlinkSync(file, symlink)); writeFileSync(importer, probe(symlink))
     return [{ cwd: dir, entry: symlink, native: [true] }, { cwd: dir, entry: importer, native: [false, true] }]
   } },
   // Two hard links are one file, but Node loads them as two modules, by URL: only the entry is main.
   { name: '(c) a run of either of two same-named hard links in different directories, each importing the other', build: dir => {
-    const a = join(dir, 'a', 'probe.mjs'), b = join(dir, 'b', 'probe.mjs')
+    const a = join(dir, 'a', 'probe.mjs')
+const  b = join(dir, 'b', 'probe.mjs')
     mkdirSync(join(dir, 'a')); mkdirSync(join(dir, 'b'))
     writeFileSync(a, probe(a, b)); makeLink(() => linkSync(a, b))
     return [{ cwd: dir, entry: a, native: [false, true] }, { cwd: dir, entry: b, native: [false, true] }]
   } },
   { name: '(d) a run by a relative path from another cwd, and an import from a module run that way', build: dir => {
-    const real = join(dir, 'real'), cwd = join(dir, 'elsewhere'), file = join(real, 'probe.mjs'), importer = join(real, 'importer.mjs')
+    const real = join(dir, 'real')
+const  cwd = join(dir, 'elsewhere')
+const  file = join(real, 'probe.mjs')
+const  importer = join(real, 'importer.mjs')
     mkdirSync(real); mkdirSync(cwd)
     writeFileSync(file, probe()); writeFileSync(importer, probe(file))
     return [{ cwd, entry: relative(cwd, file), native: [true] }, { cwd, entry: relative(cwd, importer), native: [false, true] }]
   } },
   { name: '(e) a run through a symlinked parent directory, and an import through it', build: dir => {
-    const real = join(dir, 'real'), alias = join(dir, 'alias')
+    const real = join(dir, 'real')
+const  alias = join(dir, 'alias')
     mkdirSync(real); makeLink(() => symlinkSync(real, alias, 'junction'))
     writeFileSync(join(real, 'probe.mjs'), probe()); writeFileSync(join(real, 'importer.mjs'), probe(join(alias, 'probe.mjs')))
     return [{ cwd: dir, entry: join(alias, 'probe.mjs'), native: [true] }, { cwd: dir, entry: join(alias, 'importer.mjs'), native: [false, true] }]
@@ -112,7 +120,7 @@ for (const { name, build } of LAYOUTS) {
     t.after(() => rmSync(dir, { recursive: true, force: true }))
     let runs: Run[]
     try { runs = build(dir) } catch (e) {
-      if (!(e instanceof LinkRefused)) throw e
+      if (!(e instanceof LinkRefused)) { throw e }
       t.skip(e.message); return
     }
     for (const { cwd, entry, native } of runs) {
@@ -120,7 +128,7 @@ for (const { name, build } of LAYOUTS) {
       assert.equal(r.status, 0, `node ${entry}: ${r.stderr}`)
       const modules = r.stdout.split(/\r?\n/).filter(Boolean).map(l => JSON.parse(l) as { url: string; native?: boolean; fallback: boolean })
       assert.deepEqual(modules.map(m => m.native), native, `node ${entry}: import.meta.main in each module`)
-      for (const m of modules) assert.equal(m.fallback, m.native, `node ${entry}: isMain's fallback in ${relative(dir, fileURLToPath(m.url))}`)
+      for (const m of modules) { assert.equal(m.fallback, m.native, `node ${entry}: isMain's fallback in ${relative(dir, fileURLToPath(m.url))}`) }
     }
   })
 }
@@ -139,7 +147,8 @@ test('A8.portability: isMain is false when argv[1] is absent', () =>
 
 // From Node 24.2, import.meta.main is a boolean: Node's own answer, whatever argv[1] names.
 test('A8.portability: isMain returns a boolean import.meta.main as it is, whatever argv[1] names', () => {
-  const self = fileURLToPath(import.meta.url), other = new URL('no-such-module.ts', import.meta.url).href
+  const self = fileURLToPath(import.meta.url)
+const  other = new URL('no-such-module.ts', import.meta.url).href
   assert.equal(isMainWith([self], { url: import.meta.url }), true); assert.equal(isMainWith([self], { url: import.meta.url, main: false }), false)
   assert.equal(isMainWith([self], { url: other }), false); assert.equal(isMainWith([self], { url: other, main: true }), true)
 })
@@ -153,7 +162,8 @@ test('A8.portability: when argv[1] names no file, isMain compares the URL of the
 // Node gives the main module its real path, but argv[1] keeps the path node was given,
 // which on macOS often runs through a symlink: temp dirs live under /var -> /private/var.
 test('A8.portability: check-palettes runs main() when argv[1] reaches it through a symlink, as macOS temp paths do', t => {
-  const dir = mkdtempSync(join(tmpdir(), 'mermaid-tty-link-')), link = join(dir, 'scripts')
+  const dir = mkdtempSync(join(tmpdir(), 'mermaid-tty-link-'))
+const  link = join(dir, 'scripts')
   t.after(() => rmdirSync(dir))                   // not rmSync recursive: cleanup never reaches through the link
   symlinkSync(join(ROOT, 'scripts'), link, 'junction')
   try {

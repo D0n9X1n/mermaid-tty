@@ -13,7 +13,7 @@ test('A5.errors: point labels, a numeric x range, unquoted-text limits, repeats,
   for (const [body, why] of [['line [540 "PaLM", 600]', 'syntax:2'], ['x-axis 0 --> 100', 'syntax:2'], ['title Sales Revenue', 'syntax:2'], ['x-axis Q1 [a, b]\nbar [1, 2]', 'syntax:2'],
     ['x-axis [barley, wheat]\nbar [1, 2]', 'syntax:2'], ['bar [1, 2', 'syntax:2'], ['x-axis [a, a]\nbar [1, 2]', 'repeat:2'], ['x-axis [a]\nx-axis [b]\nbar [1]', 'repeat:3'],
     ['x-axis [a, b, c]\nbar [1, 2]', 'length'], ['y-axis 0 --> 100\nbar [120]', 'domain'], ['bar [2.3, 45, .98, -3.4]', 'domain'], ['y-axis 5 --> 5\nline [5]', 'domain'],
-    ['bar [0, 0]', 'domain'], [Array.from({ length: 9 }, () => 'line [1]').join('\n'), 'series']] as const) assert.deepEqual(P(`xychart-beta\n${body}`), { reason: why }, body)
+    ['bar [0, 0]', 'domain'], [Array.from({ length: 9 }, () => 'line [1]').join('\n'), 'series']] as const) { assert.deepEqual(P(`xychart-beta\n${body}`), { reason: why }, body) }
 })
 
 // Beyond the plan's two: the rest of the matrix's xychart rules. Q: the result for a body under an xychart-beta header.
@@ -31,7 +31,7 @@ test('A5.errors: a bad header, a second title or axis, and an unclosed or run-on
     ['---\ntitle: A\n---\nxychart-beta\ntitle B\nbar [1]', 'repeat:5'], ['xychart-beta\ntitle A\ntitle B\nbar [1]', 'repeat:3'],
     ['xychart-beta\ny-axis A\ny-axis 0 --> 5\nbar [1]', 'repeat:3'], ['xychart-beta\nx-axis A\nx-axis [a]\nbar [1]', 'repeat:3'],
     ['xychart-beta\nbar [1]\naccDescr {\ntext', 'syntax:3'], ['xychart-beta\naccDescr { a } bar [1]', 'syntax:2'],
-    ['xychart-beta\nAccTitle: a\nbar [1]', 'syntax:2']] as const) assert.deepEqual(P(src), { reason: why }, src)
+    ['xychart-beta\nAccTitle: a\nbar [1]', 'syntax:2']] as const) { assert.deepEqual(P(src), { reason: why }, src) }
 })
 // k copies of the statement s, one per line.
 const times = (k: number, s: string) => Array.from({ length: k }, () => s).join('\n')
@@ -46,13 +46,13 @@ test('A5.errors: markdown, blank and undrawable texts, keywords in any case or l
     ['line "a‍b" [1]', 'unsupported-char U+200D'], ['x-axis [Barley]\nbar [1]', 'syntax:2'], ['line LINEAR [1]', 'syntax:2'],
     ['line a1Bar [1]', 'syntax:2'], ['y-axis Rev2 0 --> 5\nbar [1]', 'syntax:2'], ['Title A\nbar [1]', 'syntax:2'], ['BAR [1]', 'syntax:2'],
     ['lines [1]', 'syntax:2'], ['bar [1, 2]\nline [1]', 'length'], ['y-axis -5 --> 5\nbar [1]', 'domain'], ['bar [1]\nline [-1]', 'domain'],
-    [times(27, 'bar [1]'), 'series']] as const) assert.deepEqual(Q(body), { reason: why }, body)
+    [times(27, 'bar [1]'), 'series']] as const) { assert.deepEqual(Q(body), { reason: why }, body) }
 })
 // Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text would
 // draw differently here, so it falls back, as flowchart's labels do. A # with no ; is text.
 test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text', () => {
   for (const body of ['title "Love #9829;"', 'x-axis ["a#quot;b", c]\nbar [1, 2]', 'line "#lt;3" [1]', 'y-axis "#9829;" 0 --> 5\nbar [1]'])
-    assert.deepEqual(P(`xychart-beta\n${body}`), { reason: 'entity' }, body)
+    { assert.deepEqual(P(`xychart-beta\n${body}`), { reason: 'entity' }, body) }
   assert.equal(P('xychart-beta\ntitle "C# 1.0"\nbar [1]').title, 'C# 1.0')
 })
 // T71 QA: numbers keep their spelling exactly, sign and leading dot included, and their exact values.

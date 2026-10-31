@@ -47,21 +47,21 @@ test('A5.mutation-tests: a placed glyph moved, or one more drawn, fails glyph-mi
 const CHARTS = ['gantt', 'journey', 'pie', 'quadrant', 'timeline', 'xychart']
 test('C: every chart places each label with text and each drawn bar', () => {
   const unplaced: string[] = []
-  for (const dir of CHARTS) for (const f of readdirSync(new URL(`../../fixtures/${dir}/`, import.meta.url)).filter(f => /-ok-\d+\.mmd$/.test(f))) {
+  for (const dir of CHARTS) { for (const f of readdirSync(new URL(`../../fixtures/${dir}/`, import.meta.url)).filter(f => /-ok-\d+\.mmd$/.test(f))) {
     for (const columns of [40, 60, 80]) {
       const d = X(readFileSync(new URL(`../../fixtures/${dir}/${f}`, import.meta.url), 'utf8'), columns)
-      if (!d) continue
+      if (!d) { continue }
       assert.equal(validate(d), null, `${f} @${columns}`)
-      for (const l of d.expect.labels) if (l.text.trim() !== '' && !l.at) unplaced.push(`${f} @${columns} ${l.owner}`)
-      for (const b of d.expect.bars ?? []) if (b.eighths > 0 && !b.at) unplaced.push(`${f} @${columns} bar ${b.owner}`)
+      for (const l of d.expect.labels) { if (l.text.trim() !== '' && !l.at) { unplaced.push(`${f} @${columns} ${l.owner}`) } }
+      for (const b of d.expect.bars ?? []) { if (b.eighths > 0 && !b.at) { unplaced.push(`${f} @${columns} bar ${b.owner}`) } }
     }
-  }
+  } }
   assert.deepEqual(unplaced.slice(0, 10), [])
 })
 // d with owner o's text and cont cells moved by (dr, dc), into cells that must be free, or past a row's end.
 function shove(d: Drawing, o: string, dr: number, dc: number): Drawing {
   const mine = d.cells.flatMap((row, r) => row.flatMap((x, c) => (x && (x.kind === 'text' || x.kind === 'cont') && x.owners[0] === o ? [{ r, c, x }] : [])))
-  for (const p of mine) d.cells[p.r]![p.c] = null
+  for (const p of mine) { d.cells[p.r]![p.c] = null }
   for (const p of mine) { assert.equal(d.cells[p.r + dr]![p.c + dc] ?? null, null); d.cells[p.r + dr]![p.c + dc] = p.x }
   return d
 }
@@ -71,7 +71,8 @@ test('A5.mutation-tests: a diagram title moved off the top-left cell fails label
   assert.deepEqual(validate(shove(d, 'title', 0, 1)), { reason: 'label-misplaced' })
 })
 test('A5.mutation-tests: a node or note label moved out of its pill fails label-unbound, edges or none', () => {
-  const f = X('flowchart TD\nA ~~~ B\nA --> C', 60), s = X('sequenceDiagram\nA->>B: hi\nNote left of A: n', 60)
+  const f = X('flowchart TD\nA ~~~ B\nA --> C', 60)
+const  s = X('sequenceDiagram\nA->>B: hi\nNote left of A: n', 60)
   assert.equal(validate(f), null); assert.equal(validate(s), null)
   const B = f.cells.findIndex(row => row.some(x => x?.kind === 'text' && x.owners[0] === 'B'))
   assert.deepEqual(validate(shove(f, 'B', -1, 0)), { reason: 'label-unbound' }, `B on row ${B}`)

@@ -34,7 +34,8 @@ export type Session = {
 // env is the session's whole env, as sessionEnv builds it.
 export type SessionOptions = { driver: Driver; argv: string[]; cwd: string; env: Record<string, string> }
 
-const COLS = 100, ROWS = 40
+const COLS = 100
+const  ROWS = 40
 const PTY_KEYS: Record<Key, string> = { enter: '\r', 'ctrl-o': '\x0f', escape: '\x1b', down: '\x1b[B' }
 const TMUX_KEYS: Record<Key, string> = { enter: 'Enter', 'ctrl-o': 'C-o', escape: 'Escape', down: 'Down' }
 
@@ -49,9 +50,10 @@ export async function waitForText(read: (signal: AbortSignal) => Promise<string>
   const deadline = Date.now() + ms
   let last = ''
   for (let left = ms; left > 0; left = deadline - Date.now()) {
-    const abort = new AbortController(), t = await within(read(abort.signal), left)
+    const abort = new AbortController()
+const  t = await within(read(abort.signal), left)
     if (t === LATE) { abort.abort(); break }
-    if (t.search(re) >= 0) return t
+    if (t.search(re) >= 0) { return t }
     last = t
     await sleep(Math.min(100, Math.max(0, deadline - Date.now())))
   }
@@ -59,7 +61,8 @@ export async function waitForText(read: (signal: AbortSignal) => Promise<string>
 }
 
 // How long stop() waits for a program to exit after its hangup, then after it is killed.
-const HUP_MS = 2000, KILL_MS = 1000
+const HUP_MS = 2000
+const  KILL_MS = 1000
 // How long taskkill may take over a live tree on Windows, before the console closes.
 const TREE_MS = 3000
 // p's value, or LATE if it has not settled within ms.
@@ -72,7 +75,7 @@ async function within<T>(p: Promise<T>, ms: number): Promise<T | typeof LATE> {
 // Whether a process has pid; whether none has within ms.
 const alive = (pid: number) => { try { process.kill(pid, 0); return true } catch { return false } }
 async function gone(pid: number, ms: number): Promise<boolean> {
-  for (const until = Date.now() + ms; alive(pid); await sleep(50)) if (Date.now() >= until) return false
+  for (const until = Date.now() + ms; alive(pid); await sleep(50)) { if (Date.now() >= until) { return false } }
   return true
 }
 // Runs step, ignoring what it throws, so that a failed cleanup step skips none after it.
@@ -84,14 +87,14 @@ async function end(hangUp: () => void, exited: (ms: number) => Promise<boolean>,
   attempt(hangUp)
   const done = await exited(HUP_MS).catch(() => false)
   attempt(kill)
-  for (const step of after) attempt(step)
-  if (!done) await exited(KILL_MS).catch(() => false)
+  for (const step of after) { attempt(step) }
+  if (!done) { await exited(KILL_MS).catch(() => false) }
 }
 // Kills pid and every process under it: on Windows its tree, with taskkill /T /F; elsewhere its process group, which
 // node-pty and tmux each make it lead, and which lasts after pid has exited while any process in it runs.
 function killTree(pid: number, ms = KILL_MS): void {
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: ms })
-  else process.kill(-pid, 'SIGKILL')
+  if (process.platform === 'win32') { spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: ms }) }
+  else { process.kill(-pid, 'SIGKILL') }
 }
 
 // node-pty feeds the program's output to a screen. node-pty is imported here, not at the top: where it cannot load, the
@@ -106,7 +109,10 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   // the root of its tree).
   const pgid = p.pid
   // parsed resolves once the screen has parsed the output received so far: the screen parses writes in order.
-  let parsed = Promise.resolve(), exited = false, stopping: Promise<void> | undefined, stream = ''
+  let parsed = Promise.resolve()
+let  exited = false
+let  stopping: Promise<void> | undefined
+let  stream = ''
   p.onData(d => { stream += d; parsed = screen.write(d) })
   const exit = new Promise<void>(resolve => p.onExit(() => { exited = true; resolve() }))
   const read = async <T>(f: () => T) => { await parsed; return f() }
@@ -121,7 +127,7 @@ async function ptySession(o: SessionOptions): Promise<Session> {
     clipboard: () => read(screen.clipboard),
     // On Windows the tree is killed first, while the program still roots it: closing the console ends the program, and
     // taskkill /T then finds no tree, so a process detached from the console (and holding the cwd) would outlive it.
-    stop: () => (stopping ??= end(() => { if (process.platform === 'win32' && !exited) killTree(pgid, TREE_MS); if (!exited) p.kill() },
+    stop: () => (stopping ??= end(() => { if (process.platform === 'win32' && !exited) { killTree(pgid, TREE_MS); } if (!exited) { p.kill() } },
       ms => within(exit, ms).then(r => r !== LATE), () => killTree(pgid))),
   }
 }
@@ -132,13 +138,14 @@ const ptyRoot = () => dirname(createRequire(import.meta.url).resolve('node-pty/p
 // node-pty 1.1.0 installs its macOS spawn-helper without them, and spawns every program on macOS through it. Nothing on
 // Windows, which has no spawn-helper and no execute bits. A helper built from source, under build/, is executable already.
 export function ensureSpawnHelper(root = ptyRoot(), platform: string = process.platform): string[] {
-  const prebuilds = join(root, 'prebuilds'), fixed: string[] = []
-  if (platform === 'win32' || !existsSync(prebuilds)) return fixed
+  const prebuilds = join(root, 'prebuilds')
+const  fixed: string[] = []
+  if (platform === 'win32' || !existsSync(prebuilds)) { return fixed }
   for (const d of readdirSync(prebuilds)) {
     const helper = join(prebuilds, d, 'spawn-helper')
-    if (!existsSync(helper)) continue
+    if (!existsSync(helper)) { continue }
     const mode = statSync(helper).mode & 0o7777
-    if ((mode & 0o111) === 0o111) continue
+    if ((mode & 0o111) === 0o111) { continue }
     chmodSync(helper, mode | 0o111)
     fixed.push(helper)
   }
@@ -150,7 +157,7 @@ export function ensureSpawnHelper(root = ptyRoot(), platform: string = process.p
 // of its outer quotes; an argument with a space keeps its own, and no other cmd.exe metacharacter is escaped.
 export function ptyCommand(argv: string[], platform: string, env: Record<string, string>): { file: string; args: string[] | string } {
   const [file = '', ...args] = argv
-  if (platform !== 'win32') return { file, args }
+  if (platform !== 'win32') { return { file, args } }
   const line = argv.map(a => (/\s/.test(a) ? `"${a}"` : a)).join(' ')
   return { file: env.ComSpec ?? 'cmd.exe', args: `/d /s /c "${line}"` }
 }
@@ -165,8 +172,8 @@ const tmuxArgv = (env: Record<string, string>, args: string[]) => ['-i', ...Obje
 // Runs tmux and returns its stdout. Throws with its stderr when it fails, or saying so when it gets no answer.
 function tmux(env: Record<string, string>, args: string[]): string {
   const r = spawnSync('env', tmuxArgv(env, args), { encoding: 'utf8', timeout: CMD_MS, killSignal: 'SIGKILL' })
-  if ((r.error as { code?: string } | undefined)?.code === 'ETIMEDOUT') throw new Error(`tmux ${args.join(' ')} failed: no answer in ${CMD_MS} ms`)
-  if (r.status !== 0) throw new Error(`tmux ${args.join(' ')} failed: ${r.error?.message ?? r.stderr.trim()}`)
+  if ((r.error as { code?: string } | undefined)?.code === 'ETIMEDOUT') { throw new Error(`tmux ${args.join(' ')} failed: no answer in ${CMD_MS} ms`) }
+  if (r.status !== 0) { throw new Error(`tmux ${args.join(' ')} failed: ${r.error?.message ?? r.stderr.trim()}`) }
   return r.stdout
 }
 // tmux for a read: as tmux(), but async, so that the event loop runs on while it waits, and signal can abort it.
@@ -189,7 +196,9 @@ function tmuxSession(o: SessionOptions): Session {
     '-c', o.cwd, '--', ...o.argv, ';', 'set', '-g', 'window-size', 'manual').trim().split(' ')
   // pane, the program's pid, is also its process group's: tmux makes the program lead a session of its own. stop() uses
   // these, recorded now, and looks up nothing.
-  const server = Number(started[0]), pane = Number(started[1]), socket = started.slice(2).join(' ')
+  const server = Number(started[0])
+const  pane = Number(started[1])
+const  socket = started.slice(2).join(' ')
   // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
   const ansi = (signal?: AbortSignal) => tmuxRead(o.env, ['capture-pane', '-p', '-e', '-t', 'mtty-e2e'], signal)
   const capture = async (signal?: AbortSignal) => {
@@ -208,7 +217,7 @@ function tmuxSession(o: SessionOptions): Session {
     ansi: () => ansi(),
     clipboard: async () => {
       try { return await tmuxRead(o.env, ['show-buffer']) } catch (e) {
-        if (e instanceof Error && e.message.endsWith('no buffers')) return undefined
+        if (e instanceof Error && e.message.endsWith('no buffers')) { return undefined }
         throw e
       }
     },
@@ -218,12 +227,12 @@ function tmuxSession(o: SessionOptions): Session {
     // since a server that does not answer, or whose socket is gone, outlives kill-server. Last it removes the socket tmux
     // leaves behind. Each step runs whatever the ones before it threw: the program, its group or the server may be gone.
     stop: async () => {
-      if (stopped) return
+      if (stopped) { return }
       stopped = true
-      const cleanup = [() => run('kill-server'), () => { if (server > 0) process.kill(server, 'SIGKILL') }, () => rmSync(socket, { force: true })]
+      const cleanup = [() => run('kill-server'), () => { if (server > 0) { process.kill(server, 'SIGKILL') } }, () => rmSync(socket, { force: true })]
       // A pid of 0 would signal this process's own group.
-      if (pane > 0) await end(() => process.kill(pane, 'SIGHUP'), ms => gone(pane, ms), () => killTree(pane), ...cleanup)
-      else cleanup.forEach(attempt)
+      if (pane > 0) { await end(() => process.kill(pane, 'SIGHUP'), ms => gone(pane, ms), () => killTree(pane), ...cleanup) }
+      else { cleanup.forEach(attempt) }
     },
   }
 }

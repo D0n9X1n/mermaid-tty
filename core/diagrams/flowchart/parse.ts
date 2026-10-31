@@ -69,22 +69,22 @@ type State = { nodes: Map<string, Decl>; edges: GEdge[]; clusters: GCluster[]; o
 export function parseFlowchart(src: Source): Graph | Fail {
   const head = HEADER.exec(src.header)
   // A header HEADER does not match, such as a bad direction (`flowchart XY`), fails 'header'.
-  if (!head) return fail('header')
+  if (!head) { return fail('header') }
   const dir = (head[3] === undefined || head[3] === 'TD' ? 'TB' : head[3]) as Dir
   const st: State = { nodes: new Map(), edges: [], clusters: [], open: [], parent: new Map(), descr: null, tail: '\n' }
   for (const { n, text } of joinData(src.lines)) {
     const f = line(text.trim(), st, n)
     // A step that fails 'syntax' fails with its statement's source line.
-    if (f) return f.reason === 'syntax' ? fail(`syntax:${n}`) : f
+    if (f) { return f.reason === 'syntax' ? fail(`syntax:${n}`) : f }
   }
   // An accDescr { with no } fails with its line.
-  if (st.descr !== null) return fail(`syntax:${st.descr}`)
-  if (st.open.length > 0) return fail('unclosed-subgraph')
+  if (st.descr !== null) { return fail(`syntax:${st.descr}`) }
+  if (st.open.length > 0) { return fail('unclosed-subgraph') }
   const g = graph(dir, src.title, st)
   // An edge id that a node, a cluster or an earlier edge has would give two drawn things one owner, whichever came first.
   const ids = new Set([...g.nodes, ...g.clusters].map(x => x.id))
   for (const e of g.edges) {
-    if (ids.has(e.id)) return fail('id-collision')
+    if (ids.has(e.id)) { return fail('id-collision') }
     ids.add(e.id)
   }
   return g
@@ -100,22 +100,24 @@ function line(t: string, st: State, n: number): Fail | null {
   // The start of the line's last direction X: the rest of the line from p has one iff lastDir >= p. No match of DIR_IN
   // can overlap another, so matchAll finds every start.
   let lastDir = -1
-  for (const m of t.matchAll(DIR_IN)) lastDir = m.index!
+  for (const m of t.matchAll(DIR_IN)) { lastDir = m.index! }
   // fresh: p starts the line, or the rest of it after a block closed, where a direction X makes the rest one statement.
-  let p = 0, fresh = true
+  let p = 0
+let  fresh = true
   for (;;) {
     if (st.descr !== null) {
       const brace = t.indexOf('}', p)
-      if (brace < 0) return null
+      if (brace < 0) { return null }
       st.descr = null
       p = skipSpace(t, brace + 1)
       fresh = true
       continue
     }
-    if (p >= t.length) return null
+    if (p >= t.length) { return null }
     if (fresh && matchAt(ACC_LINE, t, p) < 0 && matchAt(ACC_BLOCK, t, p) < 0 && lastDir >= p) {
-      const d = DIR_LINE.exec(t.slice(p))?.[1], b = st.open.at(-1)
-      if (d === undefined || !b) return fail('syntax')
+      const d = DIR_LINE.exec(t.slice(p))?.[1]
+const  b = st.open.at(-1)
+      if (d === undefined || !b) { return fail('syntax') }
       b.cluster.dir = (d === 'TD' ? 'TB' : d) as Dir
       return null
     }
@@ -124,17 +126,18 @@ function line(t: string, st: State, n: number): Fail | null {
     const q = skipSpace(t, p)
     // An empty one is a parse difference: Mermaid's lexer reads the next line as its text, so it fails.
     const acc = matchAt(ACC_LINE, t, q)
-    if (acc >= 0) return t.slice(acc).trim() ? null : fail('syntax')
+    if (acc >= 0) { return t.slice(acc).trim() ? null : fail('syntax') }
     const open = matchAt(ACC_BLOCK, t, q)
     if (open >= 0) {
       st.descr = n
       p = skipSpace(t, open)
       continue
     }
-    const end = runEnd(t, p), s = t.slice(p, end).trim()
+    const end = runEnd(t, p)
+const  s = t.slice(p, end).trim()
     st.tail = t[end] === ';' && !/\s$/.test(t.slice(p, end)) ? ';' : '\n'
     const f = s ? stmt(s, st) : null
-    if (f) return f
+    if (f) { return f }
     p = end + 1
   }
 }
@@ -143,13 +146,13 @@ function line(t: string, st: State, n: number): Fail | null {
 // header; or nodes and links read whole. null, or why it fails.
 function stmt(s: string, st: State): Fail | null {
   // Mermaid's lexer has no token for an encoded #…; code outside "…" in a directive: style A fill:#f9f;stroke:#333; fails.
-  if (DIRECTIVE.test(s)) return /#\w+;/.test(s.replace(/"[^"]*"/g, '')) || directiveMisread(s, st.tail) ? fail('syntax') : null
-  if (edgeData(s, st)) return null
-  if (s === 'end') return closeSubgraph(st)
+  if (DIRECTIVE.test(s)) { return /#\w+;/.test(s.replace(/"[^"]*"/g, '')) || directiveMisread(s, st.tail) ? fail('syntax') : null }
+  if (edgeData(s, st)) { return null }
+  if (s === 'end') { return closeSubgraph(st) }
   // Mermaid's lexer reads subgraph as a keyword even where a longer word starts with it.
-  if (s.startsWith('subgraph')) return openSubgraph(s, st)
+  if (s.startsWith('subgraph')) { return openSubgraph(s, st) }
   const end = statement(s, st)
-  if (isFail(end)) return end
+  if (isFail(end)) { return end }
   return end < s.length ? fail('syntax') : null
 }
 
@@ -157,8 +160,9 @@ function stmt(s: string, st: State): Fail | null {
 // comma-separated ids, and class's class name. Each is read with what follows it; a list's , and the line's end count.
 function directiveMisread(s: string, tail: string): boolean {
   const m = /^(style|classDef|class|click)\s+(\S+)(.*)$/s.exec(s)
-  if (!m) return false
-  const [, kw, list = '', after = ''] = m, names = kw === 'style' || kw === 'click' ? [list] : list.split(',')
+  if (!m) { return false }
+  const [, kw, list = '', after = ''] = m
+const  names = kw === 'style' || kw === 'click' ? [list] : list.split(',')
   const cls = kw === 'class' ? /^\s+(\S+)/.exec(after)?.[1] : undefined
   const read = (id: string, rest: string) => ID.exec(id)?.[0] !== id || misread(id, rest, 'node')
   return names.some((n, k) => read(n, (k < names.length - 1 ? ',' : '') + after + tail)) || (cls !== undefined && read(cls, after.trimStart().slice(cls.length) + tail))
@@ -178,19 +182,20 @@ function edgeData(s: string, st: State): boolean {
 // node with a shape, a label or an @{…} already has; or the title's label Fail.
 function openSubgraph(s: string, st: State): Fail | null {
   const m = SUBGRAPH.exec(s)
-  if (!m) return fail('syntax')
+  if (!m) { return fail('syntax') }
   const [, name, rest = '', quoted] = m
-  if (name !== undefined && misread(name, s.slice('subgraph '.length).trimStart().slice(name.length) + st.tail, 'subgraph')) return fail('syntax')
+  if (name !== undefined && misread(name, s.slice('subgraph '.length).trimStart().slice(name.length) + st.tail, 'subgraph')) { return fail('syntax') }
   const c = rest.startsWith('[') ? closer(rest, 1, [']']) : null
-  if (rest && c?.at !== rest.length - 1) return fail('syntax')
+  if (rest && c?.at !== rest.length - 1) { return fail('syntax') }
   const raw = name === undefined ? quoted! : c ? rest.slice(1, c.at) : name
   // Mermaid keeps any other backquote in the id or title (subgraph "A`" is id A`), so only "`…`" around it all is read.
-  if (raw.includes('`') && !/^"`[^`"]+`"$/.test(raw)) return fail('syntax')
+  if (raw.includes('`') && !/^"`[^`"]+`"$/.test(raw)) { return fail('syntax') }
   const title = label(raw, 'none')
-  if (isFail(title)) return title
+  if (isFail(title)) { return title }
   // Mermaid's id for `subgraph "…"` is the string's text, trimmed: a "`…`" loses its backquotes too.
-  const id = name ?? quoted!.replace(/^"`?|`?"$/g, '').trim(), d = st.nodes.get(id)
-  if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) return fail('syntax')
+  const id = name ?? quoted!.replace(/^"`?|`?"$/g, '').trim()
+const  d = st.nodes.get(id)
+  if (!title.trim() || st.clusters.some(k => k.id === id) || (d && !d.bare)) { return fail('syntax') }
   const cluster: GCluster = { id, title, dir: null, nodes: [], clusters: [] }
   st.clusters.push(cluster)
   st.open.push({ cluster, ids: [] })
@@ -202,11 +207,11 @@ function openSubgraph(s: string, st: State): Fail | null {
 // or a cluster it would take that holds it.
 function closeSubgraph(st: State): Fail | null {
   const b = st.open.pop()
-  if (!b) return fail('syntax')
+  if (!b) { return fail('syntax') }
   const id = b.cluster.id
   for (const m of b.ids) {
-    if (m === id || st.parent.has(m)) continue
-    for (let p: string | undefined = id; p !== undefined; p = st.parent.get(p)) if (p === m) return fail('syntax')
+    if (m === id || st.parent.has(m)) { continue }
+    for (let p: string | undefined = id; p !== undefined; p = st.parent.get(p)) { if (p === m) { return fail('syntax') } }
     st.parent.set(m, id)
   }
   st.open.at(-1)?.ids.push(id)
@@ -219,8 +224,8 @@ function graph(dir: Dir, title: string | null, st: State): Graph {
   const ids = new Set(st.clusters.map(c => c.id))
   for (const [m, p] of st.parent) {
     const c = st.clusters.find(k => k.id === p)!
-    if (ids.has(m)) c.clusters.push(m)
-    else c.nodes.push(m)
+    if (ids.has(m)) { c.clusters.push(m) }
+    else { c.nodes.push(m) }
   }
   const nodes = [...st.nodes.values()].filter(d => !ids.has(d.id)).map(node)
   return { dir, title, nodes, edges: st.edges, clusters: st.clusters }
@@ -233,15 +238,15 @@ function runEnd(line: string, i: number): number {
   for (; i < line.length; i++) {
     if (line[i] === '"') {
       const close = line.indexOf('"', i + 1)
-      if (close < 0) return line.length
+      if (close < 0) { return line.length }
       i = close
     } else if (line.startsWith('@{', i)) {
       const d = data(line, i + 2)
-      if (d) i = d.end - 1
+      if (d) { i = d.end - 1 }
     } else if (line[i] === '#') {
       CODE_AT.lastIndex = i
-      if (CODE_AT.test(line)) i = CODE_AT.lastIndex - 1
-    } else if (line[i] === ';') return i
+      if (CODE_AT.test(line)) { i = CODE_AT.lastIndex - 1 }
+    } else if (line[i] === ';') { return i }
   }
   return line.length
 }
@@ -254,7 +259,7 @@ function matchAt(re: RegExp, text: string, i: number): number {
 
 // The first index from i in text that is not a space, or text's length.
 function skipSpace(text: string, i: number): number {
-  while (i < text.length && SPACE.test(text[i]!)) i++
+  while (i < text.length && SPACE.test(text[i]!)) { i++ }
   return i
 }
 
@@ -267,21 +272,22 @@ const DATA_ODD = /(?!\t)[\p{Cc}\p{Zl}\p{Zp}]|(?! )\p{Zs}/u
 // }. null unless the body reads whole: pairs split by commas, one trailing comma at most,
 // spaces, then }; each key once; each value one yamlValue reads; and no DATA_ODD character.
 function data(text: string, i: number): { pairs: [key: string, value: string][]; end: number } | null {
-  const start = i, pairs: [string, string][] = []
+  const start = i
+const  pairs: [string, string][] = []
   for (;;) {
     PAIR.lastIndex = i
     const m = PAIR.exec(text)
-    if (!m) break
+    if (!m) { break }
     const [, key = '', value = ''] = m
     // A key must be one YAML reads as a string (no bool, null or number), each once; and every value one yamlValue reads.
-    if (!/^[A-Za-z_][\w-]*$/.test(key) || /^(?:true|false|null)$/i.test(key) || pairs.some(([k]) => k === key) || !yamlValue(value)) return null
+    if (!/^[A-Za-z_][\w-]*$/.test(key) || /^(?:true|false|null)$/i.test(key) || pairs.some(([k]) => k === key) || !yamlValue(value)) { return null }
     pairs.push([key, value])
     i = PAIR.lastIndex
-    if (text[i] !== ',') break
+    if (text[i] !== ',') { break }
     i++
   }
   i += /^\s*/.exec(text.slice(i))![0].length
-  if (text[i] !== '}') return null
+  if (text[i] !== '}') { return null }
   // Checked up to the } the pairs end at, not the first }: a "}" value must not hide what follows it.
   const body = text.slice(start, i)
   return DATA_ODD.test(body) || body.includes(String.fromCharCode(0xfeff)) ? null : { pairs, end: i + 1 }
@@ -292,15 +298,15 @@ function data(text: string, i: number): { pairs: [key: string, value: string][];
 // link joins every node of the group before it to every node of the group after it.
 function statement(text: string, st: State): number | Fail {
   let g = group(text, 0, st)
-  if (g === null) return 0
-  if (isFail(g)) return g
+  if (g === null) { return 0 }
+  if (isFail(g)) { return g }
   for (;;) {
     const l = link(text, g.end)
-    if (l === null) return g.end
-    if (isFail(l)) return l
+    if (l === null) { return g.end }
+    if (isFail(l)) { return l }
     const next = group(text, l.end, st)
-    if (next === null) return g.end
-    if (isFail(next)) return next
+    if (next === null) { return g.end }
+    if (isFail(next)) { return next }
     connect(st, g.ids, next.ids, l)
     g = next
   }
@@ -312,13 +318,13 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
   const ids: string[] = []
   for (;;) {
     const m = mention(text, at, st.tail)
-    if (m === null || isFail(m)) return m
+    if (m === null || isFail(m)) { return m }
     const f = declare(st, m)
-    if (f) return f
+    if (f) { return f }
     ids.push(m.id)
     st.open.at(-1)?.ids.push(m.id)
     AMP.lastIndex = m.end
-    if (!AMP.test(text)) return { ids, end: m.end }
+    if (!AMP.test(text)) { return { ids, end: m.end } }
     at = AMP.lastIndex
   }
 }
@@ -327,10 +333,10 @@ function group(text: string, at: number, st: State): { ids: string[]; end: numbe
 // 'invisible-label' for a label on ~~~, as how Mermaid draws one is unknown.
 function link(text: string, at: number): Link | Fail | null {
   const l = readLink(text, at)
-  if (!l) return null
+  if (!l) { return null }
   const label = l.raw === undefined ? null : edgeLabel(l.raw, l.pipe === true)
-  if (isFail(label)) return label
-  if (l.style === 'invisible' && label !== null) return fail('invisible-label')
+  if (isFail(label)) { return label }
+  if (l.style === 'invisible' && label !== null) { return fail('invisible-label') }
   return { ...l, label }
 }
 
@@ -352,31 +358,33 @@ function connect(st: State, from: string[], to: string[], l: Link): void {
 // null if no id starts there, or its opener has no closer.
 function mention(text: string, at: number, tail: string): Mention | Fail | null {
   const id = ID.exec(text.slice(at))?.[0]
-  if (id === undefined) return null
+  if (id === undefined) { return null }
   // An id the lexer would read as a keyword, or not at all, is not this id (ids.ts).
-  if (misread(id, text.slice(at + id.length) + tail, 'node')) return fail('syntax')
+  if (misread(id, text.slice(at + id.length) + tail, 'node')) { return fail('syntax') }
   at += id.length
   if (text.startsWith('@{', at)) {
     const d = data(text, at + 2)
-    if (!d) return null
+    if (!d) { return null }
     const m: Mention = { id, end: d.end, data: true }
     const v = new Map(d.pairs.map(([k, raw]) => [k, yamlValue(raw)!]))
     // icon and img make Mermaid draw another shape; a shape it does not know, or a typed label or labelType, it rejects or
     // reads otherwise (flowDb addVertex).
-    if (v.has('icon') || v.has('img')) return fail('syntax')
-    const shape = v.get('shape'), lbl = v.get('label'), type = v.get('labelType')
+    if (v.has('icon') || v.has('img')) { return fail('syntax') }
+    const shape = v.get('shape')
+const  lbl = v.get('label')
+const  type = v.get('labelType')
     if (shape) {
       const s = shape.kind === 'string' ? ALIASES.get(shape.text) : undefined
-      if (!s) return fail('syntax')
+      if (!s) { return fail('syntax') }
       m.shape = s
     }
     if (lbl) {
-      if (lbl.kind !== 'string' || (type && type.kind !== 'string')) return fail('syntax')
+      if (lbl.kind !== 'string' || (type && type.kind !== 'string')) { return fail('syntax') }
       // labelType text or string makes an HTML label; any other, or none, Markdown (sanitizeNodeLabelType).
       const mode = type?.kind === 'string' && (type.text === 'text' || type.text === 'string') ? 'html' : 'markdown'
       const t = lbl.text.startsWith('`') ? fail('markdown-string') : checked(lbl.text.trim(), 'any', mode)
       const ls = isFail(t) ? t : splitLabel(t)
-      if (isFail(ls)) return ls
+      if (isFail(ls)) { return ls }
       m.lines = ls
     }
     return m
@@ -388,11 +396,12 @@ function mention(text: string, at: number, tail: string): Mention | Fail | null 
   }
   const pairs = BRACKETS.filter(([o]) => o === open)
   const c = closer(text, at + open.length, pairs.map(([, close]) => close))
-  if (!c) return null
-  const t = label(text.slice(at + open.length, c.at)), ls = isFail(t) ? t : splitLabel(t)
-  if (isFail(ls)) return ls
+  if (!c) { return null }
+  const t = label(text.slice(at + open.length, c.at))
+const  ls = isFail(t) ? t : splitLabel(t)
+  if (isFail(ls)) { return ls }
   const e = classEnd(text, c.at + c.close.length, tail)
-  if (e < 0) return fail('syntax')
+  if (e < 0) { return fail('syntax') }
   return { id, end: e, shape: pairs.find(([, close]) => close === c.close)![2], lines: ls }
 }
 
@@ -400,7 +409,7 @@ function mention(text: string, at: number, tail: string): Mention | Fail | null 
 function classEnd(text: string, i: number, tail: string): number {
   CLASS.lastIndex = i
   const m = CLASS.exec(text)
-  if (!m) return i
+  if (!m) { return i }
   // Its name is read as an id is: A:::style or A:::end.x is a keyword.
   return misread(m[0].slice(3), text.slice(CLASS.lastIndex) + tail, 'node') ? -1 : CLASS.lastIndex
 }
@@ -408,10 +417,10 @@ function classEnd(text: string, i: number, tail: string): number {
 // The first of closes at or after i, outside "…": where it starts and which it is.
 function closer(text: string, i: number, closes: readonly string[]): { at: number; close: string } | null {
   for (let quoted = false; i < text.length; i++) {
-    if (text[i] === '"') quoted = !quoted
+    if (text[i] === '"') { quoted = !quoted }
     else if (!quoted) {
       const close = closes.find(c => text.startsWith(c, i))
-      if (close !== undefined) return { at: i, close }
+      if (close !== undefined) { return { at: i, close } }
     }
   }
   return null
@@ -427,7 +436,7 @@ function closer(text: string, i: number, closes: readonly string[]): { at: numbe
 function label(raw: string, br: Br = 'any', token = true, edge = false): string | Fail {
   const md = raw.startsWith('"`')
   const m = (md ? /^"`([^`"]+)`"([^"]*)$/ : /^(?:"([^"]+)")?([^"]*)$/).exec(raw)
-  if (!m || !raw || (token && (/[[\](){}|]/.test(m[2]!) || /^\s*~~~/.test(m[2]!)))) return fail('syntax')
+  if (!m || !raw || (token && (/[[\](){}|]/.test(m[2]!) || /^\s*~~~/.test(m[2]!)))) { return fail('syntax') }
   return checked(((m[1] ?? '') + m[2]).trim(), br, md ? 'markdown' : 'html', edge)
 }
 
@@ -436,7 +445,7 @@ function label(raw: string, br: Br = 'any', token = true, edge = false): string 
 // as splitLabel says, so one of only <br/> fails too.
 function edgeLabel(raw: string, token: boolean): string | null | Fail {
   const t = label(raw, 'any', token, true)
-  if (isFail(t)) return t
+  if (isFail(t)) { return t }
   const ls = splitLabel(t)
   return isFail(ls) ? ls : t.trim() ? t : null
 }
@@ -456,11 +465,11 @@ function splitLabel(t: string): string[] | Fail {
 // In an HTML label where <br> splits, a literal \n is a <br />: Mermaid's nonMarkdownToHTML replaces it before
 // decodeEntities, and draws the same SVG as for <br />. Elsewhere it falls back newline.
 function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html', edge = false): string | Fail {
-  if (mode === 'markdown') return styled(text, br, { decode: true, breaks: edge })
+  if (mode === 'markdown') { return styled(text, br, { decode: true, breaks: edge }) }
   const t = decoded(br === 'any' ? text.replaceAll('\\n', '<br />') : text, mode, br)
-  if (isFail(t)) return t
+  if (isFail(t)) { return t }
   const bad = unsupported(t)
-  if (bad) return fail(`unsupported-char ${bad}`)
+  if (bad) { return fail(`unsupported-char ${bad}`) }
   return t
 }
 
@@ -468,10 +477,10 @@ function checked(text: string, br: Br = 'any', mode: 'html' | 'markdown' = 'html
 // mention with a shape, a label or an @{…} of an id a subgraph has.
 function declare(st: State, m: Mention): Fail | null {
   const bare = !m.shape && !m.lines && !m.data
-  if (!bare && st.clusters.some(c => c.id === m.id)) return fail('syntax')
+  if (!bare && st.clusters.some(c => c.id === m.id)) { return fail('syntax') }
   const d: Decl = st.nodes.get(m.id) ?? { id: m.id, shape: 'rect', lines: [m.id], bare: true }
-  if (m.shape) d.shape = m.shape
-  if (m.lines) d.lines = m.lines
+  if (m.shape) { d.shape = m.shape }
+  if (m.lines) { d.lines = m.lines }
   d.bare &&= bare
   st.nodes.set(m.id, d)
   return null

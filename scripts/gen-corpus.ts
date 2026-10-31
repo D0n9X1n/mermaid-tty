@@ -73,17 +73,20 @@ function namer(): (shape: Shape, label: string) => Node {
 // n's id, with its shape and label on its first mention. The label is quoted in a quoted block, and wherever it holds a
 // character that an unquoted label cannot.
 function ref(b: Block, n: Node): string {
-  if (b.drawn.has(n.id)) return n.id
+  if (b.drawn.has(n.id)) { return n.id }
   b.drawn.add(n.id)
-  const t = text(b, n.label), [open, close] = SHAPES[n.shape]
+  const t = text(b, n.label)
+const  [open, close] = SHAPES[n.shape]
   return `${n.id}${open}${b.quoted || /[()[\]{}:/;#|&<>"]/.test(t.replaceAll('<br/>', '')) ? `"${t}"` : t}${close}`
 }
 
 // The edge from a to z, an arrow of kind, with its label after the arrow as |label|; or, for a plain arrow in a dash
 // block, between the dashes: a -- label --> z.
 function edge(b: Block, a: Node, z: Node, kind: Arrow = 'plain', label?: string): string {
-  const from = ref(b, a), arrow = { plain: '-->', thick: '==>', dotted: '-.->' }[kind], to = ref(b, z)
-  if (!label) return `${from} ${arrow} ${to}`
+  const from = ref(b, a)
+const  arrow = { plain: '-->', thick: '==>', dotted: '-.->' }[kind]
+const  to = ref(b, z)
+  if (!label) { return `${from} ${arrow} ${to}` }
   return kind === 'plain' && b.dash ? `${from} -- ${text(b, label)} --> ${to}` : `${from} ${arrow}|${text(b, label)}| ${to}`
 }
 
@@ -95,7 +98,7 @@ const chain = (b: Block, nodes: Node[], kind: Arrow = 'plain'): string[] =>
 // bare title as its id.
 function subgraph(b: Block, id: string, title: string): string {
   const t = text(b, title)
-  if (!b.zh && chance(0.3)) return `subgraph ${t}`
+  if (!b.zh && chance(0.3)) { return `subgraph ${t}` }
   return `subgraph ${id} [${b.quoted ? `"${t}"` : t}]`
 }
 
@@ -221,7 +224,8 @@ const ANSWERS = [['Yes|是', 'No|否'], ['yes|是', 'no|否'], ['Y|是', 'N|否'
 
 // A process flow: maybe a start, k of the steps in order, maybe an end. Now and then the first step is an input.
 function flow(b: Block, p: { steps: string[] }): string[] {
-  const n = namer(), ends = chance(0.6)
+  const n = namer()
+const  ends = chance(0.6)
   const start = ends ? [n(pick(ENDS), 'Start|开始')] : []
   const steps = keep(p.steps, int(3, p.steps.length)).map((l, i) => n(i === 0 && chance(0.2) ? 'io' : 'rect', l))
   return chain(b, [...start, ...steps, ...(ends ? [n(pick(ENDS), 'Done|完成')] : [])])
@@ -230,9 +234,13 @@ function flow(b: Block, p: { steps: string[] }): string[] {
 // A decision: maybe a start, the step, the question, its yes and no branches, and maybe an end. The no branch goes to
 // the end, back to the step or the question, or joins the yes branch's last node.
 function decision(b: Block, d: Decision): string[] {
-  const n = namer(), [yes, no] = pick(ANSWERS), start = chance(0.5) ? n(pick(ENDS), 'Start|开始') : null
-  const step = n('rect', d.step), ask = n(chance(0.1) ? 'hexagon' : 'diamond', d.ask)
-  const ys = d.yes.map(l => n('rect', l)), ns = d.no.map(l => n('rect', l))
+  const n = namer()
+const  [yes, no] = pick(ANSWERS)
+const  start = chance(0.5) ? n(pick(ENDS), 'Start|开始') : null
+  const step = n('rect', d.step)
+const  ask = n(chance(0.1) ? 'hexagon' : 'diamond', d.ask)
+  const ys = d.yes.map(l => n('rect', l))
+const  ns = d.no.map(l => n('rect', l))
   const end = d.then === 'end' || chance(0.6) ? n(pick(ENDS), 'End|结束') : null
   const back = { end, step, ask, join: ys[ys.length - 1]! }[d.then]
   return [
@@ -245,9 +253,15 @@ function decision(b: Block, d: Decision): string[] {
 // A retry loop: maybe a start; the call and its check; on success the next step and maybe an end; on failure, while
 // tries are left, a wait and back to the call, often dotted; once they run out, the last step.
 function retryLoop(b: Block, r: Retry): string[] {
-  const n = namer(), [yes, no] = pick(ANSWERS), start = chance(0.5) ? n(pick(ENDS), 'Start|开始') : null
-  const call = n(chance(0.2) ? 'sub' : 'rect', r.call), ok = n('diamond', r.ok), done = n('rect', r.done)
-  const left = n('diamond', 'Retries left?|还能重试?|max 3|最多 3 次'), wait = n('rect', r.wait), failed = n('rect', r.fail)
+  const n = namer()
+const  [yes, no] = pick(ANSWERS)
+const  start = chance(0.5) ? n(pick(ENDS), 'Start|开始') : null
+  const call = n(chance(0.2) ? 'sub' : 'rect', r.call)
+const  ok = n('diamond', r.ok)
+const  done = n('rect', r.done)
+  const left = n('diamond', 'Retries left?|还能重试?|max 3|最多 3 次')
+const  wait = n('rect', r.wait)
+const  failed = n('rect', r.fail)
   const end = chance(0.5) ? n(pick(ENDS), 'End|结束') : null
   return [
     ...(start ? [edge(b, start, call)] : []), edge(b, call, ok), edge(b, ok, done, 'plain', yes), edge(b, ok, left, 'plain', no),
@@ -259,7 +273,8 @@ function retryLoop(b: Block, r: Retry): string[] {
 // A pipeline: k of the stages, all thick or all plain arrows, now and then the gate's label on the last arrow, and now
 // and then a dotted side task off the last stage.
 function pipeline(b: Block, p: Pipeline): string[] {
-  const n = namer(), kind: Arrow = chance(0.5) ? 'thick' : 'plain'
+  const n = namer()
+const  kind: Arrow = chance(0.5) ? 'thick' : 'plain'
   const stages = keep(p.stages, int(4, p.stages.length)).map((l, i) => n(i === 0 && chance(0.3) ? 'stadium' : 'rect', l))
   const last = stages[stages.length - 1]!
   const lines = [...chain(b, stages.slice(0, -1), kind), edge(b, stages[stages.length - 2]!, last, kind, chance(0.4) ? p.gate : undefined)]
@@ -271,9 +286,11 @@ function pipeline(b: Block, p: Pipeline): string[] {
 // A node's id is its English label's first word.
 function architecture(b: Block, a: Arch): string[] {
   const node = (shape: Shape, label: string): Node => ({ id: label.split(/[ |]/)[0]!.toLowerCase().replace(/[^a-z0-9]/g, ''), shape, label })
-  const client = node(pick(['stadium', 'round', 'rect'] as const), a.client), entry = node(chance(0.3) ? 'hexagon' : 'rect', a.entry)
+  const client = node(pick(['stadium', 'round', 'rect'] as const), a.client)
+const  entry = node(chance(0.3) ? 'hexagon' : 'rect', a.entry)
   const services = a.services.map(([l]) => node(chance(0.2) ? 'sub' : 'rect', l))
-  const stores = a.stores.slice(0, int(1, a.stores.length)).map(l => node('db', l)), ext = node('rect', a.ext)
+  const stores = a.stores.slice(0, int(1, a.stores.length)).map(l => node('db', l))
+const  ext = node('rect', a.ext)
   const p = b.pad
   return [
     subgraph(b, 'backend', 'Backend|后端'), p + ref(b, entry), p + subgraph(b, 'svc', 'Services|服务层'),
@@ -319,11 +336,18 @@ function generate(): string[] {
   rand = mulberry32(SEED)
   const kinds = shuffle([...FLOWS.flatMap((t, k) => Array.from({ length: t.count }, () => k)), ...SEQ.map(() => -1)])
   const flows = kinds.length - SEQ.length
-  const zh = quota(flows, 51), quoted = quota(flows, 80), br = quota(flows, 37), front = quota(flows, 8)
-  const dash = quota(flows, 28), graph = quota(flows, 24), bare = quota(flows, 4)
-  const seqZh = quota(SEQ.length, 4), titled = quota(SEQ.length, 3)
+  const zh = quota(flows, 51)
+const  quoted = quota(flows, 80)
+const  br = quota(flows, 37)
+const  front = quota(flows, 8)
+  const dash = quota(flows, 28)
+const  graph = quota(flows, 24)
+const  bare = quota(flows, 4)
+  const seqZh = quota(SEQ.length, 4)
+const  titled = quota(SEQ.length, 3)
   return kinds.map((k, i) => {
-    const before = kinds.slice(0, i), pad = pick(PADS)
+    const before = kinds.slice(0, i)
+const  pad = pick(PADS)
     if (k < 0) {
       const s = before.filter(x => x < 0).length
       return sequence(seqZh[s]!, titled[s]!, pad, SEQ[s]!).join('\n') + '\n'
@@ -346,16 +370,16 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
   const files = generate().map((body, i) => ({ path: join(DIR, `corpus-${String(i + 1).padStart(3, '0')}.mmd`), body }))
   if (check) {
     const stale = files.filter(f => !existsSync(f.path) || readFileSync(f.path, 'utf8') !== f.body)
-    for (const f of stale) console.error(`gen-corpus: ${f.path} is out of date; run node scripts/gen-corpus.ts`)
+    for (const f of stale) { console.error(`gen-corpus: ${f.path} is out of date; run node scripts/gen-corpus.ts`) }
     const written = new Set(files.map(f => f.path))
     const extra = existsSync(DIR) ? readdirSync(DIR).sort().map(name => join(DIR, name)).filter(p => !written.has(p)) : []
-    for (const p of extra) console.error(`gen-corpus: ${p} is not a file gen-corpus writes; delete it`)
+    for (const p of extra) { console.error(`gen-corpus: ${p} is not a file gen-corpus writes; delete it`) }
     return stale.length + extra.length > 0 ? 1 : 0
   }
   mkdirSync(DIR, { recursive: true })
-  for (const f of files) writeFileSync(f.path, f.body)
+  for (const f of files) { writeFileSync(f.path, f.body) }
   return 0
 }
 
 // main() runs only when node runs this file, not when a test imports it.
-if (isMain(import.meta)) process.exitCode = main()
+if (isMain(import.meta)) { process.exitCode = main() }

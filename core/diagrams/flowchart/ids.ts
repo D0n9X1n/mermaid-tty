@@ -32,13 +32,13 @@ function tokenStarts(id: string): number[] | null {
   for (let i = 0; i < id.length;) {
     starts.push(i)
     if (id.charCodeAt(i) >= 0x80) {
-      if (!UNICODE_TEXT.test(id[i]!)) return null
+      if (!UNICODE_TEXT.test(id[i]!)) { return null }
       i++
       continue
     }
     const digits = /^[0-9]+/.exec(id.slice(i))?.[0].length ?? 0
-    if (digits) i += digits
-    else while (i < id.length && id.charCodeAt(i) < 0x80) i++
+    if (digits) { i += digits }
+    else { while (i < id.length && id.charCodeAt(i) < 0x80) { i++ } }
   }
   return starts
 }

@@ -22,7 +22,8 @@ const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // that starts with one but is no statement falls back (common rule 5).
 const UNREAD = /[#;]|%%/
 const KEYWORD = /^(?:title|section|journey|accTitle|accDescr)/i
-const MIN = dec(1), MAX = dec(5)
+const MIN = dec(1)
+const  MAX = dec(5)
 
 // Why texts, in a field of mode and br, cannot be drawn, or null: text Mermaid shows otherwise fails as drawable says, and
 // so does an unsupported character. A task or section never splits, each <br> drawn as written (plain, literal); an actor
@@ -30,9 +31,9 @@ const MIN = dec(1), MAX = dec(5)
 function undrawable(mode: Mode, br: Br, ...texts: string[]): Fail | null {
   for (const t of texts) {
     const f = drawable(t, mode, br)
-    if (f) return f
+    if (f) { return f }
     const bad = unsupported(t)
-    if (bad) return fail(`unsupported-char ${bad}`)
+    if (bad) { return fail(`unsupported-char ${bad}`) }
   }
   return null
 }
@@ -44,40 +45,41 @@ function undrawable(mode: Mode, br: Br, ...texts: string[]): Fail | null {
 // title), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (text that cannot be drawn), or
 // 'empty' (no task).
 export function parseJourney(src: Source): Journey | Fail {
-  if (src.header !== 'journey') return fail('header')
+  if (src.header !== 'journey') { return fail('header') }
   // A frontmatter title is the first title (common rule 3); readSource has checked its characters.
   const journey: Journey = { title: src.title, groups: [] }
   let open = 0                                                      // the line an open accDescr { block starts on, or 0
   for (const { n, text } of src.lines) {
-    const t = text.trim(), block = open ? t : ACC_BLOCK.exec(t)?.[1]
+    const t = text.trim()
+const  block = open ? t : ACC_BLOCK.exec(t)?.[1]
     if (block === undefined) {
       const f = statement(journey, t, n)
-      if (f) return f
+      if (f) { return f }
       continue
     }
     // Accessibility text is not drawn.
     const end = block.indexOf('}')
-    if (end >= 0 && block.slice(end + 1).trim()) return fail(`syntax:${n}`)
+    if (end >= 0 && block.slice(end + 1).trim()) { return fail(`syntax:${n}`) }
     open = end >= 0 ? 0 : open || n
   }
-  if (open) return fail(`syntax:${open}`)
+  if (open) { return fail(`syntax:${open}`) }
   return journey.groups.some(g => g.tasks.length > 0) ? journey : fail('empty')
 }
 
 // Reads the statement t on line n into journey: null, or why it fails. Accessibility text is not drawn, so a # or ; in it
 // is no comment.
 function statement(journey: Journey, t: string, n: number): Fail | null {
-  if (ACC.test(t)) return t.replace(ACC, '').trim() ? null : fail(`syntax:${n}`)
-  if (UNREAD.test(t)) return fail(`syntax:${n}`)
+  if (ACC.test(t)) { return t.replace(ACC, '').trim() ? null : fail(`syntax:${n}`) }
+  if (UNREAD.test(t)) { return fail(`syntax:${n}`) }
   const title = TITLE.exec(t)?.[1]
   if (title !== undefined) {
-    if (journey.title !== null) return fail(`repeat:${n}`)
+    if (journey.title !== null) { return fail(`repeat:${n}`) }
     journey.title = title.trim()
     return undrawable('sanitized', 'none', journey.title)
   }
   const section = SECTION.exec(t)?.[1]?.trim()
   if (section !== undefined) {
-    if (section.includes(':')) return fail(`syntax:${n}`)
+    if (section.includes(':')) { return fail(`syntax:${n}`) }
     journey.groups.push({ name: section, tasks: [] })
     return undrawable('plain', 'literal', section)
   }
@@ -88,15 +90,16 @@ function statement(journey: Journey, t: string, n: number): Fail | null {
 // name: null, or why it fails.
 function task(journey: Journey, t: string, n: number): Fail | null {
   const parts = t.split(':').map(s => s.trim())
-  if (parts.length !== 3) return fail(`syntax:${n}`)
-  const [name, raw, list] = parts as [string, string, string], actors = list.split(',').map(a => a.trim())
-  if (!name || actors.includes('')) return fail(`syntax:${n}`)
+  if (parts.length !== 3) { return fail(`syntax:${n}`) }
+  const [name, raw, list] = parts as [string, string, string]
+const  actors = list.split(',').map(a => a.trim())
+  if (!name || actors.includes('')) { return fail(`syntax:${n}`) }
   const score = parseDec(raw)
-  if (!score || cmp(score, MIN) < 0 || cmp(score, MAX) > 0) return fail(`domain:${n}`)
-  if (new Set(actors).size < actors.length) return fail(`repeat:${n}`)
+  if (!score || cmp(score, MIN) < 0 || cmp(score, MAX) > 0) { return fail(`domain:${n}`) }
+  if (new Set(actors).size < actors.length) { return fail(`repeat:${n}`) }
   const bad = undrawable('plain', 'literal', name) ?? undrawable('plain', 'none', ...actors)
-  if (bad) return bad
-  if (journey.groups.length === 0) journey.groups.push({ name: null, tasks: [] })
+  if (bad) { return bad }
+  if (journey.groups.length === 0) { journey.groups.push({ name: null, tasks: [] }) }
   journey.groups.at(-1)!.tasks.push({ name, score, raw, actors })
   return null
 }

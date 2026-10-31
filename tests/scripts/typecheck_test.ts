@@ -1,7 +1,8 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import { tsconfigFor } from '../../scripts/typecheck.ts'
 import { npxInvocation } from '../../scripts/typecheck.ts'
 test('typecheck (no check ID): core alone; hooks only when the engine types exist', () => {
-  const c = tsconfigFor('/r', false), h = tsconfigFor('/r', true)
+  const c = tsconfigFor('/r', false)
+const  h = tsconfigFor('/r', true)
   assert.deepEqual(c.include, ['/r/core/**/*.ts']); assert.equal(c.compilerOptions.erasableSyntaxOnly, true)
   assert.deepEqual(h.include, ['/r/core/**/*.ts', '/r/hooks/**/*.ts', '/r/hooks/**/*.tsx', '/r/types/**/*.d.ts'])
   assert.deepEqual(h.compilerOptions.typeRoots, ['/r/.claude-plugin/types'])
@@ -25,7 +26,8 @@ test('typecheck (no check ID): the full compilerOptions with hooks', () => {
 })
 
 test('typecheck (no check ID): a root with backslashes gives /-separated globs', () => {
-  const c = tsconfigFor('C:\\r', false), h = tsconfigFor('C:\\r', true)
+  const c = tsconfigFor('C:\\r', false)
+const  h = tsconfigFor('C:\\r', true)
   assert.deepEqual(c.include, ['C:/r/core/**/*.ts'])
   assert.deepEqual(h.include, ['C:/r/core/**/*.ts', 'C:/r/hooks/**/*.ts', 'C:/r/hooks/**/*.tsx', 'C:/r/types/**/*.d.ts'])
   assert.deepEqual(h.compilerOptions.typeRoots, ['C:/r/.claude-plugin/types'])

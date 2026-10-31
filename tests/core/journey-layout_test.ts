@@ -15,7 +15,7 @@ test('A4.fit-ladder: natural; actor lists wrap after commas; one actor per row w
 })
 test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a section fall back', () => {
   for (const [body, why] of [['Make tea: 6: Me', 'domain:3'], ['Make tea: high: Me', 'domain:3'], ['Make tea: 5', 'syntax:3'], ['Do work: 1: Me, Me', 'repeat:3'],
-    ['Fix #12: 3: Me', 'syntax:3'], ['Plan; review: 3: Me', 'syntax:3']] as const) assert.deepEqual(X(`journey\nsection S\n${body}`, 80), { reason: why }, body)
+    ['Fix #12: 3: Me', 'syntax:3'], ['Plan; review: 3: Me', 'syntax:3']] as const) { assert.deepEqual(X(`journey\nsection S\n${body}`, 80), { reason: why }, body) }
   assert.deepEqual(X('journey\nsection Morning: early\nA: 1: Me', 80), { reason: 'syntax:2' })
 })
 
@@ -69,21 +69,21 @@ test('A5.errors: actor lists, colons, keywords, scores, %% and characters outsid
     ['Journey home: 3: Me', 'syntax:3'], ['acctitle: A', 'syntax:3'], ['section', 'syntax:3'], ['"%%x": 3: Me', 'syntax:3'],
     ['A: 0.5: Me', 'domain:3'], ['A: 5.01: Me', 'domain:3'], ['A: 1e0: Me', 'domain:3'], ['A: : Me', 'domain:3'],
     ['A\u0007: 3: Me', 'unsupported-char U+0007'], ['A: 3: Me\u0007', 'unsupported-char U+0007']] as const)
-    assert.deepEqual(X(`journey\nsection S\n${body}`, 80), { reason: why }, body)
+    { assert.deepEqual(X(`journey\nsection S\n${body}`, 80), { reason: why }, body) }
 })
 test('A5.errors: another header, a second title, no task, an accDescr block left open or not ending its line, and undrawable text fall back', () => {
   for (const [src, why] of [['journey extra\nA: 3: Me', 'header'], ['journey\ntitle A\ntitle B\nA: 3: Me', 'repeat:3'],
     ['---\ntitle: A\n---\njourney\ntitle B\nA: 3: Me', 'repeat:5'], ['journey\ntitle A\nsection S', 'empty'],
     ['journey\naccDescr {\nA: 3: Me', 'syntax:2'], ['journey\naccDescr { a } b\nA: 3: Me', 'syntax:2'],
     ['journey\ntitle A\u0007\nA: 3: Me', 'unsupported-char U+0007'], ['journey\nsection S\u0007\nA: 3: Me', 'unsupported-char U+0007']] as const)
-    assert.deepEqual(X(src, 80), { reason: why }, src)
+    { assert.deepEqual(X(src, 80), { reason: why }, src) }
 })
 // Common rule 4: accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment (matrix
 // journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
 test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are skipped; a frontmatter title draws', () => {
   const rows = ['My day', 'Go', '  A ' + bar(48) + ' 3  Me']
   for (const src of ['journey\ntitle My day\naccTitle: Day #1; a\naccDescr: My day\naccDescr {\n  #2;\n}\nsection Go\n%% a note\nA: 3: Me',
-    '---\ntitle: My day\n---\njourney\nsection Go\nA: 3: Me\naccDescr { one }']) assert.deepEqual(text(X(src, 80).drawing), rows, src)
+    '---\ntitle: My day\n---\njourney\nsection Go\nA: 3: Me\naccDescr { one }']) { assert.deepEqual(text(X(src, 80).drawing), rows, src) }
   assert.deepEqual(text(X('journey\nA: 3: Me\nA: 5: Me', 80).drawing), ['  A ' + bar(48) + ' 3  Me', '  A ' + bar(80) + ' 5  Me'])
 })
 // T65 QA: the bar rounds half up at its boundary: 16 × 1.03125 is 16.5, so 17 eighths, not a truncated 16.

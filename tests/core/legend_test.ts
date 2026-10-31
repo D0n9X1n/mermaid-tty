@@ -13,7 +13,8 @@ test('A4: field keys a…z, aa…; point keys 1…; a row wraps under its text',
   assert.deepEqual(legendRows([row('a', 'x', 'Supercalifragilistic')], 16), { reason: 'word-too-wide' })
 })
 test('A5.mutation-tests: withLegend lists every key, so a key missing in place, a stray key or a duplicate row fails', () => {
-  const rows = [row('a', 't1.t', 'one'), row('b', 't2.t', 'two')], keyable = [{ item: 't1.t', cls: 'timing' }, { item: 't2.t', cls: 'timing' }]
+  const rows = [row('a', 't1.t', 'one'), row('b', 't2.t', 'two')]
+const  keyable = [{ item: 't1.t', cls: 'timing' }, { item: 't2.t', cls: 'timing' }]
   const ok = withLegend(body([['a', 't1.t'], ['b', 't2.t']]), rows, 12, keyable) as Drawing
   assert.deepEqual(ok.expect.keys, [{ key: 'a', item: 't1.t', cls: 'timing' }, { key: 'b', item: 't2.t', cls: 'timing' }]); assert.equal(validate(ok), null)
   assert.deepEqual(validate(withLegend(body([['a', 't1.t']]), rows, 12, keyable) as Drawing), { reason: 'key-missing' })
