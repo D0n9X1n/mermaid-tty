@@ -1,7 +1,7 @@
 import { test, expect } from 'claude-code/testing'
 
-// The kit raises no session.start and answers no command.register, so the test answers
-// both beneath the plugins and raises session.start itself (task0-spikes.md, S7).
+// The kit raises no session.start and answers no command.register, so the test answers both beneath the plugins and
+// raises session.start itself.
 test('A6.command: session.start registers the mermaid-tty command', async ($, on) => {
   const registered: { name: string; description: string }[] = []
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
@@ -10,7 +10,7 @@ test('A6.command: session.start registers the mermaid-tty command', async ($, on
     return { value: { command: e.name } }
   })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const mermaidTty = registered.filter(r => r.name === 'mermaid-tty')
+  const mermaidTty = registered.filter((r) => r.name === 'mermaid-tty')
   expect(mermaidTty).toHaveLength(1)
   expect(mermaidTty[0]?.description.trim()).not.toBe('')
 })

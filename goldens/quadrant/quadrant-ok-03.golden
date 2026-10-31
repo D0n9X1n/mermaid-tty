@@ -1,5 +1,5 @@
 @60
-Priorities
+                        Priorities
 ┌────────────────────────────┬────────────────────────────┐
 │                            │                            │
 │                            │                            │
@@ -19,7 +19,7 @@ Priorities
 ↓ Value
 1 A (0.2, 0.7)
 @60 roles
-TTTTTTTTTT
+                        TTTTTTTTTT
 fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f                            f                            f
 f                            f                            f
@@ -39,7 +39,7 @@ fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 l LLLLL
 1 L VVVVVVVVVV
 @80
-Priorities
+                          Priorities
 ┌──────────────────────────────┬──────────────────────────────┐
 │                              │                              │
 │                              │                              │
@@ -59,7 +59,7 @@ Priorities
 ↓ Value
 1 A (0.2, 0.7)
 @80 roles
-TTTTTTTTTT
+                          TTTTTTTTTT
 fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f                              f                              f
 f                              f                              f
@@ -79,7 +79,7 @@ fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 l LLLLL
 1 L VVVVVVVVVV
 @120
-Priorities
+                          Priorities
 ┌──────────────────────────────┬──────────────────────────────┐
 │                              │                              │
 │                              │                              │
@@ -99,7 +99,7 @@ Priorities
 ↓ Value
 1 A (0.2, 0.7)
 @120 roles
-TTTTTTTTTT
+                          TTTTTTTTTT
 fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f                              f                              f
 f                              f                              f

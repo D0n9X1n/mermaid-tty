@@ -52,6 +52,11 @@ jobs:
         name: Release notes from issues and PRs, against real Git histories and a fake gh
         if: runner.os == 'Linux'
         run: python3 -m unittest scripts/release-issues_tests.py scripts/release-notes_tests.py
+      - id: style-tooling
+        run: npm ci --prefix scripts/style
+      - id: style
+        name: Code style (Prettier, check-style and its tests)
+        run: node scripts/style/run.ts
       - id: check
         name: Must-pass suite (Git Bash on Windows; fails on any command)
         shell: bash

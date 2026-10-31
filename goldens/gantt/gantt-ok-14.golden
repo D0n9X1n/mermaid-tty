@@ -1,5 +1,5 @@
 @60
-A Gantt Diagram
+                      A Gantt Diagram
 Section
    A task          2014-01-01 · 30d ██████████████▍
    Another task    after a1 · 20d                 █████████▋
@@ -9,7 +9,7 @@ Another
                                     ┬─────────────┬─────────
                                     2014-01-01    2014-01-31
 @60 roles
-TTTTTTTTTTTTTTT
+                      TTTTTTTTTTTTTTT
 !!!!!!!
    LLLLLL          VVVVVVVVVVVVVVVV 111111111111111
    LLLLLLLLLLLL    VVVVVVVVVVVVVV                 1111111111
@@ -19,7 +19,7 @@ TTTTTTTTTTTTTTT
                                     ffffffffffffffffffffffff
                                     VVVVVVVVVV    VVVVVVVVVV
 @80
-A Gantt Diagram
+                                A Gantt Diagram
 Section
    A task          2014-01-01 · 30d ██████████████████████████▍
    Another task    after a1 · 20d                             █████████████████▋
@@ -29,7 +29,7 @@ Another
                                     ┬───────────┬───────────┬───────────────────
                                     2014-01-01  2014-01-15  2014-01-29
 @80 roles
-TTTTTTTTTTTTTTT
+                                TTTTTTTTTTTTTTT
 !!!!!!!
    LLLLLL          VVVVVVVVVVVVVVVV 111111111111111111111111111
    LLLLLLLLLLLL    VVVVVVVVVVVVVV                             111111111111111111
@@ -39,7 +39,7 @@ TTTTTTTTTTTTTTT
                                     ffffffffffffffffffffffffffffffffffffffffffff
                                     VVVVVVVVVV  VVVVVVVVVV  VVVVVVVVVV
 @120
-A Gantt Diagram
+                                        A Gantt Diagram
 Section
    A task          2014-01-01 · 30d ████████████████████████████████████
    Another task    after a1 · 20d                                       ████████████████████████
@@ -49,7 +49,7 @@ Another
                                     ┬───────────────┬────────────────┬────────────────┬─────────
                                     2014-01-01      2014-01-15       2014-01-29       2014-02-12
 @120 roles
-TTTTTTTTTTTTTTT
+                                        TTTTTTTTTTTTTTT
 !!!!!!!
    LLLLLL          VVVVVVVVVVVVVVVV 111111111111111111111111111111111111
    LLLLLLLLLLLL    VVVVVVVVVVVVVV                                       111111111111111111111111

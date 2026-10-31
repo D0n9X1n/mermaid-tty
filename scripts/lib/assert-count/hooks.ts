@@ -5,8 +5,15 @@ import { createRequire, registerHooks } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const here = new URL('./', import.meta.url).href
-const SHIMS = new Map([['node:test', 'runner.ts'], ['node:assert', 'assert.ts'], ['assert', 'assert.ts'],
-  ['node:assert/strict', 'strict.ts'], ['assert/strict', 'strict.ts']].map(([id, file]) => [id, new URL(file, here).href]))
+const SHIMS = new Map(
+  [
+    ['node:test', 'runner.ts'],
+    ['node:assert', 'assert.ts'],
+    ['assert', 'assert.ts'],
+    ['node:assert/strict', 'strict.ts'],
+    ['assert/strict', 'strict.ts'],
+  ].map(([id, file]) => [id, new URL(file, here).href]),
+)
 
 registerHooks({
   resolve(specifier, context, next) {
@@ -15,5 +22,9 @@ registerHooks({
   },
 })
 // process.getBuiltinModule finds a builtin by id, past the hooks, so for these ids it loads the shim too.
-const load = createRequire(import.meta.url), builtin = process.getBuiltinModule.bind(process)
-process.getBuiltinModule = ((id: string) => { const url = SHIMS.get(id); return url ? load(fileURLToPath(url)) : builtin(id) }) as typeof builtin
+const load = createRequire(import.meta.url)
+const builtin = process.getBuiltinModule.bind(process)
+process.getBuiltinModule = ((id: string) => {
+  const url = SHIMS.get(id)
+  return url ? load(fileURLToPath(url)) : builtin(id)
+}) as typeof builtin

@@ -19,6 +19,7 @@ The repository root is the plugin root: the marketplace entry in `.claude-plugin
 | `scripts/` | Checks, generators, the end-to-end harness and the docs tooling. |
 | `assets/` | `icon.svg` and the README images. |
 | `ci/` | `coverage.json`, which maps each check ID to its CI step, and `reviews/`, the recorded verdicts of the golden reviews. |
+| `CLAUDE.md` | Working rules for coding agents: workflow, release, documentation, code style and tests. |
 | `wiki/` | This wiki: the only documentation. There is no `docs/` folder, and `check-docs` fails if one appears. |
 | `.github/workflows/` | CI, the wiki publisher and the release workflow. |
 
@@ -66,11 +67,45 @@ For a faster loop:
 | `node scripts/check-docs.ts` | Checks the README and its images, the wiki workflow, and the icon. |
 | `node scripts/check-wiki.ts` | Checks this wiki's pages. See Wiki below. |
 
+## Code style
+
+Write for the next human reader. The style follows copilot-relay's rules and the major TypeScript guides (Google, Airbnb, StandardJS): one house style, formatted by a tool, never argued by hand.
+
+```sh
+npm ci --prefix scripts/style
+node scripts/style/run.ts --write
+node scripts/style/run.ts
+```
+
+- `npm ci --prefix scripts/style` installs Prettier 3.6.2, pinned in its own lockfile; nothing at the root depends on it.
+- `node scripts/style/run.ts --write` formats: Prettier, then `scripts/style/layout.ts` for what Prettier leaves alone (a blank line after multi-line blocks, comments wrapped at 120 columns), then Prettier again.
+- `node scripts/style/run.ts` checks: `prettier --check`, `scripts/style/check-style.ts` and the checker's tests. CI runs it on Linux, macOS and Windows.
+
+Prettier (`.prettierrc.json`) uses single quotes, no semicolons, two-space indent, 120 columns and trailing commas. `.prettierignore` leaves out the generated tables, goldens, fixtures and everything that isn't TypeScript.
+
+`check-style.ts` parses each file with the TypeScript parser Prettier bundles and enforces what Prettier can't:
+
+| Rule | Closest ESLint rule |
+|---|---|
+| Every `if`, `else`, `for`, `while` and `do` body is a braced block; only `else if` is exempt | `curly: all` |
+| `===` and `!==`; `== null` only to match both `null` and `undefined` | `eqeqeq` with null ignored |
+| No ternary inside a ternary | `no-nested-ternary` |
+| One variable per `const` or `let`; loop headers excepted | `one-var: never` |
+| A blank line after each multi-line block statement | `padding-line-between-statements` |
+| At most one blank line in a row, in comments too | `no-multiple-empty-lines` |
+| No line over 120 columns, unless a string, template, regex or URL crosses it | `max-len` |
+| No file over 1000 lines | `max-lines` |
+| No issue or PR number in a comment or test name, and no issue or PR link in any string | project rule |
+
+For the Python release scripts, `scripts/style/check_py.py` reads each file with Python's tokenizer and enforces one statement per line, no compound one-line statements, and the same line, file and citation limits. The release-notes tests hold real issue numbers as data and are exempt from the citation rule.
+
+Reviewed, not enforced: comments say why (the Mermaid behavior mirrored, the terminal fact relied on, the invariant kept), never restate the next line; code states how it works today, never its history; names say what a value is; guard clauses over deep nesting; tests separate arrange, act and assert. Formatting-only commits stay apart from logic changes, so a reviewer can confirm they behave the same.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.308 installed from npm.
 
-- **check**, on all three OSes: bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
+- **check**, on all three OSes: the code style gate (`node scripts/style/run.ts`), bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
 - **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
 - **gallery**, on Ubuntu only: renders the SVG gallery and uploads it as a build artifact for visual review.
 - **claude-code-versions**, every four hours: runs the A9 end-to-end harness against each newly published Claude Code version, so a release that breaks the plugin shows up within hours.

@@ -1,0 +1,166 @@
+// Tests for check-style.ts. The .style-spec suffix keeps them out of a bare `node --test`, which runs with nothing
+// installed; check.sh runs them after `npm ci --prefix scripts/style`.
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { MAX_COLUMNS, MAX_LINES, check, checkPython, citesIssue, citesSpec } from './check-style.ts'
+
+const rules = async (source: string) => (await check('x.ts', source)).map((v) => `${v.line} ${v.rule}`)
+
+test('curly: every if, else, for and while body is a block; else if is not', async () => {
+  assert.deepEqual(await rules('if (a) b()\n'), ['1 curly'])
+  assert.deepEqual(await rules('if (a) {\n  b()\n} else c()\n'), ['3 curly'])
+  assert.deepEqual(await rules('for (const x of y) f(x)\nwhile (a) b()\n'), ['1 curly', '2 curly'])
+  assert.deepEqual(await rules('if (a) {\n  b()\n} else if (c) {\n  d()\n}\n'), [])
+})
+
+test('eqeqeq: == and != fail, except against null', async () => {
+  assert.deepEqual(await rules('const a = b == c\nconst d = e != f\n'), ['1 eqeqeq', '2 eqeqeq'])
+  assert.deepEqual(await rules('const a = b == null\nconst c = null != d\nconst e = f === g\n'), [])
+})
+
+test('no-nested-ternary: a ternary in either branch fails', async () => {
+  assert.deepEqual(await rules('const a = b ? (c ? 1 : 2) : 3\n'), ['1 no-nested-ternary'])
+  assert.deepEqual(await rules('const a = b ? 1 : c ? 2 : 3\n'), ['1 no-nested-ternary'])
+  assert.deepEqual(await rules('const a = (b ? 1 : 2) + (c ? 3 : 4)\n'), [])
+})
+
+test('one-var: one variable per declaration, except in a loop header', async () => {
+  assert.deepEqual(await rules('const a = 1, b = 2\n'), ['1 one-var'])
+  assert.deepEqual(await rules('for (let i = 0, n = 3; i < n; i++) {\n  f(i)\n}\n'), [])
+})
+
+test('blank-line-after-block: a multi-line block statement is followed by a blank line or a comment', async () => {
+  assert.deepEqual(await rules('if (a) {\n  b()\n}\nc()\n'), ['4 blank-line-after-block'])
+  assert.deepEqual(await rules('if (a) {\n  b()\n}\n\nc()\n'), [])
+  assert.deepEqual(await rules('if (a) {\n  b()\n}\n// c runs after\nc()\n'), [])
+  assert.deepEqual(await rules('if (a) {\n  b()\n}\n'), [], 'the last statement needs nothing after it')
+})
+
+test('max-len: a line over the limit fails unless a string, template, regex or URL crosses it', async () => {
+  const long = 'x'.repeat(MAX_COLUMNS)
+  assert.deepEqual(await rules(`const ${long} = 1\n`), ['1 max-len'])
+  assert.deepEqual(await rules(`// ${long}\n`), ['1 max-len'], 'comments are wrapped by hand')
+  assert.deepEqual(await rules(`const a = '${long}'\n`), [])
+  assert.deepEqual(await rules(`const a = \`${long}\`\n`), [])
+  assert.deepEqual(await rules(`const a = /${long}/\n`), [])
+  assert.deepEqual(await rules(`// see https://example.com/${long}\n`), [])
+  // A test's name is one unbreakable string, and Prettier keeps the callback's head on its line.
+  assert.deepEqual(await rules(`test('${long}', () => {\n  f()\n})\n`), [])
+  assert.deepEqual(await rules(`test('${long}', async ($, on) => {\n  f()\n})\n`), [])
+  assert.deepEqual(await rules(`const x = f('${'y'.repeat(10)}') + ${long}\n`), ['1 max-len'])
+})
+
+test('max-lines: a file over the limit fails once', async () => {
+  assert.deepEqual(await rules('f()\n'.repeat(MAX_LINES)), [])
+  assert.deepEqual(await rules('f()\n'.repeat(MAX_LINES + 1)), [`${MAX_LINES + 1} max-lines`])
+})
+
+test('issue-number: comments and test names say why, never which issue', async () => {
+  assert.deepEqual(await rules('// fixes #12\nf()\n'), ['1 issue-number'])
+  assert.deepEqual(await rules("test('draws a box (#17)', () => {})\n"), ['1 issue-number'])
+  assert.deepEqual(await rules('/* see https://github.com/o/r/issues/4 */\nf()\n'), ['1 issue-number'])
+  assert.deepEqual(await rules("// fill:#f9f and #333333 are colors\nconst a = 'see #3'\n"), [])
+})
+
+test('citesIssue: what counts as a citation', () => {
+  for (const text of ['#12', 'see #4.', 'issue 8', 'PR #33', 'pull request 2', '/pull/9']) {
+    assert.ok(citesIssue(text), text)
+  }
+
+  for (const text of ['#fff', '#abc123', '&#35;', 'C#', 'e3#2', 'item#x', 'attempt 2']) {
+    assert.ok(!citesIssue(text), text)
+  }
+})
+
+test('no-multiple-empty-lines: two blank lines in a row fail, in comments too, but not inside a template', async () => {
+  assert.deepEqual(await rules('f()\n\n\ng()\n'), ['3 no-multiple-empty-lines'])
+  assert.deepEqual(await rules('/*\na\n\n\nb\n*/\nf()\n'), ['4 no-multiple-empty-lines'])
+  assert.deepEqual(await rules('const a = `x\n\n\ny`\n'), [])
+})
+
+test('Python: one statement per line, no compound statements, no citations, same limits', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-style-'))
+  try {
+    const bad = join(dir, 'bad.py')
+    writeFileSync(bad, 'x = 1; y = 2\nif x: y = 3\n# fixes #4\ns = "a; b #5"\n')
+    const good = join(dir, 'good.py')
+    writeFileSync(good, 'x = 1\nif x:\n    y = 3\ns = "a; b #5"\n')
+    assert.deepEqual(
+      checkPython([bad, good]).map((line) => line.slice(dir.length + 1)),
+      ['bad.py:1 one-statement-per-line', 'bad.py:2 one-statement-per-line', 'bad.py:3 issue-number'],
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('spec-reference: comments state the fact, not a label of a spec or task the reader cannot open', async () => {
+  assert.deepEqual(await rules('// the tick rule (plan C §4, T47)\nf()\n'), ['1 spec-reference'])
+  for (const text of [
+    'plan A',
+    'spec C rule 5',
+    '§6',
+    '(T17)',
+    'see D15c.',
+    'X3.',
+    'V6:',
+    'common rule 5',
+    "the matrix's tick steps",
+    "Beyond the plan's tests",
+  ]) {
+    assert.ok(citesSpec(text), text)
+  }
+
+  // Acceptance check IDs name CI steps and test prefixes, and words that merely look like labels are not.
+  for (const text of [
+    'A8.no-build',
+    'VR.gallery',
+    'TS7',
+    'utf-8',
+    'UTF-16',
+    'D3.js',
+    'H2',
+    'x2',
+    'e3#2',
+    'step 2',
+    'flow.jison rule 108',
+  ]) {
+    assert.ok(!citesSpec(text), text)
+  }
+})
+
+test('issue-number: a hash and a number in prose is a citation, a color only where a color goes', async () => {
+  // Three digits after a hash read as an issue in prose; only a CSS color property or a whole color string is a color.
+  assert.ok(citesIssue('See #123 for details.'))
+  assert.ok(!citesIssue('fill:#123'))
+  assert.ok(!citesIssue('#abc'))
+  assert.ok(!citesIssue('stroke: #282828 and color:#fff'))
+})
+
+test('issue-number: test names in templates, and links to an issue or pull request in any string', async () => {
+  assert.deepEqual(await rules('test(`draws a box (#17)`, () => {})\n'), ['1 issue-number'])
+  assert.deepEqual(await rules("it('fixes #3', () => {})\n"), ['1 issue-number'])
+  const link = "const a = 'see https://github.com/o/r/issues/4'\nconst b = `see /pull/9 now`\n"
+  assert.deepEqual(await rules(link), ['1 issue-number', '2 issue-number'])
+  assert.deepEqual(await rules("const label = 'Team #1'\n"), [], 'a hash and a number in data is not a citation')
+})
+
+test('spec-reference: words that only look like labels are not citations', () => {
+  for (const text of ['Run the CI matrix on every platform.', 'S3 stores the images.', 'X11 forwarding', 'a V8 heap']) {
+    assert.ok(!citesSpec(text), text)
+  }
+
+  for (const text of [
+    '(X3)',
+    'X3. A text cell',
+    'see V6:',
+    '(D15c)',
+    'the diagram matrix',
+    "the matrix's tick steps",
+  ]) {
+    assert.ok(citesSpec(text), text)
+  }
+})

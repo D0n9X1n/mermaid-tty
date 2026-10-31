@@ -1,0 +1,23 @@
+# Prettier formats only the TypeScript that check-style checks; everything else keeps its own layout.
+*
+!core/
+!core/**/
+!core/**/*.ts
+!hooks/
+!hooks/**/
+!hooks/**/*.ts
+!hooks/**/*.tsx
+!scripts/
+!scripts/**/
+!scripts/**/*.ts
+!tests/
+!tests/**/
+!tests/**/*.ts
+!tests/**/*.tsx
+!types/
+!types/**/
+!types/**/*.ts
+# Written by their own generators, which tests compare byte for byte.
+core/width-table.ts
+core/box-table.ts
+**/node_modules/

@@ -1,0 +1,9 @@
+{
+  "name": "mermaid-tty-style",
+  "private": true,
+  "type": "module",
+  "description": "Code style tooling: Prettier formats; check-style.ts checks the rules Prettier can't.",
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

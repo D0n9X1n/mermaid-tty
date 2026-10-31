@@ -4,3 +4,4 @@ scripts/e2e/node_modules/
 scripts/docs/node_modules/
 out/
 __pycache__/
+scripts/style/node_modules/

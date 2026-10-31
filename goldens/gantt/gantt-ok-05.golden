@@ -1,5 +1,5 @@
 @60
-Adding GANTT diagram functionality to mermaid
+      Adding GANTT diagram functionality to mermaid
 A section
  ✓ Completed task                   a ██▏
  ▸ Active task                      b    ███▏
@@ -42,7 +42,7 @@ o after doc1 · 3d
 p 20h
 q 48h
 @60 roles
-TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 !!!!!!!!!
  o LLLLLLLLLLLLLL                   l ooo
  d LLLLLLLLLLL                      l    dddd
@@ -85,7 +85,7 @@ l VVVVVVVVVVVVVVV
 l VVV
 l VVV
 @80
-Adding GANTT diagram functionality to mermaid
+                 Adding GANTT diagram functionality to mermaid
 A section
  ✓ Completed task                      a ████▏
  ▸ Active task                         b       ██████▏
@@ -127,7 +127,7 @@ o after doc1 · 3d
 p 20h
 q 48h
 @80 roles
-TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+                 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 !!!!!!!!!
  o LLLLLLLLLLLLLL                      l ooooo
  d LLLLLLLLLLL                         l       ddddddd
@@ -169,7 +169,7 @@ l VVVVVVVVVVVVVVV
 l VVV
 l VVV
 @120
-Adding GANTT diagram functionality to mermaid
+                                     Adding GANTT diagram functionality to mermaid
 A section
  ✓ Completed task                      2014-01-06 · 2014-01-08 ██████
  ▸ Active task                         2014-01-09 · 3d                  █████████
@@ -194,7 +194,7 @@ Last section
                                                                ┬────────────────────┬────────────────────┬──────────────
                                                                2014-01-06           2014-01-13           2014-01-20
 @120 roles
-TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+                                     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 !!!!!!!!!
  o LLLLLLLLLLLLLL                      VVVVVVVVVVVVVVVVVVVVVVV oooooo
  d LLLLLLLLLLL                         VVVVVVVVVVVVVVV                  ddddddddd
