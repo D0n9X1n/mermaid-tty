@@ -23,7 +23,7 @@ const GALLERY = node('scripts/render-gallery.ts', '@tmp')
 const TANGLE = node('scripts/check-tangle.ts')
 const REVIEWS = node('scripts/check-review-hashes.ts', '--require-pass')
 
-// One row per A check ID, in plan A §9's order. Sub-projects B and C add their rows here.
+// One row per check ID. Sub-projects B and C add their rows here.
 export const CHECKS: Check[] = [
   { id: 'A1', steps: [NT] },
   { id: 'A2', steps: [NT] },

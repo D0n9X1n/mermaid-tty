@@ -36,7 +36,7 @@ test('VR.in-ci: color math and curated palettes', () => {
   assert.deepEqual(paletteProblems(), [])
 })
 
-// The rest of plan A's T5 table, per theme: background onFill title value s1…s8 ('-' is null).
+// The rest of each theme's keys: background onFill title value s1…s8 ('-' is null).
 const MORE = {
   default: '- inverseText text success suggestion success warning error merged claude permission planMode',
   nord: '#2E3440 #2E3440 #D08770 #81A1C1 #88C0D0 #A3BE8C #EBCB8B #D08770 #B48EAD #81A1C1 #BF616A #5E81AC',

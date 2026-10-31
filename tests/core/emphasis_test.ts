@@ -94,9 +94,9 @@ test('X3.emphasis: nesting a style in itself, escapes, code, links, strikethroug
   }
 })
 
-// X3. Mermaid 12.2.0 (JSDOM) turns each <br> spelling in an edge, transition or relation label into a newline before
-// marked runs, so emphasis spans it as whitespace, and a line after it can start a block (`a<br>- **b**` shows
-// <p>a</p>- **b**). breaks: that reading. A block start, a heading underline or a hard break on any line falls back.
+// Mermaid 12.2.0 (JSDOM) turns each <br> spelling in an edge, transition or relation label into a newline before marked
+// runs, so emphasis spans it as whitespace, and a line after it can start a block (`a<br>- **b**` shows <p>a</p>-
+// **b**). breaks: that reading. A block start, a heading underline or a hard break on any line falls back.
 test('X3.emphasis: in an edge label each <br> is a newline as Mermaid makes it; a block start on any line falls back', () => {
   const B = (t: string) => {
     const r = emphasize(t, true)

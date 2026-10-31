@@ -48,9 +48,8 @@ test('A5.errors: a bad score, a missing or repeated actor, # or ;, and : in a se
 // Beyond the plan's tests. A bar of e eighths, padded to the 10-cell field; a cell's kind, ink and owners.
 const bar = (e: number) => ('█'.repeat(Math.floor(e / 8)) + (e % 8 ? '▏▎▍▌▋▊▉'[(e % 8) - 1] : '')).padEnd(10)
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]
-// Tasks before the first section form a group with no header row, which takes s1, so the sections take s2, s3, …
-// (shared rule 3); with no such tasks, the first section takes s1. Owners follow the task's index, and a section's its
-// own.
+// Tasks before the first section form a group with no header row, which takes s1, so the sections take s2, s3, … With
+// no such tasks, the first section takes s1. Owners follow the task's index, and a section's its own.
 test('A4: tasks before the first section take s1 and shift each section ink by one; owners and bars follow the task index', () => {
   const d = X('journey\nA: 5: Me\nsection S\nB: 3: Me, Cat\nsection T\nC: 1: Cat', 80).drawing
   assert.deepEqual(text(d), [
@@ -101,7 +100,7 @@ test('A4.fit-ladder: wrap breaks actor lists after a comma; oneActor draws one a
     ' '.repeat(25) + 'Cat',
   ])
 })
-// Common rule 6: a section header row wraps when it is wider than columns; a word wider than columns falls back.
+// A section header row wraps when it is wider than columns; a word wider than columns falls back.
 test('A4.fit-ladder: a section header wraps at columns; a word wider than columns falls back', () => {
   assert.deepEqual(text(X('journey\nsection Getting to the office early\nA: 3: Me', 20).drawing), [
     'Getting to the',
@@ -166,8 +165,8 @@ test('A5.errors: another header, a second title, no task, an accDescr block left
     assert.deepEqual(X(src, 80), { reason: why }, src)
   }
 })
-// Common rule 4: accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment
-// (matrix journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
+// accTitle and accDescr, in each form, are parsed and not drawn, so a # or ; in one is no comment (matrix
+// journey-ok-08). Task names and actors may repeat across tasks (journey-ok-07).
 test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are skipped; a frontmatter title draws', () => {
   const rows = ['My day', 'Go', '  A ' + bar(48) + ' 3  Me']
   for (const src of [
@@ -182,7 +181,7 @@ test('A5: accTitle and accDescr are ignored, # and ; in them too; %% lines are s
     '  A ' + bar(80) + ' 5  Me',
   ])
 })
-// T65 QA: the bar rounds half up at its boundary: 16 × 1.03125 is 16.5, so 17 eighths, not a truncated 16.
+// From QA: the bar rounds half up at its boundary: 16 × 1.03125 is 16.5, so 17 eighths, not a truncated 16.
 test('A4: a score on a half-eighth boundary rounds half up: 1.03125 draws 17 eighths', () => {
   const d = X('journey\nsection S\nA: 1.03125: Me', 80).drawing
   assert.deepEqual(

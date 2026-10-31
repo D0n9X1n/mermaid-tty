@@ -5,7 +5,8 @@ import { validate } from '../../core/validate.ts'
 import { isFail } from '../../core/fail.ts'
 import { text } from './graph-fixture.ts'
 
-// V7: a cycle between nodes of one frame draws, its back edge inside the frame (V6 keeps it there), not as a fallback.
+// A cycle between nodes of one frame draws, its back edge inside the frame (validate rejects it outside), not as a
+// fallback.
 const REPROS = {
   'flowchart TD two-node cycle': 'flowchart TD\nsubgraph S\n  a --> b\n  b --> a\nend',
   'state composite cycle': 'stateDiagram-v2\nstate P {\n  A --> B\n  B --> A\n}\n[*] --> P',
@@ -22,8 +23,7 @@ for (const [name, src] of Object.entries(REPROS)) {
   })
 }
 
-// V8: the same, with an edge from outside the frame into a node of the cycle: it crosses the frame's border to its
-// node.
+// The same, with an edge from outside the frame into a node of the cycle: it crosses the frame's border to its node.
 const ENTERED = {
   'flowchart TD two-node cycle, edge into it': 'flowchart TD\nx --> a\nsubgraph S\n  a --> b\n  b --> a\nend',
   'flowchart LR three-node cycle, edge into it': 'flowchart LR\nx --> a\nsubgraph S\n  a --> b --> c\n  c --> a\nend',
@@ -36,8 +36,7 @@ for (const [name, src] of Object.entries(ENTERED)) {
   })
 }
 
-// V8: the lane lies two rows past the frame's nodes, as at the top level: before, its own dummy pushed it one row
-// further.
+// The lane lies two rows past the frame's nodes, as at the top level: before, its own dummy pushed it one row further.
 test('V8: the LR cycle in a frame an edge points at has no empty rows before its lane', () => {
   const r = explain(REPROS['flowchart LR three-node cycle, edge to the frame'], { columns: 80, theme: 'mono' })
   assert.ok(!isFail(r), `fell back: ${isFail(r) ? r.reason : ''}`)

@@ -31,7 +31,7 @@ test('goldenOf writes each width as text rows then role rows, cont as ~, right-t
   )
 })
 
-// Plan C T48: series source text codes as !@#$%^&*, so the glyph scan never reads it as a drawn series glyph 1–8.
+// Series source text codes as !@#$%^&*, so the glyph scan never reads it as a drawn series glyph 1–8.
 test('goldenOf codes every ink, uppercase on a text cell (series text !@#$%^&*) and lowercase on a drawn one', () => {
   const inks: Ink[] = [
     'node',
@@ -154,9 +154,9 @@ test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph 
   }
 })
 
-// X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b
-// (bold), i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its
-// golden is as before.
+// A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b (bold),
+// i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its golden is
+// as before.
 test('X3.emphasis: goldenOf adds an @w styles section only when a cell has emphasis, and goldenGlyphs skips it', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const c = createCanvas(2, 6, 80)

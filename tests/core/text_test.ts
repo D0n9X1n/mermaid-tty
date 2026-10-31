@@ -228,9 +228,9 @@ test('X2: a removed <br> joins nothing, so text on either side is checked on its
   assert.deepEqual(drawable('&am<br>p', 'html', 'any'), { reason: 'entity' })
 })
 
-// X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a
-// markdown one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other
-// text; a plain one turns a literal \n into <br />.
+// createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a markdown
+// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a
+// plain one turns a literal \n into <br />.
 const RENDERED: Mode[] = ['html', 'markdown', 'member']
 test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in every HTML-label mode, and nowhere else', () => {
   const icons = [
@@ -346,7 +346,7 @@ test('X3.emphasis: wrap measures a marked line by what it shows and keeps each m
   assert.equal(ps[1]!.text, emphasize('**字** ab'))
 })
 
-// X3. styled: a markdown field's text as the marked string Mermaid shows (core/emphasis.ts), or why not. Text the port
+// styled: a markdown field's text as the marked string Mermaid shows (core/emphasis.ts), or why not. Text the port
 // cannot match keeps the Fail drawable gives; an unsupported character fails before any marker is written, so a marker
 // can never come from the source.
 test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every other Fail', async () => {
@@ -372,7 +372,7 @@ test('X3.emphasis: styled draws emphasis in a markdown field, and keeps every ot
   assert.equal(R('#35; **x**', 'any', true), 'markdown') // codes and emphasis together fall back
 })
 
-// X3. styled's breaks: an edge label, where Mermaid makes each <br> a newline before marked. A line that would start a
+// styled's breaks: an edge label, where Mermaid makes each <br> a newline before marked. A line that would start a
 // block, underline a heading, or end in a hard break falls back as markdown, emphasis or not.
 test('X3.emphasis: styled with breaks falls back on a block start after a <br>, and reads emphasis across one', async () => {
   const { styled } = await import('../../core/text.ts')

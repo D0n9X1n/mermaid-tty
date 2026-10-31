@@ -508,8 +508,8 @@ test('label-unbound: a node label moved off its pill fails', () => {
   }
 })
 
-// X3. Emphasis is part of a label's text: a label is drawn as its marked text (core/emphasis.ts), each marker its
-// cell's em.
+// Emphasis is part of a label's text: a label is drawn as its marked text (core/emphasis.ts), each marker its cell's
+// em.
 test('X3.emphasis: a label drawn with emphasis it does not have, or without emphasis it has, fails label-missing', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const b = emphasize('**b**')!
@@ -534,8 +534,8 @@ test('X3.emphasis: em on any cell but a text cell, or outside BOLD | ITALIC, fai
   assert.equal(validate(odd)?.reason, 'emphasis')
 })
 
-// X3. A marker or any other control character in a cell's ch would carry emphasis, or nothing, past labels: instances
-// reads ch as written, so a ch of marker + 'b' reads like em 1 on 'b'. No drawn glyph or source text holds one.
+// A marker or any other control character in a cell's ch would carry emphasis, or nothing, past labels: instances reads
+// ch as written, so a ch of marker + 'b' reads like em 1 on 'b'. No drawn glyph or source text holds one.
 test("X3.emphasis: a control character in any cell's ch, a marker included, fails emphasis", async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   for (const ch of [

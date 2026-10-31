@@ -41,7 +41,7 @@ const source = (id: string) => readFileSync(join(FIXTURES, id.slice(0, id.indexO
 // Whether a source holds Han, Kana or Hangul.
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
 
-// A color as hex: a '#rrggbb' as given, a ThemeKey through T30's DARK_KEYS. Anything else throws.
+// A color as hex: a '#rrggbb' as given, a ThemeKey through render-svg.ts's DARK_KEYS. Anything else throws.
 function hex(c: string): string {
   if (/^#[0-9a-f]{6}$/i.test(c)) {
     return c

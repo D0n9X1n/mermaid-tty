@@ -356,7 +356,7 @@ test('A5.mutation-tests: a lifeline is │ or ┃ in empty cells only; a line or
   assert.deepEqual([d.cells[0]![1]!.owners, d.cells[1]![1]!.owners, d.cells[2]![1]!.owners], [['e1'], ['m1'], ['L1']])
   assert.deepEqual(d.conflicts, [])
 })
-// Text and cont cells hold source text, which rule 12 does not limit; every other cell holds a drawn glyph.
+// Text and cont cells hold source text, which GLYPHS does not limit; every other cell holds a drawn glyph.
 test('A8.platforms: every glyph a busy canvas draws outside text is in GLYPHS: it comes from boxGlyph, junction or CAPS', () => {
   const c = createCanvas(6, 14, 14, fromSameNode)
   c.frame(0, 0, 5, 9, 'frame', 'g1', 'G')

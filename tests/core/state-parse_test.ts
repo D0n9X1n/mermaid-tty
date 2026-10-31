@@ -425,8 +425,8 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
     [['Q&A', 'x|Q&A', 'c'], 'a < b', 'a < b', 'a < b'],
   )
 })
-// X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each,
-// a state's id included where it has no description, and createText swaps icons and KaTeX.
+// Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each, a
+// state's id included where it has no description, and createText swaps icons and KaTeX.
 test('X3: Markdown the emphasis port cannot match, icons and math in a state text, or a state id shown as its label, fall back', () => {
   for (const [body, why] of [
     ['state "**a **b** c**" as A', 'markdown'],
@@ -447,7 +447,7 @@ test('X3: Markdown the emphasis port cannot match, icons and math in a state tex
   )
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): a state's description, note and transition label, and a state id shown as its label, show
+// Mermaid 12.2.0 (JSDOM): a state's description, note and transition label, and a state id shown as its label, show
 // <strong> and <em>; a composite's title shows **Comp** x as written, so emphasis there still falls back.
 test('X3.emphasis: bold and italic in a state text or a state id shown as its label draw as Mermaid shows them', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')

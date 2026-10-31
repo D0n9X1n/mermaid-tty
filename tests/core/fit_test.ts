@@ -231,7 +231,7 @@ test('A4.fit-ladder: flowchart lays out only the steps of its own ladder; any ot
   }
 })
 
-// Every keyword and alias of each type, as plan A T12 lists them; flowchart-elk and requirement are explicit fallbacks.
+// Every keyword and alias of each type; flowchart-elk and requirement are explicit fallbacks.
 const TYPES: Record<DiagramType, readonly string[]> = {
   flowchart: ['flowchart', 'graph'],
   sequence: ['sequenceDiagram'],

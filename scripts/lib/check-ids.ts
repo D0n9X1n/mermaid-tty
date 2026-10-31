@@ -3,7 +3,7 @@
 
 // A label is bold text with the colon inside the bold: **No build:**
 const LABEL = /\*\*([^*:]+):\*\*/g
-// A table row of spec A or B: | A8 | …
+// A table row under Spec A or Spec B: | A8 | …
 const ROW = /\| ([AB]\d+) \|/
 // The sections that hold check IDs; any other `## ` heading ends one.
 const SECTION = /^## (Spec A|Spec B|Visual review)\b/
@@ -16,8 +16,8 @@ export function slug(s: string): string {
     .replace(/^-|-$/g, '')
 }
 
-// Row IDs plus <row>.<slug> per label in the row (spec A and B), and VR.<slug> per label in the visual review section,
-// in document order.
+// Row IDs plus <row>.<slug> per label in the row (under Spec A and Spec B), and VR.<slug> per label in the visual
+// review section, in document order.
 export function parseIds(md: string): string[] {
   const ids: string[] = []
   let section = ''

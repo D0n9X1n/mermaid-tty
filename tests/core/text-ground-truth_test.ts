@@ -263,7 +263,7 @@ test('A5.errors: ground truth: a frontmatter title draws each case as Mermaid sh
   fields.forEach(check)
 })
 
-// X2. QA repro: Mermaid 12.2.0 shows ER A["a<!--c-->b"] as ab. Every ER text is an HTML label (erBox's createText). An
+// QA repro: Mermaid 12.2.0 shows ER A["a<!--c-->b"] as ab. Every ER text is an HTML label (erBox's createText). An
 // entity's label draws in a one-line pill, an attribute's comment in one row, and a subgraph's title on its frame's
 // border, so a <br> there falls back; a relation's label splits at each <br>.
 test('A5.errors: ground truth: an ER entity label, relation label, attribute comment and subgraph title draw each case as Mermaid shows it, or fall back', () => {
@@ -277,8 +277,8 @@ test('A5.errors: ground truth: an ER entity label, relation label, attribute com
   fields.forEach(check)
 })
 
-// X2. journey: a task or section never splits, so each <br> spelling draws as written (plain, literal); an actor shows
-// a <br> as a space, so any <br falls back; a title is sanitized with no <br>. Every field falls back on a marker.
+// journey: a task or section never splits, so each <br> spelling draws as written (plain, literal); an actor shows a
+// <br> as a space, so any <br falls back; a title is sanitized with no <br>. Every field falls back on a marker.
 test('A5.errors: ground truth: a journey task, section, actor and title draw as Mermaid shows them, or fall back', () => {
   const J = (body: string, owner: string) => (c: string) => drawn(`journey\n${body.replace('$', c)}`, owner)
   const task = J('section s\n$: 3: me', 't0')
@@ -314,8 +314,8 @@ test('A5.errors: ground truth: a journey task, section, actor and title draw as 
   )
 })
 
-// X2. Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T
-// for quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
+// Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T for
+// quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
 test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text keep each case as Mermaid shows it, or fall back', () => {
   const Q =
     (body: string, pick: (m: Quadrant) => string | null | undefined) =>
@@ -339,7 +339,7 @@ test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text k
   )
 })
 
-// X2. A gantt title, statement or frontmatter, is sanitized with no <br>, as a pie title is (column T).
+// A gantt title, statement or frontmatter, is sanitized with no <br>, as a pie title is (column T).
 test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it, or falls back', () => {
   const fields: Field[] = [
     {
@@ -352,9 +352,9 @@ test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it
   fields.forEach(check)
 })
 
-// X3 (Mermaid 12.2.0 source): createText runs replaceIconSubstring and, given $$…$$, KaTeX on every HTML label, and
-// marked on a markdown one (class, state, ER, mindmap; not a flowchart's plain label). Each cross-family QA repro falls
-// back; an ordinary label in each field still draws.
+// Mermaid 12.2.0 source: createText runs replaceIconSubstring and, given $$…$$, KaTeX on every HTML label, and marked
+// on a markdown one (class, state, ER, mindmap; not a flowchart's plain label). Each cross-family QA repro falls back;
+// an ordinary label in each field still draws.
 const reason = (src: string): string | null => {
   const r = explain(src, { columns: 120, theme: 'mono' })
   return isFail(r) ? r.reason : null

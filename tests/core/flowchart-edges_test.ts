@@ -62,7 +62,7 @@ const L = (from: string, to: string, order: number, o: object = {}) => ({
 const G = (nodes: object[], edges: object[]) => ({ dir: 'TB', title: null, nodes, edges, clusters: [] })
 const ends = (l: string) => E(l).map((e: any) => e.from + e.to)
 
-// One input per flowchart-ok row of the diagram matrix that T14 covers, with the graph it should parse to.
+// One input per flowchart-ok row of the diagram matrix whose links this file covers, with the graph it should parse to.
 test('A1: matrix rows flowchart-ok-23…33, -46 and -47 parse to their graphs', () => {
   const [a, b, c, d] = ['A', 'B', 'C', 'D'].map((id, i) => N(id, 'rect', 'node', i, id))
   assert.deepEqual(
@@ -93,7 +93,8 @@ test('A1: matrix rows flowchart-ok-23…33, -46 and -47 parse to their graphs', 
     G([a!, b!], [L('A', 'B', 0, { style: 'invisible', head: 'none' })]),
     'flowchart-ok-46',
   )
-  // Only the edges: what the e1@{…} line does, an ignored directive, is T15's; here it must not fail the parse.
+  // Only the edges: what the e1@{…} line does, an ignored directive, flowchart-subgraph_test.ts covers; here it must
+  // not fail the parse.
   assert.deepEqual(
     P('flowchart TD\nA e1@--> B\ne1@{ animate: true }').edges,
     [L('A', 'B', 0, { id: 'e1' })],

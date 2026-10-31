@@ -284,7 +284,7 @@ test('A8.cache: with no capacity given, a renderer keeps 64 entries, and evicts 
   assert.deepEqual([calls, r.size], [66, 64])
 })
 
-// X3. A text cell's em draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its
+// A text cell's emphasis draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its
 // role; emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only
 // bold role.
 test("X3.emphasis: toRows draws a cell's em as bold and italic, split from unstyled neighbours of its role", () => {

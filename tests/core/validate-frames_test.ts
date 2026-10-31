@@ -17,11 +17,11 @@ const S = (t: string): Drawing =>
   sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2
-// in flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where
-// one is due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the
-// finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between()
-// further down.
+// QA's repro, whose edge label's row once ran through both sides of the Group subgraph: the layout keeps the label off
+// its border (R2 in flowchart-layout_test.ts), but its edge can reach N1 only by running through it and back in, three
+// crossings where one is due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator
+// half of the finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on
+// between() further down.
 test("A5.mutation-tests: QA's cluster-border repro, its edge through S0 and back, falls back", () => {
   const src =
     'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
@@ -184,8 +184,7 @@ test('A5.mutation-tests: a frame needs its four corners: one overwritten, by tex
   assert.equal(validate(run)?.reason, 'frame-broken')
 })
 
-// V5: a border cell draws its border's glyph, ─ or ━ across and │ or ┃ down a side, or a tee whose stem a divider of
-// the
+// A border cell draws its border's glyph, ─ or ━ across and │ or ┃ down a side, or a tee whose stem a divider of the
 // frame's own, `${id}.${k}`, continues inside: ┬ over it, ┴ under it, ├ or ┤ beside it. A stray tee leads nowhere.
 const tee = (d: Drawing, r: number, c: number, ch: string, dirs: number) => {
   d.cells[r]![c] = { ...d.cells[r]![c]!, ch, dirs }
@@ -213,8 +212,7 @@ test("A5.mutation-tests: V5 a divider's tees pass, and so does the quadrant's cr
   assert.equal(validate(q.drawing), null, show(q.drawing))
 })
 
-// V6: frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws
-// it.
+// Frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws it.
 function inner(ink: (c: Canvas) => void, g: string): Drawing {
   const c = createCanvas(6, 9, 9)
   c.frame(0, 0, 4, 8, 'frame', 'F', 'T')

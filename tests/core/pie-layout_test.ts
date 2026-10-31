@@ -115,7 +115,7 @@ test('A5.errors: a #…; entity in a slice label or a header title falls back; a
 
   assert.deepEqual(text(X('pie title C# and F#\n"F#" : 1', 80).drawing), ['C# and F#', `F# ${bar(480, 60)} 1 100.0%`])
 })
-// accTitle and accDescr, in each form, are parsed and not drawn (matrix common rule 4).
+// accTitle and accDescr, in each form, are parsed and not drawn.
 test('A5: a title statement or a frontmatter title draws as the heading; accTitle and accDescr are ignored', () => {
   for (const [src, title] of [
     ['pie\ntitle Pets\n"Dogs" : 3', 'Pets'],

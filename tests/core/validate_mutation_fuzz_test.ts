@@ -591,11 +591,11 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
   assert.deepEqual(survivors, [])
 })
 
-// X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each
-// other kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch
-// instead (which would read the same to labels), and a marker or another control character added to the first cells of
-// each kind. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15) are among the
-// ok fixtures, so styled cells lose their style here too.
+// Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each other
+// kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch instead
+// (which would read the same to labels), and a marker or another control character added to the first cells of each
+// kind. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15) are among the ok
+// fixtures, so styled cells lose their style here too.
 test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cell given emphasis, fails', (t) => {
   const { mutants, survivors } = tally(t, 'emphasis', function* (d) {
     const seen = new Map<string, number>()

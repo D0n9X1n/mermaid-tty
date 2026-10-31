@@ -539,7 +539,7 @@ test("A1: Q2a compaction keeps every seeded drawing's verdict but width", (t) =>
 
   t.diagnostic(`drawn ${count}, fitted at 40 columns by compaction ${fitted}, other verdicts changed ${bad.length}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} verdicts changed`)
-  // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back (V6); V8 draws a back
-  // edge between nodes of one open frame inside it, 1002 drawn.
+  // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back; a back edge between
+  // nodes of one open frame draws inside it, 1002 drawn.
   assert.ok(count >= 1000 && fitted > 0, `drawn ${count}, fitted ${fitted}`)
 })

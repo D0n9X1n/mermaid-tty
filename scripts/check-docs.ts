@@ -3,16 +3,16 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { width } from '../core/width.ts' // T11
+import { width } from '../core/width.ts' // a glyph's width in terminal cells
 import { publishWikiErrors } from './docs/workflow-tree.ts'
-import { ciErrors, releaseErrors } from './docs/ci-rules.ts' // T8
-import { checkShErrors } from './lib/ci-rules.ts' // T8
+import { ciErrors, releaseErrors } from './docs/ci-rules.ts' // the CI and release workflow rules
+import { checkShErrors } from './lib/ci-rules.ts' // the check.sh rule
 import { assetImages, docsFolderErrors, iconErrors, imageErrors, readmeErrors } from './lib/doc-rules.ts'
-import { versionsErrors } from './docs/ci-rules.ts' // T17
+import { versionsErrors } from './docs/ci-rules.ts' // the Claude Code versions workflow rule
 import { IMAGES } from './lib/images.ts'
-import { githubHtml, renderErrors } from './lib/github-render.ts' // T18
-import { renderImage } from './lib/render-image.ts' // T11
-import { misplaced } from './lib/svg.ts' // T11
+import { githubHtml, renderErrors } from './lib/github-render.ts' // GitHub's render against the GFM tree
+import { renderImage } from './lib/render-image.ts' // a fresh render of a README image
+import { misplaced } from './lib/svg.ts' // the glyphs off their cell in an SVG
 const root = fileURLToPath(new URL('..', import.meta.url))
 const at = (p: string) => join(root, p)
 const read = (p: string) => (existsSync(at(p)) ? readFileSync(at(p), 'utf8').replace(/\r\n/g, '\n') : '')
@@ -32,8 +32,8 @@ errors.push(
   ...ciErrors(read('.github/workflows/ci.yml')),
   ...releaseErrors(read('.github/workflows/release.yml')),
   ...checkShErrors(read('scripts/check.sh')),
-) // T8
-errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml'))) // T17
+) // the CI, release and check.sh rules
+errors.push(...versionsErrors(read('.github/workflows/claude-code-versions.yml'))) // the versions workflow rule
 for (const p of new Set(['assets/icon.svg', ...[md, ...pages.map((p) => read(p))].flatMap((t) => assetImages(t))])) {
   if (!existsSync(at(p))) {
     errors.push(`${p} is displayed but does not exist`)
@@ -46,7 +46,7 @@ errors.push(
     ? iconErrors(readFileSync(at('.claude-plugin/icon.png')))
     : ['icon.png: missing']),
 )
-// T11 begin: each README SVG equals a fresh render, and every glyph sits at col × CELL.
+// README images begin: each README SVG equals a fresh render, and every glyph sits at col × CELL.
 for (const img of IMAGES) {
   try {
     const { svg, rows } = renderImage(img)
@@ -62,15 +62,15 @@ for (const img of IMAGES) {
     errors.push(`${img.file}: ${(err as Error).message}`)
   }
 }
-// T11 end
+// README images end
 const listed = new Set(diagrams)
 for (const f of existsSync(at('assets/readme')) ? readdirSync(at('assets/readme')) : []) {
   if (f.endsWith('.svg') && !listed.has(`assets/readme/${f}`)) {
     errors.push(`assets/readme/${f}: not in the image manifest`)
   }
 }
-// T18 begin: D15d, GitHub's render of each page must show the tree's links and images; CI passes GH_TOKEN, and a local
-// run without it skips.
+// GitHub render cross-check begin: GitHub's render of each page must show the tree's links and images; CI passes
+// GH_TOKEN, and a local run without it skips.
 if (process.env.GH_TOKEN) {
   for (const p of ['README.md', ...pages]) {
     try {
@@ -84,7 +84,7 @@ if (process.env.GH_TOKEN) {
 } else {
   console.log('check-docs: GitHub render cross-check skipped: no GH_TOKEN (CI sets it)')
 }
-// T18 end
+// GitHub render cross-check end
 for (const e of errors) {
   console.error(`check-docs: ${e}`)
 }
