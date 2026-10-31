@@ -11,7 +11,8 @@ test('A4: xychart-ok-01: bar eighth-rows; ticks 11000, 7500, 4000; vertical (79 
   const r = explain(fx('xychart-ok-01'), { columns: 80, theme: 'mono' }) as any
   const t = text(r.drawing)
   const base = t.findIndex((l) => l.includes('└'))
-  assert.deepEqual([r.step, widest(r.drawing)], ['natural', 79]) // G = 6, c = 5: group g's first bar cell is column 8 + 6g
+  // G = 6, c = 5: group g's first bar cell is column 8 + 6g
+  assert.deepEqual([r.step, widest(r.drawing)], ['natural', 79])
   assert.deepEqual(
     Array.from({ length: 12 }, (_, g) => vrun(r.drawing, 8 + 6 * g, base)),
     [9, 18, 32, 38, 50, 59, 64, 57, 48, 41, 27, 18],
@@ -38,7 +39,8 @@ test('A7: series take s1, s2, s3 in source order over bars and lines; values car
 })
 test('A5.mutation-tests: every xychart-ok fixture lists every bar, zero bars included, in order, at 60, 80 and 120', () => {
   for (const id of ids.filter((i) => i.includes('-ok-'))) {
-    const series = [...fx(id).matchAll(/^\s*(bar|line)\b[^[\n]*\[([^\]]*)\]/gm)] // x<k>: k counts every series, bars and lines, in source order
+    // x<k>: k counts every series, bars and lines, in source order
+    const series = [...fx(id).matchAll(/^\s*(bar|line)\b[^[\n]*\[([^\]]*)\]/gm)]
     const want = series.flatMap((m, k) => (m[1] === 'bar' ? m[2]!.split(',').map((_, j) => `x${k}.b${j}`) : []))
     for (const w of [60, 80, 120]) {
       assert.deepEqual(

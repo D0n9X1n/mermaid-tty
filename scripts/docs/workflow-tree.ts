@@ -1,8 +1,11 @@
-// Workflow YAML as GitHub reads it (D15c, as markdown.ts is for Markdown): every workflow rule runs on the parsed tree, on real keys and values,
-// never on substrings. What the rules cannot interpret is an error, never a pass: a parse error or warning, an anchor, an alias, a merge key, a
+// Workflow YAML as GitHub reads it (D15c, as markdown.ts is for Markdown): every workflow rule runs on the parsed tree,
+// on real keys and values,
+// never on substrings. What the rules cannot interpret is an error, never a pass: a parse error or warning, an anchor,
+// an alias, a merge key, a
 // tag, a non-string key, or a flow collection where they need block style (jobs, each job, its steps, each step).
 import { LineCounter, isAlias, isMap, isNode, isPair, isScalar, isSeq, parseDocument, visit, type YAMLMap } from 'yaml'
-// A uses value is owner/repo[/path]@<40 hex>. Its # vN comment is read from the source: the rest of the value's own line, right after the value.
+// A uses value is owner/repo[/path]@<40 hex>. Its # vN comment is read from the source: the rest of the value's own
+// line, right after the value.
 const PIN = /^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/
 const VERSION = /^ # v\d/
 export type Workflow = { unreadable: string[]; errors: string[]; value: unknown }
@@ -30,6 +33,7 @@ export function readWorkflow(name: string, yml: string): Workflow {
   for (const e of [...doc.errors, ...doc.warnings]) {
     unreadable.push(`${name}:${lc.linePos(e.pos[0]).line}: unreadable: ${e.code}: ${e.message.split('\n')[0]}`)
   }
+
   visit(doc, (_, n) => {
     if (isAlias(n)) {
       bad(n, `alias *${n.source}`)
@@ -37,6 +41,7 @@ export function readWorkflow(name: string, yml: string): Workflow {
       if (n.anchor) {
         bad(n, `anchor &${n.anchor}`)
       }
+
       if (n.tag) {
         bad(n, `tag ${n.tag}`)
       }
@@ -60,14 +65,17 @@ export function readWorkflow(name: string, yml: string): Workflow {
     if (!s.has('run')) {
       return
     }
+
     const run = text(s, 'run')
     if (run === undefined) {
       bad(s.get('run', true) ?? s, 'run must be a string')
       return
     }
+
     if (/\.sh\b/.test(run) && text(s, 'shell') !== 'bash') {
       rules.push(`${name}:${at(s)}: step runs a .sh script without shell: bash`)
     }
+
     if (/scripts\/|gh release|claude plugin/.test(run) && !/^[\w-]+$/.test(text(s, 'id') ?? '')) {
       rules.push(`${name}:${at(s)}: check step has no stable id`)
     }
@@ -83,14 +91,17 @@ export function readWorkflow(name: string, yml: string): Workflow {
         bad(job ?? p, `${where} must be a block mapping`)
         continue
       }
+
       if (!job.has('steps')) {
         continue
       } // a job that calls a reusable workflow has no steps
+
       const steps = job.get('steps', true)
       if (!isSeq(steps) || steps.flow) {
         bad(steps ?? p, `${where}.steps must be a block sequence`)
         continue
       }
+
       steps.items.forEach((s, i) => {
         if (block(s)) {
           step(s)
@@ -100,12 +111,14 @@ export function readWorkflow(name: string, yml: string): Workflow {
       })
     }
   }
+
   let value: unknown
   try {
     value = doc.toJS()
   } catch (e) {
     bad(doc.contents, `cannot resolve: ${(e as Error).message}`)
   }
+
   return { unreadable, errors: [...unreadable, ...rules], value }
 }
 // Required keys and values, read from the plain object; a rule that throws (a missing parent) is missing too.
@@ -119,7 +132,8 @@ export const need = (name: string, value: unknown, rules: [string, (w: any) => u
       }
     })
     .map(([what]) => `${name}: missing ${what}`)
-// B3: publish-wiki.yml publishes on every push to main with a read-only token, one job-scoped write and the push-if-changed publisher.
+// B3: publish-wiki.yml publishes on every push to main with a read-only token, one job-scoped write and the
+// push-if-changed publisher.
 export function publishWikiErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('publish-wiki.yml', yml)
   const jobs = (w: any): any[] => Object.values(w.jobs ?? {})

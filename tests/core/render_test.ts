@@ -20,6 +20,7 @@ test('A5.errors: parse errors and unsupported types return null', () => {
   for (const s of ['flowchart TD\nA[open --> B', 'radar-beta\naxis A', 'flowchart-elk TD\nA', 'Flowchart TD\nA']) {
     assert.equal(renderMermaid(s, O), null, s)
   }
+
   assert.deepEqual(explain('flowchart TD\nA[👨‍👩]', O), { reason: 'unsupported-char U+200D' })
 })
 test('A4.fit-ladder: below the minimum width falls back', () =>
@@ -34,7 +35,8 @@ test('A5.errors: explain returns the first Fail of source, lookup, parse and fit
   const model = flowchart.parse(readSource(FC) as Source)
   assert.deepEqual(explain(FC, { columns: 8 }), fitLadder(flowchart, model as never, 8))
 })
-// parseFail is explain without the fit ladder: the first Fail of source, title, lookup and parse, or null. The width plays
+// parseFail is explain without the fit ladder: the first Fail of source, title, lookup and parse, or null. The width
+// plays
 // no part, so a diagram too wide for any terminal still parses; what core rejects (HTML, icons, image nodes) does not.
 test("A5.errors: parseFail returns explain's first Fail before the fit, or null when the source parses", () => {
   for (const s of [
@@ -46,6 +48,7 @@ test("A5.errors: parseFail returns explain's first Fail before the fit, or null 
   ]) {
     assert.deepEqual(parseFail(s), explain(s, O), s)
   }
+
   assert.equal(parseFail(FC), null)
   assert.equal(parseFail('sequenceDiagram\nA->>B: hi'), null)
   const fan = 'flowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]'
@@ -198,6 +201,7 @@ test('A8.cache: a hit; a miss when any key part changes; LRU eviction at the 65t
   for (let i = 0; i < 64; i++) {
     r.render(`flowchart TD\nN${i}`, O)
   }
+
   assert.equal(r.size, 64)
   r.render(FC, O)
   assert.equal(calls, 69)
@@ -226,6 +230,7 @@ test('A5.errors: explain fails bad-columns, before any other check, unless colum
   for (const columns of BAD_COLUMNS) {
     assert.deepEqual(explain('pie', { columns }), { reason: 'bad-columns' }, String(columns))
   }
+
   assert.equal(renderMermaid(FC, { columns: Infinity }), null)
 })
 test('A8.cache: one renderer gives what a fresh explain gives at Infinity, then at -Infinity (the null-key collision)', () => {
@@ -249,6 +254,7 @@ test('A8.cache: render refuses bad columns uncached, whatever inner would draw, 
       String(columns),
     )
   }
+
   assert.deepEqual([calls, r.size, seen.length], [0, 0, BAD_COLUMNS.length])
 })
 
@@ -267,17 +273,21 @@ test('A8.cache: with no capacity given, a renderer keeps 64 entries, and evicts 
   for (let i = 0; i < 64; i++) {
     r.render(`flowchart TD\nN${i}`, O)
   }
+
   for (let i = 0; i < 64; i++) {
     r.render(`flowchart TD\nN${i}`, O)
   }
+
   assert.deepEqual([calls, r.size], [64, 64])
   r.render('flowchart TD\nN64', O)
   r.render('flowchart TD\nN0', O)
   assert.deepEqual([calls, r.size], [66, 64])
 })
 
-// X3. A text cell's em draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its role;
-// emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only bold role.
+// X3. A text cell's em draws as SGR bold and italic. Under mono, where no role has a color, a span still carries its
+// role;
+// emphasis only sets bold and italic, so the cells beside it keep their own span, and the title stays the only bold
+// role.
 test("X3.emphasis: toRows draws a cell's em as bold and italic, split from unstyled neighbours of its role", () => {
   const x = (ch: string, em?: number): Cell => ({ ...c(ch, 'label', 'text'), ...(em ? { em } : {}) })
   const d: Drawing = { ...D, cells: [[x('a'), x('b', 1), x('c', 2), x('d', 3), x('e')]] }

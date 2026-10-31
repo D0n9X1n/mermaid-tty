@@ -54,6 +54,7 @@ for (const type of GATED_DIRS.filter((t) => existsSync(`fixtures/${t}`))) {
       })
       continue
     }
+
     test(`A4: ${id} renders, validates and matches its golden at 60/80/120, with no border-only rows, every frame listed and every drawn glyph allow-listed`, () => {
       const g = goldenOf(
         W.map((w) => {
@@ -68,6 +69,7 @@ for (const type of GATED_DIRS.filter((t) => existsSync(`fixtures/${t}`))) {
         mkdirSync(join('goldens', type), { recursive: true })
         writeFileSync(p, g)
       }
+
       assert.equal(g, readFileSync(p, 'utf8'))
     })
     if (lines.length) {
@@ -78,6 +80,7 @@ for (const type of GATED_DIRS.filter((t) => existsSync(`fixtures/${t}`))) {
             assert.ok('reason' in r, `${id}@${e.cols}`)
             continue
           }
+
           assert.equal(r.step, e.step, `${id}@${e.cols}`)
           if (e.widest !== undefined) {
             assert.equal(widest(r.drawing), e.widest, `${id}@${e.cols}`)
@@ -87,6 +90,7 @@ for (const type of GATED_DIRS.filter((t) => existsSync(`fixtures/${t}`))) {
     }
   }
 }
+
 test('A4.fit-ladder: expect lines parse', () =>
   assert.deepEqual(
     expectLines('pie\n%% expect 60 natural widest 60\n%% expect 59 wrap\n%% expect 58 fallback\n"a" : 1'),
@@ -96,7 +100,8 @@ test('A4.fit-ladder: expect lines parse', () =>
       { cols: 58, step: 'fallback' },
     ],
   ))
-// The plan's list (plan C T48), written out entry by entry, so a changed, dropped or added width fails without fixtures.
+// The plan's list (plan C T48), written out entry by entry, so a changed, dropped or added width fails without
+// fixtures.
 test("A4.fit-ladder: LADDER is the plan's 44 ladder fixtures, each with exactly its widths", () =>
   assert.deepEqual(LADDER, {
     'state-ok-18': [59, 60, 61],
@@ -179,6 +184,7 @@ function scanGolden(content: string): string[] {
     rmSync(dir, { recursive: true, force: true })
   }
 }
+
 test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as 1–8, and the glyph scan skips source text', () => {
   const cell = (role: any, kind: any) => ({ ch: 'x', role, kind, owners: ['x'], dirs: 0 })
   assert.deepEqual(
@@ -194,10 +200,12 @@ test('A8.platforms: series source text codes as !@#$%^&*, a drawn series cell as
   )
   assert.deepEqual(scanGolden('@80\n中文 █\n@80 roles\n!~!~ 1\n'), [])
 })
-// A combining mark joins the series text cell before it, so it is source text too; ß on a drawn series cell is still flagged.
+// A combining mark joins the series text cell before it, so it is source text too; ß on a drawn series cell is still
+// flagged.
 test('A8.platforms: the glyph scan skips a combining mark in series source text', () =>
   assert.deepEqual(scanGolden('@80\néx ß\n@80 roles\n!! 3\n'), ['2 ß']))
-// A drawn cell whose whole ch is a combining mark reads in a golden as a mark joined to the series text before it, so the
+// A drawn cell whose whole ch is a combining mark reads in a golden as a mark joined to the series text before it, so
+// the
 // glyph scan skips it; drawingFaults, which A4 runs on every drawing, checks each drawn cell on the drawing itself.
 test('A8.platforms: drawingFaults flags a drawn combining mark after series text, which the golden scan reads as source text', () => {
   const c = createCanvas(1, 2, 60)

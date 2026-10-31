@@ -44,7 +44,8 @@ const N = (id: string, shape: string, role: string, order: number, ...lines: str
   order,
   rows: lines.map((text) => ({ text, role, align: 'center' })),
 })
-// The edge a parse should give: a solid arrow with no label, minlen 1 and its pair's first default id, but for what o gives.
+// The edge a parse should give: a solid arrow with no label, minlen 1 and its pair's first default id, but for what o
+// gives.
 const L = (from: string, to: string, order: number, o: object = {}) => ({
   id: `L_${from}_${to}_0`,
   from,
@@ -285,7 +286,8 @@ test('A5.errors: an edge label fails as a node label does: markdown, entity, uns
   )
 })
 
-// Mermaid 12.2.0 (flowDb destructEndLink): a tail mark with no partner head draws only the head, and stays part of the line:
+// Mermaid 12.2.0 (flowDb destructEndLink): a tail mark with no partner head draws only the head, and stays part of the
+// line:
 // it adds 1 to the length, and a thick line no longer starts with =, so it draws solid.
 test('A1: a tail mark whose head is not its partner draws only the head, as Mermaid does: <--o, o-->, x--o, <---', () => {
   const want = [
@@ -304,7 +306,8 @@ test('A1: a tail mark whose head is not its partner draws only the head, as Merm
     want,
   )
 })
-// Mermaid's destructLink: a text form's opener mark pairs with its closer's head: <-- t --> is two-headed; a mark that does
+// Mermaid's destructLink: a text form's opener mark pairs with its closer's head: <-- t --> is two-headed; a mark that
+// does
 // not pair, or a stroke that differs, is INVALID.
 test('A1: a text form with a tail mark draws both ends when its closer has the partner head: <-- t -->, x-- t --x, o-- t --o', () => {
   const want = [
@@ -425,11 +428,13 @@ test('A1: a label that one "…" encloses whole still loses those quotes and kee
   )
 })
 
-// How Mermaid draws a label on ~~~ is unknown, so such a diagram falls back to its source; an unlabelled ~~~ parses (-46).
+// How Mermaid draws a label on ~~~ is unknown, so such a diagram falls back to its source; an unlabelled ~~~ parses
+// (-46).
 test('A5.errors: a label on an invisible link fails invisible-label; an unlabelled ~~~ still parses', () => {
   for (const s of ['A ~~~|secret| B', 'A ~~~~ |secret| B']) {
     assert.deepEqual(P(`flowchart TD\n${s}`), { reason: 'invisible-label' }, s)
   }
+
   assert.deepEqual(
     P('flowchart TD\nA ~~~ B').edges.map((e: { style: string }) => e.style),
     ['invisible'],

@@ -1,6 +1,9 @@
-// The e2e session driver: runs a program, in the e2e scenarios a real Claude Code, at 100×40, types into it and reads its
-// screen back as cells. The pty driver runs it under node-pty and parses its output into a screen. The tmux driver, E1's
-// fallback on Linux and macOS, runs it in a tmux server of its own and parses each read's capture-pane into a fresh screen.
+// The e2e session driver: runs a program, in the e2e scenarios a real Claude Code, at 100×40, types into it and reads
+// its
+// screen back as cells. The pty driver runs it under node-pty and parses its output into a screen. The tmux driver,
+// E1's
+// fallback on Linux and macOS, runs it in a tmux server of its own and parses each read's capture-pane into a fresh
+// screen.
 import { execFile, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -21,13 +24,17 @@ export type Session = {
   waitFor(re: RegExp, ms: number): Promise<string>
   cells(): Promise<Cell[][]>
   text(): Promise<string>
-  // What the screen is drawn from, colors as escape codes: the pty driver's whole output stream, or tmux's capture-pane -e.
+  // What the screen is drawn from, colors as escape codes: the pty driver's whole output stream, or tmux's capture-pane
+  // -e.
   ansi(): Promise<string>
   // The last text the program copied with OSC 52, or undefined before any.
   clipboard(): Promise<string | undefined>
-  // Hangs the program up and, once it has exited or after 2 s, kills its process group (on Windows, its tree), so that no
-  // child that ignores hangups outlives it. Resolves once it has exited (on Windows, once cmd.exe has), and at the latest
-  // 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for kill-server. Never throws, even if the program
+  // Hangs the program up and, once it has exited or after 2 s, kills its process group (on Windows, its tree), so that
+  // no
+  // child that ignores hangups outlives it. Resolves once it has exited (on Windows, once cmd.exe has), and at the
+  // latest
+  // 3 s after the hangup (4 s on Windows), plus, under tmux, up to 2 s for kill-server. Never throws, even if the
+  // program
   // or the server is gone already. Called again, resolves at once.
   stop(): Promise<void>
 }
@@ -43,8 +50,10 @@ export async function startSession(o: SessionOptions): Promise<Session> {
   return o.driver === 'pty' ? ptySession(o) : tmuxSession(o)
 }
 
-// read() polled every 100 ms until re matches the text it resolves to: resolves to that text; after ms, throws with the last
-// text read. The deadline is checked before each read, and a read still pending at it is aborted and abandoned, so that a
+// read() polled every 100 ms until re matches the text it resolves to: resolves to that text; after ms, throws with the
+// last
+// text read. The deadline is checked before each read, and a read still pending at it is aborted and abandoned, so that
+// a
 // read that hangs cannot hold waitFor past ms.
 export async function waitForText(
   read: (signal: AbortSignal) => Promise<string>,
@@ -60,12 +69,15 @@ export async function waitForText(
       abort.abort()
       break
     }
+
     if (t.search(re) >= 0) {
       return t
     }
+
     last = t
     await sleep(Math.min(100, Math.max(0, deadline - Date.now())))
   }
+
   throw new Error(`waitFor ${re} timed out after ${ms} ms; the screen:\n${last}`)
 }
 
@@ -104,6 +116,7 @@ async function gone(pid: number, ms: number): Promise<boolean> {
       return false
     }
   }
+
   return true
 }
 // Runs step, ignoring what it throws, so that a failed cleanup step skips none after it.
@@ -112,7 +125,8 @@ const attempt = (step: () => void) => {
     step()
   } catch {}
 }
-// Ends a program as closing its terminal would: hangUp, and wait up to HUP_MS for it to exit. Then kill its process group
+// Ends a program as closing its terminal would: hangUp, and wait up to HUP_MS for it to exit. Then kill its process
+// group
 // or tree whether or not it has, as a child that ignores the hangup outlives it there; run each of after; and if it had
 // not exited, wait up to KILL_MS more. Each step runs whatever the ones before it threw.
 async function end(
@@ -127,6 +141,7 @@ async function end(
   for (const step of after) {
     attempt(step)
   }
+
   if (!done) {
     await exited(KILL_MS).catch(() => false)
   }
@@ -149,7 +164,8 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   const { file, args } = ptyCommand(o.argv, process.platform, o.env)
   const screen = createScreen(COLS, ROWS)
   const p = spawn(file, args, { name: 'xterm-256color', cols: COLS, rows: ROWS, cwd: o.cwd, env: o.env })
-  // The program's process group, recorded now: node-pty makes the program lead a session of its own (on Windows, p.pid is
+  // The program's process group, recorded now: node-pty makes the program lead a session of its own (on Windows, p.pid
+  // is
   // the root of its tree).
   const pgid = p.pid
   // parsed resolves once the screen has parsed the output received so far: the screen parses writes in order.
@@ -192,6 +208,7 @@ async function ptySession(o: SessionOptions): Promise<Session> {
           if (process.platform === 'win32' && !exited) {
             killTree(pgid, TREE_MS)
           }
+
           if (!exited) {
             p.kill()
           }
@@ -204,32 +221,39 @@ async function ptySession(o: SessionOptions): Promise<Session> {
 
 // node-pty's own directory. Its package.json is resolved, not loaded, which works where its native module cannot load.
 const ptyRoot = () => dirname(createRequire(import.meta.url).resolve('node-pty/package.json'))
-// Sets the execute bits of each prebuilt spawn-helper under root's prebuilds that lacks them, and returns those helpers.
+// Sets the execute bits of each prebuilt spawn-helper under root's prebuilds that lacks them, and returns those
+// helpers.
 // node-pty 1.1.0 installs its macOS spawn-helper without them, and spawns every program on macOS through it. Nothing on
-// Windows, which has no spawn-helper and no execute bits. A helper built from source, under build/, is executable already.
+// Windows, which has no spawn-helper and no execute bits. A helper built from source, under build/, is executable
+// already.
 export function ensureSpawnHelper(root = ptyRoot(), platform: string = process.platform): string[] {
   const prebuilds = join(root, 'prebuilds')
   const fixed: string[] = []
   if (platform === 'win32' || !existsSync(prebuilds)) {
     return fixed
   }
+
   for (const d of readdirSync(prebuilds)) {
     const helper = join(prebuilds, d, 'spawn-helper')
     if (!existsSync(helper)) {
       continue
     }
+
     const mode = statSync(helper).mode & 0o7777
     if ((mode & 0o111) === 0o111) {
       continue
     }
+
     chmodSync(helper, mode | 0o111)
     fixed.push(helper)
   }
+
   return fixed
 }
 
 // The file and args node-pty spawns for argv. On Windows, cmd.exe /d /s /c runs argv, as Node's shell option does: only
-// cmd.exe finds an npm shim such as claude.cmd through PATHEXT (E2). The args are then one command line, which /s strips
+// cmd.exe finds an npm shim such as claude.cmd through PATHEXT (E2). The args are then one command line, which /s
+// strips
 // of its outer quotes; an argument with a space keeps its own, and no other cmd.exe metacharacter is escaped.
 export function ptyCommand(
   argv: string[],
@@ -240,6 +264,7 @@ export function ptyCommand(
   if (platform !== 'win32') {
     return { file, args }
   }
+
   const line = argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')
   return { file: env.ComSpec ?? 'cmd.exe', args: `/d /s /c "${line}"` }
 }
@@ -264,9 +289,11 @@ function tmux(env: Record<string, string>, args: string[]): string {
   if ((r.error as { code?: string } | undefined)?.code === 'ETIMEDOUT') {
     throw new Error(`tmux ${args.join(' ')} failed: no answer in ${CMD_MS} ms`)
   }
+
   if (r.status !== 0) {
     throw new Error(`tmux ${args.join(' ')} failed: ${r.error?.message ?? r.stderr.trim()}`)
   }
+
   return r.stdout
 }
 // tmux for a read: as tmux(), but async, so that the event loop runs on while it waits, and signal can abort it.
@@ -345,7 +372,8 @@ function tmuxSession(o: SessionOptions): Session {
   const server = Number(started[0])
   const pane = Number(started[1])
   const socket = started.slice(2).join(' ')
-  // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll it.
+  // capture-pane ends each row with \n. The screen needs \r\n between rows and none after the last, which would scroll
+  // it.
   const ansi = (signal?: AbortSignal) => tmuxRead(o.env, ['capture-pane', '-p', '-e', '-t', 'mtty-e2e'], signal)
   const capture = async (signal?: AbortSignal) => {
     const screen = createScreen(COLS, ROWS)
@@ -372,18 +400,25 @@ function tmuxSession(o: SessionOptions): Session {
         if (e instanceof Error && e.message.endsWith('no buffers')) {
           return undefined
         }
+
         throw e
       }
     },
-    // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to its process group,
-    // which a child of it may outlive it in. Only then does it end the server, as on macOS a Node program whose tty closes
-    // under it may stall rather than exit: kill-server, then SIGKILL to the server's recorded pid whatever kill-server did,
-    // since a server that does not answer, or whose socket is gone, outlives kill-server. Last it removes the socket tmux
-    // leaves behind. Each step runs whatever the ones before it threw: the program, its group or the server may be gone.
+    // stop() ends the program as the pty driver does: SIGHUP while its tty is still open, then SIGKILL to its process
+    // group,
+    // which a child of it may outlive it in. Only then does it end the server, as on macOS a Node program whose tty
+    // closes
+    // under it may stall rather than exit: kill-server, then SIGKILL to the server's recorded pid whatever kill-server
+    // did,
+    // since a server that does not answer, or whose socket is gone, outlives kill-server. Last it removes the socket
+    // tmux
+    // leaves behind. Each step runs whatever the ones before it threw: the program, its group or the server may be
+    // gone.
     stop: async () => {
       if (stopped) {
         return
       }
+
       stopped = true
       const cleanup = [
         () => run('kill-server'),

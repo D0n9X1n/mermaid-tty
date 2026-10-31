@@ -1,5 +1,6 @@
 // A node:test reporter for check.ts's @nt: one JSON line per real test that passed, the names of its suites and parent
-// tests, outermost first, then its own name. Not a real test: a suite, a skip, a todo, an expected failure, which passes
+// tests, outermost first, then its own name. Not a real test: a suite, a skip, a todo, an expected failure, which
+// passes
 // when its function throws, or the record that node reports, named by the file's path, for a test file that reported no
 // test of its own.
 import { resolve } from 'node:path'

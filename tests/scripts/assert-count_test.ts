@@ -1,6 +1,9 @@
-// check.ts preloads scripts/lib/assert-count/hooks.ts into each test file's process: it routes node:test and node:assert,
-// imported or required, to shims under which a test whose function executes no assertion fails. This runs a fixture under
-// the preload: a test for each way to reach node:assert, node:test or t.assert, and for each way to execute no assertion.
+// check.ts preloads scripts/lib/assert-count/hooks.ts into each test file's process: it routes node:test and
+// node:assert,
+// imported or required, to shims under which a test whose function executes no assertion fails. This runs a fixture
+// under
+// the preload: a test for each way to reach node:assert, node:test or t.assert, and for each way to execute no
+// assertion.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'

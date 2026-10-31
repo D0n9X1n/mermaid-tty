@@ -1,4 +1,5 @@
-// tests/golden/golden-lib_test.ts — the golden format, the golden glyph scan and widest, on hand-built canvases and files.
+// tests/golden/golden-lib_test.ts — the golden format, the golden glyph scan and widest, on hand-built canvases and
+// files.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -66,7 +67,8 @@ test('goldenGlyphs flags drawn and series glyphs that are not allow-listed, by f
   const dir = mkdtempSync(join(tmpdir(), 'golden-lib-'))
   try {
     mkdirSync(join(dir, 'sub'))
-    // Line 2: 中 takes two columns, so é sits on n (flagged), ü on L (source text), ─ on e (allowed) and ß on 3 (flagged).
+    // Line 2: 中 takes two columns, so é sits on n (flagged), ü on L (source text), ─ on e (allowed) and ß on 3
+    // (flagged).
     writeFileSync(join(dir, 'sub', 'x.golden'), '@60\n中éü─ß\n─\n@60 roles\nN~nLe3\ne\n@80\né\n@80 roles\no\n')
     writeFileSync(join(dir, 'a.golden'), '@60\n┌é┐\n@60 roles\nnNn\n')
     writeFileSync(join(dir, 'notes.txt'), '@60\né\n@60 roles\nn\n') // not a golden
@@ -110,7 +112,8 @@ test('goldenGlyphs flags a zero-width code point joined to a drawn cell, an empt
 })
 
 test('goldenGlyphs skips a zero-width code point that joins source text, CJK cont cells included', () => {
-  // canvas.text() joins it to the cell before it, so it is part of that cell even when a drawn cell follows. A drawn cell
+  // canvas.text() joins it to the cell before it, so it is part of that cell even when a drawn cell follows. A drawn
+  // cell
   // whose whole ch is zero-width reads the same in a golden; drawnGlyphs catches that one on the drawing.
   assert.deepEqual(scanRow(`[ cafe${ACUTE} ]`, 'nnNNNNnn'), []) // a label's last character, then drawn padding
   assert.deepEqual(scanRow(`[ e${ACUTE}x ]`, 'nnNNnn'), []) // mid-label
@@ -123,6 +126,7 @@ test('goldenGlyphs passes the golden of a label that ends in a combining mark, a
   if (isFail(r)) {
     return assert.fail(r.reason)
   }
+
   const g = goldenOf([[80, r.drawing]])
   assert.ok(g.includes(`[ cafe${ACUTE} ]`), g) // the mark joins the e cell; drawn padding follows
   assert.deepEqual(scanGolden(g), [])
@@ -151,8 +155,10 @@ test('no allow-listed glyph is zero-width or a combining mark, so a drawn glyph 
   }
 })
 
-// X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b (bold),
-// i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its golden is as before.
+// X3. A drawing with emphasis adds a styles section after its roles: one row per canvas row, a text cell's em as b
+// (bold),
+// i (italic) or x (both), any other cell a space, right-trimmed. A drawing without emphasis has none, so its golden is
+// as before.
 test('X3.emphasis: goldenOf adds an @w styles section only when a cell has emphasis, and goldenGlyphs skips it', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const c = createCanvas(2, 6, 80)

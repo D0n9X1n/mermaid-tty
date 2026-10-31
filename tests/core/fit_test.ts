@@ -38,7 +38,8 @@ test('A1: registry keywords; ENABLED is A, Tier 1 and the passed Tier 2 types', 
 })
 
 // A fake type whose model is its own ladder: each step, and what its layout draws at the budget it is given: a one-row
-// label n cells wide; the label xxx with an arrow written over its first cell ('clash'); a label one cell wider than the
+// label n cells wide; the label xxx with an arrow written over its first cell ('clash'); a label one cell wider than
+// the
 // budget on a canvas that declares 5 columns more ('liar'); the label xxx on a canvas that declares 5 columns fewer
 // ('short'); or a Fail. calls logs each layout.
 type Rung = readonly [Step, number | 'clash' | 'liar' | 'short' | Fail]
@@ -46,6 +47,7 @@ function draw(what: Rung[1], columns: number): Drawing | Fail {
   if (typeof what === 'object') {
     return what
   }
+
   const n = what === 'clash' || what === 'short' ? 3 : what === 'liar' ? columns + 1 : what
   const t = 'x'.repeat(n)
   const c = createCanvas(1, 12, what === 'liar' ? columns + 5 : what === 'short' ? columns - 5 : columns)
@@ -53,8 +55,10 @@ function draw(what: Rung[1], columns: number): Drawing | Fail {
   if (what === 'clash') {
     c.arrow(0, 0, '►', 'A')
   }
+
   return c.toDrawing({ labels: [{ owner: 'A', text: t }], edges: [], edgeLabels: [], frames: [] })
 }
+
 function fit(rungs: readonly Rung[], columns: number, calls: [Step, number][] = []) {
   const mod: DiagramModule<readonly Rung[]> = {
     type: 'flowchart',
@@ -67,6 +71,7 @@ function fit(rungs: readonly Rung[], columns: number, calls: [Step, number][] = 
   }
   return fitLadder(mod, rungs, columns)
 }
+
 test('A4.fit-ladder: a drawing the validator rejects, a conflict included, is skipped; the last rejection is returned', () => {
   assert.deepEqual(
     fit(
@@ -203,13 +208,15 @@ test('A4.fit-ladder: a type with no steps fails with too-wide and lays out nothi
   assert.deepEqual(fit([], 10, calls), { reason: 'too-wide' })
   assert.deepEqual(calls, [])
 })
-// C widens Step (T40): flowchart's layout fails 'step' for any step outside its own ladder, before it reads SPACING, and
+// C widens Step (T40): flowchart's layout fails 'step' for any step outside its own ladder, before it reads SPACING,
+// and
 // still draws each step of its own ladder.
 test('A4.fit-ladder: flowchart lays out only the steps of its own ladder; any other Step fails with step', () => {
   const g = flowchart.parse(readSource('flowchart LR\nA --> B') as Source) as never
   for (const step of ['keyed', 'keyedWrap', 'horizontal', 'oneActor', 'compact', 'outline'] as Step[]) {
     assert.deepEqual(flowchart.layout(g, step, 80), { reason: 'step' }, step)
   }
+
   for (const step of ['natural', 'tight', 'wrap', 'lrToTd'] as Step[]) {
     const d = flowchart.layout(g, step, 80)
     assert.deepEqual('reason' in d ? d : [d.columns, validate(d)], [80, null], step)
@@ -247,7 +254,8 @@ const TABLE: [string, string | null][] = [
   ['flowchart-elk', null],
   ['requirement', null],
 ]
-// Tier 1 keywords are enabled but unregistered here, since this file does not load diagrams/all.ts; registry-tiers_test.ts
+// Tier 1 keywords are enabled but unregistered here, since this file does not load diagrams/all.ts;
+// registry-tiers_test.ts
 // checks that each resolves to its module.
 test('A1: every keyword and alias maps as in the table; each Tier 2 one is disabled, and each null one falls back', () => {
   assert.deepEqual(KEYWORDS, Object.fromEntries(TABLE))

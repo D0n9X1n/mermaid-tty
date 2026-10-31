@@ -34,6 +34,7 @@ export function tsconfigFor(root: string, hooks: boolean): Tsconfig {
   if (!hooks) {
     return { compilerOptions, include: [`${r}/core/**/*.ts`] }
   }
+
   return {
     compilerOptions: {
       ...compilerOptions,
@@ -61,6 +62,7 @@ export function npxInvocation(version: string, config: string, win32: boolean): 
   if (!win32) {
     return { command: 'npx', args: [...args, config], shell: false }
   }
+
   const file = config.includes(' ') ? `"${config}"` : config
   return { command: ['npx', ...args, file].join(' '), args: [], shell: true }
 }

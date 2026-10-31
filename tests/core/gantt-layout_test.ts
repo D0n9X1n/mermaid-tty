@@ -41,7 +41,8 @@ test('A5.errors: a lone 0d milestone has M = 0 and falls back', () =>
 
 // Beyond the plan's tests. A row's distinct cells as `kind ink owners`, in reading order.
 const kinds = (row: any[]) => [...new Set(row.flatMap((c) => (c ? [`${c.kind} ${c.role} ${c.owners.join()}`] : [])))]
-// Ink: crit is arrow, else done is note, else active is decision, else the section's series. Tasks before the first section
+// Ink: crit is arrow, else done is note, else active is decision, else the section's series. Tasks before the first
+// section
 // take s1, so the sections take s2, s3, …; with no such tasks the first section takes s1.
 test('A4: status, bar and ◆ ink: arrow for crit, note for done, decision for active, else the series, shifted by early tasks', () => {
   const d = X(
@@ -73,8 +74,10 @@ test('A4: status, bar and ◆ ink: arrow for crit, note for done, decision for a
     ['   A ', '!  M ', ' ✓ B '],
   )
 })
-// gantt-ok-04, the docs' milestone example, at 120 (W = 60): ◆ at cells 2 and 54, Task A from cell 5 for 209 eighths, and
-// 5-minute ticks at 0, 13, 26, 39, 52. A milestone lists 0 eighths though it spans 2m or 4m: its ◆ is a mark, not a bar.
+// gantt-ok-04, the docs' milestone example, at 120 (W = 60): ◆ at cells 2 and 54, Task A from cell 5 for 209 eighths,
+// and
+// 5-minute ticks at 0, 13, 26, 39, 52. A milestone lists 0 eighths though it spans 2m or 4m: its ◆ is a mark, not a
+// bar.
 test('A4: gantt-ok-04: milestones at start + duration/2 list 0 eighths; bars start at their cell from t0', () => {
   const r = X(
     'dateFormat HH:mm\naxisFormat %H:%M\nInitial milestone : milestone, m1, 17:49, 2m\nTask A : 10m\nTask B : 5m\n' +
@@ -145,7 +148,8 @@ test('A5.errors: a repeated section name, an empty chart and the entity markers 
   assert.deepEqual(X('A ﬂ°x¶ß :2024-01-01, 1d', 80), { reason: 'entity' })
   assert.deepEqual(X('section ﬂ°x¶ß\nA :2024-01-01, 1d', 80), { reason: 'entity' })
 })
-// Mermaid 12.2.0's ground truth: a task name shows <br>, tags and & as written, never split; a section name splits at all four
+// Mermaid 12.2.0's ground truth: a task name shows <br>, tags and & as written, never split; a section name splits at
+// all four
 // <br> spellings.
 test('A4: a section splits at every <br> spelling; a task name draws <br>, tags and & as written', () => {
   const d = X('section One<br>two<BR>three<br/>four<br />five\nQ&A <b>x</b> a<br>b :2024-01-01, 2d', 80).drawing
@@ -171,5 +175,6 @@ test('A5.errors: a section with no task falls back', () => {
   ]) {
     assert.deepEqual(X(body, 80), { reason: 'section-empty' }, body)
   }
+
   assert.equal(X('section A\nT :2024-01-01, 1d\nsection B\nU :2024-01-02, 1d', 80).step, 'natural')
 })

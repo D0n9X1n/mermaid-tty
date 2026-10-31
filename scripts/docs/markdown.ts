@@ -1,4 +1,5 @@
-// Markdown as GitHub renders it (D15c): a spec-compliant CommonMark + GFM tree, so every docs rule reads what the renderer reads.
+// Markdown as GitHub renders it (D15c): a spec-compliant CommonMark + GFM tree, so every docs rule reads what the
+// renderer reads.
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
 import { gfm } from 'micromark-extension-gfm'
@@ -32,7 +33,8 @@ export const within = (n: Node, type: string): boolean =>
 // Visible text: code, inline code and raw HTML count as a space.
 export const text = (n: Node): string =>
   ['code', 'inlineCode', 'html'].includes(n.type) ? ' ' : (n.value ?? (n.children ?? []).map(text).join(''))
-// A node's first line. The GFM transform makes literal autolinks with no position; a node without one takes its nearest positioned ancestor's.
+// A node's first line. The GFM transform makes literal autolinks with no position; a node without one takes its nearest
+// positioned ancestor's.
 export const lineOf = (n: Node): number => n.position?.start.line ?? lineOf(n.parent!)
 export const headings = (md: string) =>
   all(parse(md), 'heading').map((h) => ({ depth: h.depth!, text: text(h), line: lineOf(h) }))
@@ -45,6 +47,7 @@ export function section(md: string, title: string): string | null {
   if (i < 0) {
     return null
   }
+
   const nl = md.indexOf('\n', hs[i]!.position!.end.offset)
   return md.slice(nl < 0 ? md.length : nl + 1, hs[i + 1]?.position!.start.offset ?? md.length)
 }

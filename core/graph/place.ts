@@ -1,4 +1,5 @@
-// One level laid out along the TB axes (plan A §7): ranks and chains, strip spacers, order, then the cross and main axes.
+// One level laid out along the TB axes (plan A §7): ranks and chains, strip spacers, order, then the cross and main
+// axes.
 import { buildLevel } from './chains.ts'
 import type { Extent, Item, Level, Unit } from './chains.ts'
 import { crossAxis, LEFT, RIGHT } from './cross.ts'
@@ -19,8 +20,10 @@ export type Placement = {
   long: number
 }
 
-// outer: each strip at this level and the strip around it, or null. fit: a strip's least frame width, for its title. The
-// title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle band.
+// outer: each strip at this level and the strip around it, or null. fit: a strip's least frame width, for its title.
+// The
+// title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle
+// band.
 export function place(
   units: readonly Unit[],
   edges: readonly GEdge[],
@@ -45,6 +48,7 @@ export function place(
   for (const it of level.items) {
     ranks[it.rank]!.push(it)
   }
+
   const fits = new Map([...fit].filter(([c]) => span.has(c)))
   const placed = order(ranks, level.segs, path)
   const x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
@@ -62,12 +66,14 @@ export function place(
       } // innermost first: the strips around it see it grown
     }
   }
+
   const { tops, length } = bandTops(heights, channel, b.before, b.after)
   const rects = new Map<string, Rect>()
   for (const it of placed.flat()) {
     if (it.kind === 'spacer') {
       continue
     }
+
     rects.set(it.id, {
       cross: x.get(it.id)!,
       main: tops[it.rank]! + Math.floor((heights[it.rank]! - it.main) / 2),
@@ -75,6 +81,7 @@ export function place(
       long: it.main,
     })
   }
+
   const strips = new Map<string, Rect>()
   for (const [c, [lo, hi]] of span) {
     const top = tops[lo]! - b.up(c)
@@ -86,6 +93,7 @@ export function place(
       long: bottom - top + 1,
     })
   }
+
   const wide = Math.max(0, ...[...rects.values(), ...strips.values()].map((r) => r.cross + r.wide))
   return {
     edges: level.edges,

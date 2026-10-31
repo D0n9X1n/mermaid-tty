@@ -49,6 +49,7 @@ test('the CLI lists untested versions, retries one, and records every selected v
         }
       }
     }
+
     assert.equal(run('record', legs, tested, '["2.1.307","2.1.308","2.1.309"]').status, 0)
     assert.equal(readFileSync(tested, 'utf8'), '2.1.306 pass\n2.1.307 pass\n2.1.308 fail\n2.1.309 fail\n')
     assert.equal(run('bogus').status, 2)

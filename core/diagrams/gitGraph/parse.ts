@@ -34,11 +34,13 @@ const TITLE = /^title[ \t]+(\S.*)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
 // A token: an attribute key, a double-quoted string with no backslash (Langium's STRING would unescape one), or a word.
-// Mermaid's grammar hides only WS /[ \t]+/, so a word runs to a space, tab or quote; one holding other whitespace fails.
+// Mermaid's grammar hides only WS /[ \t]+/, so a word runs to a space, tab or quote; one holding other whitespace
+// fails.
 const TOKEN = /(id|msg|tag|type|order|parent):|"([^"\\]*)"|([^ \t"]+)/y
 // The ends of a line Mermaid's WS terminal skips.
 const ENDS = /^[ \t]+|[ \t]+$/g
-// An unquoted name, as Mermaid's REFERENCE terminal reads it. A keyword, a word Mermaid's INT terminal could take first,
+// An unquoted name, as Mermaid's REFERENCE terminal reads it. A keyword, a word Mermaid's INT terminal could take
+// first,
 // or one its title or accessibility terminals could start on lexes as something else, so it fails.
 const NAME = /^\w([-./\w]*[-\w])?$/
 const RESERVED = new Set([
@@ -80,6 +82,7 @@ function checked(t: string, n: number, mode: Mode = 'escaped', br: Br = 'literal
   if (f) {
     stop(`${f.reason}:${n}`)
   }
+
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }
@@ -92,14 +95,17 @@ function tokens(t: string, n: number): Token[] {
       i++
       continue
     }
+
     TOKEN.lastIndex = i
     const m = TOKEN.exec(t) ?? stop(`syntax:${n}`)
     if (m[3] !== undefined && /\s/.test(m[3])) {
       stop(`syntax:${n}`)
     }
+
     out.push(m[1] ? { key: m[1] } : m[2] !== undefined ? { str: m[2] } : { word: m[3]! })
     i = TOKEN.lastIndex
   }
+
   return out
 }
 
@@ -110,6 +116,7 @@ export function parseGitGraph(src: Source): GitGraph | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -133,11 +140,14 @@ function walk(src: Source): GitGraph {
     if (end >= 0 && block.slice(end + 1).replace(ENDS, '')) {
       stop(`syntax:${n}`)
     }
+
     open = end >= 0 ? 0 : open || n
   }
+
   if (open) {
     stop(`syntax:${open}`)
   }
+
   return g
 }
 
@@ -158,9 +168,11 @@ function mainBranch(src: Source): { name: string; order: number } {
   ) {
     stop(`config:${key}`)
   }
+
   if (typeof order !== 'number') {
     stop(`config:${okey}`)
   }
+
   return { name, order }
 }
 
@@ -169,18 +181,22 @@ function statement(st: State, t: string, n: number): void {
   if (ACC.test(t)) {
     return
   }
+
   const title = TITLE.exec(t)?.[1]
   if (title !== undefined) {
     // Mermaid's TITLE terminal ends at a %%, and its converter trims and joins runs of spaces and tabs.
     if (st.g.title !== null) {
       stop(`repeat:${n}`)
     }
+
     if (title.includes('%%')) {
       stop(`syntax:${n}`)
     }
+
     st.g.title = checked(title.trim().replace(/[\t ]{2,}/g, ' '), n, 'sanitized', 'none')
     return
   }
+
   const [first, ...rest] = tokens(t, n)
   switch (first?.word) {
     case 'commit':
@@ -192,12 +208,14 @@ function statement(st: State, t: string, n: number): void {
       if (rest.length === 1) {
         return checkout(st, name(rest[0], n), n)
       }
+
       break
     case 'merge':
       return merge(st, name(rest[0], n), attrs(rest.slice(1), ['id', 'tag', 'type'], n), n)
     case 'cherry-pick':
       return pick(st, attrs(rest, ['id', 'tag', 'parent'], n), n)
   }
+
   stop(`syntax:${n}`)
 }
 
@@ -215,9 +233,11 @@ function attrs(ts: Token[], allowed: readonly string[], n: number, bare = false)
     if (key === undefined || !allowed.includes(key) || !v) {
       stop(`syntax:${n}`)
     }
+
     if (key !== 'tag' && seen.has(key)) {
       stop(`repeat:${n}`)
     }
+
     seen.add(key)
     if (key === 'type') {
       a.type = v.word !== undefined && TYPES.includes(v.word) ? (v.word as CommitType) : stop(`syntax:${n}`)
@@ -233,6 +253,7 @@ function attrs(ts: Token[], allowed: readonly string[], n: number, bare = false)
       a[key as 'id' | 'parent'] = label(v.str, n)
     }
   }
+
   return a
 }
 
@@ -242,6 +263,7 @@ function label(s: string, n: number): string {
   if (/^\s|\s$|\s\s|[^\S ]/.test(s)) {
     stop(`syntax:${n}`)
   }
+
   return checked(s, n)
 }
 
@@ -251,6 +273,7 @@ function name(t: Token | undefined, n: number): string {
   if (t?.str !== undefined && t.str !== '') {
     return label(t.str, n)
   }
+
   const w = t?.word
   return w === undefined || !NAME.test(w) || RESERVED.has(w) || SHADOWED.test(w) ? stop(`syntax:${n}`) : w
 }
@@ -262,6 +285,7 @@ function advance(st: State, id: string | null, parents: string[], merge: boolean
   st.commits.set(key, { branch: st.cur, parents, merge })
   st.heads.set(st.cur, key)
 }
+
 const headOf = (st: State, b: string): string | null => st.heads.get(b) ?? null
 
 function commit(st: State, a: Attrs, n: number): void {
@@ -270,6 +294,7 @@ function commit(st: State, a: Attrs, n: number): void {
   if (id !== null && st.commits.has(id)) {
     stop(`repeat:${n}`)
   } // Mermaid overwrites the first silently
+
   advance(st, id, h ? [h] : [], false)
   st.g.events.push({
     kind: 'commit',
@@ -287,6 +312,7 @@ function branch(st: State, name: string, a: Attrs, n: number): void {
   if (st.heads.has(name)) {
     stop(`branch:${n}`)
   }
+
   const h = headOf(st, st.cur)
   st.heads.set(name, h)
   st.g.branches.push({ name, order: a.order ?? 0 })
@@ -299,6 +325,7 @@ function checkout(st: State, name: string, n: number): void {
   if (!st.heads.has(name)) {
     stop(`checkout:${n}`)
   }
+
   st.cur = name
 }
 
@@ -319,10 +346,12 @@ function merge(st: State, other: string, a: Attrs, n: number): void {
   ) {
     stop(`merge:${n}`)
   }
+
   const id = a.id || null
   if (id !== null && st.commits.has(id)) {
     stop(`repeat:${n}`)
   }
+
   advance(st, id, [curKey!, otherKey!], true)
   st.g.events.push({
     kind: 'merge',
@@ -345,6 +374,7 @@ function pick(st: State, a: Attrs, n: number): void {
   if (!src || (parent && !src.parents.includes(parent)) || (src.merge && !parent) || src.branch === st.cur || !h) {
     stop(`pick:${n}`)
   }
+
   const tags = a.tags.length ? a.tags.filter(Boolean) : [`cherry-pick:${a.id}${src.merge ? `|parent:${parent}` : ''}`]
   advance(st, null, [h, a.id!], false)
   st.g.events.push({ kind: 'pick', branch: st.cur, from: src.branch, id: a.id!, msg: null, tags, type: null, line: n })

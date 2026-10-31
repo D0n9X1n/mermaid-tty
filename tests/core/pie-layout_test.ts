@@ -49,7 +49,8 @@ test('A5.errors: zero, negative, repeated, unquoted, backslash and empty pies fa
   }
 })
 
-// Beyond the plan's tests. Nine slices, so ink cycles: ties keep source order, and ink and owners follow the source index
+// Beyond the plan's tests. Nine slices, so ink cycles: ties keep source order, and ink and owners follow the source
+// index
 // k, not the rank. A bar's ink is s<(k mod 8) + 1>, so i (k = 8) wraps to s1.
 test('A4: ties keep source order; ink and owners follow the source index; expect lists every bar and text owner once', () => {
   const vs = [1, 2, 2, 1, 1, 1, 1, 1, 3]
@@ -106,11 +107,13 @@ test('A5.errors: other header forms and value tokens outside the subset fall bac
     assert.deepEqual(X(src, 80), { reason: why }, src)
   }
 })
-// Mermaid 12.2.0 encodes each #…; of the diagram body as an entity and decodes it in the SVG, so it would draw other text.
+// Mermaid 12.2.0 encodes each #…; of the diagram body as an entity and decodes it in the SVG, so it would draw other
+// text.
 test('A5.errors: a #…; entity in a slice label or a header title falls back; a # that starts no entity is text', () => {
   for (const src of ['pie\n"#9829;" : 1', 'pie title I #9829; pets\n"a" : 1']) {
     assert.deepEqual(X(src, 80), { reason: 'entity' }, src)
   }
+
   assert.deepEqual(text(X('pie title C# and F#\n"F#" : 1', 80).drawing), ['C# and F#', `F# ${bar(480, 60)} 1 100.0%`])
 })
 // accTitle and accDescr, in each form, are parsed and not drawn (matrix common rule 4).

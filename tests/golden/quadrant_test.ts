@@ -14,8 +14,10 @@ test("A4: quadrant-ok-01's key 1 is at column 18, row 6 (q = 30) and at column 1
   ] as const) {
     const t = T('quadrant-ok-01', w)
     const top = t.findIndex((l) => l.startsWith('┌'))
-    assert.equal(t[top + 5]!.indexOf('1'), 1 + col, `@${w}`) // row 6 is the 4th point row, under the top half's title row
+    // row 6 is the 4th point row, under the top half's title row
+    assert.equal(t[top + 5]!.indexOf('1'), 1 + col, `@${w}`)
   }
+
   assert.equal(T('quadrant-ok-09', 60).filter((l) => l.startsWith('1 ')).length, 1)
   assert.match(T('quadrant-ok-09', 59).at(-1)!, /^ {2}\S/)
 })

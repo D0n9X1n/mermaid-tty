@@ -175,7 +175,8 @@ export function releaseErrors(yml: string): string[] {
     ]),
   ]
 }
-// B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version, and records every result.
+// B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version, and records
+// every result.
 export function versionsErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('claude-code-versions.yml', yml)
   const w = value as any
@@ -243,6 +244,7 @@ export function stepIds(...ymls: string[]): Set<string> {
       if (unreadable.length) {
         throw new Error(unreadable.join('\n'))
       }
+
       return jobs(value).flatMap((j) => steps(j).flatMap((s) => (typeof s.id === 'string' ? [s.id] : [])))
     }),
   )

@@ -1,7 +1,10 @@
-// The gaps between rank bands, read back from a Placed alone (plan A §7.6), so the router (T17) finds its channels without
-// rerunning the layout. Each level, the top and each sealed block on its own, runs along its own main axis: its bands are
+// The gaps between rank bands, read back from a Placed alone (plan A §7.6), so the router (T17) finds its channels
+// without
+// rerunning the layout. Each level, the top and each sealed block on its own, runs along its own main axis: its bands
+// are
 // the ones the layout recorded in Placed.bands (with none, there are no gaps), and a gap the cells between two bands.
-// borders: the gap's cells that hold the top or bottom border of an open cluster on that level, in order; the rest is the
+// borders: the gap's cells that hold the top or bottom border of an open cluster on that level, in order; the rest is
+// the
 // gap's channel.
 import { ancestors, clusterTree } from './clusters.ts'
 import type { Box, Placed } from './layered.ts'
@@ -31,5 +34,6 @@ export function gaps(p: Placed): Gap[] {
       })
     }
   }
+
   return out
 }

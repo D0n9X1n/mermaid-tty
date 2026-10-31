@@ -50,14 +50,16 @@ const TITLE = re(String.raw`title\s+(.*)`)
 // accTitle: and accDescr: lines, and accDescr { … } blocks, are parsed and not drawn.
 const ACC = re(String.raw`(?:accTitle|accDescr)\s*:.*`)
 const ACC_BLOCK = re(String.raw`accDescr\s*\{(.*)`)
-// Where a message or note names a participant, Mermaid 12.2.0's lexer reads these words as keywords, in any case and before
+// Where a message or note names a participant, Mermaid 12.2.0's lexer reads these words as keywords, in any case and
+// before
 // any character but a-z, 0-9 and _ (jison's word boundary), and fails on an id made of one. After participant, actor,
 // create, activate, deactivate or destroy it reads any id.
 const KEYWORDS =
   `participant actor note over end loop alt else opt par and rect critical break option activate deactivate autonumber
   box create destroy par_over off sequenceDiagram`.split(/\s+/)
 const KEYWORD = new RegExp(`^(?:${KEYWORDS.join('|')})(?![A-Za-z0-9_])`, 'i')
-// Words Mermaid reads as keywords only before what follows here: title x, title: x, accTitle: x, accDescr: x or {. Before
+// Words Mermaid reads as keywords only before what follows here: title x, title: x, accTitle: x, accDescr: x or {.
+// Before
 // an arrow, a bare colon or a comma they are ids, as link, links, properties and details always are there.
 const SOFT: ReadonlyMap<string, RegExp> = new Map([
   ['title', /^(?:\s|:\s|:$)/],
@@ -85,7 +87,8 @@ const NAMED = new Set(
     /\s+/,
   ),
 )
-// Words a browser also reads as a color, each to its own support: currentColor, the CSS-wide keywords, and the CSS Color 4
+// Words a browser also reads as a color, each to its own support: currentColor, the CSS-wide keywords, and the CSS
+// Color 4
 // system colors, deprecated ones included. A box label led by one fails box-color.
 const OTHER_COLORS = new Set(
   `currentcolor inherit initial unset revert accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas
@@ -95,9 +98,12 @@ const OTHER_COLORS = new Set(
     /\s+/,
   ),
 )
-// Not in the plan: the strict subset of rgb(), rgba(), hsl() and hsla() box colors. rgb() and rgba() take three integers
-// 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or turn, then two
-// percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts are space-separated.
+// Not in the plan: the strict subset of rgb(), rgba(), hsl() and hsla() box colors. rgb() and rgba() take three
+// integers
+// 0-255 or three percentages 0-100%; hsl() and hsla() take a hue, a number with an optional deg, grad, rad or turn,
+// then two
+// percentages. An optional alpha, a number 0-1 or a percentage, follows a comma, or a / when the parts are
+// space-separated.
 // Spaces are free inside the parentheses.
 const BYTE = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`
 const PERCENT = String.raw`(?:100(?:\.0+)?|[1-9]?\d(?:\.\d+)?|\.\d+)%`
@@ -142,16 +148,19 @@ function text(s: string, mode: Mode, br: Br): string {
   if (t.includes('#')) {
     stop('hash')
   }
+
   const f = drawable(t, mode, br)
   if (f) {
     stop(f.reason)
   }
+
   for (const line of labelLines(t)) {
     const u = unsupported(line)
     if (u) {
       stop(`unsupported-char ${u}`)
     }
   }
+
   return t
 }
 // Mermaid reads a wrap: or nowrap: at the start of a message, note, condition, alias or box label as a directive, not
@@ -170,9 +179,11 @@ function closes(rest: string, n: number): boolean {
   if (i < 0) {
     return false
   }
+
   if (rest.slice(i + 1).trim()) {
     stop(`syntax:${n}`)
   }
+
   return true
 }
 
@@ -180,7 +191,8 @@ function closes(rest: string, n: number): boolean {
 // comment) or the line end ('').
 type Stmt = { n: number; raw: string; cut: string }
 // Not in the plan: as in Mermaid 12.2.0, a ; ends a statement and a # starts a comment that runs to the line end.
-// Accessibility text runs to the line end, an accDescr { block to its }, whatever it holds. encodeEntities turns an entity
+// Accessibility text runs to the line end, an accDescr { block to its }, whatever it holds. encodeEntities turns an
+// entity
 // such as #9829; into other text before the lexer runs, so one fails hash.
 function* statements(lines: Source['lines']): Generator<Stmt> {
   let accFrom = 0
@@ -189,8 +201,10 @@ function* statements(lines: Source['lines']): Generator<Stmt> {
       if (closes(text.trim(), n)) {
         accFrom = 0
       }
+
       continue
     }
+
     let rest = text.trimStart()
     while (rest.trim()) {
       const block = ACC_BLOCK.exec(rest.trim())
@@ -199,23 +213,29 @@ function* statements(lines: Source['lines']): Generator<Stmt> {
         if (block && !closes(block[1]!, n)) {
           accFrom = n
         }
+
         break
       }
+
       if (/#\w+;/.test(rest)) {
         stop('hash')
       }
+
       const i = rest.search(/[;#]/)
       const cut = i < 0 ? '' : rest[i]!
       const raw = i < 0 ? rest : rest.slice(0, i)
       if (raw.trim()) {
         yield { n, raw, cut }
       }
+
       if (cut !== ';') {
         break
       }
+
       rest = rest.slice(i + 1).trimStart()
     }
   }
+
   if (accFrom) {
     stop(`syntax:${accFrom}`)
   }
@@ -228,6 +248,7 @@ export function parseSequence(src: Source): Seq | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -244,25 +265,30 @@ function walk(src: Source): Seq {
   const marked = new Set<string>()
   // Each participant's activation depth: Mermaid fails on deactivating one that is not active.
   const depth = new Map<string, number>()
-  // Mermaid 12.2.0's renderer numbers messages in source order: an index from 1, a step of 1, shown once autonumber is on.
+  // Mermaid 12.2.0's renderer numbers messages in source order: an index from 1, a step of 1, shown once autonumber is
+  // on.
   const num = { index: 1, step: 1, shown: false }
   let box: Box | null = null
   let creating: string[] = []
   let destroying: string[] = []
   // A statement goes into the innermost open frame's last section, or the top level.
   const add = (item: Item) => void (frames.at(-1)?.sections.at(-1)?.items ?? seq.items).push(item)
-  // Naming a participant declares it if it is new; naming a destroyed one fails. A message or note naming it passes what
+  // Naming a participant declares it if it is new; naming a destroyed one fails. A message or note naming it passes
+  // what
   // follows the id in the statement: a keyword there, or a number before a space, fails as Mermaid's lexer does.
   const mention = (id: string, after?: string) => {
     if (after !== undefined && (KEYWORD.test(id) || SOFT.get(id.toLowerCase())?.test(after))) {
       stop('keyword')
     }
+
     if (after !== undefined && NUMBER.test(id) && after.startsWith(' ')) {
       stop('id')
     }
+
     if (destroyed.has(id)) {
       stop('destroyed')
     }
+
     if (!seq.participants.some((p) => p.id === id)) {
       seq.participants.push({ id, kind: 'participant', label: id })
     }
@@ -273,6 +299,7 @@ function walk(src: Source): Seq {
     if (d < 0) {
       stop('inactive')
     }
+
     depth.set(id, d)
   }
   const open = (type: Frame['type'], cond: string | null) => {
@@ -295,6 +322,7 @@ function walk(src: Source): Seq {
       if (hash) {
         stop('hash')
       }
+
       const id = m[3]!
       const known = seq.participants.some((p) => p.id === id)
       mention(id)
@@ -308,15 +336,18 @@ function walk(src: Source): Seq {
         p.kind = m[2] as Participant['kind']
         p.label = m[4] === undefined ? id : text(unwrap(m[4]), 'plain', 'none')
       }
+
       if (box) {
         // Not in the plan: as in Mermaid, a participant belongs to one box.
         if (seq.boxes.some((b) => b !== box && b.ids.includes(id))) {
           stop('box-split')
         }
+
         if (!box.ids.includes(id)) {
           box.ids.push(id)
         }
       }
+
       if (m[1]) {
         add({ kind: 'create', id })
         creating.push(id)
@@ -327,41 +358,51 @@ function walk(src: Source): Seq {
       if (hash) {
         stop('hash')
       }
+
       const kind = m[1] as Mark['kind']
       const id = m[2]!
-      // As in Mermaid 12.2.0, a mark does not declare its id, so it does not set column order. Mermaid fails on one nothing
+      // As in Mermaid 12.2.0, a mark does not declare its id, so it does not set column order. Mermaid fails on one
+      // nothing
       // else declares; one that a message could not name, a keyword or number, falls back here.
       if (!seq.participants.some((p) => p.id === id) && (KEYWORD.test(id) || SOFT.has(id.toLowerCase()))) {
         stop('keyword')
       }
+
       if (!seq.participants.some((p) => p.id === id) && NUMBER.test(id)) {
         stop('id')
       }
+
       if (destroyed.has(id)) {
         stop('destroyed')
       }
+
       marked.add(id)
       if (kind === 'activate') {
         activation(id, 1)
       }
+
       if (kind === 'deactivate') {
         activation(id, -1)
       }
+
       if (kind === 'destroy') {
         destroying.push(id)
       }
+
       add({ kind, id })
     } else if ((m = NOTE.exec(t))) {
       // Not in the plan: as in Mermaid's grammar, only over takes two participants.
       if (m[4] && m[1] !== 'over') {
         bad()
       }
+
       const ids = m[4] ? [m[2]!, m[4]] : [m[2]!]
       const body = text(unwrap(m[6]!), 'plain', 'any')
       mention(m[2]!, m[3]!)
       if (m[4]) {
         mention(m[4], m[5]!)
       }
+
       add({ kind: 'note', side: m[1] as Note['side'], ids, text: body })
     } else if ((m = FRAME.exec(t))) {
       open(m[1] as Frame['type'], optText(m[2], 'plain'))
@@ -372,12 +413,14 @@ function walk(src: Source): Seq {
       if (!f || f.type !== DIVIDES[m[1]!]) {
         bad()
       }
+
       f.sections.push({ cond: optText(m[2], 'plain'), items: [] })
     } else if ((m = BOX.exec(t))) {
       // Not in the plan: a box sits in no rect, however deep, but may sit in another frame.
       if (frames.some((f) => f.type === 'rect')) {
         bad()
       }
+
       box = { label: optText(boxLabel(m[1] ?? ''), 'sanitized'), ids: [] }
       seq.boxes.push(box)
     } else if (t === 'end') {
@@ -400,6 +443,7 @@ function walk(src: Source): Seq {
         num.index = Number(m[2]) || num.index
         num.step = Number(m[3] ?? 1) || num.step
       }
+
       if (!Number.isSafeInteger(num.index) || !Number.isSafeInteger(num.step)) {
         stop('autonumber')
       }
@@ -407,9 +451,11 @@ function walk(src: Source): Seq {
       if (hash) {
         stop('hash')
       }
+
       if (seq.title !== null) {
         stop('title')
       }
+
       seq.title = text(m[1]!, 'sanitized', 'none')
     } else if (ACC.test(t) || ACC_BLOCK.test(t)) {
       // Mermaid's accTitle: and accDescr: tokens end in \s*, so an empty one takes the next line as its text.
@@ -425,6 +471,7 @@ function walk(src: Source): Seq {
       if (creating.some((id) => id !== msg.to)) {
         stop('create')
       }
+
       if (destroying.some((id) => id !== msg.from && id !== msg.to)) {
         stop('destroy')
       }
@@ -432,22 +479,27 @@ function walk(src: Source): Seq {
       if (msg.activate) {
         activation(msg.to, 1)
       }
+
       if (msg.deactivate) {
         activation(msg.from, -1)
       }
+
       for (const id of destroying) {
         destroyed.add(id)
       }
+
       creating = []
       destroying = []
       // Every message, shown or not, steps the index, rounded to 2 places as Mermaid does. A shown number must be safe.
       if (num.shown && !Number.isSafeInteger(num.index)) {
         stop('autonumber')
       }
+
       add({ ...msg, num: num.shown ? num.index : null })
       num.index = Math.round((num.index + num.step) * 100) / 100
     }
   }
+
   if (frames.length || box) {
     stop('unclosed-frame')
   }
@@ -455,12 +507,15 @@ function walk(src: Source): Seq {
   if (creating.length) {
     stop('create')
   }
+
   if (destroying.length) {
     stop('destroy')
   }
+
   if ([...marked].some((id) => !seq.participants.some((p) => p.id === id))) {
     stop('undeclared')
   }
+
   return seq
 }
 
@@ -470,15 +525,18 @@ function message(t: string): [Msg, string] | null {
   if (!from) {
     return null
   }
+
   const rest = t.slice(from[0].length)
   const arrow = ARROWS.find(([a]) => rest.startsWith(a))
   if (!arrow) {
     return null
   }
+
   const to = TO.exec(rest.slice(arrow[0].length))
   if (!to) {
     return null
   }
+
   const [, line, tail, head] = arrow
   return [
     {
@@ -497,15 +555,19 @@ function message(t: string): [Msg, string] | null {
   ]
 }
 
-// A box's label, cut at any # by statements(): its text after a leading CSS color, which is not drawn; null if none is left. As in Mermaid, a lowercase
-// rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in the plan: Mermaid drops that color only if
-// the browser reads it as one, and else titles the box with the whole label, so one outside the strict subset fails box-color.
+// A box's label, cut at any # by statements(): its text after a leading CSS color, which is not drawn; null if none is
+// left. As in Mermaid, a lowercase
+// rgb(, rgba(, hsl( or hsla( starts a color that runs to the label's last ). Not in the plan: Mermaid drops that color
+// only if
+// the browser reads it as one, and else titles the box with the whole label, so one outside the strict subset fails
+// box-color.
 function boxLabel(s: string): string | null {
   if (/^(?:rgba?|hsla?)\(/.test(s)) {
     const color = s.slice(0, s.lastIndexOf(')') + 1)
     if (!COLOR_FN.test(color)) {
       stop('box-color')
     }
+
     return s.slice(color.length) || null
   }
   // As in Mermaid 12.2.0's parseBoxData: the color is the label's first run of word characters, wherever it ends.
@@ -514,6 +576,7 @@ function boxLabel(s: string): string | null {
   if (OTHER_COLORS.has(name)) {
     stop('box-color')
   }
+
   return (name === 'transparent' || NAMED.has(name) ? s.slice(word.length) : s).trim() || null
 }
 

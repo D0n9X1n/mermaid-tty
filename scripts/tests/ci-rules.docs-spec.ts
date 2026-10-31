@@ -98,6 +98,7 @@ for (const [rule, base, from, to, want] of cases) {
       `${from} -> ${to}`,
     ))
 }
+
 test('step ids come from real step keys, not comments, job ids or shell content', () => {
   assert.deepEqual([...stepIds(CI)], ['check', 'e2e-tooling', 'e2e', 'gallery'])
   assert.deepEqual(
@@ -151,9 +152,11 @@ test('CI preserves every interim check and runs all A9 scenarios on each OS', ()
   ]) {
     assert.ok(runs('check').includes(command), command)
   }
+
   for (const command of ['claude plugin validate .', 'claude plugin test .']) {
     assert.ok(read('scripts/check.sh').includes(command))
   }
+
   assert.ok(runs('e2e').includes('npm ci --prefix scripts/e2e'))
   assert.ok(runs('e2e').includes('node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts'))
   assert.ok(runs('e2e').includes('node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all'))
@@ -175,6 +178,7 @@ test('release checks tag, notes and wiki before publication; tests the fresh ins
       assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${name} ${id}: runner context in job env`)
     }
   }
+
   const ids = job.steps.map((s: any) => s.id).filter(Boolean)
   const order = [
     'release-tag',

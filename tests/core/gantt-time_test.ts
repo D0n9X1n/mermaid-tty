@@ -44,6 +44,7 @@ test('A4: durations are whole ms; M, y, junk, a fractional d or w, and fractions
   for (const s of ['1M', '1y', '3dX', '1.0001ms', 'd', '1.5', '1.5d', '0.5w']) {
     assert.equal(parseDuration(s), null, s)
   }
+
   assert.deepEqual(
     [
       tickStep(30 * D, 60, 10),
@@ -64,14 +65,17 @@ test('A4: a one-letter token with a leading zero, a field out of range, and a ye
   for (const s of ['05/7/2017 9:5:3', '20/07/2017 9:5:3', '20/7/2017 09:5:3', '20/7/2017 9:05:3', '20/7/2017 9:5:03']) {
     assert.equal(parseDate(s, dmy), null, s)
   }
+
   assert.equal(parseDate('1/1/2017 0:0:0', dmy), Date.UTC(2017, 0, 1))
   // Date.UTC reads years 0–99 as 1900–1999, so they never round-trip; Mermaid's strict Day.js parse rejects them too.
   for (const s of ['2024-13-01', '2024-00-10', '2024-01-00', '2024-01-32', '2023-02-29', '0024-01-01', '0000-01-01']) {
     assert.equal(parseDate(s, ymd), null, s)
   }
+
   for (const s of ['24:00', '12:60', '1:00', '12:5']) {
     assert.equal(parseDate(s, F('HH:mm')), null, s)
   }
+
   assert.deepEqual(
     [parseDate('2024-02-29', ymd), parseDate('0100-01-01', ymd)],
     [Date.UTC(2024, 1, 29), Date.UTC(100, 0, 1)],
@@ -81,6 +85,7 @@ test('A4: a dateFormat token is a listed one, and a literal one of - / . : T and
   for (const f of ['yyyy-MM-DD', 'YY-MM-DD', 'YYYY-MM-DD,', 'YYYY-MM-Do', 'YYYY-MM-DD hh:mm']) {
     assert.deepEqual(F(f), { reason: 'format-token' }, f)
   }
+
   assert.deepEqual([F('MM-DD'), F('YYYY-DD HH')], [{ reason: 'format-ymd' }, { reason: 'format-ymd' }])
   assert.equal(parseDate('2024/3/1 8.05', F('YYYY/M/D H.mm')), Date.UTC(2024, 2, 1, 8, 5))
 })
@@ -88,9 +93,11 @@ test('A4: any other % fails an axisFormat; a date-free one takes no date token; 
   for (const f of ['%', '%%', '%-d', '%_H', 'a%', '%Q']) {
     assert.deepEqual(A(f), { reason: 'axis-format' }, f)
   }
+
   for (const f of ['%Y', '%y', '%m', '%d', '%e', '%j', '%b', '%a']) {
     assert.deepEqual(A(f, false), { reason: 'axis-format' }, f)
   }
+
   assert.equal(formatAxis(Date.UTC(1970, 0, 1, 17, 49, 5, 30), A('at %H:%M:%S.%L', false)), 'at 17:49:05.030')
   // d3-time-format prints %Y as the year mod 10000 and %y as the year mod 100, so a year past 9999 keeps four digits.
   assert.deepEqual(
@@ -106,6 +113,7 @@ test('A4: d and w take no decimal point; a decimal ms, s, m or h is exact; ticks
   for (const s of ['2.0d', '1.0w', '0.5ms', ' 2d', '2 d', '-1d', '.5h', '1e3ms']) {
     assert.equal(parseDuration(s), null, s)
   }
+
   assert.deepEqual(['1.50s', '0.001s', '0.25m', '007ms'].map(parseDuration), [1_500, 1, 15_000, 7])
   const steps = [
     1,
@@ -128,7 +136,8 @@ test('A4: d and w take no decimal point; a decimal ms, s, m or h is exact; ticks
     [...steps.slice(1), null],
   )
 })
-// Mermaid's Day.js reads MMM as a month name and a repeated field twice, and a one-letter token's 1–2 digits greedily, never
+// Mermaid's Day.js reads MMM as a month name and a repeated field twice, and a one-letter token's 1–2 digits greedily,
+// never
 // backtracking: under Hmm it reads 930 as hour 93 and fails, where a backtracking pattern reads 9:30. So these fail.
 test('A4: a dateFormat that repeats a field, or puts a one-letter token right before another token, fails format-token', () => {
   for (const f of [
@@ -142,6 +151,7 @@ test('A4: a dateFormat that repeats a field, or puts a one-letter token right be
   ]) {
     assert.deepEqual(F(f), { reason: 'format-token' }, f)
   }
+
   assert.deepEqual(
     [parseDate('20240105', F('YYYYMMDD')), parseDate('2024-01-05 9:30', F('YYYY-MM-DD H:mm'))],
     [Date.UTC(2024, 0, 5), Date.UTC(2024, 0, 5, 9, 30)],
@@ -151,6 +161,7 @@ test('A4: a duration too large to be exact as a number is null; a span or width 
   for (const s of [`${'9'.repeat(400)}ms`, '9007199254740993ms']) {
     assert.equal(parseDuration(s), null, s)
   }
+
   for (const [m, w] of [
     [1.5, 60],
     [NaN, 60],

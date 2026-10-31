@@ -22,9 +22,11 @@ test('VR.gallery: every Tier 1 ok fixture at 80 and 60, a CJK sheet per type, th
         }
       }
     }
+
     for (const t of TIER1) {
       assert.ok(files.has(`cjk-${t}.svg`), `cjk-${t}`)
     }
+
     assert.ok(files.has('palettes.svg'))
   } finally {
     rmSync(out, { recursive: true, force: true })

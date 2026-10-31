@@ -20,6 +20,7 @@ function ticks(): Drawing {
     frames: [],
   })
 }
+
 const swap = (d: Drawing, [r1, c1]: [number, number], [r2, c2]: [number, number]) => {
   const x = d.cells[r1]![c1]!
   d.cells[r1]![c1] = d.cells[r2]![c2]!
@@ -60,6 +61,7 @@ function placed(): Drawing {
     ],
   })
 }
+
 test('C: bars and glyphs with at pass where they are drawn', () => assert.equal(validate(placed()), null))
 test('A5.mutation-tests: a bar off its base fails bar-misplaced; two bars swapped fail', () => {
   const d = placed()
@@ -78,7 +80,8 @@ test('A5.mutation-tests: a placed glyph moved, or one more drawn, fails glyph-mi
   e.cells[2]![1] = e.cells[2]![0]!
   assert.deepEqual(validate(e), { reason: 'glyph-misplaced' })
 })
-// Every chart fixture, at 40, 60 and 80 columns: each label with text, and each bar with a cell, states where it is drawn.
+// Every chart fixture, at 40, 60 and 80 columns: each label with text, and each bar with a cell, states where it is
+// drawn.
 const CHARTS = ['gantt', 'journey', 'pie', 'quadrant', 'timeline', 'xychart']
 test('C: every chart places each label with text and each drawn bar', () => {
   const unplaced: string[] = []
@@ -91,12 +94,14 @@ test('C: every chart places each label with text and each drawn bar', () => {
         if (!d) {
           continue
         }
+
         assert.equal(validate(d), null, `${f} @${columns}`)
         for (const l of d.expect.labels) {
           if (l.text.trim() !== '' && !l.at) {
             unplaced.push(`${f} @${columns} ${l.owner}`)
           }
         }
+
         for (const b of d.expect.bars ?? []) {
           if (b.eighths > 0 && !b.at) {
             unplaced.push(`${f} @${columns} bar ${b.owner}`)
@@ -105,6 +110,7 @@ test('C: every chart places each label with text and each drawn bar', () => {
       }
     }
   }
+
   assert.deepEqual(unplaced.slice(0, 10), [])
 })
 // d with owner o's text and cont cells moved by (dr, dc), into cells that must be free, or past a row's end.
@@ -115,12 +121,15 @@ function shove(d: Drawing, o: string, dr: number, dc: number): Drawing {
   for (const p of mine) {
     d.cells[p.r]![p.c] = null
   }
+
   for (const p of mine) {
     assert.equal(d.cells[p.r + dr]![p.c + dc] ?? null, null)
     d.cells[p.r + dr]![p.c + dc] = p.x
   }
+
   return d
 }
+
 test('A5.mutation-tests: a diagram title moved off the top-left cell fails label-misplaced', () => {
   const d = X('---\ntitle: My flow\n---\nflowchart TD\nA --> B', 60)
   assert.equal(validate(d), null)

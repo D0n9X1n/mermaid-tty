@@ -1,4 +1,5 @@
-// D15d: GitHub's own render of each page must show exactly the GFM tree's links and images, so any micromark/cmark-gfm divergence (such as code spans past 1,000 backticks) fails in CI.
+// D15d: GitHub's own render of each page must show exactly the GFM tree's links and images, so any micromark/cmark-gfm
+// divergence (such as code spans past 1,000 backticks) fails in CI.
 import { spawnSync } from 'node:child_process'
 import { all, parse } from '../docs/markdown.ts'
 const REPO = 'D0n9X1n/mermaid-tty'
@@ -13,7 +14,8 @@ const attr = (tag: string, name: string) => {
   const m = new RegExp(`\\s${name}="([^"]*)"`).exec(tag)
   return m ? decode(m[1]!) : undefined
 }
-// Live links and images in GitHub's HTML, minus its image wrappers (<a target="_blank" href="<the img src>">) and heading anchors; a proxied image keeps data-canonical-src.
+// Live links and images in GitHub's HTML, minus its image wrappers (<a target="_blank" href="<the img src>">) and
+// heading anchors; a proxied image keeps data-canonical-src.
 export function githubRefs(html: string): string[] {
   const out: string[] = []
   for (const [, a, img, one] of html.matchAll(/(<a\s[^>]*>)(<img\s[^>]*>)|(<(?:a|img)\s[^>]*>)/g)) {
@@ -22,6 +24,7 @@ export function githubRefs(html: string): string[] {
         out.push(`image ${attr(t, 'data-canonical-src') ?? attr(t, 'src')}`)
         continue
       }
+
       const href = attr(t, 'href')
       const wrapper = !!img && href === attr(img, 'src') && /\starget="_blank"/.test(t)
       if (href !== undefined && !wrapper && !/\sclass="anchor"/.test(t)) {
@@ -29,6 +32,7 @@ export function githubRefs(html: string): string[] {
       }
     }
   }
+
   return out
 }
 // What the checker sees: link and image nodes, plus <a href> and <img src> inside raw HTML (the README hero).
@@ -49,6 +53,7 @@ const minus = (a: string[], b: string[]) => {
     if (i >= 0) {
       rest.splice(i, 1)
     }
+
     return i < 0
   })
 }
@@ -69,5 +74,6 @@ export function githubHtml(file: string, cwd: string): string {
   if (r.status !== 0) {
     throw new Error(`gh api markdown failed: ${(r.stderr || r.error?.message || 'no output').trim()}`)
   }
+
   return r.stdout
 }

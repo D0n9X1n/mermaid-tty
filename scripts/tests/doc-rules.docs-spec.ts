@@ -128,7 +128,8 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
     'publish-wiki.yml:16: step runs a .sh script without shell: bash',
   ],
   [publishWikiErrors, WIKI, '[main]\n', '[main]\n    "paths": [wiki/**]\n', 'paths filter would skip merges'],
-  // As publish-wiki.yml jobs: a flow sequence hiding a quoted uses key; an id, or the publisher call, only in a comment.
+  // As publish-wiki.yml jobs: a flow sequence hiding a quoted uses key; an id, or the publisher call, only in a
+  // comment.
   [
     publishWikiErrors,
     WIKI,
@@ -152,6 +153,7 @@ for (const [rule, base, from, to, want] of cases) {
       `${from} -> ${to}`,
     ))
 }
+
 test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image is displayed, every link target is known', () => {
   const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'
   const G = (md: string, readme = true) => grammarErrors('x.md', md, readme)
@@ -184,7 +186,8 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
     ['![x](https://example.com/a.svg)', 'src must match', true],
     ['[![b](https://evil.dev/b.svg)](https://github.com/D0n9X1n/mermaid-tty)', 'badge image host', true],
     ['[x](https://github.com/D0n9X1n/mermaid-tty/blob/a%2Fb)', 'link target not allowed', true],
-    // cycle 3: a second or late HTML block, comments, bare URLs and autolinks, reference forms, footnotes, escapes, [[wiki links]]
+    // cycle 3: a second or late HTML block, comments, bare URLs and autolinks, reference forms, footnotes, escapes,
+    // [[wiki links]]
     [H + '\n\n' + H, 'raw HTML other than', true],
     ['## h\n\n' + H, 'raw HTML other than', true],
     ['<!-- c -->', 'raw HTML other than', true],
@@ -211,7 +214,8 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
   }
 })
 test('D15b: every autolink literal is reported on its own line, including one the GFM transform leaves with no position', () => {
-  // markdown.docs-spec.ts shows the transform gives `say "www.x.example"` no position; the tokenizer positions https://x.dev.
+  // markdown.docs-spec.ts shows the transform gives `say "www.x.example"` no position; the tokenizer positions
+  // https://x.dev.
   assert.deepEqual(grammarErrors('x.md', '# T\n\nsee https://x.dev\n\nsay "www.x.example"\n', false), [
     'x.md:3: autolink or bare URL; write [label](url): https://x.dev (D15b)',
     'x.md:5: autolink or bare URL; write [label](url): http://www.x.example (D15b)',

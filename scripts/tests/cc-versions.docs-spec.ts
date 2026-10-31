@@ -48,6 +48,7 @@ test('the real version workflow passes, keeps the runner context out of job env,
   for (const [id, j] of Object.entries<any>((readWorkflow('claude-code-versions.yml', real()).value as any).jobs)) {
     assert.ok(!JSON.stringify(j.env ?? {}).includes('runner.'), `${id}: runner context in job env`)
   }
+
   assert.match(
     readFileSync(new URL('../check-docs.ts', import.meta.url), 'utf8'),
     /versionsErrors\(read\('\.github\/workflows\/claude-code-versions\.yml'\)\)/,

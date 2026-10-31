@@ -22,15 +22,18 @@ const linked = (r: Route, p?: Placed) =>
     if (!i) {
       return true
     }
+
     const a = r.cells[i - 1]!
     const distance = Math.abs(c.r - a.r) + Math.abs(c.c - a.c)
     if (distance === 1) {
       return true
     }
+
     const b = p?.boxes.get(`${r.edge}:label`)
     if (!b || (c.c !== a.c && c.r !== a.r)) {
       return false
     }
+
     const dr = Math.sign(c.r - a.r)
     const dc = Math.sign(c.c - a.c)
     for (let k = 1; k < distance; k++) {
@@ -40,6 +43,7 @@ const linked = (r: Route, p?: Placed) =>
         return false
       }
     }
+
     return true
   })
 const at = (r: Route) => new Set(r.cells.map((c) => `${c.r},${c.c}`))
@@ -99,8 +103,10 @@ test('A1: R3 a rejoined suffix cannot merge before the target channel', () => {
     if (x.r !== y.r || x.c !== y.c) {
       break
     }
+
     suffix.push(y)
   }
+
   assert.ok(suffix.length > 0)
   assert.ok(suffix.every((c) => Math.abs(c.r - head.r) <= 2))
   assert.equal(validate(drawGraph(p, rs, 120)), null)
@@ -154,7 +160,8 @@ test('A1: R4 a two-headed link is no one-way pair for a bipartite net', () => {
   assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
 })
 
-// Only edges of one merge group share a run: a fan-out stem joined to another group's fan-in reads as a self-loop N1→N1.
+// Only edges of one merge group share a run: a fan-out stem joined to another group's fan-in reads as a self-loop
+// N1→N1.
 test('A1: R4 a shared run stays inside one merge group', () => {
   const graph = g('BT', ['N1>N0', 'N2>N0|yes', 'N2>N1'])
   graph.clusters = [{ id: 'S', title: 'S', dir: null, nodes: ['N2'], clusters: [] }]
@@ -198,6 +205,7 @@ test('A1: R3 self-loop turns stay out of crossings even when all owners share it
       assert.ok(c.dirs === 5 || c.dirs === 10)
     }
   }
+
   assert.deepEqual(falsePairs(d), [])
 })
 
@@ -217,6 +225,7 @@ test('A1: R2 every owner stays straight where unrelated edges cross', () => {
       spots.set(key, [...(spots.get(key) ?? []), { edge: r.edge, dirs: c.dirs }])
     }
   }
+
   for (const owners of spots.values()) {
     const unrelated = owners.some((a) =>
       owners.some((b) => {
@@ -260,6 +269,7 @@ test('A1: R2 an outside head never crosses a line on its own in-stem', () => {
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
@@ -281,11 +291,13 @@ test('A1: shared end groups never hide arrow-on-bend conflicts', () => {
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   for (const r of rs) {
     for (const other of rs.filter((s) => s !== r)) {
       assert.ok(r.ends.every((h) => !at(other).has(`${h.r},${h.c}`)))
     }
   }
+
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
@@ -318,6 +330,7 @@ test('A1: side-entry splices never retrace a cell or create a one-arm spur', () 
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   assert.equal(at(rs[0]!).size, rs[0]!.cells.length)
   assert.ok(rs[0]!.cells.every((c) => [3, 5, 6, 9, 10, 12].includes(c.dirs)))
   assert.equal(validate(drawGraph(p, rs, 120)), null)
@@ -333,6 +346,7 @@ test('A1: side-entry splices preserve all dummy and label waypoints in order', (
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   const r = rs.find((r) => r.edge === 'e1')!
   const waypoints = [...p.boxes].filter(([id]) => id.startsWith('e1#')).sort((a, b) => a[1].row - b[1].row)
   let previous = -1
@@ -341,6 +355,7 @@ test('A1: side-entry splices preserve all dummy and label waypoints in order', (
     assert.ok(index > previous)
     previous = index
   }
+
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
 
@@ -366,6 +381,7 @@ test('A1: related routes cannot put a junction behind another head', () => {
     assert.equal(result.reason, 'route-conflict')
     return
   }
+
   assert.equal(validate(drawGraph(p, result, 120)), null)
 })
 
@@ -399,6 +415,7 @@ test('A1: aligned one-to-one chains use centered straight ports', () => {
   for (const r of rs) {
     assert.ok(r.cells.every((c) => c.dirs === 5))
   }
+
   assert.equal(validate(drawGraph(p, rs, 80)), null)
 })
 
@@ -454,6 +471,7 @@ test('A1: bends have corners; each head follows a straight cell; crossings are p
   for (const r of rs) {
     assert.ok([5, 10].includes(r.cells.at(-1)!.dirs), r.edge)
   }
+
   const [, ad, bc] = R('TB', ['A>C', 'A=>D', 'B>C', 'B>D'])
   const dirOf = (r: Route, k: string) => r.cells.find((c) => `${c.r},${c.c}` === k)!.dirs
   const shared = [...at(ad!)].filter((k) => at(bc!).has(k))
@@ -539,6 +557,7 @@ test('A1: a long edge visits each of its dummies exactly once', () => {
     assert.equal(r.cells.filter((c) => c.r === b.row && c.c === b.col).length, 1)
     assert.ok(rs.filter((s) => s !== r).every((s) => !at(s).has(`${b.row},${b.col}`)))
   }
+
   assert.ok(linked(r))
 })
 
@@ -598,6 +617,7 @@ test('A1: routes avoid every node, label and foreign dummy box', () => {
       assert.ok(c.r < b.row || c.r >= b.row + b.rows || c.c < b.col || c.c >= b.col + b.cols)
     }
   }
+
   assert.ok(rs[0]!.cells[0]!.dirs & 1)
   assert.ok([5, 10].includes(rs[0]!.cells.at(-1)!.dirs))
 })
@@ -616,12 +636,14 @@ test('A1: frame borders are crossed straight and perpendicular', () => {
         assert.equal(c.dirs, 5)
         crossed++
       }
+
       if (c.r >= f.row && c.r < f.row + f.rows && (c.c === f.col || c.c === f.col + f.cols - 1)) {
         assert.equal(c.dirs, 10)
         crossed++
       }
     }
   }
+
   assert.ok(crossed > 0)
 })
 
@@ -637,6 +659,7 @@ test('A1: routes avoid the full display width of frame title cells', () => {
   for (const c of [...r.cells, ...r.ends]) {
     assert.ok(c.r !== f.row || c.c < f.col + 2 || c.c > f.col + 5)
   }
+
   assert.equal(r.cells.at(-1)!.dirs, 5)
 })
 
@@ -731,6 +754,7 @@ test('A1: distinct port groups cannot occupy the same face cell', () => {
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   assert.notDeepEqual(rs[0]!.cells[0], rs[1]!.cells[0])
   assert.equal(validate(drawGraph(p, rs, 120)), null)
 })
@@ -746,6 +770,7 @@ test('A1: unrelated routes cannot share a one-cell obstacle passage', () => {
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   assert.equal(validate(drawGraph(q, rs, 120)), null)
   assert.ok(![...at(rs[0]!)].some((k) => at(rs[1]!).has(k)))
 })
@@ -779,6 +804,7 @@ test('A1: crossings cannot turn the cell behind a head into a junction', () => {
     assert.equal(rs.reason, 'route-conflict')
     return
   }
+
   for (const r of rs) {
     for (const h of r.ends) {
       const stem = r.cells.find((c) => Math.abs(c.r - h.r) + Math.abs(c.c - h.c) === 1)!
@@ -842,6 +868,7 @@ test('A1: routes are 4-connected and end in one allowed head', () => {
       ['▼'],
     )
   }
+
   assert.deepEqual(
     R('LR', ['A>B'])[0]!.ends.map((e) => e.ch),
     ['►'],

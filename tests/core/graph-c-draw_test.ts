@@ -63,7 +63,8 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
       .flat()
       .some((c) => c?.kind === 'text' && c.ch === 's' && c.owners[0] === 'C.a1.name' && c.owners.includes('C')),
   )
-  // Each fixed row or column is placed, from its pill's top-left: a column at its offset, the widths before it and a gap cell each.
+  // Each fixed row or column is placed, from its pill's top-left: a column at its offset, the widths before it and a
+  // gap cell each.
   const C = ([k, r, c]: [string, number, number]) => ({ id: `C.${k}`, parent: 'C', place: { r, c } })
   assert.deepEqual(d.expect.members, [
     ...(
@@ -78,7 +79,9 @@ test('A3: member columns align; a column cell is owned by its own id, then the n
     { id: 'D.annot', parent: 'D' },
     { id: 'D.m0', parent: 'D', place: { r: 2, c: 2 } },
     { id: 'D.m1', parent: 'D', place: { r: 3, c: 2 } },
-  ]) // a1's blank note draws no cell, so it is not listed; every row with an id is, «annot» included, unplaced as it is centered
+    // a1's blank note draws no cell, so it is not listed; every row with an id is, «annot» included, unplaced as it is
+    // centered
+  ])
 })
 test('A4: an end label gets room beside its end, and a reversed edge lists its true ends', () => {
   const one = g('TB', ['A>B'])
@@ -112,6 +115,7 @@ test('A3: a mark is its glyph alone, a cap its node owns in its role, with no la
     for (const [i, mark] of (['start', 'choice', 'bar', 'end'] as const).entries()) {
       Object.assign(gr.nodes[i]!, { mark, ...(mark === 'bar' ? { span: 3 } : {}) })
     }
+
     const d = D(gr)
     assert.equal(validate(d), null, dir)
     assert.deepEqual(d.expect.labels, [], dir)
@@ -171,6 +175,7 @@ test('A3: a triangle points into the node it touches, at either end and in any d
     ].entries()) {
       Object.assign(gr.edges[i]!, { tail, head })
     }
+
     const d = D(gr)
     assert.equal(validate(d), null, dir)
     assert.deepEqual(endsOf(d), [tri[dir], '◆@C ◇@D', 'o@E x@F'], dir)
@@ -196,6 +201,7 @@ test('A4: an end-labelled edge spans two ranks; a reversed edge swaps its end la
     Object.assign(one.edges[0]!, { [k]: '1' })
     assert.ok(L(one).boxes.has('e0#1'), k)
   }
+
   const cyc = g('TB', ['A>B', 'B>A'])
   Object.assign(cyc.edges[1]!, { tail: 'diamond', head: 'none', tailLabel: '1', headLabel: '0..*' })
   const e = L(cyc).graph.edges[1]!
@@ -258,8 +264,10 @@ test('A4: an end label sits right of a vertical run, above a horizontal one, at 
 // Whether any line or arrow cell of d is drawn for both a and b.
 const shared = (d: ReturnType<typeof D>, a: string, b: string) =>
   d.cells.flat().some((c) => c !== null && c.owners.includes(a) && c.owners.includes(b))
-// Two labelled ends on one face of a TB node get adjacent ports, so one label meets the other's stem: that drawing fails
-// closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and passes.
+// Two labelled ends on one face of a TB node get adjacent ports, so one label meets the other's stem: that drawing
+// fails
+// closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and
+// passes.
 test('A4: an end with a label gets its own port, never a shared stem, at a fan-out or a fan-in', () => {
   for (const [specs, k] of [
     [['A>B', 'A>C'], 'tailLabel'],
@@ -289,9 +297,12 @@ test('A4: V4 reads a C end as a mark at its node: a ◆ fan-out draws separate l
     if (tail !== 'none') {
       assert.ok(!shared(d, 'e0', 'e1'), tail)
     }
-    const cell = d.cells.flat().find((c) => c?.kind === 'line' && c.owners.join() === 'e1')! // join e0 onto one of e1's line cells
+
+    // join e0 onto one of e1's line cells
+    const cell = d.cells.flat().find((c) => c?.kind === 'line' && c.owners.join() === 'e1')!
     Object.assign(cell, { owners: ['e1', 'e0'], segs: [...cell.segs!, { owner: 'e0', dirs: cell.dirs }] })
-    assert.deepEqual(validate(d), tail === 'none' ? null : { reason: 'merge-ambiguous' }, tail) // a plain fan-out may join; a mark at A may not
+    // a plain fan-out may join; a mark at A may not
+    assert.deepEqual(validate(d), tail === 'none' ? null : { reason: 'merge-ambiguous' }, tail)
   }
 })
 test("A4: a compacted drawing keeps every end label beside its end, apart from the other end's", () => {
@@ -300,6 +311,7 @@ test("A4: a compacted drawing keeps every end label beside its end, apart from t
     for (const e of gr.edges) {
       Object.assign(e, { tail: 'diamond', tailLabel: '1', headLabel: '0..*' })
     }
+
     const p = layoutGraph(gr, { rankGap: 3, nodeGap: 4, wrapAt: null }) as Placed
     const rs = routeGraph(p) as Route[]
     const full = drawGraph(p, rs, 80, (x) => x)
@@ -314,7 +326,8 @@ test("A4: a compacted drawing keeps every end label beside its end, apart from t
     assert.doesNotMatch(text(d).join('\n'), /10\.\.\*|\*1/, dir) // the two cardinalities never read as one
   }
 })
-// [ A ] then e0 along row 0 to ► and [ B ], its channel n cells: '1' runs right from the second cell, '0..*' left to the
+// [ A ] then e0 along row 0 to ► and [ B ], its channel n cells: '1' runs right from the second cell, '0..*' left to
+// the
 // cell before ►.
 function channel(n: number) {
   const gr = g('LR', ['A>B'])
@@ -331,6 +344,7 @@ function channel(n: number) {
   }
   return drawGraph({ graph: gr, boxes, frames: new Map(), rows: 1, cols: 11 + n }, [route], 80, (x) => x)
 }
+
 test('A4: two end labels that meet end to end are a Conflict; a cell apart they pass', () => {
   assert.ok(channel(5).conflicts.length > 0)
   assert.deepEqual(validate(channel(6)), { reason: 'overwrite' })

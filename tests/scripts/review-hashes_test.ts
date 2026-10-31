@@ -57,6 +57,7 @@ test('VR.reviewers: a CRLF or lone-CR record parses as its LF twin, but each rev
       JSON.stringify(eol),
     )
   }
+
   const crlf = parseRecord('c.md', REC.replace(sha('A'), sha('A\r\n'))) as ReviewRecord
   assert.deepEqual(
     checkRecords([crlf], () => Buffer.from('A\r\n')),
@@ -108,13 +109,16 @@ test('VR.reviewers: scope is a slug, verdict pass or fail, date a real YYYY-MM-D
   for (const scope of ['vr-C-flowchart', 'beauty', 'translation']) {
     assert.equal((at('scope', scope) as ReviewRecord).scope, scope)
   }
+
   for (const scope of ['vr A', 'vr_A', '-vr', 'vr-A-', 'vr--A', '']) {
     assert.deepEqual(at('scope', scope), bad('scope', scope))
   }
+
   assert.equal((at('verdict', 'fail') as ReviewRecord).verdict, 'fail')
   for (const verdict of ['Pass', 'passed', 'FAIL', '']) {
     assert.deepEqual(at('verdict', verdict), bad('verdict', verdict))
   }
+
   assert.equal((at('date', '2028-02-29') as ReviewRecord).date, '2028-02-29')
   for (const date of [
     '2026-11-2',
@@ -128,6 +132,7 @@ test('VR.reviewers: scope is a slug, verdict pass or fail, date a real YYYY-MM-D
   ]) {
     assert.deepEqual(at('date', date), bad('date', date))
   }
+
   assert.deepEqual((at('reviewers', '[PM, cross-family:gemini-3.5]') as ReviewRecord).reviewers, [
     'PM',
     'cross-family:gemini-3.5',
@@ -156,7 +161,8 @@ test('VR.reviewers: vr-A reviewers include PM and a cross-family:<model id>', ()
   }
 })
 
-// Beauty is the PM's review of the rendered GitHub page, alone; translation and every vr-* scope need a cross-family reviewer too.
+// Beauty is the PM's review of the rendered GitHub page, alone; translation and every vr-* scope need a cross-family
+// reviewer too.
 test('VR.reviewers: PM always; only beauty may omit a cross-family reviewer', () => {
   const at = (scope: string, reviewers: string) =>
     parseRecord('r.md', withFront(`scope: ${scope}`, ...FRONT.slice(1, 3), `reviewers: ${reviewers}`))
@@ -192,6 +198,7 @@ test('VR.reviewers: ## Files is a | path | sha256 | table whose rows each hold a
   ]) {
     assert.deepEqual(parseRecord('r.md', withRows(ROW, row)), { error: `r.md: bad Files row ${JSON.stringify(row)}` })
   }
+
   const table = { error: 'r.md: the Files table must start with | path | sha256 | and a |---|---| row' }
   for (const text of [
     REC.replace('| path | sha256 |\n', ''),
@@ -200,6 +207,7 @@ test('VR.reviewers: ## Files is a | path | sha256 | table whose rows each hold a
   ]) {
     assert.deepEqual(parseRecord('r.md', text), table)
   }
+
   assert.deepEqual(parseRecord('r.md', REC.replace('## Files', '## Reviewed')), { error: 'r.md: no ## Files table' })
 })
 
@@ -219,6 +227,7 @@ function tree(t: TestContext, files: Record<string, string | Uint8Array>): strin
     mkdirSync(dirname(join(dir, path)), { recursive: true })
     writeFileSync(join(dir, path), bytes)
   }
+
   return dir
 }
 
@@ -242,8 +251,10 @@ test('VR.passes: a required glob is a path, present or not, or <dir>/** for ever
   })
 })
 
-// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two folders, so
-// C's goldens never reopen A's review. Plan C (T85) adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes here.
+// The seed: vr-A needs a passing record for A's goldens and for the palettes; plan C (T48) narrows it to A's two
+// folders, so
+// C's goldens never reopen A's review. Plan C (T85) adds one vr-C-<type> scope per Tier 1 type; plan B adds its scopes
+// here.
 test("VR.passes: ci/reviews/required.json requires a vr-A pass for A's goldens and for core/themes.ts", () => {
   const req = JSON.parse(
     readFileSync(fileURLToPath(new URL('../../ci/reviews/required.json', import.meta.url)), 'utf8'),
@@ -409,6 +420,7 @@ test('VR.reviewers: a table row outside ## Files, under ## Notes, indented or be
   for (const row of [`| absent | ${Z} |`, `  | absent | ${Z} |`]) {
     assert.deepEqual(parseRecord('r.md', `${REC}${row}\n`), stray(row))
   }
+
   const before = `| goldens/b.golden | ${Z} |`
   assert.deepEqual(
     parseRecord(
@@ -427,7 +439,8 @@ test('VR.reviewers: a Files row whose path appears twice fails the record, wheth
   }
 })
 
-// The strict grammar still takes a real record: a title, blank lines, an aligned table, and prose sections that hold | mid-line.
+// The strict grammar still takes a real record: a title, blank lines, an aligned table, and prose sections that hold |
+// mid-line.
 test('VR.reviewers: a valid record, one ## Files table then prose-only sections, still passes --require-pass', (t) => {
   const text = [
     '---',
@@ -469,7 +482,8 @@ test('VR.reviewers: a valid record, one ## Files table then prose-only sections,
   )
 })
 
-// The QA repro: a table without outer pipes under ## Notes was never parsed, so a reader saw files that were never hashed.
+// The QA repro: a table without outer pipes under ## Notes was never parsed, so a reader saw files that were never
+// hashed.
 test('VR.reviewers: a table without outer pipes under ## Notes fails the record, so --require-pass exits 1', (t) => {
   const dir = tree(t, {
     'ci/reviews/required.json': JSON.stringify({ 'vr-A': ['goldens/**', 'core/themes.ts'] }),
@@ -535,7 +549,8 @@ test('VR.reviewers: ## Notes holding only prose, a --- rule alone on a line amon
 // The error for a line of raw HTML.
 const html = (line: string) => ({ error: `r.md: raw HTML ${JSON.stringify(line)}` })
 
-// A record is plain prose, list items and the one Files table: raw HTML could show a reader files the check never reads.
+// A record is plain prose, list items and the one Files table: raw HTML could show a reader files the check never
+// reads.
 test('VR.reviewers: an HTML table under ## Notes fails the record', () => {
   for (const tag of ['<table>', '<TABLE>']) {
     assert.deepEqual(
@@ -554,7 +569,8 @@ test('VR.reviewers: an HTML comment, a lone closing tag or a processing instruct
 test('VR.reviewers: prose with a < that opens no tag, as in a < b, still passes', () =>
   assert.deepEqual(parseRecord('r.md', withNotes('The PM read a < b, 1<2, x <= y and b <- a.')), parsed('r.md')))
 
-// The QA repro: CommonMark ends a line at a lone CR, so GitHub renders this table under ## Notes, while a split on LF and
+// The QA repro: CommonMark ends a line at a lone CR, so GitHub renders this table under ## Notes, while a split on LF
+// and
 // CRLF alone saw one line and left the absent row unchecked.
 test('VR.reviewers: a table on lone-CR lines under ## Notes fails the record, so --require-pass exits 1', (t) => {
   const dir = tree(t, {

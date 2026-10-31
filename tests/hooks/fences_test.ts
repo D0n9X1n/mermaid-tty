@@ -16,6 +16,7 @@ test('A6.hook-tests: prose and fences split and re-join exactly (LF and CRLF)', 
       r,
     )
   }
+
   assert.deepEqual(
     splitFences(`Intro\n${F}Outro`).map((x) => x.kind),
     ['prose', 'mermaid', 'prose'],
@@ -103,13 +104,15 @@ test('A6.hook-tests: a fence closed before a diagram stays prose, and so does on
   const D = '```mermaid\nA\n```\n'
   const d = mermaid(D, 'A')
   assert.deepEqual(splitFences('```js\nx\n```\n' + D), [prose('```js\nx\n```\n'), d])
-  assert.deepEqual(splitFences('``` a`b\n' + D), [prose('``` a`b\n'), d]) // a backtick in a backtick info: not an opener
+  // a backtick in a backtick info: not an opener
+  assert.deepEqual(splitFences('``` a`b\n' + D), [prose('``` a`b\n'), d])
   assert.deepEqual(splitFences(D + '```mermaid\nB\n'), [d, prose('```mermaid\nB\n')])
 })
 
 // CommonMark ends a line at LF, CRLF or a lone CR, and nowhere else: U+2028 and U+2029 (JS line terminators, which `.`
 // does not match) and U+0085 are ordinary characters. They may sit in an info string, never on a closer line.
-const SEP = [0x2028, 0x2029, 0x85].map((c) => String.fromCharCode(c)) // from code points: raw, they are invisible in source
+// from code points: raw, they are invisible in source
+const SEP = [0x2028, 0x2029, 0x85].map((c) => String.fromCharCode(c))
 
 test('A6.hook-tests: QA repro: U+2028 in the info string of an outer fence still opens it, so its nested diagram stays prose', () => {
   const r = '````md' + SEP[0] + 'x\n```mermaid\nflowchart TD\nA-->B\n```\n````\n' // SEP[0] is U+2028
@@ -135,6 +138,7 @@ test('A6.hook-tests: U+2028, U+2029 and U+0085 are plain info-string characters:
     ]) {
       assert.deepEqual(splitFences(r), [prose(r)], JSON.stringify(r))
     }
+
     const fence = '```' + s + 'x\nB\n```\n' // a closed fence with the char in its info, then a diagram
     assert.deepEqual(splitFences(fence + D), [prose(fence), mermaid(D, 'A')], JSON.stringify(s))
   }
@@ -178,7 +182,8 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
   const int = (n: number) => Math.floor(rand() * n)
   const pick = (a: string[]) => a[int(a.length)]!
   const [S, P] = SEP as [string, string]
-  // Prose lines never open a fence and body lines never close one; an info is mermaid only when trimmed of spaces and tabs.
+  // Prose lines never open a fence and body lines never close one; an info is mermaid only when trimmed of spaces and
+  // tabs.
   const PROSE = [
     '',
     'text',
@@ -218,6 +223,7 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
       if (text === '' && last === '\n' && reply.endsWith('\r')) {
         last = '\r\n'
       } // else the lone CR and this LF read as one CRLF
+
       reply += text + last
     }
     const blocks = int(7)
@@ -226,6 +232,7 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
         line(pick(PROSE))
         continue
       }
+
       const ch = pick(['`', '~'])
       const other = ch === '`' ? '~' : '`'
       const len = 3 + int(3)
@@ -240,19 +247,23 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
       for (let k = int(4); k > 0; k--) {
         line(pick([...BODY, other.repeat(3 + int(3)), ...(len > 3 ? [ch.repeat(len - 1)] : [])]))
       }
+
       const body = reply.length > bodyAt ? reply.slice(bodyAt, reply.length - last.length) : ''
       if (b === blocks - 1 && rand() < 0.2) {
         continue
       } // the last fence may stay open: prose to the end
+
       line(' '.repeat(int(4)) + ch.repeat(len + int(2)) + pick(['', ' ', '\t', ' \t ']))
       if (isMermaid) {
         if (at > from) {
           want.push(prose(reply.slice(from, at)))
         }
+
         want.push(mermaid(reply.slice(at), body))
         from = reply.length
       }
     }
+
     if (reply && rand() < 0.3) {
       // no final line end
       reply = reply.slice(0, -last.length)
@@ -262,9 +273,11 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
         from = reply.length
       }
     }
+
     if (from < reply.length) {
       want.push(prose(reply.slice(from)))
     }
+
     const got = splitFences(reply)
     assert.equal(got.map((x) => x.text).join(''), reply, JSON.stringify(reply))
     assert.deepEqual(got, want, JSON.stringify(reply))

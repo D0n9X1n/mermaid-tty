@@ -14,6 +14,7 @@ const find = (d: any, p: (c: any) => boolean) => {
       }
     }
   }
+
   throw new Error('none')
 }
 test('VR.tangled: a clean golden has no tangle; each rule catches its break', () => {
@@ -34,13 +35,15 @@ test('VR.tangled: a clean golden has no tangle; each rule catches its break', ()
       }
     })
   }
+
   assert.ok(tangles(h).includes('ambiguous-head'))
   const l = fresh()
   l.expect = { ...l.expect, edgeLabels: l.expect.edgeLabels.map((e: any) => ({ ...e, edge: 'nope' })) }
   assert.ok(tangles(l).includes('label-detached'))
 })
 
-// A hand-built drawing: rows of glyphs, and under each a row of keys into own, the owners of that cell ('.' for none). A key
+// A hand-built drawing: rows of glyphs, and under each a row of keys into own, the owners of that cell ('.' for none).
+// A key
 // in kinds sets its cells' kind; otherwise ─┄│┌┐└┘├┤┬┴┼ are line cells, each owner running all their dirs; ▲►▼◄ arrows;
 // [ ] caps; a space a fill; any other glyph text.
 const DIRS: Record<string, number> = {
@@ -71,9 +74,11 @@ function grid(
       if (k === '.') {
         return null
       }
+
       if (!owners) {
         throw new Error(`no owners for key ${k} at ${r},${c}`)
       }
+
       const dirs = DIRS[ch] ?? 0
       const kind =
         kinds[k] ??
@@ -92,6 +97,7 @@ function grid(
   )
   return { columns: 80, cells, conflicts: [], expect: { labels: [], edges: [], edgeLabels: [], ...expect } }
 }
+
 const named = (...ids: string[]) => ids.map((id) => ({ owner: id, text: id }))
 // Each head glyph is an end mark at to, as validate's Expect lists them.
 const edge = (id: string, from: string, to: string, ...heads: string[]) => ({

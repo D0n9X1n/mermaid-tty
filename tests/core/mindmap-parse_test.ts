@@ -88,6 +88,7 @@ test('A5.errors: text after the header, another case, a trailing %% and a typed 
   ] as const) {
     assert.deepEqual(P(src), { reason: why }, src)
   }
+
   const c = (v: string) => P(`---\nconfig:\n  mindmap:\n    colorBy: ${v}\n---\nmindmap\nRoot`).colorBy
   assert.deepEqual(['1', 'true', '"depth"', 'branch'].map(c), ['branch', 'branch', 'depth', 'branch'])
   assert.deepEqual([P('mindmap\nRoot').colorBy, P('mindmap\nRoot').title], ['branch', null])

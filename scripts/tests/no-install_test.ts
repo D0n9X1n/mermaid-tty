@@ -1,5 +1,7 @@
-// A8 no-build: in a fresh clone, with nothing installed, bare `node --test` must pass; no default-discovered test may need the docs parser.
-// Those tests are named *.docs-spec.ts, outside Node's default patterns; check.sh runs them after `npm ci --prefix scripts/docs`.
+// A8 no-build: in a fresh clone, with nothing installed, bare `node --test` must pass; no default-discovered test may
+// need the docs parser.
+// Those tests are named *.docs-spec.ts, outside Node's default patterns; check.sh runs them after `npm ci --prefix
+// scripts/docs`.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -24,14 +26,17 @@ test('A8.no-build: every test that reaches scripts/docs is a .docs-spec.ts, and 
   )
   assert.ok(specs.length > 0 && specs.every((f) => reaches(join(here, f))), specs.join())
 })
-// The fresh copy's own run reaches this file too; MTTY_NO_INSTALL_CHILD skips the nested copy there, so it does not recurse.
-// A child of a test run inherits NODE_TEST_CONTEXT and reports to its parent instead of running; drop it, as in a fresh shell.
+// The fresh copy's own run reaches this file too; MTTY_NO_INSTALL_CHILD skips the nested copy there, so it does not
+// recurse.
+// A child of a test run inherits NODE_TEST_CONTEXT and reports to its parent instead of running; drop it, as in a fresh
+// shell.
 const child = process.env.MTTY_NO_INSTALL_CHILD === '1'
 const env = {
   ...Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== 'NODE_TEST_CONTEXT')),
   MTTY_NO_INSTALL_CHILD: '1',
 }
-// The mutation's import specifier is a const, so the reaches() scan of this file's text does not take it for this file's own import.
+// The mutation's import specifier is a const, so the reaches() scan of this file's text does not take it for this
+// file's own import.
 const parser = '../scripts/docs/markdown.ts'
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' })
 test(
@@ -45,17 +50,20 @@ test(
       return { status: r.status, out: r.stdout + r.stderr }
     }
     try {
-      // The repository's layout, as a clone has it: every tracked file at its own path, and no node_modules, so nothing is installed.
+      // The repository's layout, as a clone has it: every tracked file at its own path, and no node_modules, so nothing
+      // is installed.
       for (const f of git(root, 'ls-files', '-z')
         .split('\0')
         .filter((p) => p && !p.split('/').includes('node_modules'))) {
         mkdirSync(dirname(join(dir, f)), { recursive: true })
         copyFileSync(join(root, f), join(dir, f))
       }
+
       const clean = run()
       assert.equal(clean.status, 0, clean.out)
       assert.doesNotMatch(clean.out, /ERR_MODULE_NOT_FOUND/)
-      // The mutation: a default-discovered test that imports the parser fails for the missing package, not a missing file.
+      // The mutation: a default-discovered test that imports the parser fails for the missing package, not a missing
+      // file.
       writeFileSync(
         join(dir, 'tests/leak_test.ts'),
         `import test from 'node:test';\nimport { parse } from '${parser}';\ntest('leak', () => { parse('# x'); });\n`,

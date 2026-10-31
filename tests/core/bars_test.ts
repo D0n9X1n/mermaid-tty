@@ -45,6 +45,7 @@ test('A4: every partial shows exactly its eighths: 1–7 are ▏▎▍▌▋▊�
     assert.equal(hbar(k + 1), g, `h${k + 1}`)
     assert.equal(hbar(k + 9), `█${g}`, `h${k + 9}`)
   }
+
   for (const [k, g] of [...'▁▂▃▄▅▆▇'].entries()) {
     assert.deepEqual(vbar(k + 1, 1), [g], `v${k + 1}`)
     assert.deepEqual(vbar(k + 9, 3), [' ', g, '█'], `v${k + 9}`)

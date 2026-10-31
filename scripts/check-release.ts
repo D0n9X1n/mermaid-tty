@@ -15,7 +15,9 @@ const errors =
 for (const e of errors) {
   console.error(`check-release: ${e}`)
 }
+
 if (errors.length) {
   process.exit(1)
 }
+
 console.log(`check-release: ${mode} ok (${version})`)

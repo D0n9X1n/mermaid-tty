@@ -1,11 +1,16 @@
-// Whether Mermaid 12.2.0's lexer (flow.jison) would read an id as that id. Its keyword rules come before an id's own tokens,
-// and it tries them at each token start inside the id: the id's start, after a leading run of ASCII digits (NUM), and after
-// each non-ASCII character (UNICODE_TEXT, one character from a fixed table). A keyword that matches there, given the text
-// after it, re-reads the id; a non-ASCII character outside the table is no token. Either way the id is not read, and its
+// Whether Mermaid 12.2.0's lexer (flow.jison) would read an id as that id. Its keyword rules come before an id's own
+// tokens,
+// and it tries them at each token start inside the id: the id's start, after a leading run of ASCII digits (NUM), and
+// after
+// each non-ASCII character (UNICODE_TEXT, one character from a fixed table). A keyword that matches there, given the
+// text
+// after it, re-reads the id; a non-ASCII character outside the table is no token. Either way the id is not read, and
+// its
 // statement falls back. Verified under JSDOM, at a statement's start, after a link and after &.
 export type IdKind = 'node' | 'edge' | 'subgraph'
 
-// The keyword rules each kind of id meets, as the lexer matches them (\b is ASCII, so styleé is style then é). A node id,
+// The keyword rules each kind of id meets, as the lexer matches them (\b is ASCII, so styleé is style then é). A node
+// id,
 // a :::class or a directive's id is idString, which takes default and the direction words; an edge id's id@ (LINK_ID)
 // comes after default; a subgraph id is textNoTags, which takes most keywords but not these, and reads end only alone.
 const TARGETS = String.raw`interpolate|_self|_blank|_parent|_top`
@@ -18,7 +23,8 @@ const KEYWORD: Readonly<Record<IdKind, RegExp>> = {
 }
 
 // Whether the lexer would not read id, of kind, as that id. rest is what follows it to its statement's end, then the
-// character that ends the statement: ';' right after it, else a line break. An edge id is one id@ token (LINK_ID) once no
+// character that ends the statement: ';' right after it, else a line break. An edge id is one id@ token (LINK_ID) once
+// no
 // keyword matches at its start, so only its start counts.
 export function misread(id: string, rest: string, kind: IdKind): boolean {
   const starts = kind === 'edge' ? [0] : tokenStarts(id)
@@ -35,9 +41,11 @@ function tokenStarts(id: string): number[] | null {
       if (!UNICODE_TEXT.test(id[i]!)) {
         return null
       }
+
       i++
       continue
     }
+
     const digits = /^[0-9]+/.exec(id.slice(i))?.[0].length ?? 0
     if (digits) {
       i += digits
@@ -47,10 +55,12 @@ function tokenStarts(id: string): number[] | null {
       }
     }
   }
+
   return starts
 }
 
-// UNICODE_TEXT, flow.jison rule 108 in Mermaid 12.2.0, as written there: the one-character tokens a non-ASCII id may hold.
+// UNICODE_TEXT, flow.jison rule 108 in Mermaid 12.2.0, as written there: the one-character tokens a non-ASCII id may
+// hold.
 const UNICODE_TEXT = new RegExp(
   `^(?:${[
     String.raw`[\u00AA\u00B5\u00BA\u00C0-\u00D6\u00D8-\u00F6]`,

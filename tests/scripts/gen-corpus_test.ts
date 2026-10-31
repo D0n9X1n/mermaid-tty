@@ -79,5 +79,6 @@ test('A10: gen-corpus prints its usage, exits 2 and writes nothing, given any ar
     assert.equal(r.status, 2, argv.join(' '))
     assert.equal(r.stderr, 'usage: node scripts/gen-corpus.ts [--check]\n')
   }
+
   assert.equal(existsSync(join(d, 'fixtures')), false)
 })

@@ -1,4 +1,5 @@
-// The layered layout (plan A §6–7): a Graph placed on a cell grid, each node, edge label and dummy a Box, each cluster a frame.
+// The layered layout (plan A §6–7): a Graph placed on a cell grid, each node, edge label and dummy a Box, each cluster
+// a frame.
 import { fail, isFail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
 import type { Extent, Unit } from './chains.ts'
@@ -29,9 +30,12 @@ export type Placed = {
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
 
-// A sealed cluster is laid out on its own, in its own direction or else its parent's, and placed as one block: its frame a
-// border on each side, plus a pad cell on each side across the ranks, and at least its title + 4 wide, the content centred.
-// An open cluster is a strip of the level it is on, in that level's direction. An edge may end on a sealed cluster, never on
+// A sealed cluster is laid out on its own, in its own direction or else its parent's, and placed as one block: its
+// frame a
+// border on each side, plus a pad cell on each side across the ranks, and at least its title + 4 wide, the content
+// centred.
+// An open cluster is a strip of the level it is on, in that level's direction. An edge may end on a sealed cluster,
+// never on
 // an open one.
 export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail {
   const across = g.dir === 'LR' || g.dir === 'RL'
@@ -46,17 +50,21 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   if (g.edges.some((e) => [e.from, e.to].some((x) => t.byId.has(x) && !t.sealed.has(x)))) {
     return fail('cluster-edge')
   }
+
   const units: Unit[] = []
   const subs = new Map<string, Placed>()
   const last = Math.max(-1, ...g.nodes.map((n) => n.order))
-  // A side note, left when its ranks go across (withNotes made it a node): its node's unit grows on its side by the note's
-  // widest line, wrapped at wrapAt, or its key, plus ' ┄┄'; its main extent is the larger of its rows and the note's lines.
+  // A side note, left when its ranks go across (withNotes made it a node): its node's unit grows on its side by the
+  // note's
+  // widest line, wrapped at wrapAt, or its key, plus ' ┄┄'; its main extent is the larger of its rows and the note's
+  // lines.
   const sided = new Map<string, { pill: Size; note: Size; side: 'left' | 'right'; id: string }>()
   for (const n of g.nodes.filter((n) => top(n.id))) {
     const z = nodeSize(n, s.wrapAt, across)
     if (isFail(z)) {
       return z
     }
+
     const note =
       n.note && !across
         ? n.note.key !== undefined
@@ -66,21 +74,26 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     if (note && isFail(note)) {
       return note
     }
+
     const w = note ? { rows: Math.max(z.rows, note.rows), cols: z.cols + note.cols - 2 + 3 } : z
     if (note) {
       sided.set(n.id, { pill: z, note: { rows: note.rows, cols: note.cols - 2 }, side: n.note!.side, id: n.note!.id })
     }
+
     units.push({ id: n.id, kind: 'node', owner: t.parent.get(n.id) ?? null, key: n.order, ...ext(w) })
   }
+
   for (const [i, c] of g.clusters.entries()) {
     if (!t.sealed.has(c.id) || !top(c.id)) {
       continue
     }
+
     const sub = layoutGraph(subgraph(g, t, c), s, true)
     const inner = g.nodes.filter((n) => ancestors(t.parent, n.id).includes(c.id))
     if (isFail(sub)) {
       return sub
     }
+
     subs.set(c.id, sub)
     const key = inner.length > 0 ? Math.min(...inner.map((n) => n.order)) : last + 1 + i
     const [mr, mc] = margin(c.id)
@@ -93,6 +106,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       ...ext({ rows: sub.rows + 2 * mr, cols }),
     })
   }
+
   units.sort((a, b) => a.key - b.key)
   const free = g.edges.filter((e) => top(e.from) && top(e.to))
   const labels = new Map<string, Extent>()
@@ -107,15 +121,19 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     if (z && isFail(z)) {
       return z
     }
+
     if (z) {
       labels.set(e.id, ext(z))
     }
   }
+
   const outer = new Map(
     g.clusters.filter((c) => !t.sealed.has(c.id) && top(c.id)).map((c) => [c.id, t.parent.get(c.id) ?? null] as const),
   )
-  // An end label lies along a horizontal run, above it, and beside a vertical one: so the gap it lies in, between ranks when
-  // they go across, else between the nodes of a rank, widens by the widest end label + 1 cells. Compaction drops what is unused.
+  // An end label lies along a horizontal run, above it, and beside a vertical one: so the gap it lies in, between ranks
+  // when
+  // they go across, else between the nodes of a rank, widens by the widest end label + 1 cells. Compaction drops what
+  // is unused.
   const room = (e: GEdge) =>
     Math.max(-1, ...[e.tailLabel, e.headLabel].flatMap((t) => (t === undefined ? [] : [width(t)]))) + 1
   const extra = Math.max(0, ...free.map(room))
@@ -163,27 +181,33 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       })
       continue
     }
+
     if (!sub) {
       boxes.set(id, b)
       continue
     }
+
     frames.set(id, b) // a frameless cluster's box too, for the drawer
     const [mr, mc] = margin(id)
     const dc = mc + ((b.cols - sub.cols - 2 * mc) >> 1) // content centred in a frame widened for its title
     for (const [k, v] of sub.boxes) {
       boxes.set(k, shift(v, b.row + mr, b.col + dc))
     }
+
     for (const [k, v] of sub.frames) {
       frames.set(k, shift(v, b.row + mr, b.col + dc))
     }
+
     for (const [k, v] of sub.notes ?? []) {
       notes.set(k, shift(v, b.row + mr, b.col + dc))
     }
+
     for (const n of sub.bands ?? []) {
       const d = n.axis === 'row' ? b.row + mr : b.col + dc
       bands.push({ ...n, block: n.block ?? id, from: n.from + d, to: n.to + d })
     }
   }
+
   for (const [id, r] of p.strips) {
     frames.set(id, box(r))
   }
@@ -199,6 +223,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     if (!label || !a || !b || e.reversed || [...boxes.keys()].some((id) => id.startsWith(`${e.id}#`))) {
       continue
     }
+
     const source = across ? a.row + ((a.rows - 1) >> 1) : a.col + ((a.cols - 1) >> 1)
     const target = across ? b.row + ((b.rows - 1) >> 1) : b.col + ((b.cols - 1) >> 1)
     const single = graph.edges.filter((n) => n.from === e.from && n.style !== 'invisible').length === 1
@@ -227,11 +252,13 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       boxes.set(`${e.id}:label`, candidate)
     }
   }
+
   for (const e of graph.edges.filter((e) => !e.reversed && e.label !== null)) {
     const label = boxes.get(`${e.id}:label`)
     if (!label) {
       continue
     }
+
     const axis = across ? label.row + (label.rows >> 1) : label.col + (label.cols >> 1)
     for (const [id, b] of boxes) {
       if (id.startsWith(`${e.id}#`)) {
@@ -262,12 +289,15 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
       }
     }
   }
-  // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further out.
-  // A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's move here.
+  // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further
+  // out.
+  // A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's move
+  // here.
   const blocked = new Set([...subs.values()].flatMap((x) => x.graph.edges.map((e) => e.id)))
   const inStrip = stripLanes(graph, t, boxes, frames, notes, across, room, blocked)
   const backs = graph.edges.filter((e) => e.reversed && !blocked.has(e.id) && !inStrip.has(e.id))
-  // Nested, beside all but these edges' own dummies and labels, which move into the lanes, so the frame holds no blank rows
+  // Nested, beside all but these edges' own dummies and labels, which move into the lanes, so the frame holds no blank
+  // rows
   // before them; at the top level the drawings stay as they were.
   const own = (k: string) => nested && backs.some((e) => k.startsWith(`${e.id}#`) || k === `${e.id}:label`)
   let outside =
@@ -283,15 +313,18 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
         boxes.set(id, across ? { ...b, row: lane } : { ...b, col: lane })
       }
     }
+
     if (label) {
       boxes.set(
         `${e.id}:label`,
         nearSource(e, across ? { ...label, row: outside } : { ...label, col: outside }, boxes, frames, across),
       )
     }
+
     outside += (label ? (across ? label.rows : label.cols) : 1) + 2
   }
-  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it goes.
+  // Nested, the size holds those lanes too, so the frame around it does; at the top the router widens past them as it
+  // goes.
   const lanes = nested && backs.some((e) => e.style !== 'invisible') ? outside - 2 : 0
   const all = [...boxes.values(), ...frames.values()] // a strip widened for its lanes (stripLanes) too
   const rows = Math.max(across ? p.wide : p.long, ...all.map((b) => b.row + b.rows), across ? lanes : 0)
@@ -299,10 +332,14 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   return { graph, boxes, frames, rows, cols, bands, ...(notes.size > 0 ? { notes } : {}) }
 }
 
-// V8: a back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside what
-// the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all past it
-// moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown. An edge into
-// the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7). Returns the edges.
+// V8: a back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside
+// what
+// the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all past
+// it
+// moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown. An edge
+// into
+// the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7). Returns the
+// edges.
 function stripLanes(
   g: Graph,
   t: Tree,
@@ -322,6 +359,7 @@ function stripLanes(
       home.set(c, [...(home.get(c) ?? []), e])
     }
   }
+
   const far = (b: Box) => (across ? b.row + b.rows : b.col + b.cols)
   const start = (b: Box) => (across ? b.row : b.col)
   const wraps = (f: Box, b: Box) =>
@@ -344,16 +382,20 @@ function stripLanes(
           boxes.set(id, across ? { ...b, row: lane } : { ...b, col: lane })
         }
       }
+
       if (label) {
         boxes.set(`${e.id}:label`, across ? { ...label, row: outside } : { ...label, col: outside })
       }
+
       outside += (label ? (across ? label.rows : label.cols) : 1) + 2
     }
+
     const d = outside - 2 + gap + 1 - far(f)
     const past = far(f)
     if (d <= 0) {
       continue
     }
+
     const move = (b: Box): Box => (across ? { ...b, row: b.row + d } : { ...b, col: b.col + d })
     const grow = (b: Box): Box => (across ? { ...b, rows: b.rows + d } : { ...b, cols: b.cols + d })
     for (const m of [boxes, notes]) {
@@ -363,10 +405,12 @@ function stripLanes(
         }
       }
     }
+
     for (const [k, b] of frames) {
       frames.set(k, k === c || wraps(b, f) ? grow(b) : start(b) >= past ? move(b) : b)
     }
   }
+
   return new Set([...home.values()].flat().map((e) => e.id))
 }
 
@@ -385,6 +429,7 @@ function nearSource(
   if (!a || !b) {
     return label
   }
+
   const main = (x: Box) => (across ? x.col : x.row)
   const long = (x: Box) => (across ? x.cols : x.rows)
   const am = main(a) + (long(a) >> 1)
@@ -399,10 +444,12 @@ function nearSource(
   ) {
     return label
   }
+
   const start = bm > am ? am + 2 : am - 1 - size
   if (bm > am ? start + size - 1 > bm - 2 || start >= main(label) : start < bm + 2 || start <= main(label)) {
     return label
   }
+
   const candidate = across ? { ...label, col: start } : { ...label, row: start }
   const meets = (u: Box, v: Box) =>
     u.row < v.row + v.rows && v.row < u.row + u.rows && u.col < v.col + v.cols && v.col < u.col + u.cols

@@ -14,6 +14,7 @@ export function crossings(ranks: Ranks, segs: readonly Seg[]): number {
     const l = at.get(s.lower)!
     by[u.k]!.push([u.i, l.i])
   }
+
   let n = 0
   for (const ps of by) {
     ps.forEach(([a, b], x) =>
@@ -24,6 +25,7 @@ export function crossings(ranks: Ranks, segs: readonly Seg[]): number {
       }),
     )
   }
+
   return n
 }
 
@@ -46,11 +48,13 @@ function near(segs: readonly Seg[], from: 'upper' | 'lower'): Map<string, string
   for (const s of segs) {
     m.set(s[from], [...(m.get(s[from]) ?? []), s[from === 'upper' ? 'lower' : 'upper']])
   }
+
   return m
 }
 
 // ranks in source order, built top down, then reordered by barycenter sweeps: a down sweep sorts each rank by the mean
-// position of its items' neighbours above, an up sweep by those below; an item with no neighbour there keeps its own index.
+// position of its items' neighbours above, an up sweep by those below; an item with no neighbour there keeps its own
+// index.
 // path: the strips around an owner, outermost first.
 export function order(ranks: Ranks, segs: readonly Seg[], path: (o: string | null) => string[] = () => []): Item[][] {
   const above = near(segs, 'lower')
@@ -59,6 +63,7 @@ export function order(ranks: Ranks, segs: readonly Seg[], path: (o: string | nul
   for (const r of ranks) {
     cur.push(nest(r, new Map(r.map((it) => [it.id, 0])), path, cur.length > 0 ? firsts(cur.at(-1)!, path) : new Map()))
   }
+
   let best = cur
   let fewest = crossings(cur, segs)
   for (let sweep = 0; sweep < 8; sweep++) {
@@ -77,12 +82,15 @@ export function order(ranks: Ranks, segs: readonly Seg[], path: (o: string | nul
       )
       next[k] = nest(next[k]!, val, path, firsts(fix, path))
     }
+
     const c = crossings(next, segs)
     if (c < fewest) {
       best = next
       fewest = c
     }
+
     cur = next
   }
+
   return best
 }

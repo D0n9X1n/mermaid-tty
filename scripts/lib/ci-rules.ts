@@ -21,15 +21,18 @@ export function coverageErrors(
       errors.push(`${id}: no CI step`)
     }
   }
+
   for (const [id, value] of Object.entries(coverage)) {
     if (!ids.includes(id)) {
       errors.push(`${id}: unknown check ID`)
     }
+
     for (const step of [value].flat()) {
       if (!steps.has(step)) {
         errors.push(`${id}: step id ${step} is missing from ci.yml and release.yml`)
       }
     }
   }
+
   return errors
 }

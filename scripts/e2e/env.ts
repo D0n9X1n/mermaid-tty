@@ -1,4 +1,5 @@
-// The e2e session's recipe: the env the harness runs a real Claude Code in, built from nothing, and the seed files of its
+// The e2e session's recipe: the env the harness runs a real Claude Code in, built from nothing, and the seed files of
+// its
 // config dir. Node built-ins only, so the main suite tests it with nothing installed.
 import { win32 } from 'node:path'
 
@@ -15,7 +16,8 @@ export type Recipe = {
   path: string
 }
 
-// The session's env. It inherits no variable of this process's but, on Windows, SystemRoot, ComSpec and PATHEXT, which a
+// The session's env. It inherits no variable of this process's but, on Windows, SystemRoot, ComSpec and PATHEXT, which
+// a
 // program needs to start there.
 export function sessionEnv(r: Recipe): Record<string, string> {
   const env: Record<string, string> = {
@@ -56,6 +58,7 @@ export function sessionEnv(r: Recipe): Record<string, string> {
   } else if (r.driver === 'pty') {
     env.TMUX = 'e2e'
   }
+
   return env
 }
 
@@ -67,6 +70,7 @@ export function seedConfig(realCwd: string, key: string, platform: string): stri
   if (platform === 'win32') {
     projects[realCwd.replaceAll('\\', '/')] = { hasTrustDialogAccepted: true }
   }
+
   return JSON.stringify(
     {
       hasCompletedOnboarding: true,
@@ -78,7 +82,8 @@ export function seedConfig(realCwd: string, key: string, platform: string): stri
   )
 }
 
-// The config dir's settings.json: the plugin's theme, under each of the three keys Claude Code may read its options from (E4).
+// The config dir's settings.json: the plugin's theme, under each of the three keys Claude Code may read its options
+// from (E4).
 export function seedSettings(theme: string): string {
   const keys = ['mermaid-tty', 'mermaid-tty@inline', 'mermaid-tty@mermaid-tty']
   return JSON.stringify({ pluginConfigs: Object.fromEntries(keys.map((k) => [k, { options: { theme } }])) }, null, 2)
@@ -93,10 +98,12 @@ export function mergeJson(existing: string, seed: string): string {
     if (!isObject(a) || !isObject(b)) {
       return b
     }
+
     const out: Record<string, unknown> = { ...a }
     for (const [k, v] of Object.entries(b)) {
       out[k] = k in a ? merge(a[k], v) : v
     }
+
     return out
   }
   return JSON.stringify(merge(JSON.parse(existing), JSON.parse(seed)), null, 2)

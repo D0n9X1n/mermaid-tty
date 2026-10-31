@@ -16,14 +16,16 @@ export type Section = { name: string | null; periods: Period[] }
 export type Timeline = { dir: 'LR' | 'TD'; title: string | null; multicolor: boolean; sections: Section[] }
 
 const HEADER = /^timeline( (LR|TD))?$/
-// The statements, each a whole trimmed line: a title; a section; an accTitle or accDescr line; an accDescr { block, whose
+// The statements, each a whole trimmed line: a title; a section; an accTitle or accDescr line; an accDescr { block,
+// whose
 // text runs to its first }, which must end its line; and a period or event line, which entry reads.
 const TITLE = /^title[ \t]+(.+)$/
 const SECTION = /^section[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
-// Mermaid's lexer reads its keywords in any case and at the start of a longer word, so a line that starts with one but is
+// Mermaid's lexer reads its keywords in any case and at the start of a longer word, so a line that starts with one but
+// is
 // no statement falls back (common rule 5).
 const KEYWORD = /^(?:timeline|title|section|accTitle|accDescr)/i
 // A ':' before a space splits a line into events, and Mermaid's lexer splits at a ':' before any whitespace or the
@@ -47,9 +49,11 @@ function checked(t: string, mode: Mode, br: Br): string {
   if (f) {
     stop(f.reason)
   }
+
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }
+
 const plain = (t: string): string => checked(t, 'plain', 'lower')
 
 export function parseTimeline(src: Source): Timeline | Fail {
@@ -59,6 +63,7 @@ export function parseTimeline(src: Source): Timeline | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -86,11 +91,14 @@ function walk(src: Source): Timeline {
     if (end >= 0 && block.slice(end + 1).trim()) {
       stop(`syntax:${n}`)
     }
+
     open = end >= 0 ? 0 : open || n
   }
+
   if (open) {
     stop(`syntax:${open}`)
   }
+
   return tl
 }
 
@@ -101,19 +109,24 @@ function statement(st: State, t: string, n: number): void {
     if (!t.replace(ACC, '').trim()) {
       stop(`syntax:${n}`)
     }
+
     return
   }
+
   if (t.includes('#')) {
     stop(`syntax:${n}`)
   }
+
   const title = TITLE.exec(t)?.[1]
   if (title !== undefined) {
     if (st.tl.title !== null) {
       stop(`repeat:${n}`)
     }
+
     st.tl.title = checked(title, 'sanitized', 'none')
     return
   }
+
   const name = SECTION.exec(t)?.[1]
   if (name === undefined) {
     return KEYWORD.test(t) ? stop(`syntax:${n}`) : entry(st, t, n)
@@ -126,9 +139,11 @@ function statement(st: State, t: string, n: number): void {
   if (st.loose) {
     stop(`section:${st.loose}`)
   }
+
   if (st.tl.sections.some((s) => s.name === name)) {
     stop(`repeat:${n}`)
   }
+
   st.tl.sections.push({ name: plain(name), periods: [] })
 }
 
@@ -140,19 +155,23 @@ function entry(st: State, t: string, n: number): void {
   if (parts[0]!.includes(':') || AMBIGUOUS.test(t) || parts.slice(1).includes('')) {
     stop(`syntax:${n}`)
   }
+
   if (parts[0] === '' && !st.last) {
     stop(`syntax:${n}`)
   }
+
   const [text = '', ...events] = parts.map(plain)
   if (text === '') {
     st.last!.events.push(...events)
     return
   }
+
   const sections = st.tl.sections
   if (sections.length === 0) {
     sections.push({ name: null, periods: [] })
     st.loose = n
   }
+
   st.last = { text, events }
   sections.at(-1)!.periods.push(st.last)
 }

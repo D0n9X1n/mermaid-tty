@@ -95,6 +95,7 @@ test('A4: a <br/> heading expects its text as drawn, and a word too wide on any 
     assert.deepEqual(br.expect.labels, [{ owner: 'title', text: 'one\ntwo', at: { r: 0, c: 0 } }], t)
     assert.equal(validate(br), null, t)
   }
+
   assert.deepEqual(heading('ok<br/>Supercalifragilistic', 'title', 'title', 10), { reason: 'word-too-wide' })
 })
 
@@ -136,6 +137,7 @@ test("A4: stack's columns is the argument, so validate measures every row agains
     assert.equal(d.columns, cols)
     assert.deepEqual(validate(d), want, `${cols}`)
   }
+
   assert.deepEqual(stack([], 10), {
     columns: 10,
     cells: [],

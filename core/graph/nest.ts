@@ -1,5 +1,6 @@
 // One rank's order (plan A §7.4): its items sorted by val, then by source order, each strip's items kept together as a
-// block at their mean val, its first key breaking ties. Blocks of strips that are also on the fixed rank keep their order
+// block at their mean val, its first key breaking ties. Blocks of strips that are also on the fixed rank keep their
+// order
 // there (fixed: each strip's first index on it), so that two strips never swap from one rank to the next.
 import type { Item } from './chains.ts'
 
@@ -22,10 +23,12 @@ export function nest(
       blocks.push({ c, items: [it], v: 0, key: 0 })
     }
   }
+
   for (const b of blocks) {
     b.v = b.items.reduce((a, it) => a + val.get(it.id)!, 0) / b.items.length
     b.key = Math.min(...b.items.map((it) => it.key))
   }
+
   blocks.sort((a, b) => a.v - b.v || a.key - b.key)
   const slots = blocks.flatMap((b, i) => (b.c !== null && fixed.has(b.c) ? [i] : []))
   const kept = slots.map((i) => blocks[i]!).sort((a, b) => fixed.get(a.c!)! - fixed.get(b.c!)!)

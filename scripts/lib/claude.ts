@@ -7,5 +7,6 @@ export function claude(args: string[], cwd?: string): number {
   if (r.error) {
     console.error(r.error)
   }
+
   return r.status ?? 1
 }

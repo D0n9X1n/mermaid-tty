@@ -18,7 +18,8 @@ export type ScreenSpec = {
   hex?: Readonly<Record<string, number>>
 }
 
-// The rows each of reply's closed mermaid fences draws as, at columns in theme, in order; a fence that falls back has none.
+// The rows each of reply's closed mermaid fences draws as, at columns in theme, in order; a fence that falls back has
+// none.
 // Read from the drawing's cells, before toRows styles them, so a renderer that drops cells on the way to the screen
 // changes the screen but not these rows.
 export function drawnDiagrams(reply: string, columns: number, theme: string): string[][] {
@@ -27,6 +28,7 @@ export function drawnDiagrams(reply: string, columns: number, theme: string): st
     if (r === null || isFail(r)) {
       return []
     }
+
     return [
       r.drawing.cells.map((row) =>
         row
@@ -39,7 +41,8 @@ export function drawnDiagrams(reply: string, columns: number, theme: string): st
 }
 
 // The first screen row at or after from where rows show, one per screen row, all after one left margin of m cells that
-// is blank or holds the reply bullet; null when there is none. Wide characters' second cells, whose ch is '', add nothing.
+// is blank or holds the reply bullet; null when there is none. Wide characters' second cells, whose ch is '', add
+// nothing.
 function findRows(cells: Cell[][], rows: readonly string[], from: number): { at: number; m: number } | null {
   const rest = (row: Cell[], m: number) =>
     row
@@ -62,6 +65,7 @@ function findRows(cells: Cell[][], rows: readonly string[], from: number): { at:
       }
     }
   }
+
   return null
 }
 
@@ -72,6 +76,7 @@ function span(row: Cell[], m: number, text: string): Cell[] {
   while (n < row.length && (got.length < text.length || row[n]!.ch === '')) {
     got += row[n++]!.ch
   }
+
   return row.slice(m, n)
 }
 
@@ -86,10 +91,12 @@ function joined(row: Cell[]): { text: string; at: number[] } {
     for (let k = 0; k < c.ch.length; k++) {
       at.push(i)
     }
+
     text += c.ch
   })
   return { text, at }
 }
+
 const show = (c: Color) => `${c.mode} ${c.mode === 'rgb' ? `#${c.value.toString(16).padStart(6, '0')}` : c.value}`
 const plain = (c: Color) => c.mode === 'default'
 
@@ -101,7 +108,8 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
   // Code's cwd line (C:\Users\... on Windows), is not taken for it.
   const drawn = new Set<number>()
   // Under mono, only the cells each diagram's rows cover must carry no color: a cell outside them may be Claude Code's
-  // own UI, like its spinner, colored while the screen was read. A blank cell shows no foreground, so only its background
+  // own UI, like its spinner, colored while the screen was read. A blank cell shows no foreground, so only its
+  // background
   // counts: Claude Code's spinner can leave its color on one, on Windows.
   const colored = (c: Cell) => (c.ch.trim() !== '' && !plain(c.fg)) || !plain(c.bg)
   const noColor = (what: string, c: Cell | undefined) => {
@@ -115,6 +123,7 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
       problems.push(`diagram ${n + 1}: not drawn; expected its rows:\n${rows.join('\n')}`)
       return
     }
+
     const { at, m } = found
     from = at + rows.length
     rows.forEach((_, k) => drawn.add(at + k))
@@ -130,12 +139,14 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
       problems.push(`${label}: not drawn`)
       continue
     }
+
     const from = found.text.indexOf(label)
     const own = [...new Set(found.at.slice(from, from + label.length))].map((i) => found.row[i]!)
     if (spec.color === 'none') {
       noColor(label, own.find(colored))
       continue
     }
+
     const pill = PILLS.has(role)
     const want = spec.hex?.[role]
     const mode = spec.color === 'truecolor' ? 'rgb' : 'p256'
@@ -148,6 +159,7 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
       )
     }
   }
+
   const text = cells
     .map((row) =>
       row
@@ -161,6 +173,7 @@ export function checkDiagramScreen(cells: Cell[][], spec: ScreenSpec): string[] 
       problems.push(`${line}: prose`)
     }
   }
+
   return problems
 }
 
@@ -170,7 +183,8 @@ export function sourceShown(text: string, source: readonly string[]): string[] {
   return source.filter((l) => /[[(>]/.test(l) && text.includes(l)).map((l) => `${l}: drawn diagram shown as source`)
 }
 
-// The rows of a screen's text that show a diagram drawn: those holding one of labels but none of the source lines, which
+// The rows of a screen's text that show a diagram drawn: those holding one of labels but none of the source lines,
+// which
 // hold the labels too. [] when every diagram shows as source.
 export function drawnRows(text: string, labels: readonly string[], source: readonly string[]): string[] {
   return text.split('\n').filter((row) => labels.some((l) => row.includes(l)) && !source.some((s) => row.includes(s)))

@@ -42,7 +42,8 @@ const TITLE = re(String.raw`title\s+(${TEXT})`)
 const X_AXIS = re(String.raw`x-axis\s+(?:(${AXIS_TEXT})|(?:(${AXIS_TEXT})\s*)?${list(TEXT)})`)
 const Y_AXIS = re(String.raw`y-axis\s+(?:(${AXIS_TEXT})|(?:(${AXIS_TEXT})\s+)?(${NUM})\s*-->\s*(${NUM}))`)
 const SERIES = re(String.raw`(bar|line)\s+(?:(${TEXT})\s*)?${list(NUM)}`)
-// As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither draws.
+// As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither
+// draws.
 const ACC = /^acc(?:Title|Descr)\s*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
@@ -58,10 +59,13 @@ function stop(reason: string): never {
 }
 
 // The model src's statements build, or why it cannot be drawn: 'header' (not xychart-beta or xychart, alone or with
-// vertical or horizontal), 'syntax:<n>' (a statement on source line n outside the subset, or an accDescr { there with no
+// vertical or horizontal), 'syntax:<n>' (a statement on source line n outside the subset, or an accDescr { there with
+// no
 // }), 'repeat:<n>' (a second title, from frontmatter or a statement, x-axis or y-axis, or a repeated category, on line
-// n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal draws reliably), 'length' (a series without one value per
-// group), 'series' (more than 8 line series or 26 bar series) or 'domain' (no y range that holds every value: see domain).
+// n), 'entity' or 'html' (text Mermaid shows otherwise), 'unsupported-char U+XXXX' (a text character no terminal draws
+// reliably), 'length' (a series without one value per
+// group), 'series' (more than 8 line series or 26 bar series) or 'domain' (no y range that holds every value: see
+// domain).
 export function parseXy(src: Source): Xy | Fail {
   try {
     return walk(src)
@@ -69,6 +73,7 @@ export function parseXy(src: Source): Xy | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -94,25 +99,33 @@ function walk(src: Source): Xy {
       if (closes(t, n)) {
         descr = 0
       }
+
       continue
     }
+
     if (ACC.test(t)) {
       if (!t.replace(ACC, '').trim()) {
         stop(`syntax:${n}`)
       }
+
       continue
     }
+
     if (ACC_BLOCK.test(t)) {
       if (!closes(t.replace(ACC_BLOCK, ''), n)) {
         descr = n
       }
+
       continue
     }
+
     statement(t, n, xy, seen)
   }
+
   if (descr) {
     stop(`syntax:${descr}`)
   }
+
   lengths(xy)
   counts(xy)
   domain(xy)
@@ -125,9 +138,11 @@ function closes(rest: string, n: number): boolean {
   if (i < 0) {
     return false
   }
+
   if (rest.slice(i + 1).trim()) {
     stop(`syntax:${n}`)
   }
+
   return true
 }
 
@@ -138,6 +153,7 @@ function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
     if (seen.has(key)) {
       stop(`repeat:${n}`)
     }
+
     seen.add(key)
   }
   let m: RegExpExecArray | null
@@ -164,7 +180,8 @@ function statement(t: string, n: number, xy: Xy, seen: Set<string>): void {
 }
 
 // A text's content. A "…" is trimmed, as Mermaid's xychart database trims each text; a "`…`" markdown string fails, and
-// so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. Text Mermaid
+// so does one blank once trimmed, as "" does in Mermaid. A word fails if a keyword starts a run of its letters. Text
+// Mermaid
 // shows otherwise fails as drawable says: each text is sanitized, with no <br>, as the title is ('entity' or 'html').
 function text(s: string, n: number): string {
   const quoted = s.startsWith('"')
@@ -172,13 +189,16 @@ function text(s: string, n: number): string {
   if (quoted ? s.startsWith('"`') || t === '' : KEYWORD.test(s)) {
     stop(`syntax:${n}`)
   }
+
   const f = drawable(t, 'sanitized', 'none')
   if (f) {
     stop(f.reason)
   }
+
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }
+
 const optText = (s: string | undefined, n: number): string | null => (s === undefined ? null : text(s, n))
 
 // An x-axis list's categories, in order. A repeated one fails on line n.
@@ -187,6 +207,7 @@ function categories(items: string, n: number): string[] {
   if (new Set(cs).size < cs.length) {
     stop(`repeat:${n}`)
   }
+
   return cs
 }
 

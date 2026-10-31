@@ -8,6 +8,7 @@ const file = process.argv[2]
 if (!file) {
   throw new Error('usage: node scripts/gen-width-table.ts <EastAsianWidth.txt>')
 }
+
 const text = readFileSync(file, 'utf8')
 const version = /^# EastAsianWidth-(\d+\.\d+\.\d+)\.txt/.exec(text)?.[1]
 if (!version) {
@@ -20,13 +21,16 @@ for (const line of text.split(/\r?\n/)) {
   if (!data) {
     continue
   }
+
   const m = /^([0-9A-F]{4,6})(?:\.\.([0-9A-F]{4,6}))?\s*;\s*(A|F|H|N|Na|W)$/.exec(data)
   if (!m) {
     throw new Error(file + ': unexpected line: ' + line)
   }
+
   if (m[3] !== 'W' && m[3] !== 'F') {
     continue
   }
+
   const lo = parseInt(m[1]!, 16)
   ranges.push([lo, m[2] ? parseInt(m[2], 16) : lo])
 }

@@ -17,6 +17,7 @@ function fakeRoot(t: TestContext, hooks = false): string {
   if (hooks) {
     mkdirSync(join(root, '.claude-plugin', 'types', 'claude-code'), { recursive: true })
   }
+
   return root
 }
 
@@ -36,6 +37,7 @@ function fakeSpawn(outcome: ReturnType<Spawn> | Error): { calls: Call[]; spawn: 
     if (outcome instanceof Error) {
       throw outcome
     }
+
     return outcome
   }
   return { calls, spawn }

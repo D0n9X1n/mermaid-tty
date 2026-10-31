@@ -1,6 +1,8 @@
 // A convergence fuzz over real drawings. Each ok fixture, and every fourth corpus block, is drawn at 60 and 80 columns;
-// each mutation keeps expect unchanged and changes what the cells show, so validate must fail it. A mutation that leaves
-// the cells identical, or that only relabels an automorphism of the source, is skipped. Each class counts its mutants and
+// each mutation keeps expect unchanged and changes what the cells show, so validate must fail it. A mutation that
+// leaves
+// the cells identical, or that only relabels an automorphism of the source, is skipped. Each class counts its mutants
+// and
 // fails on any survivor.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -45,15 +47,18 @@ function run(d: Drawing, patch: Patch): boolean | null {
   if (patch.every(([, , x], i) => same(x, old[i]!))) {
     return null
   }
+
   for (const [r, c, x] of patch) {
     d.cells[r]![c] = x
   }
+
   const failed = validate(d) !== null
   patch.forEach(([r, c], i) => {
     d.cells[r]![c] = old[i]!
   })
   return failed
 }
+
 type Tally = { mutants: number; survivors: string[] }
 // Runs every patch each case yields and tallies it; a survivor is named by its case and the patch's own note.
 function tally(
@@ -71,19 +76,23 @@ function tally(
       if (failed === null) {
         continue
       }
+
       out.mutants++
       if (!failed) {
         out.survivors.push(`${name}: ${note}`)
       }
     }
   }
+
   t.diagnostic(
     `${label}: ${out.mutants} mutants, ${out.survivors.length} survivors${out.survivors.length ? `, e.g. ${out.survivors.slice(0, Number(process.env.SHOW ?? 5)).join('; ')}` : ''}`,
   )
   return out
 }
+
 const spots = (d: Drawing) => d.cells.flatMap((row, r) => row.flatMap((x, c) => (x ? [{ r, c, x }] : [])))
-// A drawing's line cells, at most two of each context: glyph, style and how many owners drew there. Cells of one context
+// A drawing's line cells, at most two of each context: glyph, style and how many owners drew there. Cells of one
+// context
 // meet the validator's rules alike, and a big drawing has thousands of them.
 function lineCells(d: Drawing) {
   const seen = new Map<string, number>()
@@ -91,6 +100,7 @@ function lineCells(d: Drawing) {
     if (x.kind !== 'line') {
       return false
     }
+
     const k = `${x.ch}|${x.style}|${x.segs?.length ?? 0}`
     const n = seen.get(k) ?? 0
     seen.set(k, n + 1)
@@ -98,7 +108,8 @@ function lineCells(d: Drawing) {
   })
 }
 
-// Every line glyph by the dirs it draws: the Box Drawing table's light and heavy mixes, the dashed runs, the doubles and
+// Every line glyph by the dirs it draws: the Box Drawing table's light and heavy mixes, the dashed runs, the doubles
+// and
 // their single mixes, and the round corners.
 const bits = (arms: string) => [1, 2, 4, 8].reduce((m, b, i) => (arms[i] !== '0' ? m | b : m), 0)
 const DIRS = new Map<string, number>([
@@ -135,7 +146,8 @@ test('A5.mutation-tests: fuzz: every line cell redrawn in another style of the s
 
 // One arm of a solid line cell redrawn in the other weight, light to heavy or heavy to light, its glyph the
 // mixed one the canvas would draw for those arms, so the cell is self-consistent and only its weight is wrong: a thick
-// branch on a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm (a
+// branch on a thin line, or a thin one on a thick line. Dotted cells have no heavy arm to show, and a cell of one arm
+// (a
 // gitGraph lane's tail ╵) has no other arm to differ from: expect states no line's weight, so its weight is unchecked.
 test('A5.mutation-tests: fuzz: one arm of a line cell redrawn in the other weight fails', (t) => {
   const { mutants, survivors } = tally(t, 'weight', function* (d) {
@@ -143,11 +155,13 @@ test('A5.mutation-tests: fuzz: one arm of a line cell redrawn in the other weigh
       if (x.style === 'dotted' || [1, 2, 4, 8].filter((b) => x.dirs & b).length < 2) {
         continue
       }
+
       const arms = x.arms ?? [1, 2, 4, 8].map((b) => (x.dirs & b ? '1' : '0')).join('')
       for (let i = 0; i < 4; i++) {
         if (arms[i] === '0') {
           continue
         }
+
         const flipped = arms.slice(0, i) + (arms[i] === '1' ? '2' : '1') + arms.slice(i + 1)
         yield [
           `(${r},${c}) ${x.ch} arm ${i} as ${lineGlyph(x.dirs, flipped, x.style ?? 'light')}`,
@@ -168,6 +182,7 @@ function networks(d: Drawing): (id: string) => string {
     while (root.get(r) !== r) {
       r = root.get(r)!
     }
+
     return r
   }
   for (const { x } of spots(d)) {
@@ -176,6 +191,7 @@ function networks(d: Drawing): (id: string) => string {
       root.set(find(id), find(ids[0]!))
     }
   }
+
   return (id) => (root.has(id) ? find(id) : '')
 }
 // x with owner o's part given to e instead: its owners and its segs, e's dirs there OR-merged with o's.
@@ -189,6 +205,7 @@ function reassign(x: Cell, o: string, e: string): Cell {
     } else {
       out.push({ owner, dirs: s.dirs })
     }
+
     return out
   }, [])
   return { ...x, owners, ...(segs ? { segs } : {}) }
@@ -202,6 +219,7 @@ test('A5.mutation-tests: fuzz: a line cell given to another edge of its joined n
         if (!net(o)) {
           continue
         }
+
         for (const e of d.expect.edges) {
           if (e.id !== o && net(e.id) === net(o)) {
             yield [`(${r},${c}) ${o} as ${e.id}`, [[r, c, reassign(x, o, e.id)]]]
@@ -214,7 +232,8 @@ test('A5.mutation-tests: fuzz: a line cell given to another edge of its joined n
   assert.deepEqual(survivors, [])
 })
 
-// Each node's pill: the box of the cap, fill, text, cont and frame cells it draws as owners[0], if that box holds no other
+// Each node's pill: the box of the cap, fill, text, cont and frame cells it draws as owners[0], if that box holds no
+// other
 // cell; and the pill's shape, its empty, border and inner cells, so pills of one shape and size can swap.
 const PILL = new Set(['cap', 'fill', 'text', 'cont', 'frame'])
 function pills(d: Drawing) {
@@ -225,6 +244,7 @@ function pills(d: Drawing) {
     if (mine.length === 0) {
       continue
     }
+
     const [r0, r1, c0, c1] = [
       Math.min(...mine.map((p) => p.r)),
       Math.max(...mine.map((p) => p.r)),
@@ -235,6 +255,7 @@ function pills(d: Drawing) {
     if (rows.flat().some((x) => x && (x.owners[0] !== id || !PILL.has(x.kind)))) {
       continue
     }
+
     out.push({
       id,
       r: r0,
@@ -245,6 +266,7 @@ function pills(d: Drawing) {
         .join('/'),
     })
   }
+
   return out
 }
 // Whether swapping nodes a and b maps the source onto itself: each edge, its ends and its label, read with a and b
@@ -275,6 +297,7 @@ test('A5.mutation-tests: fuzz: two node pills of one shape and size swapped fail
         if (p.shape !== q.shape || automorphic(d, p.id, q.id)) {
           continue
         }
+
         const patch: Patch = p.rows.flatMap((row, y) =>
           row.flatMap(
             (x, k): Patch => [
@@ -291,8 +314,10 @@ test('A5.mutation-tests: fuzz: two node pills of one shape and size swapped fail
   assert.deepEqual(survivors, [])
 })
 
-// Where each label may lie, by its owner: an edge label within one cell of its edge's line or arrow cells (at least one of
-// its cells), a node's label inside its pill's box (every cell), a row's label in its mark's block right of the mark (every
+// Where each label may lie, by its owner: an edge label within one cell of its edge's line or arrow cells (at least one
+// of
+// its cells), a node's label inside its pill's box (every cell), a row's label in its mark's block right of the mark
+// (every
 // cell). Other text (titles, axes, legends) has no span to leave, so it is not moved.
 function spanOf(d: Drawing, owner: string): ((cells: [number, number][]) => boolean) | null {
   const all = spots(d)
@@ -301,6 +326,7 @@ function spanOf(d: Drawing, owner: string): ((cells: [number, number][]) => bool
     const route = all.filter((p) => (p.x.kind === 'line' || p.x.kind === 'arrow') && p.x.owners.includes(edge))
     return (cells) => cells.some(([r, c]) => route.some((q) => Math.max(Math.abs(r - q.r), Math.abs(c - q.c)) <= 1))
   }
+
   const box = pills(d).find((p) => p.id === owner)
   if (box) {
     return (cells) =>
@@ -308,11 +334,13 @@ function spanOf(d: Drawing, owner: string): ((cells: [number, number][]) => bool
         ([r, c]) => r >= box.r && r < box.r + box.rows.length && c >= box.c && c < box.c + box.rows[0]!.length,
       )
   }
+
   const rows = d.expect.rows ?? []
   const i = rows.findIndex((x) => x.owners.includes(owner))
   if (i < 0) {
     return null
   }
+
   const markAt = (k: number) => all.find((p) => p.x.owners.includes(rows[k]!.mark))!
   const m = markAt(i)
   const next = i + 1 < rows.length ? markAt(i + 1).r : d.cells.length
@@ -327,10 +355,12 @@ test("A5.mutation-tests: fuzz: a label moved one cell into free cells outside it
       if (!inSpan) {
         continue
       }
+
       const mine = spots(d).filter((p) => (p.x.kind === 'text' || p.x.kind === 'cont') && p.x.owners[0] === owner)
       if (mine.length === 0) {
         continue
       }
+
       const held = new Set(mine.map((p) => `${p.r},${p.c}`))
       for (const [dr, dc] of [
         [-1, 0],
@@ -345,6 +375,7 @@ test("A5.mutation-tests: fuzz: a label moved one cell into free cells outside it
         ) {
           continue
         }
+
         const patch: Patch = [
           ...mine.map((p): Patch[number] => [p.r, p.c, null]),
           ...mine.map((p, k): Patch[number] => [to[k]![0], to[k]![1], p.x]),
@@ -371,9 +402,11 @@ function units(d: Drawing): Unit[] {
       by.set(o, u)
     }
   }
+
   return [...by.values()]
 }
-// u's cells moved so its first cell is at (r, c), and v's to u's, as one patch; null if a target is off the grid or holds
+// u's cells moved so its first cell is at (r, c), and v's to u's, as one patch; null if a target is off the grid or
+// holds
 // a cell neither draws.
 function relocate(d: Drawing, us: readonly Unit[], to: readonly [number, number][]): Patch | null {
   const held = new Set(us.flatMap((u) => u.cells.map((p) => `${p.r},${p.c}`)))
@@ -385,12 +418,15 @@ function relocate(d: Drawing, us: readonly Unit[], to: readonly [number, number]
       if (r < 0 || c < 0 || r >= d.cells.length || (d.cells[r]![c] && !held.has(`${r},${c}`))) {
         return null
       }
+
       writes.push([r, c, p.x])
     }
   }
+
   if (new Set(writes.map(([r, c]) => `${r},${c}`)).size < writes.length) {
     return null
   }
+
   return [...us.flatMap((u) => u.cells.map((p): Patch[number] => [p.r, p.c, null])), ...writes]
 }
 
@@ -399,12 +435,14 @@ test('A5.mutation-tests: fuzz: two placed chart texts swapped fail', (t) => {
     if (!k.chart) {
       return
     }
+
     const us = units(d)
     for (const [i, u] of us.entries()) {
       for (const v of us.slice(i + 1)) {
         if (u.text === v.text) {
           continue
         }
+
         const patch = relocate(
           d,
           [u, v],
@@ -437,6 +475,7 @@ test('A5.mutation-tests: fuzz: a title, axis title, frame title, header or legen
         if (inSpan?.(u.cells.map((p) => [p.r + dr, p.c + dc]))) {
           continue
         }
+
         const patch = relocate(d, [u], [to])
         if (patch) {
           yield [`${u.owner} '${u.text}' by (${dr},${dc})`, patch]
@@ -491,6 +530,7 @@ test("A5.mutation-tests: fuzz: an edge's two end labels swapped fail", (t) => {
         if (!a || !b || a.text === b.text) {
           continue
         }
+
         const patch = relocate(
           d,
           [a, b],
@@ -510,7 +550,8 @@ test("A5.mutation-tests: fuzz: an edge's two end labels swapped fail", (t) => {
   assert.deepEqual(survivors, [])
 })
 
-// Bar glyphs by axis, and a bar's own cells: the caps in a bar glyph its owner draws. Each run's base and tip are redrawn,
+// Bar glyphs by axis, and a bar's own cells: the caps in a bar glyph its owner draws. Each run's base and tip are
+// redrawn,
 // since every inner cell is a full █ that the same rule reads; the tip is also cut, and grown by one cell.
 const BAR_GLYPHS = { h: [...'█▏▎▍▌▋▊▉'], v: [...'█▁▂▃▄▅▆▇'] } as const
 test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cell redrawn another length fails', (t) => {
@@ -527,11 +568,13 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
         if (!tip && has(pr, pc)) {
           continue
         }
+
         for (const g of BAR_GLYPHS[b.axis]) {
           if (g !== x.ch) {
             yield [`${b.owner} (${r},${c}) ${x.ch} as ${g}`, [[r, c, { ...x, ch: g }]]]
           }
         }
+
         if (tip) {
           yield [`${b.owner} (${r},${c}) cut`, [[r, c, null]]]
           if (nr >= 0 && !d.cells[nr]![nc]) {
@@ -545,9 +588,12 @@ test('A5.mutation-tests: fuzz: a bar one cell longer, one cell shorter, or a cel
   assert.deepEqual(survivors, [])
 })
 
-// X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each other
-// kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch instead (which
-// would read the same to labels), and a marker or another control character added to the first cells of each kind. The emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
+// X3. Emphasis: every text cell redrawn with each other em (none, bold, italic, both), and the first cells of each
+// other
+// kind given one, must fail. So must marker leaks: a text cell's em dropped and its marker written into ch instead
+// (which
+// would read the same to labels), and a marker or another control character added to the first cells of each kind. The
+// emphasis fixtures (flowchart-ok-59, state-ok-26, class-ok-32, er-ok-25, mindmap-ok-15)
 // are among the ok fixtures, so styled cells lose their style here too.
 test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cell given emphasis, fails', (t) => {
   const { mutants, survivors } = tally(t, 'emphasis', function* (d) {
@@ -563,6 +609,7 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
             ]
           }
         }
+
         for (const em of [1, 2, 3]) {
           yield [
             `(${r},${c}) ${x.ch} em ${x.em ?? 0} as marker ${em} in ch`,
@@ -570,14 +617,17 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
           ]
         }
       }
+
       const n = seen.get(x.kind) ?? 0
       seen.set(x.kind, n + 1)
       if (n >= 3) {
         continue
       }
+
       if (x.kind !== 'text') {
         yield [`(${r},${c}) ${x.kind} ${x.ch} given em 1`, [[r, c, { ...x, em: 1 }]]]
       }
+
       for (const ctl of [marker(1), marker(2), marker(3), String.fromCharCode(0), String.fromCharCode(27)]) {
         yield [
           `(${r},${c}) ${x.kind} ${JSON.stringify(x.ch)} with ${JSON.stringify(ctl)}`,
@@ -591,7 +641,8 @@ test('X3.emphasis: fuzz: a text cell drawn with other emphasis, or any other cel
 })
 
 // A whole edge redrawn in another line style, solid, thick or dotted: every line cell only it draws gets that style's
-// arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A cell
+// arms, style and glyph, so each cell is self-consistent and the edge reads as another kind of arrow (━━► for ──►). A
+// cell
 // it shares (a stem, a crossing) is left as drawn; an edge with no cell of its own is skipped.
 const RESTYLE = { solid: ['light', '1'], thick: ['heavy', '2'], dotted: ['dotted', '1'] } as const
 test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails', (t) => {
@@ -603,14 +654,17 @@ test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails'
         if (!e.style) {
           continue
         }
+
         const own = spots(d).filter((p) => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
         if (own.length === 0) {
           continue
         }
+
         for (const to of ['solid', 'thick', 'dotted'] as const) {
           if (to === e.style) {
             continue
           }
+
           const [style, w] = RESTYLE[to]
           yield [
             `${e.id} ${e.style} as ${to}`,
@@ -629,7 +683,8 @@ test('A5.mutation-tests: fuzz: a whole edge redrawn in another line style fails'
 })
 
 // An edge's line cut out, as compaction cuts slack: every column (row) whose drawn cells are only that edge's own
-// straight ─ (│) is removed, the grid closing up, so its head meets its node and no line shows its style (A►B for A┄┄►B).
+// straight ─ (│) is removed, the grid closing up, so its head meets its node and no line shows its style (A►B for
+// A┄┄►B).
 // Only a cut that leaves the edge no line cell is a mutant: one that just shortens a longer line draws the same edge.
 // As one patch: every cell that the removal changes.
 function cut(d: Drawing, cols: ReadonlySet<number>, rws: ReadonlySet<number>): Patch {
@@ -645,6 +700,7 @@ function cut(d: Drawing, cols: ReadonlySet<number>, rws: ReadonlySet<number>): P
   )
   return out
 }
+
 test('A5.mutation-tests: fuzz: an edge with its own line cut out, its head against its node, fails', (t) => {
   const { mutants, survivors } = tally(
     t,
@@ -667,6 +723,7 @@ test('A5.mutation-tests: fuzz: an edge with its own line cut out, its head again
         if (cols.size > 0 && gone((_, c) => cols.has(c))) {
           yield [`${e.id} columns cut`, cut(d, cols, new Set())]
         }
+
         if (rws.size > 0 && gone((r) => rws.has(r))) {
           yield [`${e.id} rows cut`, cut(d, new Set(), rws)]
         }
@@ -701,6 +758,7 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', (t) =>
             if (y < 0 || x < 0 || y >= d.cells.length || x >= d.cells[y]!.length || d.cells[y]![x]) {
               continue
             }
+
             yield [
               `${id} head at (${y},${x})`,
               [[y, x, { ch: '►', role: 'arrow', kind: 'arrow', owners: [id], dirs: 0 }]],
@@ -735,8 +793,10 @@ test('A5.mutation-tests: fuzz: a cell drawn for an invisible edge fails', (t) =>
 })
 
 // An edge's glyphs copied to a spot joined to nothing, in the first empty 5×5 window of the grid: its first
-// own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part no
-// arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side: no
+// own cell alone, and a closed 3×3 ring in its own style (┌─┐ │ │ └─┘, or the dotted or heavy kin), the only stray part
+// no
+// arm leaves open. And that ring set against one of its label's cells, a corner beside it, under, over or either side:
+// no
 // arm of the ring points at the label, so it is joined to nothing still. Each is a second, stray component of the edge.
 const RING = [
   [0, 0, 6],
@@ -762,11 +822,13 @@ test("A5.mutation-tests: fuzz: an edge's glyphs copied to a spot joined to nothi
           }
         }
       }
+
       for (const e of d.expect.edges) {
         const own = spots(d).find((p) => p.x.kind === 'line' && p.x.owners.length === 1 && p.x.owners[0] === e.id)
         if (!own) {
           continue
         }
+
         const style = own.x.style ?? 'light'
         const w = style === 'heavy' ? '2' : '1'
         const ring = (r0: number, c0: number): Patch =>
@@ -804,6 +866,7 @@ test("A5.mutation-tests: fuzz: an edge's glyphs copied to a spot joined to nothi
             if (r0 < 0 || c0 < 0 || !RING.every(([dr, dc]) => free(r0 + dr, c0 + dc))) {
               continue
             }
+
             yield [`${e.id} ring at (${r0},${c0}) beside its label`, ring(r0, c0)]
           }
         }

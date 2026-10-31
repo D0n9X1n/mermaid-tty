@@ -56,6 +56,7 @@ test('A5.errors: an entity or subgraph id equal to an owner id the drawing mints
       body,
     )
   }
+
   assert.equal(X('r5 ||--o{ B : x').step, 'natural') // r5 names no relation here
 })
 test('A3: an identifying relation is solid, a non-identifying one dashed', () => {

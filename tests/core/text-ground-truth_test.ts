@@ -1,6 +1,8 @@
 // Each drawn field against what Mermaid 12.2.0 shows: 16
-// cases, each rendered as X{case}Y in Chrome under securityLevel strict. A case Mermaid shows as written draws as written; one
-// it splits at its <br> draws as split lines; any other, shown as other text, swallowed (MISS) or an error (ERR), falls back.
+// cases, each rendered as X{case}Y in Chrome under securityLevel strict. A case Mermaid shows as written draws as
+// written; one
+// it splits at its <br> draws as split lines; any other, shown as other text, swallowed (MISS) or an error (ERR), falls
+// back.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { isFail, type Fail } from '../../core/fail.ts'
@@ -41,7 +43,8 @@ const TRUTH = {
 const BRS = [9, 10, 11, 12]
 const TAG = 13
 
-// A drawn field: the text it draws for a case, one string per row, or its Fail. strict: the cases it falls back on though
+// A drawn field: the text it draws for a case, one string per row, or its Fail. strict: the cases it falls back on
+// though
 // Mermaid shows them as written or split, where the drawing cannot match (a <br> in one-line text) or the field's mode
 // cannot tell (sanitized: any <).
 // shows: the cases it draws as the text Mermaid shows, as the truth gives it (a #…; code decoded).
@@ -59,6 +62,7 @@ function drawn(src: string, owner: string): string[] | Fail {
   if (isFail(r)) {
     return r
   }
+
   return r.drawing.cells.flatMap((cells) => {
     const t = cells
       .flatMap((c) => ((c?.kind === 'text' || c?.kind === 'cont') && c.owners[0] === owner ? [c.ch] : []))
@@ -114,19 +118,23 @@ test('A5.errors: ground truth: a flowchart node label, edge label and subgraph t
   fields.forEach(check)
 })
 
-// An alias draws in a one-line pill, and a frame's label and a box's title on its border, so a <br> there falls back. A box
+// An alias draws in a one-line pill, and a frame's label and a box's title on its border, so a <br> there falls back. A
+// box
 // title is sanitized: any < falls back, <b>z</b> too.
 test('A5.errors: ground truth: a sequence message, note, alias, frame label and box title draw each case as Mermaid shows it, or fall back', () => {
-  // Each case drawn as X{case}Y, as the truth was rendered, then the X and Y dropped: Mermaid ends a sequence statement at
+  // Each case drawn as X{case}Y, as the truth was rendered, then the X and Y dropped: Mermaid ends a sequence statement
+  // at
   // a ;, so &lt; alone draws &lt as Mermaid shows it, while X&lt;Y fails in both.
   const S = (body: string, owner: string) => drawn(`sequenceDiagram\n${body}`, owner)
   const xy = (d: string[] | Fail): string[] | Fail => {
     if (isFail(d)) {
       return d
     }
+
     if (!d[0]?.startsWith('X') || !d.at(-1)?.endsWith('Y')) {
       return { reason: 'not X…Y' } as Fail
     }
+
     return d.map((t, i) => (i === 0 ? t.slice(1) : t)).map((t, i, a) => (i === a.length - 1 ? t.slice(0, -1) : t))
   }
   const frame = (c: string) => {
@@ -148,7 +156,8 @@ test('A5.errors: ground truth: a sequence message, note, alias, frame label and 
   fields.forEach(check)
 })
 
-// A slice draws every <br> spelling as written, on its one row. A title is sanitized: any < falls back, and so do a<br>b
+// A slice draws every <br> spelling as written, on its one row. A title is sanitized: any < falls back, and so do
+// a<br>b
 // and <b>z</b>, which Mermaid shows as written.
 test('A5.errors: ground truth: a pie slice and title, on the header or a statement, draw each case as Mermaid shows it, or fall back', () => {
   const fields: Field[] = [
@@ -164,7 +173,8 @@ test('A5.errors: ground truth: a pie slice and title, on the header or a stateme
   fields.forEach(check)
 })
 
-// xychart has no layout yet, so each text is what the parser keeps, one line. Each is sanitized with no <br>, as the title;
+// xychart has no layout yet, so each text is what the parser keeps, one line. Each is sanitized with no <br>, as the
+// title;
 // Mermaid's axis titles were not probed, so they take the title's truth.
 test('A5.errors: ground truth: an xychart title, category and axis titles keep each case as Mermaid shows it, or fall back', () => {
   const X =
@@ -215,7 +225,8 @@ test('A5.errors: ground truth: a <br> with a non-HTML space, or a </br>, falls b
   )
 })
 
-// QA repro: Mermaid 12.2.0 shows sequence `title a<!--c-->b` as ab. A sequence title, statement or frontmatter, is sanitized
+// QA repro: Mermaid 12.2.0 shows sequence `title a<!--c-->b` as ab. A sequence title, statement or frontmatter, is
+// sanitized
 // with no <br>, as a pie title is.
 test('A5.errors: ground truth: a sequence title, statement or frontmatter, is sanitized: a < or a <br> falls back', () => {
   const T = (src: string) => {
@@ -238,8 +249,10 @@ test('A5.errors: ground truth: a sequence title, statement or frontmatter, is sa
   )
 })
 
-// QA repro: Mermaid 12.2.0 shows a frontmatter title "ﬂ°x¶ß" as &x; and "a<!--c-->b" as ab, in every type. explain checks
-// it as a sanitized title with no <br>. Only those two cases were probed for frontmatter; the rest take the title's truth.
+// QA repro: Mermaid 12.2.0 shows a frontmatter title "ﬂ°x¶ß" as &x; and "a<!--c-->b" as ab, in every type. explain
+// checks
+// it as a sanitized title with no <br>. Only those two cases were probed for frontmatter; the rest take the title's
+// truth.
 // #9829; falls back though encodeEntities never sees frontmatter, so Mermaid may show it as written: conservative.
 test('A5.errors: ground truth: a frontmatter title draws each case as Mermaid shows a title, or falls back, in pie, flowchart and xychart', () => {
   const F = (body: string) => (c: string) => drawn(`---\ntitle: "${c}"\n---\n${body}`, 'title')
@@ -252,7 +265,8 @@ test('A5.errors: ground truth: a frontmatter title draws each case as Mermaid sh
 })
 
 // X2. QA repro: Mermaid 12.2.0 shows ER A["a<!--c-->b"] as ab. Every ER text is an HTML label (erBox's createText). An
-// entity's label draws in a one-line pill, an attribute's comment in one row, and a subgraph's title on its frame's border,
+// entity's label draws in a one-line pill, an attribute's comment in one row, and a subgraph's title on its frame's
+// border,
 // so a <br> there falls back; a relation's label splits at each <br>.
 test('A5.errors: ground truth: an ER entity label, relation label, attribute comment and subgraph title draw each case as Mermaid shows it, or fall back', () => {
   const E = (body: string, owner: string) => (c: string) => drawn(`erDiagram\n${body.replace('$', c)}`, owner)
@@ -265,7 +279,8 @@ test('A5.errors: ground truth: an ER entity label, relation label, attribute com
   fields.forEach(check)
 })
 
-// X2. journey: a task or section never splits, so each <br> spelling draws as written (plain, literal); an actor shows a
+// X2. journey: a task or section never splits, so each <br> spelling draws as written (plain, literal); an actor shows
+// a
 // <br> as a space, so any <br falls back; a title is sanitized with no <br>. Every field falls back on a marker.
 test('A5.errors: ground truth: a journey task, section, actor and title draw as Mermaid shows them, or fall back', () => {
   const J = (body: string, owner: string) => (c: string) => drawn(`journey\n${body.replace('$', c)}`, owner)
@@ -302,7 +317,8 @@ test('A5.errors: ground truth: a journey task, section, actor and title draw as 
   )
 })
 
-// X2. Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T for
+// X2. Every quadrant text is sanitized (quadrantDb's textSanitizer; a title by setDiagramTitle), with no <br>: column T
+// for
 // quoted text. Unquoted text cannot hold < or > (quadrant.jison), but a marker falls back there too.
 test('A5.errors: ground truth: a quadrant title, axis, quadrant and point text keep each case as Mermaid shows it, or fall back', () => {
   const Q =
@@ -340,14 +356,17 @@ test('A5.errors: ground truth: a gantt title draws each case as Mermaid shows it
   fields.forEach(check)
 })
 
-// X3 (Mermaid 12.2.0 source): createText runs replaceIconSubstring and, given $$…$$, KaTeX on every HTML label, and marked
-// on a markdown one (class, state, ER, mindmap; not a flowchart's plain label). Each cross-family QA repro falls back; an
+// X3 (Mermaid 12.2.0 source): createText runs replaceIconSubstring and, given $$…$$, KaTeX on every HTML label, and
+// marked
+// on a markdown one (class, state, ER, mindmap; not a flowchart's plain label). Each cross-family QA repro falls back;
+// an
 // ordinary label in each field still draws.
 const reason = (src: string): string | null => {
   const r = explain(src, { columns: 120, theme: 'mono' })
   return isFail(r) ? r.reason : null
 }
-// gitGraph is parsed but not yet drawn (explain: unimplemented), so its whitespace repros are in gitGraph-parse_test.ts.
+// gitGraph is parsed but not yet drawn (explain: unimplemented), so its whitespace repros are in
+// gitGraph-parse_test.ts.
 test('X3: QA repros: Markdown other than bold and italic, icons and math in class, state and ER labels, ER comments and class notes fall back', () => {
   const repros = [
     'classDiagram\nclass A["**a **b** c**"]',

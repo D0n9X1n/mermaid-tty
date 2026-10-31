@@ -12,7 +12,8 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { ensureSpawnHelper, ptyCommand, startSession, waitForText, type Driver } from './driver.ts'
 import { sessionEnv } from './env.ts'
 
-// The program each session runs. It writes its pid to dir/pid; draws its size and env and a colored row; then shows on one
+// The program each session runs. It writes its pid to dir/pid; draws its size and env and a colored row; then shows on
+// one
 // line, redrawn, every byte typed so far; on the first enter copies '读 hi' with OSC 52; and on q says bye and exits. A
 // hangup it answers as a program that first saves its state would: it exits 300 ms later, and errors on its closed tty
 // do not end it sooner.
@@ -115,8 +116,10 @@ async function gone(pid: number): Promise<boolean> {
       return true
     }
   }
+
   return false
 }
+
 const SKIP = { pty: false, tmux: process.platform === 'win32' || spawnSync('tmux', ['-V']).status !== 0 }
 
 for (const driver of ['pty', 'tmux'] as const) {
@@ -126,7 +129,8 @@ for (const driver of ['pty', 'tmux'] as const) {
     async () => {
       const s = await start(driver)
       try {
-        // The program takes a while to start, so waitFor finds ready only on a later poll; it resolves to the screen's text.
+        // The program takes a while to start, so waitFor finds ready only on a later poll; it resolves to the screen's
+        // text.
         assert.deepEqual((await s.waitFor(/ready/, 10000)).split('\n').slice(0, 4), [
           first(driver),
           '读 b',
@@ -158,7 +162,8 @@ for (const driver of ['pty', 'tmux'] as const) {
       } finally {
         await s.stop()
       }
-      // stop() resolves once the program has exited, here 300 ms after its hangup. On Windows node-pty's exit is that of
+      // stop() resolves once the program has exited, here 300 ms after its hangup. On Windows node-pty's exit is that
+      // of
       // cmd.exe, which may come first, so there the program is polled for.
       assert.equal(process.platform === 'win32' ? await gone(pid()) : !alive(pid()), true)
       // A second stop() resolves too.
@@ -186,6 +191,7 @@ for (const driver of ['pty', 'tmux'] as const) {
         } else {
           assert.deepEqual([lines.slice(0, 39), /^Pane is dead \(status 0, [^)]+\)$/.test(lines[39]!)], [drawn, true])
         }
+
         await assert.rejects(s.waitFor(/never/, 300), {
           message: `waitFor /never/ timed out after 300 ms; the screen:\n${screen}`,
         })
@@ -207,6 +213,7 @@ test(
     } finally {
       await s.stop()
     }
+
     assert.equal(existsSync(socketPath()), false)
   },
 )
@@ -231,6 +238,7 @@ for (const driver of ['pty', 'tmux'] as const) {
         for (const p of pids) {
           assert.equal(await gone(p), true, `pid ${p}`)
         }
+
         if (driver === 'tmux') {
           assert.equal(existsSync(socketPath()), false)
         }
@@ -272,6 +280,7 @@ for (const early of [false, true]) {
             process.kill(parent, 'SIGHUP')
             assert.equal(await gone(parent), true)
           }
+
           await s.stop()
           assert.deepEqual([await gone(parent), await gone(child)], [true, true])
         } finally {
@@ -280,6 +289,7 @@ for (const early of [false, true]) {
               process.kill(child, 'SIGKILL')
             } catch {}
           }
+
           await s.stop()
         }
       },
@@ -322,6 +332,7 @@ test(
           } catch {}
         }
       }
+
       await s.stop()
     }
   },
@@ -359,6 +370,7 @@ for (const driver of ['pty', 'tmux'] as const) {
         } else {
           process.kill(parent, 'SIGKILL')
         }
+
         assert.equal(await gone(parent), true)
         await s.stop()
         assert.deepEqual([await gone(parent), await gone(child)], [true, true])
@@ -373,6 +385,7 @@ for (const driver of ['pty', 'tmux'] as const) {
             } catch {}
           }
         }
+
         await s.stop()
       }
     },
@@ -426,11 +439,13 @@ test(
           process.kill(server, 'SIGCONT')
         } catch {}
       }
+
       if (prog > 0) {
         try {
           process.kill(prog, 'SIGKILL')
         } catch {}
       }
+
       await s.stop()
     }
   },
@@ -460,6 +475,7 @@ test(
           } catch {}
         }
       }
+
       await s.stop()
     }
   },

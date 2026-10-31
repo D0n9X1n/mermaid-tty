@@ -80,8 +80,10 @@ test('A5.mutation-tests: expect.bars lists every xychart bar; a deleted or one-l
   assert.deepEqual(validate(cut((k) => k !== cols.at(-1))), { reason: 'bar' }) // drawn one lane narrow
 })
 
-// Beyond the plan's tests. inks: each `${kind} ${role}` of d's cells, with the sorted owners that draw it. texts and labelled:
-// the sorted owners of d's text cells, each once, and of its expect.labels. undef: whether a field, at any depth, is undefined.
+// Beyond the plan's tests. inks: each `${kind} ${role}` of d's cells, with the sorted owners that draw it. texts and
+// labelled:
+// the sorted owners of d's text cells, each once, and of its expect.labels. undef: whether a field, at any depth, is
+// undefined.
 const inks = (d: any) => {
   const m: Record<string, Set<string>> = {}
   for (const c of d.cells.flat()) {
@@ -89,6 +91,7 @@ const inks = (d: any) => {
       ;(m[`${c.kind} ${c.role}`] ??= new Set()).add(c.owners[0])
     }
   }
+
   return Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].sort()]))
 }
 const texts = (d: any) =>
@@ -256,7 +259,8 @@ test('A4: an explicit bound prints as written; a computed bound and the midpoint
   assert.deepEqual(ticks('xychart-beta\ny-axis 0.50 --> +2.0\nline [1, 1.5]'), ['+2.0', '1.25', '0.50'])
   assert.deepEqual(ticks('xychart-beta\nline [0, 2.50]'), ['2.5', '1.25', '0'])
 })
-// T72 QA: a horizontal point is placed from y0, not from 0: with y-axis 10 --> 20, the values 10, 15 and 20 sit at field
+// T72 QA: a horizontal point is placed from y0, not from 0: with y-axis 10 --> 20, the values 10, 15 and 20 sit at
+// field
 // cells 0, 9 and 18 (W = 19), after the tag column.
 test('A4: horizontal points sit at cellOf(v − y0, M, W) when y0 is not 0', () => {
   const t = text(X('xychart-beta horizontal\ny-axis 10 --> 20\nline [10, 15, 20]', 25).drawing)

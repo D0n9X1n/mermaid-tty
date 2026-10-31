@@ -28,6 +28,7 @@ async function planReply($: any, e: any, theme: string, mode: () => Promise<Mode
   if (columns === undefined || passThrough(e.surface, e.props, m)) {
     return null
   }
+
   const log = (reason: string) => {
     try {
       void Promise.resolve($.ui.log(`mermaid-tty fallback: ${reason}`, { to: 'debug' })).catch(() => {})
@@ -46,6 +47,7 @@ async function planReply($: any, e: any, theme: string, mode: () => Promise<Mode
         picture = pictureFor($, store, s.body, look, columns, log)
       } catch {}
     }
+
     const r =
       s.kind === 'mermaid' && !picture ? renderer.render(s.body, { columns, theme }, (f) => log(f.reason)) : null
     if (picture) {
@@ -61,9 +63,11 @@ async function planReply($: any, e: any, theme: string, mode: () => Promise<Mode
       }
     }
   }
+
   if (!parts.some((p) => !('prose' in p))) {
     return null
   }
+
   const { Box, Text, Image } = $.ui.resolve(e)
   return { parts, Box, Text, Image }
 }

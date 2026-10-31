@@ -24,10 +24,13 @@ test('A5.errors: a Tier 2 type passes the gate only with a vr-C-<type> pass reco
   assert.deepEqual(tier2Problems('radar', ALL, [rec(ALL.slice(1))], read), [
     'vr-C-radar: fixtures/radar/radar-ok-01.mmd',
   ]) // a fixture not listed
-  assert.equal(tier2Problems('radar', ALL, [rec(ALL.slice(0, 1)), rec(ALL.slice(1))], read).length, 1) // a fixture-only and a golden-only record do not add up
-  for (const records of [[rec([])], [], [rec(ALL, 'fail')], [rec(ALL, 'pass', 'vr-C-sankey')]]) { // empty table, no record, fail, other scope
+  // a fixture-only and a golden-only record do not add up
+  assert.equal(tier2Problems('radar', ALL, [rec(ALL.slice(0, 1)), rec(ALL.slice(1))], read).length, 1)
+  // empty table, no record, fail, other scope
+  for (const records of [[rec([])], [], [rec(ALL, 'fail')], [rec(ALL, 'pass', 'vr-C-sankey')]]) {
     assert.equal(tier2Problems('radar', ALL, records, read).length, 2)
   }
+
   assert.equal(
     tier2Problems('radar', ALL, [rec(ALL)], (p) => (p.endsWith('.mmd') ? 'radar-beta\n' : read(p))).length,
     1,

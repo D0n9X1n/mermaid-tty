@@ -16,6 +16,7 @@ test('A3: each shape shows its own caps; a <br> label takes one row per line', (
   for (const p of ['(( C ))', '[ S ]', '( R )', ')) B ((', ') L (', '{{ H }}']) {
     assert.ok(t.join('\n').includes(p), p)
   }
+
   assert.ok(t[i + 1]!.endsWith(' g'))
 })
 test('A4.fit-ladder: narrowing takes natural, compact, wrapped labels, the outline, then fallback, in that order', () => {
@@ -120,7 +121,8 @@ test('A4.fit-ladder: wrap tries 24 before narrower widths; the outline tries its
 // Parentage is checked: each link is an expected edge the validator traces, so pills moved under another parent fail.
 const L = (body: string, step: string, columns: number) =>
   mindmap.layout(parseMindmap(readSource(`mindmap\n${body}`) as any) as any, step as any, columns) as any
-// A clone of d with the complete cells owned by a and b exchanged, ownership and expect kept; null if their shapes differ.
+// A clone of d with the complete cells owned by a and b exchanged, ownership and expect kept; null if their shapes
+// differ.
 function swap(d: any, a: string, b: string): any {
   const cells = d.cells.map((row: any[]) => [...row])
   const of = (o: string) =>
@@ -133,12 +135,14 @@ function swap(d: any, a: string, b: string): any {
   if (p.length === 0 || rel(p) !== rel(q)) {
     return null
   }
+
   p.forEach((y: any, i: number) => {
     cells[q[i].r][q[i].c] = y.x
     cells[y.r][y.c] = q[i].x
   })
   return { ...d, cells }
 }
+
 const STEPS = ['natural', 'compact', 'wrap', 'outline']
 const WIDTHS = [30, 40, 60, 80, 120]
 test('validate: the QA swap, X and Y exchanged between A and B, fails at every step and width', () => {
@@ -149,11 +153,13 @@ test('validate: the QA swap, X and Y exchanged between A and B, fails at every s
       if (d.cells === undefined) {
         continue
       }
+
       seen.add(step)
       assert.equal(validate(d), null, `${step} ${cols}`)
       assert.notEqual(validate(swap(d, 'm2', 'm4')), null, `${step} ${cols}`)
     }
   }
+
   assert.deepEqual([...seen], STEPS)
 })
 test("validate: a child moved onto a sibling's trunk fails, tree and outline", () => {
@@ -185,6 +191,7 @@ test('validate: every swap of two same-shaped pills with different parents fails
         if (d.cells === undefined) {
           continue
         }
+
         const ids = d.expect.labels.map((l: any) => l.owner)
         const parent = new Map(d.expect.edges.map((e: any) => [e.to, e.from]))
         assert.equal(parent.size, ids.length - 1, 'each child declares its parent link')
@@ -193,6 +200,7 @@ test('validate: every swap of two same-shaped pills with different parents fails
             if (a >= b || parent.get(a) === parent.get(b)) {
               continue
             }
+
             const m = swap(d, a, b)
             if (m) {
               n++
@@ -203,9 +211,11 @@ test('validate: every swap of two same-shaped pills with different parents fails
       }
     }
   }
+
   assert.ok(n > 50, `${n} mutants`)
 })
-// QA's cross-family repro: X and Y swapped, and their links redrawn to cross through one shared column, ┬ over ┴, so each
+// QA's cross-family repro: X and Y swapped, and their links redrawn to cross through one shared column, ┬ over ┴, so
+// each
 // pill sits under the other's parent. The links have no end marks, so only a rule on unmarked merges catches it.
 test('validate: unmarked links from different parents merged through one trunk fail merge-ambiguous', () => {
   const d = swap(X('Root\n  A\n    X\n  B\n    Y', 80).drawing, 'm2', 'm4')
@@ -236,12 +246,14 @@ test('validate: unmarked links from different parents merged through one trunk f
       cv.line(r, c, dirs, 'light', 'edge', o)
     }
   }
+
   const drawn = cv.toDrawing(d.expect)
   for (const [, p] of paths) {
     for (const [r, c] of p) {
       d.cells[r][c] = drawn.cells[r]![c]
     }
   }
+
   assert.deepEqual(text(d), [' Root ─┬─ A ─┬─ Y', '       └─ B ─┴─ X'])
   assert.equal(validate(d)?.reason, 'merge-ambiguous')
 })

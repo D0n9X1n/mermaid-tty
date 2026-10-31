@@ -43,6 +43,7 @@ test('A3: one row per label line; no border-only rows', () => {
       )
     }
   }
+
   assert.match(text(d).join('\n'), /\[ one \][\s\S]*▼[\s\S]*\[ +two +\]/)
 })
 
@@ -156,6 +157,7 @@ test('every shape validates; every row of every box has its caps, owned by the n
       for (const n of gr.nodes) {
         n.shape = shape
       }
+
       const { p, d } = D(gr, wrapAt)
       const at = `${shape} ${label}`
       assert.equal(validate(d), null, at)
@@ -177,6 +179,7 @@ test('every shape validates; every row of every box has its caps, owned by the n
           )
         }
       }
+
       const a = p.boxes.get('A')!
       if (label === 'one') {
         assert.equal(text(d)[a.row]!.slice(a.col), `${l} one ${r}`.trimEnd(), at)
@@ -239,6 +242,7 @@ test('fan-in: edges into one node share one arrowhead, owned by each, and valida
     const { d } = D(g('TB', specs))
     assert.equal(validate(d), null, specs.join(' '))
   }
+
   const { d } = D(g('TB', ['A>C', 'B>C']))
   assert.deepEqual(
     d.cells

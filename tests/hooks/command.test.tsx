@@ -113,6 +113,7 @@ test('A6.command: an argument that is not a string replies with the usage and ke
       want.push(USAGE, `mermaid-tty mode: ${m}`, m === 'diagram')
     }
   }
+
   expect(got).toEqual(want)
 })
 

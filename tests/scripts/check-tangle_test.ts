@@ -1,5 +1,7 @@
-// check-tangle.ts: report(label, blocks, show) runs the tangle check on each block at 60, 80 and 120 columns, then lists each
-// hit, each id that hit, or only the counts. The CLI reports the goldens, adds --corpus and --private DIR, and exits 1 on any hit.
+// check-tangle.ts: report(label, blocks, show) runs the tangle check on each block at 60, 80 and 120 columns, then
+// lists each
+// hit, each id that hit, or only the counts. The CLI reports the goldens, adds --corpus and --private DIR, and exits 1
+// on any hit.
 import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -24,7 +26,8 @@ function tmp(t: TestContext): string {
   t.after(() => rmSync(d, { recursive: true, force: true }))
   return d
 }
-// explain with every arrow cell wiped: each edge keeps its end marks in expect but loses its head, so ambiguous-head fires.
+// explain with every arrow cell wiped: each edge keeps its end marks in expect but loses its head, so ambiguous-head
+// fires.
 const headless: typeof explain = (s, o) => {
   const r = explain(s, o)
   if (!isFail(r)) {
@@ -36,6 +39,7 @@ const headless: typeof explain = (s, o) => {
       })
     }
   }
+
   return r
 }
 const blocks = [
@@ -98,6 +102,7 @@ test('VR.tangled: the goldens are the -ok- fixtures of every fixtures/ folder bu
   for (const t of ['flowchart', 'sequence', ...TIER1]) {
     assert.ok(ids.includes(`${t}-ok-01`), t)
   }
+
   assert.deepEqual(
     ids.filter((id) => !/^[A-Za-z]+-ok-\d+$/.test(id) || id.startsWith('corpus-')),
     [],

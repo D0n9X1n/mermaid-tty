@@ -57,6 +57,7 @@ function scratch(files: Record<string, string>, body: (dir: string) => void): vo
       mkdirSync(dirname(join(dir, file)), { recursive: true })
       writeFileSync(join(dir, file), text)
     }
+
     body(dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -78,6 +79,7 @@ function check(dir: string, id: string, env: Record<string, string> = {}) {
     steps: r.stderr.split(/\r?\n/).filter((l) => l.startsWith('> ')),
   }
 }
+
 function emptyPath<T>(body: () => T): T {
   const saved = process.env.PATH
   process.env.PATH = ''
@@ -87,6 +89,7 @@ function emptyPath<T>(body: () => T): T {
     process.env.PATH = saved
   }
 }
+
 const nodeTest = (...tests: string[]) =>
   `import test, { describe, it } from 'node:test'\nimport assert from 'node:assert/strict'\n${tests.join('\n')}\n`
 // Files @nt must not run: a kit test, and a .ts file not named *_test.ts.
@@ -249,7 +252,8 @@ function assertNoRun(r: ReturnType<typeof check>, id: string): void {
   assert.deepEqual(r.steps, ['> @nt'], id)
   assert.match(r.stderr, new RegExp(`^no tests ran for ${id.replaceAll('.', '\\.')}$`, 'm'), id)
 }
-// Tests node:test passes that execute no assertion: the forms the static scan must catch, and each placeholder form. Under
+// Tests node:test passes that execute no assertion: the forms the static scan must catch, and each placeholder form.
+// Under
 // check.ts's preload each fails, so @nt fails. [what, the tests in tests/a_test.ts]
 const UNASSERTING: [string, string][] = [
   [
@@ -284,7 +288,8 @@ for (const [what, tests] of UNASSERTING) {
       assert.match(r.stdout, /error: 'no assertion executed'/)
     }))
 }
-// Accepted: an EventEmitterAsyncResource runs its listeners in the async context it was made in, so a node:assert call in
+// Accepted: an EventEmitterAsyncResource runs its listeners in the async context it was made in, so a node:assert call
+// in
 // a listener of one made outside the test counts for no test (count.ts). Such a test must assert in its own flow too.
 test('A8.validation: @nt fails on a test whose only assertion is in a listener of an EventEmitterAsyncResource made outside it', () =>
   scratch(
@@ -400,7 +405,8 @@ test('A8.validation: @nt fails and stops the row when only an empty suite matche
     },
     (dir) => assertNoRun(check(dir, 'A1'), 'A1'),
   ))
-// Each skipped or todo test with a function calls an assertion, so only the reporter's exclusion keeps it from counting.
+// Each skipped or todo test with a function calls an assertion, so only the reporter's exclusion keeps it from
+// counting.
 test('A8.validation: @nt fails when every matching test is skipped, at the top level or in a suite, by option, .skip or t.skip', () =>
   scratch(
     {

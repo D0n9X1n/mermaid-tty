@@ -18,8 +18,10 @@ const TD: readonly Step[] = ['natural', 'wrap']
 const ink = (k: number): SeriesKey => `s${(k % 8) + 1}` as SeriesKey
 const widest = (ps: readonly Piece[]): number => Math.max(0, ...ps.map((p) => width(p.text)))
 
-// t's rows at most max cells wide: split at each lowercase <br>, the only break Mermaid 12.2.0 makes in a timeline (parse.ts),
-// so <BR> or <br/> draws as written; each line wrapped. A later line's first piece joins '\n', so validate reads one label.
+// t's rows at most max cells wide: split at each lowercase <br>, the only break Mermaid 12.2.0 makes in a timeline
+// (parse.ts),
+// so <BR> or <br/> draws as written; each line wrapped. A later line's first piece joins '\n', so validate reads one
+// label.
 // null if a word is wider than max.
 function pieces(t: string, max: number): Piece[] | null {
   const out: Piece[] = []
@@ -28,11 +30,14 @@ function pieces(t: string, max: number): Piece[] | null {
     if (!ps) {
       return null
     }
+
     ps.forEach((p, j) => out.push(j > 0 || i === 0 ? p : { ...p, join: '\n' }))
   }
+
   return out
 }
-// ps drawn down from row r at column c in ink, owned by owner, and listed in labels as text, placed at its first cell; its
+// ps drawn down from row r at column c in ink, owned by owner, and listed in labels as text, placed at its first cell;
+// its
 // row count. So a section, period or event cannot leave its span.
 type Labels = Expect['labels'][number][]
 function put(
@@ -49,6 +54,7 @@ function put(
   labels.push(placed(owner, label(text), ps, r, c))
   return ps.length
 }
+
 const label = (t: string): string => t.split('<br>').join('\n')
 
 // Each period with its owner index k, its section's index s, and its ink: its section's, when sections are named; else
@@ -76,6 +82,7 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   if (heads.some((h) => !h) || evs.flat().some((e) => !e)) {
     return fail('too-wide')
   }
+
   const cw = its.map((_, i) => Math.max(widest(heads[i]!), ...evs[i]!.map((e) => widest(e!))) + 2)
   const spans = tl.sections.map((_, s) => its.filter((p) => p.s === s).map((p) => p.k))
   const names: Piece[][] = []
@@ -83,25 +90,31 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
     if (sec.name === null) {
       continue
     }
+
     const ks = spans[s]!
     const ps = pieces(sec.name, ks.length * (w + 1) - 3)
     if (ks.length === 0) {
       return fail('empty-section')
     }
+
     if (!ps) {
       return fail('too-wide')
     }
+
     const span = ks.reduce((t, k) => t + cw[k]!, 0) + gap * (ks.length - 1)
     const need = widest(ps) + 2
     if (need > span) {
       cw[ks.at(-1)!]! += need - span
     }
+
     names[s] = ps
   }
+
   const total = cw.reduce((t, c) => t + c, 0) + gap * Math.max(0, n - 1)
   if (total > columns) {
     return fail('too-wide')
   }
+
   const x = cw.map((_, i) => cw.slice(0, i).reduce((t, c) => t + c + gap, 0))
   const S = Math.max(0, ...names.map((ps) => ps?.length ?? 0))
   const P = Math.max(0, ...heads.map((h) => h!.length))
@@ -121,6 +134,7 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
       r += put(cv, labels, e, evs[p.k]![j]!, r, at, p.ink, `p${p.k}.e${j}`)
     })
   }
+
   const dots = new Map(its.map((p) => [x[p.k]!, p]))
   for (let c = 0; c < total; c++) {
     const p = dots.get(c)
@@ -130,14 +144,18 @@ function lr(tl: Timeline, step: Step, columns: number): Drawing | Fail {
       cv.cap(S + P, c, '─', 'edge', 'axis')
     }
   }
+
   const glyphs = its.map((p) => ({ owner: `p${p.k}:mark`, ch: '●', at: { r: S + P, c: x[p.k]! } }))
   return cv.toDrawing({ labels, edges: [], edgeLabels: [], frames: [], glyphs })
 }
 
-// TD, unwrapped, or with wrapped true: section names wrap to columns, periods to columns − 2 and events to columns − 4. A
+// TD, unwrapped, or with wrapped true: section names wrap to columns, periods to columns − 2 and events to columns − 4.
+// A
 // section name takes its own rows before its first period. A period's ● and pill share its first row; each later row it
-// takes, its pill's and its events', starts with │, and an event's pill sits after two blank cells. 'too-wide' if a word
-// is wider than its field, or, unwrapped, a row is wider than columns: rows end at their text, as validate measures them.
+// takes, its pill's and its events', starts with │, and an event's pill sits after two blank cells. 'too-wide' if a
+// word
+// is wider than its field, or, unwrapped, a row is wider than columns: rows end at their text, as validate measures
+// them.
 function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
   const its = items(tl)
   const cap = (less: number) => (wrapped ? columns - less : Infinity)
@@ -147,6 +165,7 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
   if (names.some((x) => !x) || heads.some((h) => !h) || evs.flat().some((e) => !e)) {
     return fail('too-wide')
   }
+
   const wide = Math.max(
     ...names.map((x) => widest(x!)),
     ...heads.map((h) => widest(h!) + 2),
@@ -155,6 +174,7 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
   if (wide > columns) {
     return fail('too-wide')
   }
+
   const height =
     names.reduce((t, x) => t + x!.length, 0) +
     heads.reduce((t, h) => t + h!.length, 0) +
@@ -167,6 +187,7 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
     if (sec.name !== null) {
       r += put(cv, labels, sec.name, names[s]!, r, 0, ink(s), `sec${s}`)
     }
+
     for (const p of its.filter((q) => q.s === s)) {
       const top = r
       cv.cap(r, 0, '●', p.ink, `p${p.k}:mark`)
@@ -184,16 +205,20 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
 }
 
 // LR, and a bare header: natural, tight, wrap, then lrToTd, which draws TD wrapped. TD: natural, unwrapped, then wrap.
-// lrToTd needs no unwrapped try first: TD unwrapped fits only when every text fits its field, and then wrapping to those
-// fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns (common rule 3).
+// lrToTd needs no unwrapped try first: TD unwrapped fits only when every text fits its field, and then wrapping to
+// those
+// fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns (common
+// rule 3).
 function layout(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   if (!(tl.dir === 'TD' ? TD : LR).includes(step)) {
     return fail('step')
   }
+
   const body = tl.dir === 'TD' || step === 'lrToTd' ? td(tl, step !== 'natural', columns) : lr(tl, step, columns)
   if (isFail(body) || tl.title === null) {
     return body
   }
+
   const head = heading(tl.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
 }

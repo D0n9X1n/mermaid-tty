@@ -20,6 +20,7 @@ function touchingMarks(d: any): string[] {
       if (mark(r, c) && mark(r, c + 1)) {
         out.push(`${r},${c} ${r},${c + 1}`)
       }
+
       if (mark(r, c) && mark(r + 1, c)) {
         out.push(`${r},${c} ${r + 1},${c}`)
       }

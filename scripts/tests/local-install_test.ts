@@ -1,9 +1,15 @@
-// B5, every PR: scripts/test-local-install.sh, run for real by bash, with a scratch bin first on PATH that holds a strict fake
-// claude and, in one case, a fake cygpath. The caller's CLAUDE_CONFIG_DIR is a sentinel dir with one marker file. Each run
-// checks the script's output and what it did, never how a path is spelled: the add → install → list calls the fake claude
-// logged, each finding in the dir it was handed the markers of the calls before it, and no others; that the sentinel still
-// holds exactly its marker, which a call handed any alias of the sentinel breaks; that a watch on the sentinel saw no change
-// during the run, not even one undone before the run ended; and that TMPDIR, a fresh empty dir for each run, is empty after it.
+// B5, every PR: scripts/test-local-install.sh, run for real by bash, with a scratch bin first on PATH that holds a
+// strict fake
+// claude and, in one case, a fake cygpath. The caller's CLAUDE_CONFIG_DIR is a sentinel dir with one marker file. Each
+// run
+// checks the script's output and what it did, never how a path is spelled: the add → install → list calls the fake
+// claude
+// logged, each finding in the dir it was handed the markers of the calls before it, and no others; that the sentinel
+// still
+// holds exactly its marker, which a call handed any alias of the sentinel breaks; that a watch on the sentinel saw no
+// change
+// during the run, not even one undone before the run ended; and that TMPDIR, a fresh empty dir for each run, is empty
+// after it.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -18,10 +24,14 @@ const version: string = JSON.parse(readFileSync(join(root, '.claude-plugin/plugi
 const NO_BASH = spawnSync('bash', ['-c', 'exit 0']).status !== 0 && 'needs bash on PATH (Git Bash on Windows)'
 const OURS = 'mermaid-tty@mermaid-tty'
 const OK = `local install: ok (mermaid-tty ${version})\n`
-// The fake claude writes a marker, fake-claude-<pid>-<n> for its nth call, into the config dir it is handed, CLAUDE_CONFIG_DIR or,
-// unset or empty, claude's default ~/.claude, by that path as the shell resolves it. It logs to claude.log beside it, tab-separated:
-// the marker's name, the markers the dir held before, and argv. A dir it cannot enter or write in fails the call. It fails an add
-// of any dir but the repo root (MTTY_REPO), and an install before that add or of any plugin but ours; plugin list prints
+// The fake claude writes a marker, fake-claude-<pid>-<n> for its nth call, into the config dir it is handed,
+// CLAUDE_CONFIG_DIR or,
+// unset or empty, claude's default ~/.claude, by that path as the shell resolves it. It logs to claude.log beside it,
+// tab-separated:
+// the marker's name, the markers the dir held before, and argv. A dir it cannot enter or write in fails the call. It
+// fails an add
+// of any dir but the repo root (MTTY_REPO), and an install before that add or of any plugin but ours; plugin list
+// prints
 // MTTY_PLUGIN_LIST only after that install, and an empty list before. Any other call fails.
 const CLAUDE = [
   '#!/bin/sh',
@@ -46,10 +56,12 @@ const CLAUDE = [
   'esac',
   '',
 ].join('\n')
-// Git Bash's cygpath -w prints another form of the mktemp path. This one prints it with /. appended: the same dir, in a form
+// Git Bash's cygpath -w prints another form of the mktemp path. This one prints it with /. appended: the same dir, in a
+// form
 // rm -rf refuses, so a trap that removed the form handed to claude would leave the dir behind.
 const CYGPATH = ['#!/bin/sh', `printf '%s/.\\n' "$2"`, ''].join('\n')
-// claude plugin list's format: a header and a blank line, then per plugin an id line, its fields indented, and a blank line.
+// claude plugin list's format: a header and a blank line, then per plugin an id line, its fields indented, and a blank
+// line.
 const entry = (id: string, v: string) => [
   `  ❯ ${id}`,
   `    Version: ${v}`,
@@ -59,7 +71,8 @@ const entry = (id: string, v: string) => [
   '',
 ]
 const list = (...entries: string[][]) => ['Installed plugins:', '', ...entries.flat()].join('\n') + '\n'
-// Every run's calls, in order: the add, the install and the list, each labelled one dir: the dir it was handed held the markers
+// Every run's calls, in order: the add, the install and the list, each labelled one dir: the dir it was handed held the
+// markers
 // of the calls before it, and no others, so all three wrote to one dir.
 const CALLS = [
   ['one dir', 'plugin', 'marketplace', 'add', './'],
@@ -77,14 +90,19 @@ const holds = (dir: string) =>
         e.isFile() ? readFileSync(join(dir, e.name), 'utf8') : '(not a file)',
       ])
     : null
-// macOS and Windows watch a whole tree natively. Elsewhere (Linux) Node emulates that, checking what exists as it handles each
-// event, so it misses an entry made and removed while spawnSync blocks the event loop. There the watch covers dir's own entries
-// only, which, with the sentinel's listing after the run checked against SENTINEL, its listing before, covers a dir with no subdirs.
+// macOS and Windows watch a whole tree natively. Elsewhere (Linux) Node emulates that, checking what exists as it
+// handles each
+// event, so it misses an entry made and removed while spawnSync blocks the event loop. There the watch covers dir's own
+// entries
+// only, which, with the sentinel's listing after the run checked against SENTINEL, its listing before, covers a dir
+// with no subdirs.
 const RECURSIVE = process.platform === 'darwin' || process.platform === 'win32'
 // How long a watch may take to report a change. macOS can also report writes made just before the watch began.
 const LAG = 200
-// Calls run while watching dir. Returns run's result and the changes the watch reported up to LAG ms after run returned, but
-// none from before run: it waits until the watch has been quiet for LAG ms, at most 25 times, since macOS can deliver the
+// Calls run while watching dir. Returns run's result and the changes the watch reported up to LAG ms after run
+// returned, but
+// none from before run: it waits until the watch has been quiet for LAG ms, at most 25 times, since macOS can deliver
+// the
 // creation of dir's own files well after the watch starts.
 async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
   const changes: string[] = []
@@ -95,6 +113,7 @@ async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
       seen = changes.length
       await sleep(LAG)
     }
+
     changes.length = 0
     const result = run()
     await sleep(LAG)
@@ -104,9 +123,12 @@ async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
   }
 }
 
-// Runs the script with bash from the repo root, as CI does, with TMPDIR a fresh empty dir, while watching the sentinel, the
-// caller's CLAUDE_CONFIG_DIR; HOME is its parent, so ~/.claude is the sentinel too. Returns the script's exit status and output,
-// the fake claude's calls, what the sentinel holds after the run and the changes watched in it during the run, and what is left
+// Runs the script with bash from the repo root, as CI does, with TMPDIR a fresh empty dir, while watching the sentinel,
+// the
+// caller's CLAUDE_CONFIG_DIR; HOME is its parent, so ~/.claude is the sentinel too. Returns the script's exit status
+// and output,
+// the fake claude's calls, what the sentinel holds after the run and the changes watched in it during the run, and what
+// is left
 // in TMPDIR.
 async function localInstall(pluginList: string, { cygpath = false } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'mtty-'))
@@ -121,11 +143,13 @@ async function localInstall(pluginList: string, { cygpath = false } = {}) {
     for (const [name, text] of SENTINEL) {
       writeFileSync(join(sentinel, name), text)
     }
+
     writeFileSync(join(bin, 'claude'), CLAUDE, { mode: 0o755 })
     if (cygpath) {
       writeFileSync(join(bin, 'cygpath'), CYGPATH, { mode: 0o755 })
     }
-    // Windows names it Path: drop every spelling, so the child gets one PATH, with the scratch bin first. MTTY_REPO has /
+    // Windows names it Path: drop every spelling, so the child gets one PATH, with the scratch bin first. MTTY_REPO has
+    // /
     // separators, a form Git Bash's cd takes too.
     const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toUpperCase() !== 'PATH'))
     const [r, changes] = await watching(sentinel, () =>
@@ -143,7 +167,8 @@ async function localInstall(pluginList: string, { cygpath = false } = {}) {
         },
       }),
     )
-    // Each call as its argv after a label: one dir if the dir it was handed held exactly the markers of the calls before it.
+    // Each call as its argv after a label: one dir if the dir it was handed held exactly the markers of the calls
+    // before it.
     const log = lines(join(bin, 'claude.log')).map((l) => l.split('\t'))
     const names = log.map(([name = '']) => name)
     const calls = log.map(([, found = '', ...argv], i) => {
@@ -151,7 +176,8 @@ async function localInstall(pluginList: string, { cygpath = false } = {}) {
       const want = names.slice(0, i).sort().join(' ')
       return [got === want ? 'one dir' : `found ${got || 'no marker'}, not ${want || 'none'}`, ...argv]
     })
-    // Left behind: TMPDIR's entries. TMPDIR starts empty, so anything the script left under it, at any depth, shows here.
+    // Left behind: TMPDIR's entries. TMPDIR starts empty, so anything the script left under it, at any depth, shows
+    // here.
     return {
       status: r.status,
       stdout: r.stdout,
@@ -245,7 +271,8 @@ test(
     assert.deepEqual(r.left, [])
   },
 )
-// Runs miss effects like a write outside the sentinel and TMPDIR, so the script is pinned: each edit shows in review as a new pin.
+// Runs miss effects like a write outside the sentinel and TMPDIR, so the script is pinned: each edit shows in review as
+// a new pin.
 test('local install: the script matches its pinned SHA-256', () => {
   const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').replaceAll('\r\n', '\n')
   assert.equal(

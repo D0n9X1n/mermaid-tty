@@ -13,9 +13,11 @@ export function main(source: string = readFileSync(FIXTURE, 'utf8')): number {
     console.error('smoke: renderMermaid returned null, so the source falls back')
     return 1
   }
+
   for (const row of rows) {
     console.log(row.map((s) => s.text).join(''))
   }
+
   return 0
 }
 

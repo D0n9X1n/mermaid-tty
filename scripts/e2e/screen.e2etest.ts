@@ -1,4 +1,5 @@
-// The screen reader the e2e harness reads a session through. It needs @xterm/headless, so only the e2e job, which installs
+// The screen reader the e2e harness reads a session through. It needs @xterm/headless, so only the e2e job, which
+// installs
 // scripts/e2e's packages, runs this.
 import test from 'node:test'
 import assert from 'node:assert/strict'

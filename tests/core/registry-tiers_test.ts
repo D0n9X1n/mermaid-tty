@@ -38,6 +38,7 @@ test('A5.errors: ENABLED is A, Tier 1 and the passed Tier 2 types; every other T
       assert.deepEqual(lookup(k), { reason: `disabled:${t}` }, k)
     }
   }
+
   assert.deepEqual(explain('radar-beta\naxis A', { columns: 80 }), { reason: 'disabled:radar' })
 })
 test('A5.errors: every Tier 1 keyword resolves to its registered module', () => {
@@ -64,7 +65,8 @@ test('B1: supportTable lists each ENABLED type with its header keywords', () => 
   assert.equal(t.length, 2 + ENABLED.size)
 })
 
-// Beyond the plan's three tests: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; and a Tier 1
+// Beyond the plan's three tests: all.ts holds each Tier 1 type once, so none is left out behind a duplicate; and a Tier
+// 1
 // type whose module fails falls back through explain. The last test files a failing module, the shape T40's stub had
 // (T85 deleted core/diagrams/stub.ts), in each module's place, then files the module back.
 const stub = (type: DiagramType): DiagramModule => {

@@ -22,10 +22,12 @@ function graph(src: string): Graph {
   if (isFail(s)) {
     throw new Error(s.reason)
   }
+
   const g = flowchart.parse(s)
   if (isFail(g)) {
     throw new Error(g.reason)
   }
+
   return g
 }
 // What layout → route → draw makes of g at spacing s and the given columns, or the first Fail.
@@ -34,9 +36,11 @@ function pipeline(g: Graph, s: Spacing, columns: number): Drawing | Fail {
   if (isFail(placed)) {
     return placed
   }
+
   const routes = routeGraph(placed)
   return isFail(routes) ? routes : drawGraph(placed, routes, columns)
 }
+
 const verdict = (d: Drawing | Fail) => (isFail(d) ? d.reason : (validate(d)?.reason ?? 'valid'))
 const LONG = 'A[the quick brown fox jumps over the lazy dog] --> B[ok]'
 
@@ -98,6 +102,7 @@ test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarke
       )
     }
   }
+
   assert.equal(validate(drawGraph(p, rs, 80)), null)
   const result = explain(
     'flowchart TB\nN0 --> N1\nN0 --> N2\nN1 --> N4\nN3 -->|Q| N4\nN5 ~~~ N3\nN5 --- N2\nN4 --> N5',
@@ -196,6 +201,7 @@ test('A1: R2 label exits keep a one-column-compatible target port on their axis'
       r.edge,
     )
   }
+
   assert.equal(validate(drawGraph(p, rs, 80)), null)
   const source = readFileSync(new URL('../../fixtures/corpus/corpus-023.mmd', import.meta.url), 'utf8')
   const result = explain(source, { columns: 80 })
@@ -479,6 +485,7 @@ test('A4.fit-ladder: lrToTd draws LR as TB and RL as BT at the tight spacing, tr
       )
       assert.deepEqual(flowchart.layout(g, 'lrToTd', columns), td(tried[tried.length - 1] ?? null), `${dir} ${columns}`)
     }
+
     assert.equal(g.dir, dir)
   }
 })

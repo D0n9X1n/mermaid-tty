@@ -16,6 +16,7 @@ test('A1: headers and directions', () => {
   ]) {
     assert.equal(P(`flowchart ${d}\nA`).dir, w)
   }
+
   assert.equal(P('graph LR\nA').dir, 'LR')
   assert.equal(P('flowchart\nA').dir, 'TB')
   assert.equal(P('graph\nA').dir, 'TB')
@@ -42,6 +43,7 @@ test('A1: every bracket shape, @{shape}, quoted and <br/> labels', () => {
   for (const [src, shape] of S) {
     assert.equal(P(`flowchart TD\n${src}`).nodes[0].shape, shape, src)
   }
+
   assert.equal(P('flowchart TD\nA["a, b: (c)!"]').nodes[0].rows[0].text, 'a, b: (c)!')
   assert.deepEqual(
     P('flowchart TD\nA[one<br/>two<br>three]').nodes[0].rows.map((r: any) => r.text),
@@ -65,7 +67,8 @@ const N = (id: string, shape: string, role: string, order: number, ...lines: str
 // The graph a node-only flowchart with no frontmatter title should give.
 const G = (dir: string, ...nodes: object[]) => ({ dir, title: null, nodes, edges: [], clusters: [] })
 
-// One node-only input per row of the diagram matrix's flowchart tables that T13 can parse; rows with links wait for T14.
+// One node-only input per row of the diagram matrix's flowchart tables that T13 can parse; rows with links wait for
+// T14.
 test('A1: matrix rows flowchart-ok-01…22 and -49 parse to their graphs', () => {
   const rows: [string, string, object][] = [
     ['flowchart-ok-01', 'flowchart TD\nA[Start]', G('TB', N('A', 'rect', 'node', 0, 'Start'))],
@@ -236,8 +239,10 @@ test('A5.errors: an @{…} label is checked like a bracket label', () => {
   assert.deepEqual(P('flowchart TD\nA@{ shape: cyl, label: "a\u{200D}b" }'), { reason: 'unsupported-char U+200D' })
 })
 
-// Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and backquotes,
-// joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style nested in itself or
+// Mermaid 12.2.0 lexes "`…`" as a Markdown string (labelType markdown): it shows the text without its quotes and
+// backquotes,
+// joined to any text after it, through marked. Emphasis draws (X3.emphasis below); an escape, a style nested in itself
+// or
 // a block start falls back as any Markdown field's does.
 test('A1: a "`…`" Markdown string with no emphasis draws its text, as Mermaid shows it', () => {
   const g = P(
@@ -281,7 +286,8 @@ test('A5.errors: a Markdown string with emphasis the port cannot match, or an es
   ])
 })
 
-// Mermaid 12.2.0 (encodeEntities, then the browser) shows a #…; code as its character: a decimal code, or a name it knows.
+// Mermaid 12.2.0 (encodeEntities, then the browser) shows a #…; code as its character: a decimal code, or a name it
+// knows.
 test('A1: a #…; code draws as the character Mermaid shows: a decimal code or a known name; # and ; apart are text', () => {
   const g = P(
     'flowchart TD\nA["#quot;"] -->|#35; x| B[a #9829; #169; #59; b]\nC@{ label: "x #amp; y" }\nsubgraph s [t #lt; u]\nB\nend',
@@ -312,7 +318,8 @@ test('A5.errors: a #…; code Mermaid would not show as one drawable character f
   assert.equal(P('flowchart TD\nA-->B\nclick A href "https://x.y/#a;"').edges.length, 1)
 })
 
-// Mermaid 12.2.0 reads an @{ … } body with a line break as a YAML block mapping: key: value lines at one indent, then }.
+// Mermaid 12.2.0 reads an @{ … } body with a line break as a YAML block mapping: key: value lines at one indent, then
+// }.
 test('A1: an @{ … } split over lines, one key: value per line at one indent, draws as its one-line form', () => {
   const pairs = [
     ['A@{\n  shape: rounded\n  label: "x y"\n}', 'A@{ shape: rounded, label: "x y" }'],
@@ -339,7 +346,8 @@ test('A5.errors: an @{ … } over lines falls back where its YAML may read other
   )
 })
 
-// Mermaid 12.2.0 gives an @{ label } labelType markdown (flowDb sanitizeNodeLabelType): A@{ label: "a*b*c" } shows a<em>b</em>c.
+// Mermaid 12.2.0 gives an @{ label } labelType markdown (flowDb sanitizeNodeLabelType): A@{ label: "a*b*c" } shows
+// a<em>b</em>c.
 test('A5.errors: an @{ label } is a Markdown label: what the emphasis port cannot match falls back as markdown, as in other Markdown fields', () => {
   const bad = ['A@{ label: "**a **b** c**" }', 'A@{ label: "*a *b* c*" }', "A@{ label: 'a \\* b' }"]
   assert.deepEqual(
@@ -399,7 +407,8 @@ test('A5.errors: an @{…} body that does not read whole as key: value pairs, ea
   )
 })
 
-// A blank label line, from consecutive <br/> or a <br/> leading or trailing the trimmed label, is a box row with no text,
+// A blank label line, from consecutive <br/> or a <br/> leading or trailing the trimmed label, is a box row with no
+// text,
 // and an inline edge label whose middle line the router cannot place. A label blank as a whole is still allowed.
 test('A5.errors: a node or edge label with a blank line fails label-blank-line', () => {
   const bad = [
@@ -423,7 +432,8 @@ test('A5.errors: a node or edge label with a blank line fails label-blank-line',
   }
 })
 // X3. Mermaid 12.2.0 draws a flowchart node, edge label or subgraph title (labelType 'text') through createText with
-// markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX, and
+// markdown off: marked never runs, so **x** shows as written, but replaceIconSubstring swaps an icon, $$…$$ is KaTeX,
+// and
 // nonMarkdownToHTML turns a literal \n into <br />.
 test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls back; Markdown in a plain label draws', () => {
   for (const [s, why] of [
@@ -437,6 +447,7 @@ test('X3: an icon, a $$…$$ formula or a literal \\n in a flowchart label falls
   ]) {
     assert.deepEqual(P(`flowchart TD\n${s}`), { reason: why }, s)
   }
+
   assert.ok(!('reason' in P('flowchart TD\nA["**bold** snake_case"] -->|_x_| B')))
 })
 
@@ -457,13 +468,15 @@ test('A literal \\n in an HTML flowchart label is a line break, as Mermaid draws
       s,
     )
   }
+
   assert.deepEqual(
     ['A["a\\n"]', 'A["a\\n\\nb"]', 'A["a\\n<br>b"]'].map((s) => F(s).reason),
     ['label-blank-line', 'label-blank-line', 'label-blank-line'],
   )
 })
 
-// Cross-family review of 37a8ff2: each repro verified against Mermaid 12.2.0 under JSDOM. Where we would draw other than
+// Cross-family review of 37a8ff2: each repro verified against Mermaid 12.2.0 under JSDOM. Where we would draw other
+// than
 // Mermaid shows, we fall back.
 const F = (s: string) => P(`flowchart TD\n${s}`)
 test('A1: a "`…`" subgraph title takes its text as id, as Mermaid does, so A --> C joins the cluster', () => {
@@ -748,7 +761,8 @@ test('A1: an id the lexer of Mermaid reads as itself still draws: styleX, endpoi
   )
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph title
+// X3. Mermaid 12.2.0 (JSDOM): A["`**b** *i*`"] shows <strong>b</strong> <em>i</em>, as do an edge label, a subgraph
+// title
 // and an @{ label } (labelType markdown). Each draws as the marked string core/emphasis.ts makes.
 test('X3.emphasis: bold and italic in a Markdown string or an @{ label } draw as Mermaid shows them', () => {
   const g = P(

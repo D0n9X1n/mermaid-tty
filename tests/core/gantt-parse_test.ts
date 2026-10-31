@@ -64,6 +64,7 @@ test('A5.errors: unsupported statements and bad dates, durations, ids, reference
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(P('dateFormat HH:mm\nA :17:49, 2m'), { reason: 'axis-format' })
 })
 
@@ -135,12 +136,14 @@ test('A5.errors: an end past the Date range falls back with its line; one at the
   assert.deepEqual(P('A :2024-01-01, 100000000d'), { reason: 'date:2' })
   assert.equal(P('A :1970-01-01, 100000000d').tasks[0].end, 8.64e15)
 })
-// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so #9829; shows ♥: such text would draw
+// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so #9829; shows ♥: such text would
+// draw
 // differently here, so it falls back. A # with no ; is text.
 test('A5.errors: a #…; entity in a body title, a section or a task name falls back; a lone # is text', () => {
   for (const body of ['title Love #9829;', 'section #lt;3', 'A #9829; :2024-01-01, 1d']) {
     assert.deepEqual(P(`${body}\nX :2024-01-01, 1d`), { reason: 'entity' }, body)
   }
+
   const g = P('title C# plan\nsection C#\nF# port :2024-01-01, 1d')
   assert.deepEqual([g.title, g.sections, g.tasks[0].name], ['C# plan', ['C#'], 'F# port'])
 })
@@ -171,8 +174,10 @@ test('A5.errors: a second title, from frontmatter or a statement, and an undrawa
   }
 })
 
-// Mermaid 12.2.0's ganttDb resolves times in up to 11 passes in source order. A pass reads a task not yet resolved as no
-// time: `after a b` with b later takes a's end alone, and the first task of a chain of 11 forward references never resolves.
+// Mermaid 12.2.0's ganttDb resolves times in up to 11 passes in source order. A pass reads a task not yet resolved as
+// no
+// time: `after a b` with b later takes a's end alone, and the first task of a chain of 11 forward references never
+// resolves.
 // Such charts would draw differently here, so they fall back.
 const chain = (k: number) =>
   [...Array.from({ length: k }, (_, i) => `T${i} :t${i}, after t${i + 1}, 1d`), `T${k} :t${k}, 2024-01-01, 1d`].join(
@@ -207,6 +212,7 @@ test('A5.errors: a click Mermaid would not read on its line, an axisFormat with 
   ]) {
     assert.deepEqual(P(`A :a1, 2024-01-01, 1d\n${line}`), { reason: 'syntax:3' }, line)
   }
+
   for (const line of [
     'click a1 call cb()',
     'click a1 call cb(x, "y") href "u"',

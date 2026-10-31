@@ -11,8 +11,10 @@ function marks(
   for (const [id, [r, col]] of Object.entries(at)) {
     c.cap(r, col, '●', 'node', id)
   }
+
   return c.toDrawing({ labels: [], edges: [], edgeLabels: [], frames: [], order })
 }
+
 test('C: order passes owners drawn in strictly increasing rows, in one column when column is set', () => {
   assert.equal(
     validate(

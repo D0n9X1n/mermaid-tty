@@ -84,7 +84,8 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
 }
 const shape = (p: any) => p?.parts.map((x: any) => ('prose' in x ? 'prose' : 'rows' in x ? 'rows' : 'picture'))
 
-// Only a fence core parses becomes a picture: BAD (a character core rejects) stays prose. FAN parses but is too wide for
+// Only a fence core parses becomes a picture: BAD (a character core rejects) stays prose. FAN parses but is too wide
+// for
 // text at 40 columns, so its picture stands in for its source.
 const FAN =
   '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
@@ -122,6 +123,7 @@ test('A6.command: text mode, mono, tmux and source never run mmdc', async () => 
     await s.idle()
     assert.deepEqual(runs, [])
   }
+
   const { $, runs } = pix()
   const s = createPictures()
   assert.equal(await safePlan($, ev(`a\n${FC}b`), 'default', async () => 'source' as const, s), null)

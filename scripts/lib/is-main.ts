@@ -26,9 +26,11 @@ export function isMain(meta: { url: string; main?: boolean }): boolean {
   if (typeof meta.main === 'boolean') {
     return meta.main
   }
+
   const argv1 = process.argv[1]
   if (!argv1) {
     return false
   }
+
   return meta.url === pathToFileURL(realPath(resolve(argv1))).href
 }

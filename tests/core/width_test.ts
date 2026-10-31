@@ -44,6 +44,7 @@ test('A4.width-table: widths', () => {
   ] as const) {
     assert.equal(width(s), w, cps(s))
   }
+
   assert.equal(isWide(0x1f680), true)
 })
 
@@ -69,6 +70,7 @@ test('A4.width-table: isWide is true at lo and hi, false at lo-1 and hi+1', () =
   for (const [lo, hi] of RANGES) {
     bounds(lo, hi)
   }
+
   assert.deepEqual(
     [WIDE[0], WIDE[1], WIDE.at(-2), WIDE.at(-1)],
     [0x1100, 0x115f, 0x30000, 0x3fffd],
@@ -97,6 +99,7 @@ test('A4.width-table: unsupported text falls back', () => {
   ] as const) {
     assert.equal(unsupported(s), cp, cps(s))
   }
+
   for (const s of ['plain', '中文', 'é', 'a​b']) {
     assert.equal(unsupported(s), null, s)
   }

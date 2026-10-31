@@ -78,6 +78,7 @@ test('A2: autonumber off draws a message unnumbered, and a restart draws from it
   for (const s of ['10. a', '20. c', '3. d']) {
     assert.ok(t.includes(s), s)
   }
+
   assert.ok(!/\d\. b/.test(t), 'b is unnumbered')
 })
 test('A2: a note left of and right of a participant sits one column off its lifeline', () => {
@@ -258,6 +259,7 @@ function touching(d: any): string[] {
       if (c?.kind !== 'frame') {
         return
       }
+
       const b = rects.get(c.owners[0]) ?? [y, y, x, x]
       rects.set(c.owners[0], [Math.min(b[0]!, y), Math.max(b[1]!, y), Math.min(b[2]!, x), Math.max(b[3]!, x)])
     }),
@@ -267,6 +269,7 @@ function touching(d: any): string[] {
       if (!['text', 'cont', 'fill', 'cap'].includes(c?.kind)) {
         return
       }
+
       for (const [o, [t, b, l, r]] of rects) {
         const on =
           y === t || y === b ? x >= l! && x <= r! : y > t! && y < b! && [l!, r!].some((k) => Math.abs(x - k) <= 1)
@@ -278,6 +281,7 @@ function touching(d: any): string[] {
   )
   return out
 }
+
 test('A2: no sequence golden draws a label on a frame border or beside one of its sides', () => {
   for (const f of readdirSync('fixtures/sequence').filter((f) => f.includes('-ok-'))) {
     for (const w of [60, 80, 120]) {
@@ -355,7 +359,8 @@ test('A2: a rect from one box into another, which would cross both borders, fall
   })
 })
 // A frame in a boxed diagram draws only where Mermaid 12.2.0's own geometry keeps it inside a box, or clear of
-// it, whatever the text widths; a self-message, a note on one lifeline, a deactivation outside the frame's run, or nesting
+// it, whatever the text widths; a self-message, a note on one lifeline, a deactivation outside the frame's run, or
+// nesting
 // that reaches the box's border falls back. Each repro was checked against Mermaid 12.2.0.
 const TEAM = 'box Team\nparticipant A\nparticipant B\nend\n'
 const nest = (n: number, body: string) => `${'rect\n'.repeat(n)}${body}\n${'end\n'.repeat(n)}`
@@ -387,7 +392,8 @@ test('A2: in a boxed diagram, a frame a wide note widens over a lifeline beyond 
   }
 })
 // Without a box, a frame covers exactly the lifelines Mermaid 12.2.0's frame covers, or the diagram falls back. Mermaid
-// sizes a frame to its contents' bounds, 10 px beyond them per frame open inside it; a self-message reaches max(text / 2,
+// sizes a frame to its contents' bounds, 10 px beyond them per frame open inside it; a self-message reaches max(text /
+// 2,
 // 75) px from its lifeline and a note on one lifeline its own width, each widening only the gap on one side.
 test('A2: without a box, a frame that a self-message or a wide note widens over a lifeline Mermaid leaves out falls back', () => {
   // Repro 1: Mermaid's outer rect ends at x=171, B at 275; ours enclosed B.

@@ -21,6 +21,7 @@ test('A3: every glyph mark is one cell whatever its rows, caps or direction; a b
     assert.deepEqual(nodeSize(wide, 2), { rows: 1, cols: 1 }, mark)
     assert.deepEqual(nodeSize(wide, 2, true), { rows: 1, cols: 1 }, `${mark} across`)
   }
+
   assert.deepEqual(nodeSize(N([], { mark: 'bar' }), null), { rows: 1, cols: 1 })
   assert.deepEqual(nodeSize(N([], { mark: 'bar' }), null, true), { rows: 1, cols: 1 })
   assert.deepEqual(nodeSize(N([{ text: 'ab', role: 'node', align: 'center' }]), null, true), { rows: 1, cols: 6 })
@@ -116,6 +117,7 @@ test('A3: a note on either side leaves its node sized by its rows alone', () => 
       side,
     )
   }
+
   assert.deepEqual(nodeSize(plain, 8), { rows: 1, cols: 10 })
 })
 // T40/T49 QA: a fixed row is sized by its terminal width, so a wide (CJK) member takes two cells a character.

@@ -26,6 +26,7 @@ test('A8.portability: forbidden tokens and imports are found; comments and strin
   ]) {
     assert.notDeepEqual(scanSource(s), [], s)
   }
+
   for (const s of [
     "import type { Register } from 'claude-code'",
     "import { width } from './width.ts'",
@@ -35,6 +36,7 @@ test('A8.portability: forbidden tokens and imports are found; comments and strin
   ]) {
     assert.deepEqual(scanSource(s), [], s)
   }
+
   assert.deepEqual(scanRepo('.'), [])
 })
 test('A8.platforms: .gitattributes keeps text files LF', () =>
@@ -299,11 +301,13 @@ function scratch<T>(files: Record<string, string>, body: (dir: string) => T): T 
       mkdirSync(dirname(join(dir, f)), { recursive: true })
       writeFileSync(join(dir, f), text)
     }
+
     return body(dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 }
+
 test('A8.portability: scanRepo reports file:line token in core/ and hooks/ .ts and .tsx files, and a dependencies key', () =>
   scratch(REPO, (dir) => assert.deepEqual(scanRepo(dir), PROBLEMS)))
 test('A8.portability: check-portable.ts prints the problems and exits 1, and exits 0 on this repo', () => {

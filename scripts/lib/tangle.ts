@@ -1,5 +1,6 @@
 // scripts/lib/tangle.ts — the independent tangle check (VR.tangled): a second reviewer over each golden. It looks for a
-// drawing that passes core/validate.ts but would confuse a reader. It reads only the drawing's cells and expect, and shares
+// drawing that passes core/validate.ts but would confuse a reader. It reads only the drawing's cells and expect, and
+// shares
 // no logic with the validator, so one bug cannot hide in both.
 import type { Cell, Drawing } from '../../core/canvas.ts'
 
@@ -9,7 +10,8 @@ type Drawn = { r: number; c: number; x: Cell }
 const cellAt = (d: Drawing, r: number, c: number): Cell | null => d.cells[r]?.[c] ?? null
 const ownedBy = (x: Cell | null, id: string): boolean => x?.owners.includes(id) ?? false
 
-// The nodes: label owners that are neither an edge label nor a frame. A frame owns a frame cell, or a line cell drawn for
+// The nodes: label owners that are neither an edge label nor a frame. A frame owns a frame cell, or a line cell drawn
+// for
 // no edge: a sequence frame's divider.
 function nodes(d: Drawing, all: readonly Drawn[]): string[] {
   const edges = new Set(d.expect.edges.map((e) => e.id))
@@ -27,7 +29,8 @@ const AXES: readonly (readonly [number, number])[] = [
   [1, 0],
 ]
 
-// Whether x is part of node n: owned by n and not its lifeline, a background that messages cross by design, as a frame's is.
+// Whether x is part of node n: owned by n and not its lifeline, a background that messages cross by design, as a
+// frame's is.
 const ofNode = (x: Cell | null, n: string): boolean => x?.kind !== 'lifeline' && ownedBy(x, n)
 
 // through-node: a line or arrow cell between two cells of one node, left and right or up and down.
@@ -46,8 +49,10 @@ function throughNode(d: Drawing, all: readonly Drawn[]): boolean {
 const marks = (d: Drawing): Set<string> => new Set((d.expect.rows ?? []).map((x) => x.mark))
 const isLine = (x: Cell | null): boolean => x?.kind === 'line'
 
-// The commit a fork's corner at (r, c) starts from: along its side arm to the tee on the parent's lane, then back up that
-// lane, against the corner's forward arm, to the first cap's mark. None if the corner has no such arms or no cap is there.
+// The commit a fork's corner at (r, c) starts from: along its side arm to the tee on the parent's lane, then back up
+// that
+// lane, against the corner's forward arm, to the first cap's mark. None if the corner has no such arms or no cap is
+// there.
 function fork(d: Drawing, r: number, c: number): string[] {
   const x = cellAt(d, r, c)!
   const side = x.dirs & 10
@@ -56,14 +61,17 @@ function fork(d: Drawing, r: number, c: number): string[] {
   if (side === 0 || side === 10 || dr === 0) {
     return []
   }
+
   let cc = c
   let rr = r + dr
   while (isLine(cellAt(d, r, cc)) && (cellAt(d, r, cc)!.dirs & side) !== 0) {
     cc += dc
   }
+
   while (isLine(cellAt(d, rr, cc))) {
     rr += dr
   }
+
   const cap = cellAt(d, rr, cc)
   return cap?.kind === 'cap' ? cap.owners.filter((o) => marks(d).has(o)) : []
 }
@@ -74,7 +82,8 @@ const rowMarks = (d: Drawing, y: number): string[] =>
     x ? x.owners.filter((o) => marks(d).has(o)).flatMap((o) => (x.kind === 'line' ? fork(d, y, c) : [o])) : [],
   )
 
-// The commits lane run o through (r, c) connects: up and down its column while the cells are o's, to the cap that ends it
+// The commits lane run o through (r, c) connects: up and down its column while the cells are o's, to the cap that ends
+// it
 // or, where it stops open (a lane's tail, or its start at a fork corner), to the row it stops in.
 function laneEnds(d: Drawing, r: number, c: number, o: string): string[] {
   return [-1, 1].flatMap((dr) => {
@@ -82,6 +91,7 @@ function laneEnds(d: Drawing, r: number, c: number, o: string): string[] {
     while (cellAt(d, y, c)?.kind !== 'cap' && ownedBy(cellAt(d, y + dr, c), o)) {
       y += dr
     }
+
     return rowMarks(d, y)
   })
 }
@@ -93,6 +103,7 @@ function ends(d: Drawing, id: string, r: number, c: number): string[] {
   if (e) {
     return [e.from, e.to]
   }
+
   return id.startsWith('lane:') ? laneEnds(d, r, c, id) : marks(d).has(id) ? fork(d, r, c) : []
 }
 
@@ -126,7 +137,8 @@ const BEHIND: Readonly<Record<string, readonly [number, number]>> = {
 // How many sides x's dirs reach.
 const branches = (x: Cell | null): number => [1, 2, 4, 8].filter((b) => ((x?.dirs ?? 0) & b) !== 0).length
 
-// ambiguous-head: an edge with end marks but no arrow cell of its own, or a head just past a junction (3 or more branches),
+// ambiguous-head: an edge with end marks but no arrow cell of its own, or a head just past a junction (3 or more
+// branches),
 // so a reader cannot tell which line it ends. A corner behind it, as in a self-message's ◄┘, is fine.
 function ambiguousHead(d: Drawing, all: readonly Drawn[]): boolean {
   const headless = d.expect.edges.some(

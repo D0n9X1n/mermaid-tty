@@ -1,6 +1,8 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
-//   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario harness|source-view|stored|lead|all] [--keep]
-// The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with --plugin-dir
+//   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario
+//   harness|source-view|stored|lead|all] [--keep]
+// The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with
+// --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
 // scenario in a session of its own. Prints PASS|FAIL <os> <theme> <color> <scenario> per run, each run's problems under
 // it, and a summary line; exits 1 on any FAIL. --keep keeps each run's temp dir, with screen.ansi in it, and under tmux
@@ -46,6 +48,7 @@ function oneOf<T extends string>(name: string, v: string, allowed: readonly T[])
   if (allowed.includes(v as T)) {
     return v as T
   }
+
   console.error(`--${name} ${v}: expected ${allowed.join('|')}`)
   process.exit(2)
 }
@@ -56,6 +59,7 @@ function runsFor(theme: string, color: string | undefined): Run[] {
   if (color !== undefined) {
     return themes.map((t) => ({ theme: t, color: oneOf('color', color, ['truecolor', '256'] as const) }))
   }
+
   return [
     ...themes.map((t) => ({ theme: t, color: 'truecolor' as const })),
     ...(themes.includes('nord') ? [{ theme: 'nord' as const, color: '256' as const }] : []),
@@ -75,6 +79,7 @@ function installClaude(v: string): string {
   if (works()) {
     return bin
   }
+
   const npm = spawnSync('npm', ['install', '--prefix', dir, `@anthropic-ai/claude-code@${v}`], {
     encoding: 'utf8',
     shell: win,
@@ -82,19 +87,23 @@ function installClaude(v: string): string {
   if (npm.status !== 0) {
     throw new Error(`npm install @anthropic-ai/claude-code@${v} failed:\n${npm.stderr}`)
   }
+
   if (!works()) {
     spawnSync(process.execPath, [join(pkg, 'install.cjs')], { cwd: pkg, stdio: 'inherit' })
   }
+
   if (!works()) {
     throw new Error(`claude ${v} does not run from ${bin}`)
   }
+
   return bin
 }
 
 // What a scenario gets: its session, its run, and its sandbox's config dir and temp dir.
 type Ctx = { s: Session; run: Run; config: string; base: string; copied: string }
 const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
-// The prompt line showing text. Claude Code follows ❯ with a no-break space, which \s matches, where a plain space would not.
+// The prompt line showing text. Claude Code follows ❯ with a no-break space, which \s matches, where a plain space
+// would not.
 const promptLine = (text: string) => new RegExp(`❯\\s${escape(text)}`)
 // Types text at the prompt, waits until the prompt line shows it, then presses enter.
 async function submit(s: Session, text: string): Promise<void> {
@@ -110,7 +119,8 @@ async function showDiagrams(s: Session): Promise<void> {
 }
 
 // One run of one scenario, in a sandbox of its own: a temp HOME, config dir and cwd, the mock, and the seeded config.
-// Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp leaves
+// Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp
+// leaves
 // a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the session's: the
 // seeds are merged into its files, and the session starts without --plugin-dir.
 async function runOne(
@@ -134,6 +144,7 @@ async function runOne(
     writeFileSync(join(bin, name), script)
     chmodSync(join(bin, name), 0o755)
   }
+
   const mock = await startMock()
   let s: Session | undefined
   try {
@@ -162,22 +173,26 @@ async function runOne(
     if (s && keep) {
       writeFileSync(join(base, 'screen.ansi'), await s.ansi().catch((e) => String(e)))
     }
+
     if (s && !keepUp) {
       await s.stop()
     }
+
     await mock.stop()
     // A sandbox left behind is a warning, not a problem of the run's, and ends no later run.
     const left = keep ? undefined : removeSandbox(base)
     if (left) {
       console.log(left)
     }
+
     if (keep) {
       console.log(`kept ${base}${keepUp ? `; attach with: tmux -L ${TMUX_SOCKET} attach -t mtty-e2e` : ''}`)
     }
   }
 }
 
-// REPLY's labels by role, its prose lines, and every line of its two drawn diagrams' source, which holds those labels too.
+// REPLY's labels by role, its prose lines, and every line of its two drawn diagrams' source, which holds those labels
+// too.
 const LABELS = { 读取配置文件: 'node', '完成?': 'decision', 结束: 'node', User: 'node', ping: 'label' }
 const PROSE = ['Here is the config flow:', 'And the handshake:', 'This one stays source:', 'Unclosed:']
 const LEAD_SOURCE = fenceBody(REPLY_LEAD).split('\n')
@@ -185,7 +200,8 @@ const SOURCE = splitFences(REPLY)
   .filter((f) => f.kind === 'mermaid')
   .slice(0, 2)
   .flatMap((f) => (f.kind === 'mermaid' ? f.body.split('\n') : []))
-// The width the expected rows are drawn at: the session's (driver.ts's COLS). The replies' diagrams draw the same at any
+// The width the expected rows are drawn at: the session's (driver.ts's COLS). The replies' diagrams draw the same at
+// any
 // width from it down to well under it, so Claude Code's margins do not change them.
 const DRAW_COLUMNS = 100
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
@@ -195,6 +211,7 @@ function hexOf(r: Run): Record<string, number> | undefined {
   if (r.theme === 'default' || r.theme === 'mono') {
     return undefined
   }
+
   return Object.fromEntries(Object.entries(THEMES[r.theme].roles).map(([role, c]) => [role, parseInt(c!.slice(1), 16)]))
 }
 // The drawn screen's problems: REPLY's drawn diagrams' rows as the renderer draws them, in order, each label in its
@@ -214,6 +231,7 @@ async function drawnScreen({ s, run }: Ctx): Promise<string[]> {
       problems.push(`${line}: expected as source`)
     }
   }
+
   return [...problems, ...sourceShown(text, SOURCE)]
 }
 
@@ -235,6 +253,7 @@ async function sourceView(c: Ctx): Promise<string[]> {
         problems.push(`${where}: ${line} not shown`)
       }
     }
+
     for (const row of drawnRows(text, labels, SOURCE)) {
       problems.push(`${where}: drawn row ${JSON.stringify(row.trim())}`)
     }
@@ -288,11 +307,13 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
   if (from < 0 || to < from) {
     return [...problems, 'lead: prompt line or diagram not found']
   }
+
   for (const r of rows.slice(from + 1, to)) {
     if (r.trim() === '⏺') {
       problems.push('lead: a row holds only the reply bullet (D5)')
     }
   }
+
   return problems
 }
 
@@ -301,6 +322,7 @@ function jsonlFiles(dir: string): string[] {
   if (!existsSync(dir)) {
     return []
   }
+
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? jsonlFiles(join(dir, e.name)) : e.name.endsWith('.jsonl') ? [join(dir, e.name)] : [],
   )
@@ -329,16 +351,20 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
   if (!(await poll(() => files().some((f) => findReply(readFileSync(f, 'utf8'), REPLY)), 5000))) {
     problems.push(`stored: no transcript holds the reply byte for byte (${files().length} .jsonl files)`)
   }
+
   if (Object.keys(clipboardStubs(os, copied)).length === 0) {
     console.log(`stored: not run on ${os}: no clipboard command to stub`)
     return problems
   }
+
   await submit(s, '/copy')
   // E6: Claude Code 2.1.308 opens a picker, Full response first, then one entry per code block; choose flowchart LR's.
   const screen = await s.waitFor(/Select content to copy|Copied/, 5000).catch(() => '')
   if (screen.includes('Select content to copy')) {
-    // One entry at a time, each move seen on screen before the next press: on a slow ConPTY a fixed pause let the presses
-    // run past flowchart LR to "Always copy full response", which Enter then saved as a preference. The selection is read
+    // One entry at a time, each move seen on screen before the next press: on a slow ConPTY a fixed pause let the
+    // presses
+    // run past flowchart LR to "Always copy full response", which Enter then saved as a preference. The selection is
+    // read
     // only below the picker's header; a move not seen, or a header gone, stops with Escape rather than a guessed Enter.
     const at = (t: string) => {
       const h = t.lastIndexOf('Select content to copy')
@@ -357,16 +383,20 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
         why = `the selection did not move from ${JSON.stringify(was)}`
       }
     }
+
     if (!why && !/^flowchart LR\b/.test(sel!)) {
       why = 'flowchart LR was not reached in 10 moves'
     }
+
     if (why) {
       problems.push(`stored: the /copy picker: ${why}; the screen:\n${await s.text()}`)
       await s.key('escape')
       return problems
     }
+
     await s.key('enter')
   }
+
   const exact = (t: string | undefined) => t === want || t === `${want}\n`
   const stub = () => (existsSync(copied) ? readFileSync(copied, 'utf8') : undefined)
   const via = await poll(async () => (exact(stub()) ? 'stub' : exact(await s.clipboard()) ? 'osc52' : undefined), 5000)
@@ -377,6 +407,7 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
       `stored: /copy copied ${JSON.stringify(stub() ?? (await s.clipboard()))}, not the fence body; the screen:\n${await s.text()}`,
     )
   }
+
   return problems
 }
 
@@ -423,12 +454,14 @@ async function main(): Promise<number> {
       if (problems.length) {
         failed++
       }
+
       console.log(`${problems.length ? 'FAIL' : 'PASS'} ${os} ${run.theme} ${run.color} ${scenario}`)
       for (const p of problems) {
         console.log(`  ${p.replaceAll('\n', '\n  ')}`)
       }
     }
   }
+
   console.log(
     `e2e: ${total - failed} passed, ${failed} failed (${os}, ${driver}, claude ${version}, ${runs.map((r) => `${r.theme}/${r.color}`).join(' ')})`,
   )

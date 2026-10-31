@@ -15,6 +15,7 @@ if (version.status !== 0 || !(major >= 11)) {
   console.error('render-picture: needs mmdc 11 or 12 on PATH')
   process.exit(1)
 }
+
 const dir = mkdtempSync(join(tmpdir(), 'mtty-picture-'))
 try {
   for (const img of IMAGES.filter((i) => i.picture)) {
@@ -22,6 +23,7 @@ try {
     if (!fence) {
       throw new Error(`${img.source}: no mermaid fence`)
     }
+
     const config = join(dir, 'config.json')
     const puppeteer = join(dir, 'puppeteer.json')
     writeFileSync(config, JSON.stringify(mermaidConfig('dark')))
@@ -46,6 +48,7 @@ try {
         `${img.picture}: ${size?.width} px is too wide for ${img.columns} columns; the plugin would keep text`,
       )
     }
+
     console.log(`render-picture: wrote ${img.picture}`)
   }
 } finally {

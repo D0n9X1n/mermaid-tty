@@ -23,6 +23,7 @@ function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+
 let rand = mulberry32(SEED)
 
 // An integer in [lo, hi]; an element of xs; true with probability p.
@@ -30,6 +31,7 @@ const int = (lo: number, hi: number): number => lo + Math.floor(rand() * (hi - l
 function pick<T>(xs: readonly T[]): T {
   return xs[int(0, xs.length - 1)]!
 }
+
 const chance = (p: number): boolean => rand() < p
 // xs, shuffled in place.
 function shuffle<T>(xs: T[]): T[] {
@@ -37,6 +39,7 @@ function shuffle<T>(xs: T[]): T[] {
     const j = int(0, i)
     ;[xs[i], xs[j]] = [xs[j]!, xs[i]!]
   }
+
   return xs
 }
 // n flags in a random order, k of them true: a quota.
@@ -90,6 +93,7 @@ function ref(b: Block, n: Node): string {
   if (b.drawn.has(n.id)) {
     return n.id
   }
+
   b.drawn.add(n.id)
   const t = text(b, n.label)
   const [open, close] = SHAPES[n.shape]
@@ -105,6 +109,7 @@ function edge(b: Block, a: Node, z: Node, kind: Arrow = 'plain', label?: string)
   if (!label) {
     return `${from} ${arrow} ${to}`
   }
+
   return kind === 'plain' && b.dash
     ? `${from} -- ${text(b, label)} --> ${to}`
     : `${from} ${arrow}|${text(b, label)}| ${to}`
@@ -121,6 +126,7 @@ function subgraph(b: Block, id: string, title: string): string {
   if (!b.zh && chance(0.3)) {
     return `subgraph ${t}`
   }
+
   return `subgraph ${id} [${b.quoted ? `"${t}"` : t}]`
 }
 
@@ -728,6 +734,7 @@ function cycle<S extends { title: string }>(
     },
   }
 }
+
 const FLOWS: Template[] = [
   cycle(22, 0.4, PROCESS, flow),
   cycle(22, 0.2, DECISION, decision),
@@ -738,7 +745,8 @@ const FLOWS: Template[] = [
 // A block's indent: mostly four spaces.
 const PADS = ['    ', '    ', '    ', '  ', '']
 
-// The 100 blocks, the kinds in a shuffled order. Quotas over the 92 flowcharts hold the mix: 51 in Chinese, 80 quoted, 37
+// The 100 blocks, the kinds in a shuffled order. Quotas over the 92 flowcharts hold the mix: 51 in Chinese, 80 quoted,
+// 37
 // with <br/> details, 8 with a frontmatter title, 28 that put a plain arrow's label between dashes, 24 headed graph, 4
 // with no direction. Decisions, retry loops and architectures always label an edge; architectures always have
 // subgraphs. Of the 8 sequence diagrams, 4 are in Chinese and 3 have a title.
@@ -762,6 +770,7 @@ function generate(): string[] {
       const s = before.filter((x) => x < 0).length
       return sequence(seqZh[s]!, titled[s]!, pad, SEQ[s]!).join('\n') + '\n'
     }
+
     const f = before.filter((x) => x >= 0).length
     const b: Block = { zh: zh[f]!, quoted: quoted[f]!, br: br[f]!, dash: dash[f]!, pad, drawn: new Set<string>() }
     const { title, lines } = FLOWS[k]!.make(b, before.filter((x) => x === k).length)
@@ -780,12 +789,14 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
     console.error(USAGE)
     return 2
   }
+
   const files = generate().map((body, i) => ({ path: join(DIR, `corpus-${String(i + 1).padStart(3, '0')}.mmd`), body }))
   if (check) {
     const stale = files.filter((f) => !existsSync(f.path) || readFileSync(f.path, 'utf8') !== f.body)
     for (const f of stale) {
       console.error(`gen-corpus: ${f.path} is out of date; run node scripts/gen-corpus.ts`)
     }
+
     const written = new Set(files.map((f) => f.path))
     const extra = existsSync(DIR)
       ? readdirSync(DIR)
@@ -796,12 +807,15 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
     for (const p of extra) {
       console.error(`gen-corpus: ${p} is not a file gen-corpus writes; delete it`)
     }
+
     return stale.length + extra.length > 0 ? 1 : 0
   }
+
   mkdirSync(DIR, { recursive: true })
   for (const f of files) {
     writeFileSync(f.path, f.body)
   }
+
   return 0
 }
 

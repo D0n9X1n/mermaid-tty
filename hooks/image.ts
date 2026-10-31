@@ -6,7 +6,8 @@
 // (puppeteerConfig); mmdc's Mermaid config holds only securityLevel strict and the theme; and the authority, layer A
 // (hooks/svg.ts), checks the SVG mmdc draws for the source before a second run makes the PNG.
 // Termination: each source, look and width is rendered at most once per store, so a picture the bounded cache drops
-// stays text rather than rendering again, and a batch of renders redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
+// stays text rather than rendering again, and a batch of renders redraws once. No JSX and no Node, so node --test can
+// import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
@@ -127,10 +128,12 @@ export async function pictureLook($: any, s: Pictures, theme: string): Promise<L
   if (theme === 'mono') {
     return null
   }
+
   s.pixels ??= showsPixels($)
   if (!(await s.pixels)) {
     return null
   }
+
   try {
     const v = (await $.config.list()).find((r: any) => r.key === 'theme')?.value
     return typeof v !== 'string' ? null : v.startsWith('dark') ? 'dark' : v.startsWith('light') ? 'default' : null
@@ -141,7 +144,8 @@ export async function pictureLook($: any, s: Pictures, theme: string): Promise<L
 
 // The cached picture of body in look at columns, or undefined. On a miss, a key not yet tried is queued for one render
 // unless the queue is full (then a later draw asks again): only a source within Mermaid's size limit that the safety
-// gate passes (`image: unsafe source (<rule>)` is logged once when it does not) and core parses, while mmdc answers. A failure logs `image: <why>`; a finished batch redraws ui.render once.
+// gate passes (`image: unsafe source (<rule>)` is logged once when it does not) and core parses, while mmdc answers. A
+// failure logs `image: <why>`; a finished batch redraws ui.render once.
 export function pictureFor(
   $: any,
   s: Pictures,
@@ -157,6 +161,7 @@ export function pictureFor(
     s.cache.set(key, hit)
     return hit
   }
+
   const id = hash(key)
   if (
     s.noMmdc ||
@@ -167,25 +172,30 @@ export function pictureFor(
   ) {
     return undefined
   }
+
   s.tried.add(id)
   if (body.length > MAX_SOURCE) {
     say(log, `source over ${MAX_SOURCE} characters`)
     return undefined
   }
+
   const unsafe = unsafeReason(body)
   if (unsafe) {
     say(log, `unsafe source (${unsafe})`)
     return undefined
   }
+
   if (parseFail(body)) {
     return undefined
   } // the text renderer logs why it falls back
+
   s.inflight.add(key)
   s.tail = s.tail.then(() => job($, s, key, body, look, columns, log)).catch(() => {})
   return undefined
 }
 
-// One queued render: the version probe first (once per store), then the picture or why not; the last of a batch redraws.
+// One queued render: the version probe first (once per store), then the picture or why not; the last of a batch
+// redraws.
 async function job(
   $: any,
   s: Pictures,
@@ -206,6 +216,7 @@ async function job(
       oneLine(e instanceof Error ? e.message : String(e)),
     )
   }
+
   s.inflight.delete(key)
   if (typeof r === 'string') {
     say(log, r)
@@ -213,6 +224,7 @@ async function job(
     keep(s, key, r)
     s.fresh = true
   }
+
   if (s.inflight.size === 0 && s.fresh) {
     s.fresh = false
     try {
@@ -240,12 +252,14 @@ function keep(s: Pictures, key: string, p: Picture) {
     if (s.cache.size <= s.limits.entries && s.bytes <= s.limits.bytes) {
       break
     }
+
     s.cache.delete(k)
     s.bytes -= v.png.length
   }
 }
 
-// One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same source,
+// One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same
+// source,
 // config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
 async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
   const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
@@ -254,6 +268,7 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
   if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) {
     return 'no temp dir'
   }
+
   try {
     const config = `${dir}/config.json`
     const puppeteer = `${dir}/puppeteer.json`
@@ -270,29 +285,36 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
     if (v.exitCode !== 0) {
       return `mmdc exited ${v.exitCode}: ${oneLine(v.stderr)}`
     }
+
     if ((await $.fs.stat(svg)).size > MAX_SVG) {
       return 'svg over 4 MiB'
     }
+
     const text = await $.fs.read(svg)
     const unsafe = typeof text === 'string' ? svgUnsafe(text) : 'unreadable'
     if (unsafe) {
       return `unsafe svg (${unsafe})`
     }
+
     const r = await mmdc(out, 'png')
     if (r.exitCode !== 0) {
       return `mmdc exited ${r.exitCode}: ${oneLine(r.stderr)}`
     }
+
     if ((await $.fs.stat(out)).size > MAX_PNG) {
       return 'png over 2 MiB'
     }
+
     const { base64 } = await $.fs.read(out, { as: 'bytes' })
     const size = pngSize(base64)
     if (!size) {
       return 'not a png'
     }
+
     if (size.width > columns * PAGE * SCALE * FULL) {
       return 'too wide to read'
     }
+
     const box = fit(size.width, size.height, columns)
     return box ? { png: base64, ...box } : 'over 255 rows'
   } finally {
@@ -322,6 +344,7 @@ export function pngSize(base64: string): { width: number; height: number } | nul
     if (v < 0) {
       return null
     }
+
     acc = (acc << 6) | v
     bits += 6
     if (bits >= 8) {
@@ -330,9 +353,11 @@ export function pngSize(base64: string): { width: number; height: number } | nul
       acc &= (1 << bits) - 1
     }
   }
+
   if (b.length < 24 || SIGNATURE.some((x, i) => b[i] !== x) || String.fromCharCode(...b.slice(12, 16)) !== 'IHDR') {
     return null
   }
+
   const u32 = (i: number) => b[i]! * 16777216 + b[i + 1]! * 65536 + b[i + 2]! * 256 + b[i + 3]!
   const width = u32(16)
   const height = u32(20)
@@ -348,6 +373,7 @@ function hash(s: string): string {
     h1 = Math.imul(h1 ^ c, 2654435761)
     h2 = Math.imul(h2 ^ c, 1597334677)
   }
+
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
   return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36)

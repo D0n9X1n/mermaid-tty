@@ -83,6 +83,7 @@ test('A5.errors: unsupported, malformed and repeated statements fall back with t
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(P('A ||--o{ B : x %% note'), { reason: 'directive' })
 })
 
@@ -98,6 +99,7 @@ test('A5.common: entities, unsupported characters and blank label lines fall bac
   ]) {
     assert.deepEqual(P(body), { reason: 'entity' }, body)
   }
+
   const m = P('"C#" ||--|| B : "a # b"\nB {\n  string id "c#"\n}')
   assert.deepEqual([m.entities[0].label, m.relations[0].label, m.entities[1].attrs[0].comment], ['C#', 'a # b', 'c#'])
   assert.deepEqual(P('A ||--|| B : "x\u200Dy"'), { reason: 'unsupported-char U+200D' })
@@ -113,6 +115,7 @@ test('A5.common: headers and keywords are case-sensitive and whole; styling and 
     const s = readSource(`${h}\nA`)
     assert.deepEqual('reason' in s ? s : parseEr(s), { reason: 'header' }, h)
   }
+
   for (const body of [
     'Endpoint',
     'subgraphs',
@@ -130,6 +133,7 @@ test('A5.common: headers and keywords are case-sensitive and whole; styling and 
   ]) {
     assert.deepEqual(P(body), { reason: 'syntax:2' }, body)
   } // Mermaid's ER grammar has no click
+
   const m = P(
     [
       'style A fill:#f9f',
@@ -239,13 +243,15 @@ test('A5.errors: words Mermaid lexes as something else, attribute keys and Markd
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(
     P('12 ||--|| B : x\nTOTAL').entities.map((e: any) => e.id),
     ['12', 'B', 'TOTAL'],
   )
 })
 // Mermaid 12.2.0's erBox draws an entity's label (only when it has attributes; one with none is a plain rect label)
-// and each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from the
+// and each attribute column through addText, which runs parseGenericTypes: each comma piece's ~ pairs become <…> from
+// the
 // outside in. A relation label and a subgraph title show ~ as written. Each case below was rendered under JSDOM.
 test('~…~ in an ER entity label with attributes and in attribute columns draws as <…>, as erBox shows it', () => {
   const m = P(
@@ -289,7 +295,8 @@ test('~…~ in an ER entity label with attributes and in attribute columns draws
     ['<A<B>>', 'a<b~c>', '~a<b>c', 'a<>b', 'a<b>,<c>', 'a<b,c>d', 'x<a&b>', '<<x>>', 'about ~5'],
   )
 })
-// Mermaid's lexer reads a word holding a ~ through the last ~ on its line as one attribute word, so a ~ in two columns, a
+// Mermaid's lexer reads a word holding a ~ through the last ~ on its line as one attribute word, so a ~ in two columns,
+// a
 // lone ~ in the type, or a ~ in a comment's first word with another after it is a parse error there; a <br> it would
 // show as written falls back.
 test('An attribute line Mermaid misreads for its ~, or a generic forming <br>, falls back', () => {
@@ -325,11 +332,14 @@ test('X3: Markdown the emphasis port cannot match, icons and math in an attribut
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.equal(P('A {\n  string id "snake_case a\\nb"\n}').entities[0].attrs[0].comment, 'snake_case a\\nb')
 })
 
-// X3. Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or one a <br>
-// splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's name is its
+// X3. Mermaid 12.2.0 (JSDOM): an alias p["**Person** _x_"], a relation label "**places** *x*" (or *owns* unquoted, or
+// one a <br>
+// splits), a subgraph title [**T**] and an attribute comment "**c** _d_" show <strong> and <em>. An entity's name is
+// its
 // id, so emphasis there still falls back.
 test('X3.emphasis: bold and italic in an ER alias, relation label, subgraph title or attribute comment draw as Mermaid shows them', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')

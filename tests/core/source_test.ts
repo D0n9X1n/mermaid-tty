@@ -19,7 +19,8 @@ test('A5.errors: a trailing %% falls back; %% { is a comment', () => {
 
 // Mermaid 12.2.0's detectInit reads every %%{init: …}%% or %%{initialize: …}%% in the text, ' made ", by JSON.parse,
 // merging them in order; a %%{wrap}%% sets wrap true after them; then cleanAndMerge lays the lot over the frontmatter
-// config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM. D reads with the scanner;
+// config, and both reach addDirective. Each case below was checked with mermaid.parse under JSDOM. D reads with the
+// scanner;
 // which settings then draw is the config allowlist's (source-allow_test.ts).
 const D = (t: string) => scanSource(t) as Source
 test('A whole-line init, initialize or wrap directive sets config as frontmatter config does, and is dropped', () => {
@@ -108,7 +109,8 @@ test('A1: the header is the first kept line, trimmed, with only a trailing ; rem
     lines: [{ n: 2, text: 'C' }],
   })
 })
-// F1 (pie QA): Mermaid's TITLE terminal keeps a trailing ;, so `pie title Fruit;` is titled "Fruit;". Only A's headers, whose
+// F1 (pie QA): Mermaid's TITLE terminal keeps a trailing ;, so `pie title Fruit;` is titled "Fruit;". Only A's headers,
+// whose
 // grammars take a ; as a statement end, lose it; every other header keeps it, so its own parser reads or rejects it.
 test('A1: a trailing ; is removed only from a flowchart, graph or sequenceDiagram header', () => {
   for (const [h, want] of [
@@ -145,7 +147,8 @@ test('A1: frontmatter title is one quoted or plain scalar; other keys, nested on
     ].map(titleOf),
     ['Flow', 'Flow', null, `It's "fine"`, '50%% off', null],
   )
-  assert.deepEqual(readSource('---\n---\nflowchart TD\nA'), { reason: 'frontmatter' }) // adjacent fences: Mermaid finds no block (fix cycle 1)
+  // adjacent fences: Mermaid finds no block (fix cycle 1)
+  assert.deepEqual(readSource('---\n---\nflowchart TD\nA'), { reason: 'frontmatter' })
 })
 
 test('A5.errors: frontmatter with no closing --- falls back; only an exact --- on line 1 opens it', () => {
@@ -348,7 +351,8 @@ test('A5.errors: any other numeric-looking plain config scalar fails config:<dot
     bad.map((v) => [v, one(v)]),
     bad.map((v) => [v, { reason: 'config:a' }]),
   )
-  // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as frontmatter.
+  // The block's form is checked first: in a block T41 rejects, a numeric-looking scalar still falls back as
+  // frontmatter.
   for (const fm of ['config:\n  a: 1.5\n  a: 2', 'config:\n  a: 1.5\n  b: [1]', 'config:\n  a: 1.5\n  b:']) {
     assert.deepEqual(readSource(`---\n${fm}\n---\ngitGraph\ncommit`), { reason: 'frontmatter' }, fm)
   }
@@ -380,7 +384,8 @@ test('A1: a frontmatter title drops its comment and decodes its escapes', () => 
     rows.map(([v]) => [v, titled(v)]),
     rows,
   )
-  assert.equal((readSource('---\ntitle:\tFlow\n---\nflowchart TD\nA') as Source).title, 'Flow') // a tab may separate, as in js-yaml
+  // a tab may separate, as in js-yaml
+  assert.equal((readSource('---\ntitle:\tFlow\n---\nflowchart TD\nA') as Source).title, 'Flow')
 })
 
 test('A1: a null, false or empty frontmatter title means no title, as in Mermaid', () => {
@@ -510,7 +515,8 @@ test("X4: non-ASCII whitespace falls back where Mermaid 12.2.0's lexer for the h
     ws.map((t) => [t, readSource(t)]),
     ws.map((t) => [t, { reason: 'whitespace' }]),
   )
-  // Jison's \s skips them in flowchart's header line and blank lines, so these read as their ASCII twins; mindmap indents too.
+  // Jison's \s skips them in flowchart's header line and blank lines, so these read as their ASCII twins; mindmap
+  // indents too.
   for (const [odd, plain] of [
     ['flowchart LR\n \nA-->B', 'flowchart LR\n\nA-->B'],
     ['flowchart LR \nA-->B', 'flowchart LR\nA-->B'],

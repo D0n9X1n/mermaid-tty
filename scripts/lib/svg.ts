@@ -25,11 +25,13 @@ export function glyphCells(rows: { text: string }[][], width: (s: string) => num
     for (const sp of row) {
       ends.push((len += sp.text.length))
     }
+
     for (const { segment, index } of seg.segment(row.map((sp) => sp.text).join(''))) {
       const w = width(segment)
       if (w > 0 && segment.trim()) {
         out.push({ row: r, col, text: segment, span: ends.findIndex((e) => index < e) })
       }
+
       col += w
     }
   })
@@ -57,6 +59,7 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
       if (sp.bg) {
         out.push(`<rect x="${col * CELL}" y="${r * ROW}" width="${w * CELL}" height="${ROW}" fill="${sp.bg}"/>`)
       }
+
       col += w
     }
   })
@@ -65,12 +68,14 @@ export function toSvg(rows: Styled[][], width: (s: string) => number, title: str
       `<image x="${p.col * CELL}" y="${p.row * ROW}" width="${p.columns * CELL}" height="${p.rows * ROW}" href="data:image/png;base64,${p.png}"/>`,
     )
   }
+
   for (const g of glyphCells(rows, width)) {
     const sp = rows[g.row]![g.span]!
     out.push(
       `<text x="${g.col * CELL}" y="${g.row * ROW + BASE}" fill="${sp.fg}"${sp.bold ? ' font-weight="bold"' : ''}${sp.italic ? ' font-style="italic"' : ''}>${esc(g.text)}</text>`,
     )
   }
+
   return [...out, '</g>', '</svg>', ''].join('\n')
 }
 // B1 glyph rule: lists every glyph whose <text> is not at x = col × CELL, y = row × ROW + BASE.

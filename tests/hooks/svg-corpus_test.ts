@@ -1,4 +1,5 @@
-// Layer A against Mermaid's real output. tests/hooks/svg-corpus holds a sample of the SVGs mmdc 11 and 12 draw, with the
+// Layer A against Mermaid's real output. tests/hooks/svg-corpus holds a sample of the SVGs mmdc 11 and 12 draw, with
+// the
 // hook's flags, for the ok fixtures that reach mmdc (core parses them and hooks/safe.ts passes them): the smallest per
 // version and diagram type, then enough more to use every element and attribute name the full set uses. Every sample
 // must pass svgUnsafe, and the names the sample uses must be exactly the allowlist, so the list is Mermaid's own.
@@ -20,7 +21,8 @@ const sample = readdirSync(DIR)
   .filter((f) => f.endsWith('.svg'))
   .sort()
 
-// The element and attribute names an SVG uses, by context: inside a foreignObject is HTML. Namespace declarations aside.
+// The element and attribute names an SVG uses, by context: inside a foreignObject is HTML. Namespace declarations
+// aside.
 function names(svg: string): Set<string> {
   const out = new Set<string>()
   const stack: string[] = []
@@ -30,6 +32,7 @@ function names(svg: string): Set<string> {
       stack.pop()
       continue
     }
+
     const ctx = stack.includes('foreignObject') ? 'html' : 'svg'
     out.add(`${ctx} element ${name}`)
     for (const a of attrs!.matchAll(/([^\s=]+)\s*=\s*"[^"]*"/g)) {
@@ -37,10 +40,12 @@ function names(svg: string): Set<string> {
         out.add(`${ctx} attribute ${a[1]}`)
       }
     }
+
     if (!self) {
       stack.push(name!)
     }
   }
+
   return out
 }
 
@@ -68,6 +73,7 @@ test('A6.hook-tests: every sampled Mermaid SVG (13 types, mmdc 11 and 12) passes
       )
     }
   }
+
   for (const f of sample) {
     assert.equal(svgUnsafe(readFileSync(join(DIR, f), 'utf8')), null, f)
   }
@@ -132,6 +138,7 @@ test(
                         bad.push(`${major} ${look} ${f.name}: ${r}`)
                       }
                     }
+
                     done()
                   })
                   c.stdin.end(f.body)
@@ -140,6 +147,7 @@ test(
           )
         }
       }
+
       let next = 0
       await Promise.all(
         Array.from({ length: 8 }, async () => {

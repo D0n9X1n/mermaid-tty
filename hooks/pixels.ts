@@ -13,14 +13,17 @@ export async function showsPixels($: any): Promise<boolean> {
     ) {
       return false
     }
+
     const term = (await $.env.get('TERM')) ?? ''
     const program = ((await $.env.get('TERM_PROGRAM')) ?? '').toLowerCase()
     if (term === 'xterm-kitty') {
       return program === '' || program === 'kitty'
     }
+
     if (term === 'xterm-ghostty') {
       return program === '' || program === 'ghostty'
     }
+
     return false
   } catch {
     return false

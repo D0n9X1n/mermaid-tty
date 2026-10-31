@@ -1,4 +1,5 @@
-// The cluster tree (plan A §7.3, §7.7): what holds each node and cluster, which clusters are sealed (no edge crosses their
+// The cluster tree (plan A §7.3, §7.7): what holds each node and cluster, which clusters are sealed (no edge crosses
+// their
 // border) and a sealed cluster's subgraph.
 import type { GCluster, Graph } from './model.ts'
 
@@ -14,10 +15,12 @@ export function ancestors(parent: ReadonlyMap<string, string>, x: string): strin
   for (let c = parent.get(x); c !== undefined && c !== x && !out.includes(c); c = parent.get(c)) {
     out.push(c)
   }
+
   return out
 }
 
-// An edge crosses a cluster's border when exactly one of its ends lies inside it; an end on the cluster itself is not inside.
+// An edge crosses a cluster's border when exactly one of its ends lies inside it; an end on the cluster itself is not
+// inside.
 export function clusterTree(g: Pick<Graph, 'edges' | 'clusters'>): Tree {
   const parent = new Map<string, string>()
   const byId = new Map(g.clusters.map((c) => [c.id, c]))
@@ -26,6 +29,7 @@ export function clusterTree(g: Pick<Graph, 'edges' | 'clusters'>): Tree {
       parent.set(x, c.id)
     }
   }
+
   const open = new Set<string>()
   for (const e of g.edges) {
     const a = ancestors(parent, e.from)
@@ -36,6 +40,7 @@ export function clusterTree(g: Pick<Graph, 'edges' | 'clusters'>): Tree {
       }
     }
   }
+
   return { parent, byId, sealed: new Set(g.clusters.map((c) => c.id).filter((id) => !open.has(id))) }
 }
 

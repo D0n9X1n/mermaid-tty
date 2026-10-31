@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { BASE, CELL, ROW, glyphCells, misplaced, toSvg } from '../lib/svg.ts'
 import { width } from '../../core/width.ts'
-// e\u0301 is e + U+0301 COMBINING ACUTE ACCENT, one grapheme; \u200B is ZERO WIDTH SPACE. Escapes, since a copy can lose either.
+// e\u0301 is e + U+0301 COMBINING ACUTE ACCENT, one grapheme; \u200B is ZERO WIDTH SPACE. Escapes, since a copy can
+// lose either.
 const rows = [
   [
     { text: '[中]', fg: '#fff', bg: '#333' },
@@ -22,7 +23,8 @@ test('each glyph gets its own cell; wide glyphs take two; combining marks join t
       [7, '<'],
     ],
   ))
-// U+0301 begins the second span. toSvg segments the row's text whole, so the mark joins the e before it, not a zero-width grapheme of its own.
+// U+0301 begins the second span. toSvg segments the row's text whole, so the mark joins the e before it, not a
+// zero-width grapheme of its own.
 test("a combining mark at a span's start joins its base: one <text>, at the base's cell and fill", () => {
   const split = [
     [

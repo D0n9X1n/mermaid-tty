@@ -22,6 +22,7 @@ export function isWide(cp: number): boolean {
       return true
     }
   }
+
   return false
 }
 
@@ -30,6 +31,7 @@ export function width(s: string): number {
   for (const ch of s) {
     w += ZERO.test(ch) ? 0 : isWide(ch.codePointAt(0)!) ? 2 : 1
   }
+
   return w
 }
 
@@ -41,5 +43,6 @@ export function unsupported(s: string): string | null {
       return 'U+' + ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')
     }
   }
+
   return null
 }

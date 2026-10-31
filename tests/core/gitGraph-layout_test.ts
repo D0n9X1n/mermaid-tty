@@ -5,7 +5,8 @@ import { text } from './graph-fixture.ts'
 const X = (body: string, columns = 80, h = 'gitGraph') => explain(`${h}\n${body}`, { columns, theme: 'mono' }) as any
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'
 test('A3: one row per event; lanes 2 cells apart; main opens with ╷; a fork ├─╮; a merge ◉─┤; one label column; BT flips', () => {
-  assert.deepEqual(text(X(LOG).drawing), ['╷   main', '●   a', '├─╮ dev', '│ ● b', '◉─┘ m']) // PM: a lane that ends draws only its real arms (┘), not ┤
+  // PM: a lane that ends draws only its real arms (┘), not ┤
+  assert.deepEqual(text(X(LOG).drawing), ['╷   main', '●   a', '├─╮ dev', '│ ● b', '◉─┘ m'])
   assert.equal(text(X(LOG + ' type: NORMAL').drawing).at(-1), '●─┘ m') // an explicit NORMAL merge is not the default ◉
   assert.deepEqual(text(X(LOG, 80, 'gitGraph BT:').drawing), ['◉─┐ m', '│ ● b', '├─╯ dev', '●   a', '╵   main'])
 })
@@ -95,7 +96,8 @@ test('A5.mutation-tests: the validator catches two commits swapped, and a merge 
   )
   ;[d.cells[3][2], d.cells[4][2]] = [d.cells[4][2], d.cells[3][2]]
   assert.ok(validate(d))
-  const adj = structuredClone(X('commit id: "a"\ncommit id: "b"').drawing) // no cell joins them: only expect.order pins them
+  // no cell joins them: only expect.order pins them
+  const adj = structuredClone(X('commit id: "a"\ncommit id: "b"').drawing)
   ;[adj.cells[1][0], adj.cells[2][0]] = [adj.cells[2][0], adj.cells[1][0]]
   assert.deepEqual(validate(adj), { reason: 'order-broken' })
   const M = (b: string) =>
@@ -113,6 +115,7 @@ test('A5.errors: a fork point or merged head that replay leaves unclear fails li
   ]) {
     assert.deepEqual(X(body), { reason: 'link-ambiguous' }, body)
   }
+
   assert.deepEqual(T('commit id: "a"\nbranch x\ncheckout main\ncommit id: "c"\ncheckout x\ncommit id: "d"'), [
     '╷   main',
     '●   a',

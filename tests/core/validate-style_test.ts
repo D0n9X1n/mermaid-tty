@@ -20,7 +20,8 @@ const restyled = (src: string, r: number, c: number, was: string, ch: string): D
   return d
 }
 
-// QA: a glyph that shows another line style than its cell records says the wrong thing (a dependency for a realization, a
+// QA: a glyph that shows another line style than its cell records says the wrong thing (a dependency for a realization,
+// a
 // non-identifying relation for an identifying one, a reply for a call), so it fails line-glyph like a wrong arm does.
 test('line-glyph: a line cell drawn in another style than it records fails', () => {
   for (const [src, r, c, was, ch] of [
@@ -52,12 +53,14 @@ test('A whole edge redrawn heavy or dotted fails line-glyph', () => {
     for (const [y, c] of lines) {
       d.cells[y]![c] = { ...d.cells[y]![c]!, ch, style, arms: `0${weight}0${weight}` }
     }
+
     assert.match(
       d.cells.map((row) => row.map((x) => (x ? x.ch : ' ')).join('')).join('\n'),
       new RegExp(`\\]${ch}${ch}►\\[`),
     )
     assert.equal(validate(d)?.reason, 'line-glyph', style)
   }
+
   assert.equal(validate(r.drawing), null)
 })
 
@@ -99,6 +102,7 @@ test('Every drawn edge of every ok fixture records its line style', () => {
       }
     }
   }
+
   assert.deepEqual(missing, [])
 })
 
@@ -148,12 +152,14 @@ test('A dotted edge drawn only as crossings fails line-glyph', () => {
   assert.equal(rows(d)[1], '[ A ]┼┼[ B ]')
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
-// Hole 2: an edge drawn as its head alone has no line to show its style. A-.->B with its two ┄ columns cut: [ A ]►[ B ].
+// Hole 2: an edge drawn as its head alone has no line to show its style. A-.->B with its two ┄ columns cut: [ A ]►[ B
+// ].
 test('An edge drawn with no line cell fails line-glyph', () => {
   const d = drawn('flowchart LR\nA -.-> B')
   for (const row of d.cells) {
     row.splice(5, 2)
   }
+
   assert.equal(rows(d)[0], '[ A ]►[ B ]')
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
@@ -192,6 +198,7 @@ function cornerCross(ring = false): Drawing {
       c.line(r, col, dirs, 'dotted', 'edge', 'AB')
     }
   }
+
   return c.toDrawing({
     labels: ['A', 'B', 'C', 'D'].map((o) => ({ owner: o, text: o.toLowerCase() })),
     edgeLabels: [],
@@ -202,19 +209,22 @@ function cornerCross(ring = false): Drawing {
     ],
   })
 }
+
 test('A dotted edge drawn only as a corner and a crossing fails line-glyph', () => {
   const d = cornerCross()
   assert.deepEqual(d.conflicts, [])
   assert.deepEqual(rows(d), ['', 'a┐', 'c┼d', ' b'])
   assert.equal(validate(d)?.reason, 'line-glyph', rows(d).join('\n'))
 })
-// The renderer did this: a dotted two-headed self-message's line was only ┐┘, as a solid one's is. It must draw a ┄ or fall back.
+// The renderer did this: a dotted two-headed self-message's line was only ┐┘, as a solid one's is. It must draw a ┄ or
+// fall back.
 test('A dotted two-headed self-message draws a dotted straight cell, or falls back', () => {
   for (const columns of [60, 80, 120]) {
     const r = explain('sequenceDiagram\nA<<-->>A: x', { columns, theme: 'mono' })
     if (!('drawing' in r)) {
       continue
     }
+
     const mine = r.drawing.cells.flat().filter((x) => x?.kind === 'line' && x.owners.includes('m0'))
     assert.ok(
       mine.some((x) => x!.style === 'dotted' && (x!.dirs === 5 || x!.dirs === 10)),
@@ -223,7 +233,8 @@ test('A dotted two-headed self-message draws a dotted straight cell, or falls ba
     assert.equal(validate(r.drawing), null, `${columns}`)
   }
 })
-// An edge's cells form one connected path between its ends: a closed ┄ ring of A-.-B's own, off its path, is a stray part.
+// An edge's cells form one connected path between its ends: a closed ┄ ring of A-.-B's own, off its path, is a stray
+// part.
 test('An edge with a part joined to nothing fails edge-disconnected', () => {
   const d = cornerCross(true)
   assert.deepEqual(d.conflicts, [])
@@ -233,7 +244,8 @@ test('An edge with a part joined to nothing fails edge-disconnected', () => {
 
 // A walk through an edge label into a line cell needs that cell to point at the label, as
 // line to line does. A -.-|x| B drawn as [ A ]┼┼x[ B ], C---D and E---F crossing its two cells, plus a closed ┄ ring of
-// A-.-B's own whose ┌ sits right under x: ┌ has no arm toward x, so the ring is joined to nothing, and it is no witness.
+// A-.-B's own whose ┌ sits right under x: ┌ has no arm toward x, so the ring is joined to nothing, and it is no
+// witness.
 test('A stray ring beside an edge label is not reached through the label, and fails edge-disconnected', () => {
   const c = createCanvas(5, 13, 13)
   c.text(1, 0, '[ A ]', 'node', 'A')
@@ -259,6 +271,7 @@ test('A stray ring beside an edge label is not reached through the label, and fa
   ] as const) {
     c.line(r, col, dirs, 'dotted', 'edge', 'AB')
   }
+
   const d = c.toDrawing({
     labels: [
       ...['A', 'B'].map((o) => ({ owner: o, text: `[ ${o} ]` })),

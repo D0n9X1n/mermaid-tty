@@ -28,6 +28,7 @@ test("explain: prints the step taken, the widest row's width and the rows, and e
   if (isFail(d)) {
     throw new Error(d.reason)
   }
+
   const rows = toRows(d.drawing, palette('default')).map((row) => row.map((s) => s.text).join(''))
   assert.equal(r.status, 0, r.stderr)
   assert.equal(

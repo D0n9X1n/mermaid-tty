@@ -169,6 +169,7 @@ test('A5.errors: drawn text falls back on a #…; entity, an unsupported charact
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   const g = P('s1 : a # b\ns1 --> s2 : #1 pick\nnote left of s2 : see #3').graph
   assert.deepEqual([g.nodes[0].rows[0].text, g.edges[0].label, g.nodes[1].note.text], ['a # b', '#1 pick', 'see #3'])
 })
@@ -248,6 +249,7 @@ test('A5.errors: a keyword in another case or starting a longer word, a bad head
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(parseState(readSource('stateDiagram-v3\na') as any), { reason: 'header' })
 })
 test('A5.errors: root-only lines in a body, an empty region, a late or repeated mark, a note on no state, a second body fall back', () => {
@@ -281,6 +283,7 @@ test('A5.errors: a note or accDescr block with no end, an end note in another fo
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.equal(P('s1\nnote left of s1\n\n  a\n\nend note').graph.nodes[0].note.text, 'a')
 })
 test('A5.errors: an id Mermaid drops or shares, a styling or click line it reads otherwise, and text after : it splits fall back', () => {
@@ -305,6 +308,7 @@ test('A5.errors: an id Mermaid drops or shares, a styling or click line it reads
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   const g = P('s1 : at 10:30\ns1 --> long-name : a:b\nclick s1 "https://x" "tip"').graph
   assert.deepEqual([g.nodes[0].rows[0].text, g.nodes[1].id, g.edges[0].label], ['at 10:30', 'long-name', 'a:b'])
 })
@@ -316,6 +320,7 @@ test('A5.errors: a state or composite mentioned in two regions of one composite 
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(
     P('state C {\n[*] --> a\n--\n[*] --> b\n}\nnote left of a : x').graph.nodes.find((n: any) => n.id === 'a').note
       .text,
@@ -329,6 +334,7 @@ test('A5: a note is a mention, in source order: its first mention declares a pla
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   const g = P('note left of s9 : x').graph
   assert.deepEqual(g.nodes, [
     {
@@ -348,6 +354,7 @@ test('A5.errors: a multi-line note whose first line starts with : falls back at 
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.equal(P('a\nnote right of a\n  x : y\nend note').graph.nodes[0].note.text, 'x : y')
 })
 test('A5: a transition and a region chain are whole edges: solid with an arrow head, or invisible with none', () => {
@@ -389,7 +396,8 @@ test('A5: a transition and a region chain are whole edges: solid with an arrow h
 })
 
 // As Mermaid 12.2.0 shows them: a description, transition label or note is an HTML label
-// each <br> splits; a composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls back.
+// each <br> splits; a composite's title draws on its frame, on one line. A ; Mermaid starts a new statement at falls
+// back.
 test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back', () => {
   for (const [body, why] of [
     ['state "a<!--c-->b" as A', 'html'],
@@ -404,6 +412,7 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
   ] as const) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   const g = P(
     'state "Q&A" as A\nA --> B : a < b\nB : x<br>Q&A\nnote left of A : a < b\nstate "a < b" as C {\n  c\n}',
   ).graph
@@ -417,7 +426,8 @@ test('A5.errors (X2): text Mermaid shows otherwise in a state field falls back',
     [['Q&A', 'x|Q&A', 'c'], 'a < b', 'a < b', 'a < b'],
   )
 })
-// X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each, a
+// X3. Mermaid 12.2.0 gives every state node, note, transition and composite labelType 'markdown': marked renders each,
+// a
 // state's id included where it has no description, and createText swaps icons and KaTeX.
 test('X3: Markdown the emphasis port cannot match, icons and math in a state text, or a state id shown as its label, fall back', () => {
   for (const [body, why] of [
@@ -431,6 +441,7 @@ test('X3: Markdown the emphasis port cannot match, icons and math in a state tex
   ]) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   const g = P('state "snake_case" as A\nA --> my_b : a*b\nD : C:\\x').graph
   assert.deepEqual(
     [g.nodes.map((n: any) => n.rows.map((r: any) => r.text).join('|')), g.edges[0].label],

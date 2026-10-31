@@ -36,6 +36,7 @@ export function paletteProblems(themes: Readonly<Record<ThemeName, Palette>> = T
     if (bad.length) {
       return bad.map(([ink, c]) => `${t}.${ink} is not #rrggbb: ${c}`)
     }
+
     const bg = p.background!
     const roles = swatches(p.roles)
     return [
@@ -70,6 +71,7 @@ function table(themes: Readonly<Record<ThemeName, Palette>>): string {
     if (notHex(p).length) {
       continue
     }
+
     rows.push([t, 'background', p.background!])
     for (const group of [swatches(p.roles), swatches(p.series)]) {
       group.forEach(([ink, c], i) => {
@@ -78,6 +80,7 @@ function table(themes: Readonly<Record<ThemeName, Palette>>): string {
       })
     }
   }
+
   const widths = rows[0]!.map((_, k) => Math.max(...rows.map((r) => r[k]?.length ?? 0)))
   const numeric = new Set([3, 5]) // contrast and distance align right
   return rows
@@ -96,9 +99,11 @@ function main(): number {
   for (const p of problems) {
     console.error(p)
   }
+
   if (problems.length) {
     return 1
   }
+
   console.log(`ok: ${CHECKED.join(', ')} pass: contrast >= ${MIN_CONTRAST}, OKLab distance >= ${MIN_DISTANCE}`)
   return 0
 }

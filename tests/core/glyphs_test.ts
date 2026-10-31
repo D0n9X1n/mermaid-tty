@@ -5,7 +5,8 @@ import { BOX } from '../../core/box-table.ts'
 const inBox = (g: string) => g.codePointAt(0)! >= 0x2500 && g.codePointAt(0)! <= 0x257f
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i))
-// Rule 12: printable ASCII U+0020–U+007E (95), the whole Box Drawing block U+2500–U+257F (128), and the 39 glyphs sections name:
+// Rule 12: printable ASCII U+0020–U+007E (95), the whole Box Drawing block U+2500–U+257F (128), and the 39 glyphs
+// sections name:
 // A's 7, then C's 32 (bars, gantt, xychart, class, gitGraph, quadrant).
 const RULE_12: ReadonlySet<string> = new Set([
   ...range(0x20, 0x7e),
@@ -26,6 +27,7 @@ test('A8.platforms: GLYPHS is rule 12: ASCII, Box Drawing, section-named glyphs;
       assert.ok(!/\p{Emoji}/u.test(g), `emoji: ${g}`)
     }
   }
+
   assert.ok([...RULE_12].every(isAllowed))
   for (const g of ['\u0001', '\u007f', '▶', '◀', '中']) {
     // a control, DEL, two Emoji triangles, CJK
@@ -134,7 +136,8 @@ test('A8.platforms: junction() for every dirs 1–15, light, heavy and dotted', 
   for (let dirs = 1; dirs <= 15; dirs++) {
     const light = PINNED[armsOf(dirs, '1')]
     const heavy = PINNED[armsOf(dirs, '2')]
-    const dotted = [1, 4, 5].includes(dirs) ? '┆' : [2, 8, 10].includes(dirs) ? '┄' : light // no dashed corners: bend light
+    // no dashed corners: bend light
+    const dotted = [1, 4, 5].includes(dirs) ? '┆' : [2, 8, 10].includes(dirs) ? '┄' : light
     for (const [w, want] of [
       ['light', light],
       ['heavy', heavy],
@@ -146,5 +149,6 @@ test('A8.platforms: junction() for every dirs 1–15, light, heavy and dotted', 
       }
     }
   }
+
   assert.deepEqual(wrong, [])
 })

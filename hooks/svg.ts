@@ -1,16 +1,19 @@
 // Layer A, the authority on what a picture may hold: the SVG mmdc drew for a source, checked before any PNG is made. An
 // allowlist over a real tokenisation (a small XML scanner; Mermaid's output is well-formed XML), not a search for bad
 // strings. svgUnsafe gives the first thing the SVG breaks, or null:
-//   syntax       not one well-formed element tree: a tag that does not close or closes the wrong one, an attribute twice,
+//   syntax       not one well-formed element tree: a tag that does not close or closes the wrong one, an attribute
+//   twice,
 //                unquoted or with a < in it, text outside the root
 //   markup       anything but elements and text: a comment, CDATA, a DOCTYPE or DTD, a processing instruction (an XML
 //                declaration is allowed only first)
 //   element n    a name not on the list for its context, exactly (no prefix, any case): SVG_ELEMENTS outside a
 //                foreignObject, HTML_ELEMENTS inside one; svg only as the root; nothing inside a <style>
-//   namespace n a namespace declaration other than xmlns (SVG) and xmlns:xlink (XLink) on the root, or xmlns (XHTML) on a
+//   namespace n a namespace declaration other than xmlns (SVG) and xmlns:xlink (XLink) on the root, or xmlns (XHTML) on
+//   a
 //                foreignObject's child
 //   attribute n  a name not on the list for its context: SVG_ATTRIBUTES, or HTML_ATTRIBUTES inside a foreignObject
-//   entity       an entity but &lt; &gt; &amp; &quot; &apos; or a numeric reference to a Unicode scalar value XML allows
+//   entity       an entity but &lt; &gt; &amp; &quot; &apos; or a numeric reference to a Unicode scalar value XML
+//   allows
 //   char         a control character but tab, LF and CR, or a lone surrogate
 //   marker       Mermaid's entity-marker characters (U+FB02, U+00B6), decoded or not
 //   css t        in any attribute value or <style> text: @import, @font-face, @namespace, a backslash, /*, image(,
@@ -151,9 +154,11 @@ export function svgUnsafe(svg: string): string | null {
         return r
       }
     }
+
     if (lt < 0) {
       break
     }
+
     i = lt
     if (svg.startsWith('</', i)) {
       CLOSE.lastIndex = i
@@ -161,17 +166,21 @@ export function svgUnsafe(svg: string): string | null {
       if (!m || stack.pop() !== m[1]) {
         return 'syntax'
       }
+
       i = CLOSE.lastIndex
       continue
     }
+
     if (svg[i + 1] === '!' || svg[i + 1] === '?') {
       return 'markup'
     }
+
     OPEN.lastIndex = i
     const open = OPEN.exec(svg)
     if (!open) {
       return 'syntax'
     }
+
     i = OPEN.lastIndex
     const attrs = new Map<string, string>()
     for (;;) {
@@ -180,29 +189,36 @@ export function svgUnsafe(svg: string): string | null {
       if (!a) {
         break
       }
+
       if (attrs.has(a[1]!)) {
         return 'syntax'
       }
+
       attrs.set(a[1]!, a[2] ?? a[3]!)
       i = ATTR.lastIndex
     }
+
     END.lastIndex = i
     const end = END.exec(svg)
     if (!end) {
       return 'syntax'
     }
+
     i = END.lastIndex
     if (stack.length === 0 && roots++ > 0) {
       return 'syntax'
     }
+
     const r = element(open[1]!, attrs, stack)
     if (r) {
       return r
     }
+
     if (!end[1]) {
       stack.push(open[1]!)
     }
   }
+
   return roots === 1 && stack.length === 0 ? null : 'syntax'
 }
 
@@ -214,11 +230,13 @@ function element(name: string, attrs: Map<string, string>, stack: string[]): str
   if (parent === 'style') {
     return `element ${name} in style`
   }
+
   const known =
     stack.length === 0 ? name === 'svg' : html ? HTML_ELEMENTS.has(name) : name !== 'svg' && SVG_ELEMENTS.has(name)
   if (!known) {
     return `element ${name}`
   }
+
   for (const [a, v] of attrs) {
     if (a === 'xmlns' || a.startsWith('xmlns:')) {
       const ok =
@@ -228,16 +246,20 @@ function element(name: string, attrs: Map<string, string>, stack: string[]): str
       if (!ok) {
         return `namespace ${a}`
       }
+
       continue
     }
+
     if (!(html ? HTML_ATTRIBUTES : SVG_ATTRIBUTES).has(a)) {
       return `attribute ${a}`
     }
+
     const r = value(v, true)
     if (r) {
       return r
     }
   }
+
   return null
 }
 
@@ -246,6 +268,7 @@ function text(t: string, stack: string[]): string | null {
   if (stack.length === 0) {
     return /^[ \t\r\n]*$/.test(t) ? null : 'syntax'
   }
+
   return value(t, stack[stack.length - 1] === 'style')
 }
 
@@ -255,29 +278,36 @@ function value(raw: string, css: boolean): string | null {
   if (v === null) {
     return 'entity'
   }
+
   if (BAD_CHAR.test(v)) {
     return 'char'
   }
+
   if (MARKER.test(v)) {
     return 'marker'
   }
+
   if (!css) {
     return null
   }
+
   const t = CSS.find(([, re]) => re.test(v))
   if (t) {
     return `css ${t[0]}`
   }
+
   for (const m of v.matchAll(/url\(/gi)) {
     if (!URL_REF.test(v.slice(m.index))) {
       return 'url'
     }
   }
+
   return null
 }
 
 // s with each entity decoded once, as XML does; null on any & that does not start an entity XML defines, or a numeric
-// reference to a code point XML does not allow (a C0 control but tab, LF and CR; a surrogate; U+FFFE, U+FFFF; past U+10FFFF).
+// reference to a code point XML does not allow (a C0 control but tab, LF and CR; a surrogate; U+FFFE, U+FFFF; past
+// U+10FFFF).
 function decode(s: string): string | null {
   let out = ''
   let i = 0
@@ -287,6 +317,7 @@ function decode(s: string): string | null {
     if (!m) {
       return null
     }
+
     let c: string
     if (m[1] !== undefined) {
       c = NAMED[m[1]]!
@@ -302,10 +333,13 @@ function decode(s: string): string | null {
       if (!allowed) {
         return null
       }
+
       c = String.fromCodePoint(code)
     }
+
     out += s.slice(i, j) + c
     i = ENTITY.lastIndex
   }
+
   return out + s.slice(i)
 }

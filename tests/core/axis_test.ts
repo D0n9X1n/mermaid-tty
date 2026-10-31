@@ -50,7 +50,8 @@ test("A4: the rule is frame caps owned by owner, each kept label value text owne
     cellsOf(g, 1),
     [2, 3, 4, 5, 6].map((c) => `${c} text value ax.t0`).concat([8, 9, 10, 11, 12].map((c) => `${c} text value ax.t2`)),
   )
-  assert.deepEqual(validate(axisRows(2, 20, ticks, 21, 'ax')), { reason: 'row-too-wide' }) // a field past the budget fails
+  // a field past the budget fails
+  assert.deepEqual(validate(axisRows(2, 20, ticks, 21, 'ax')), { reason: 'row-too-wide' })
 })
 
 // An axis of w cells at column 0, w columns wide, as text.
@@ -62,14 +63,17 @@ test('A4: a label stays only inside the field, and 2 or more cells after the las
   assert.deepEqual(row(10, [L(1, 'abc', 'right')]), [rule(0, 10, []), '']) // starts one before it
   assert.deepEqual(row(10, [L(0, 'ab'), L(3, 'cd')]), [rule(0, 10, [0, 3]), 'ab cd']) // 2 cells after: stays
   assert.deepEqual(row(10, [L(0, 'ab'), L(2, 'cd')]), [rule(0, 10, [0]), 'ab']) // 1 cell after: drops
-  assert.deepEqual(row(10, [L(0, 'ab'), L(4, 'cd', 'right')]), [rule(0, 10, [0, 4]), 'ab cd']) // a right label starts at
+  // a right label starts at
+  assert.deepEqual(row(10, [L(0, 'ab'), L(4, 'cd', 'right')]), [rule(0, 10, [0, 4]), 'ab cd'])
   assert.deepEqual(row(10, [L(0, 'ab'), L(3, 'cd', 'right')]), [rule(0, 10, [0]), 'ab']) //   cell − width + 1
   assert.deepEqual(row(10, [L(0, '一月'), L(4, 'x')]), [rule(0, 10, [0]), '一月']) // a wide label spans its columns
   assert.deepEqual(row(10, [L(3, '一月', 'right'), L(5, 'x')]), [rule(0, 10, [3, 5]), '一月 x'])
 })
 test('A4: a dropped label moves nothing: the next one still measures from the last kept label', () => {
-  assert.deepEqual(row(20, [L(0, 'abcdef'), L(2, 'x'), L(6, 'y')]), [rule(0, 20, [0]), 'abcdef']) // not to its nearer end
-  assert.deepEqual(row(20, [L(0, 'ab'), L(1, 'abcdefgh'), L(4, 'y')]), [rule(0, 20, [0, 4]), 'ab  y']) // nor to its farther one
+  // not to its nearer end
+  assert.deepEqual(row(20, [L(0, 'abcdef'), L(2, 'x'), L(6, 'y')]), [rule(0, 20, [0]), 'abcdef'])
+  // nor to its farther one
+  assert.deepEqual(row(20, [L(0, 'ab'), L(1, 'abcdefgh'), L(4, 'y')]), [rule(0, 20, [0, 4]), 'ab  y'])
   assert.deepEqual(row(10, [L(0, 'abc', 'right'), L(1, 'x')]), [rule(0, 10, [1]), ' x']) // nor one that left the field
 })
 // Helpers QA: ticks are taken in input order, never re-sorted: after x at 6, y at 0 starts before x's end and drops.

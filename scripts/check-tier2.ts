@@ -24,6 +24,7 @@ export function tier2Files(t: string): string[] {
   if (!existsSync(dir)) {
     return []
   }
+
   return readdirSync(dir)
     .filter((n) => ok.test(n))
     .sort()
@@ -37,6 +38,7 @@ export function repoRecords(): ReviewRecord[] {
   if (!existsSync(dir)) {
     return []
   }
+
   return readdirSync(dir)
     .filter((f) => f.endsWith('.md'))
     .sort()
@@ -57,12 +59,14 @@ export function tier2Problems(
   if (!files.length) {
     return [`${scope}: no ok fixtures`]
   }
+
   const each = records
     .filter((r) => r.scope === scope && r.verdict === 'pass')
     .map((r) => [...requirePass([r], { [scope]: files }), ...checkRecords([r], read)])
   if (!each.length) {
     return requirePass([], { [scope]: files })
   }
+
   return each.reduce((best, p) => (p.length < best.length ? p : best))
 }
 
@@ -74,14 +78,17 @@ function main(): number {
     if (enabled) {
       return found.map((p) => `${t}: ${p}`)
     }
+
     return found.length ? [] : [`${t}: passes the gate but is not in TIER2_PASSED`]
   })
   for (const p of problems) {
     console.error(p)
   }
+
   if (problems.length) {
     return 1
   }
+
   console.log(
     `check-tier2: TIER2_PASSED [${TIER2_PASSED.join(', ')}] lists exactly the Tier 2 types that pass the gate`,
   )

@@ -9,7 +9,8 @@ import type { DiagramModule } from '../../registry.ts'
 import { register } from '../../registry.ts'
 import { parseState, type StateModel } from './parse.ts'
 
-// The graph drawn in dir. Keyed: each note, in source order, keyed a, b, … in place, with its legend row; its text joined
+// The graph drawn in dir. Keyed: each note, in source order, keyed a, b, … in place, with its legend row; its text
+// joined
 // by spaces. Unkeyed: the notes as written and no legend. Either way every note is keyable, so keyed keys all or none.
 function build(m: StateModel, { dir, keyed }: Parameters<Build>[0]): ReturnType<Build> {
   const byId = new Map(m.graph.nodes.flatMap((n) => (n.note ? [[n.note.id, n.note] as const] : [])))
@@ -18,6 +19,7 @@ function build(m: StateModel, { dir, keyed }: Parameters<Build>[0]): ReturnType<
   if (!keyed) {
     return { graph: { ...m.graph, dir }, legend: [], keyable }
   }
+
   const keys = new Map(noted.map((n, k) => [n.id, fieldKey(k)]))
   const nodes = m.graph.nodes.map((n) => (n.note ? { ...n, note: { ...n.note, key: keys.get(n.note.id)! } } : n))
   const legend: LegendRow[] = noted.map((n) => ({

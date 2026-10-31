@@ -20,9 +20,11 @@ test('A4: decimals parse exactly; malformed numbers are null', () => {
   for (const s of ['1', '-0.34', '+1.3', '.6', '2.4', '0']) {
     assert.notEqual(parseDec(s), null, s)
   }
+
   for (const s of ['1.', '1e3', 'NaN', '0x10', '', '-', '1.2.3']) {
     assert.equal(parseDec(s), null, s)
   }
+
   assert.equal(cmp(add(D('0.1'), D('0.2')), D('0.3')), 0)
   assert.equal(div(D('1'), dec(0)), null)
 })

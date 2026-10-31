@@ -53,7 +53,8 @@ test('A3: a note in an LR composite under a TB root becomes a note node inside i
 test('A5.mutation-tests: a keyed edge label routes through its one-cell key box, not its text footprint', () => {
   const gr = g('TB', ['A>B|one<br>two'])
   gr.edges[0]!.labelKey = 'a'
-  assert.deepEqual(validate(D(gr)), { reason: 'key-stray' }) // connected; the key is stray only because no legend lists it here
+  // connected; the key is stray only because no legend lists it here
+  assert.deepEqual(validate(D(gr)), { reason: 'key-stray' })
 })
 test("A3: a note withNotes turns into a node keeps its key as the node's one key row", () => {
   const lr = g('LR', ['A>B'])
@@ -128,6 +129,7 @@ test("A3: a mark's note draws beside its glyph and is listed, on either side, so
       side,
     )
   }
+
   const s = readSource('stateDiagram-v2\nstate ch <<choice>>\n[*] --> ch\nch --> B\nnote right of ch : memo')
   const m = parseState(s as any) as any
   const d = D(m.graph)

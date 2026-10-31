@@ -17,8 +17,10 @@ const S = (t: string): Drawing =>
   sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2 in
-// flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where one is
+// QA's repro, whose edge label's row once ran through both sides of S0: the layout keeps the label off S0's border (R2
+// in
+// flowchart-layout_test.ts), but its edge can reach N1 only by running through S0 and back in, three crossings where
+// one is
 // due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator half of the finding, a
 // label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between() further down.
 test("A5.mutation-tests: QA's cluster-border repro, its edge through S0 and back, falls back", () => {
@@ -53,7 +55,8 @@ test('A5.mutation-tests: a cluster an edge crosses straight, its title on its to
     assert.equal(validate(d), null, `${t}\n${show(d)}`)
   }
 })
-// An alt frame, titled and with an else divider, inside box L; A→B leaves L through its right side and enters R through its left.
+// An alt frame, titled and with an else divider, inside box L; A→B leaves L through its right side and enters R through
+// its left.
 test('A5.mutation-tests: a sequence alt frame with its title and divider, and boxes a message crosses, pass', () => {
   const d = S(
     'box L\nparticipant A\nparticipant J\nend\nbox R\nparticipant B\nend\nalt ok\nA->>J: Hello John, how are you?\nelse no\nJ->>A: Great!\nend\nA->>B: hi',
@@ -62,7 +65,8 @@ test('A5.mutation-tests: a sequence alt frame with its title and divider, and bo
   assert.equal(validate(d), null, show(d))
 })
 
-// Frame F, rows 1–5 and columns 0–6, titled T at (1,2); a above it at (0,3), bb inside at (4,3); edge e from A to B as ink draws it.
+// Frame F, rows 1–5 and columns 0–6, titled T at (1,2); a above it at (0,3), bb inside at (4,3); edge e from A to B as
+// ink draws it.
 function framed(ink: (c: Canvas) => void, frames = ['F'], extra: { owner: string; text: string }[] = []): Drawing {
   const c = createCanvas(6, 7, 7)
   c.frame(1, 0, 5, 6, 'frame', 'F', 'T')
@@ -76,9 +80,11 @@ function framed(ink: (c: Canvas) => void, frames = ['F'], extra: { owner: string
     frames,
   })
 }
+
 const line = (c: Canvas, cells: [number, number, number][]) =>
   cells.forEach(([r, col, dirs]) => c.line(r, col, dirs, 'light', 'edge', 'e'))
-// Straight: e runs down column 3, crossing F's top border as │. Along: e turns onto the top border, └┐, and drops down column 4.
+// Straight: e runs down column 3, crossing F's top border as │. Along: e turns onto the top border, └┐, and drops down
+// column 4.
 const straight = (c: Canvas) => {
   line(c, [
     [1, 3, 5],
@@ -132,7 +138,8 @@ test("A node pill drawn on a frame's border fails frame-broken", () => {
   assert.equal(validate(pill(2, 1)), null) // inside, beside the left side
 })
 
-// Frame F, rows 0–2 and columns 0 to w - 1, with ink drawn over it; label is the text ink draws, as one label of owner L.
+// Frame F, rows 0–2 and columns 0 to w - 1, with ink drawn over it; label is the text ink draws, as one label of owner
+// L.
 function box(w: number, ink: (c: Canvas) => void = () => {}, label?: string): Drawing {
   const c = createCanvas(3, w, w)
   c.frame(0, 0, 2, w - 1, 'frame', 'F')
@@ -144,7 +151,8 @@ function box(w: number, ink: (c: Canvas) => void = () => {}, label?: string): Dr
     frames: ['F'],
   })
 }
-// QA's repro: a two-row label erases the top border and both sides, so the bottom border alone spans a one-row box. With
+// QA's repro: a two-row label erases the top border and both sides, so the bottom border alone spans a one-row box.
+// With
 // the top row erased at width 2, the │ sides over └┘ span a box with no ┌┐.
 test('A5.mutation-tests: a frame whose top border or sides text erased fails frame-broken, though the cells left span a box', () => {
   const repro = box(
@@ -177,7 +185,8 @@ test('A5.mutation-tests: a frame needs its four corners: one overwritten, by tex
   assert.equal(validate(run)?.reason, 'frame-broken')
 })
 
-// V5: a border cell draws its border's glyph, ─ or ━ across and │ or ┃ down a side, or a tee whose stem a divider of the
+// V5: a border cell draws its border's glyph, ─ or ━ across and │ or ┃ down a side, or a tee whose stem a divider of
+// the
 // frame's own, `${id}.${k}`, continues inside: ┬ over it, ┴ under it, ├ or ┤ beside it. A stray tee leads nowhere.
 const tee = (d: Drawing, r: number, c: number, ch: string, dirs: number) => {
   d.cells[r]![c] = { ...d.cells[r]![c]!, ch, dirs }
@@ -205,7 +214,8 @@ test("A5.mutation-tests: V5 a divider's tees pass, and so does the quadrant's cr
   assert.equal(validate(q.drawing), null, show(q.drawing))
 })
 
-// V6: frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws it.
+// V6: frame F, rows 0–4 and columns 0–8, holds a at (2,2) and b at (2,5); edge e from A to B, its head g, as ink draws
+// it.
 function inner(ink: (c: Canvas) => void, g: string): Drawing {
   const c = createCanvas(6, 9, 9)
   c.frame(0, 0, 4, 8, 'frame', 'F', 'T')
@@ -223,8 +233,10 @@ function inner(ink: (c: Canvas) => void, g: string): Drawing {
     frames: ['F'],
   })
 }
+
 test('V6: an edge between two nodes of one frame that leaves it through its border and comes back fails edge-outside-frame', () => {
-  // Under a, along row 3, down through the bottom border at (4,4), back up at (4,5), ▲ into b: each crossing a straight │.
+  // Under a, along row 3, down through the bottom border at (4,4), back up at (4,5), ▲ into b: each crossing a straight
+  // │.
   const out = inner((c) => {
     line(c, [
       [3, 2, 3],
@@ -265,6 +277,7 @@ function between(ink: (c: Canvas) => void): Drawing {
     frames: ['F'],
   })
 }
+
 test('An edge through a frame that holds neither of its ends fails edge-crosses-frame', () => {
   // Down column 4, in through F's top border and out through its bottom, each crossing a straight │.
   const through = between((c) =>
@@ -280,7 +293,8 @@ test('An edge through a frame that holds neither of its ends fails edge-crosses-
   // framed(straight) above is the passing case: F holds one end, and the edge crosses its border once.
   assert.equal(validate(framed(straight)), null)
 })
-// The two-subgraph LR chart (case 2) at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds neither end, and leaves through its
+// The two-subgraph LR chart (case 2) at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds
+// neither end, and leaves through its
 // right wall. Every step of the ladder draws a frame crossed so, or another broken drawing, so the fence falls back.
 test('The two-subgraph LR chart at 80 columns, its dotted edge crossing Data tier, falls back', () => {
   const src =
@@ -299,6 +313,7 @@ test("A self-loop on a frame never runs over the frame's border", () => {
     if (!('drawing' in r)) {
       continue
     } // falling back is fine
+
     const d = r.drawing
     const b = d.cells.flatMap((row, y) =>
       row.flatMap((x, c) => (x?.kind === 'frame' && x.owners[0] === 'S' ? [[y, c]] : [])),
@@ -313,7 +328,8 @@ test("A self-loop on a frame never runs over the frame's border", () => {
     assert.ok(loop.length > 0 && !loop.some(([y, c]) => onBorder(y, c)), `${columns}\n${show(d)}`)
   }
 })
-// The validator half alone, on F of between() with no a: e from F to b leaves F's top from above, at (0,3), then runs down
+// The validator half alone, on F of between() with no a: e from F to b leaves F's top from above, at (0,3), then runs
+// down
 // column 4 through F's interior, crossing its top and bottom borders. F is e's end, but not that way.
 test('An edge from a frame that runs through the frame fails edge-crosses-frame', () => {
   const c = createCanvas(8, 9, 9)

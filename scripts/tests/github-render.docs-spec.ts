@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { githubRefs, renderErrors, treeRefs } from '../lib/github-render.ts'
 const T = '`'.repeat(1001)
-const HERO = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>' // the HTML below is shaped like gh api markdown output recorded on 2026-10-28
+// the HTML below is shaped like gh api markdown output recorded on 2026-10-28
+const HERO = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'
 const W = (src: string) =>
   `<a target="_blank" rel="noopener noreferrer" href="${src}"><img src="${src}" alt="x" style="max-width: 100%;"></a>`
 test('githubRefs drops image wrappers and heading anchors and reads data-canonical-src', () => {

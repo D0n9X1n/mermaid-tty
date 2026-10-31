@@ -29,6 +29,7 @@ test('B5: release CLI checks notes from a file or stdin for both install command
       assert.equal(result.status, 0, result.stderr)
       assert.equal(result.stdout, `check-release: notes ok (${version})\n`)
     }
+
     for (const present of INSTALL) {
       const bad = run(['notes', '-'], present)
       const absent = INSTALL.find((line) => line !== present)

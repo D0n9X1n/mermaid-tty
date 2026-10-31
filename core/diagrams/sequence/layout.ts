@@ -1,4 +1,5 @@
-// The sequence diagram module (plan A §6, T24): its parser, its fit ladder, and each step's layout at the given columns.
+// The sequence diagram module (plan A §6, T24): its parser, its fit ladder, and each step's layout at the given
+// columns.
 // One lifeline per participant, in declaration order, under a header of pills; then rows per statement. Frames draw
 // first, then lifelines, then lines, arrows, text and caps, so each layer replaces the one below it without a conflict.
 // It registers itself on import, after registry.ts has run, so MODULES is initialized when register runs.
@@ -63,10 +64,13 @@ function pieces(label: string, wrapAt: number | null): Piece[] | null {
     if (!ps) {
       return null
     }
+
     ps.forEach((p, j) => out.push(i > 0 && j === 0 ? { ...p, join: '\n' } : p))
   }
+
   return out
 }
+
 const widest = (ps: readonly Piece[]): number => Math.max(0, ...ps.map((p) => width(p.text)))
 // A label as validate compares it: each <br> a space.
 const plain = (label: string): string => labelLines(label).join(' ')
@@ -90,12 +94,15 @@ function drawPill(cv: Canvas, row: number, c: number, p: Participant): void {
 }
 
 // Numbers each message, note and frame among its kind in source order, a frame before its contents, wraps each
-// message's and note's label, a message's after its autonumber, and finds each frame's run and each box's borders. A Fail
-// for a box with no participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe integer.
+// message's and note's label, a message's after its autonumber, and finds each frame's run and each box's borders. A
+// Fail
+// for a box with no participants or a word wider than wrapAt. parseSequence has checked each autonumber is a safe
+// integer.
 function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (seq.boxes.some((b) => b.ids.length === 0)) {
     return fail('empty-box')
   }
+
   const no = new Map<Item, number>()
   const text = new Map<Item, string>()
   const pcs = new Map<Item, Piece[]>()
@@ -109,9 +116,11 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
         it.sections.forEach((s) => walk(s.items))
         continue
       }
+
       if (it.kind !== 'msg' && it.kind !== 'note') {
         continue
       }
+
       const i = count[it.kind]++
       const n = it.kind === 'msg' ? it.num : null
       const t = n === null ? it.text : `${n}. ${it.text}`
@@ -129,6 +138,7 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (wide) {
     return fail('too-wide')
   }
+
   const pills = seq.participants.map(pill)
   const at = new Map(seq.participants.map((p, i) => [p.id, i]))
   const last = pills.length - 1
@@ -142,15 +152,18 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
       const is = (it.kind === 'msg' ? [it.from, it.to] : it.ids).map((id) => at.get(id)!)
       return { lo: Math.min(...is), hi: Math.max(...is), l: 0, r: 0 }
     }
+
     if (it.kind !== 'frame') {
       return null
     }
+
     const s =
       it.sections.reduce<Span | null>((a, x) => join(a, run(x.items)), null) ??
       (last < 0 ? null : { lo: 0, hi: last, l: 0, r: 0 })
     if (!s) {
       return null
     }
+
     const o = { ...s, l: s.l + 1, r: s.r + 1 }
     outer.set(it, o)
     fr[o.hi] = Math.max(fr[o.hi]!, o.r)
@@ -163,7 +176,8 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
   if (extent) {
     return extent
   }
-  // A box's borders stand 2 columns beyond its pills, and a blank column beyond the frame borders stacked at its ends, 2
+  // A box's borders stand 2 columns beyond its pills, and a blank column beyond the frame borders stacked at its ends,
+  // 2
   // columns each; a one-member box's right one beyond its title too, as draw puts it.
   const rb = pills.map(() => 0)
   const lb = pills.map(() => 0)
@@ -176,6 +190,7 @@ function context(seq: Seq, pad: number, wrapAt: number | null): Ctx | Fail {
       2 * fr[z]! + 2,
     )
   }
+
   return { seq, pad, pills, at, no, text, pcs, rb, lb, outer, fr, fl }
 }
 
@@ -186,6 +201,7 @@ function join(a: Span | null, b: Span | null): Span | null {
   if (!a || !b) {
     return a ?? b
   }
+
   const lo = Math.min(a.lo, b.lo)
   const hi = Math.max(a.hi, b.hi)
   return {
@@ -215,10 +231,12 @@ function stretch(c: Ctx, f: number, t: number, cap: number): [Bound, Bound] {
     if (c.rb[g]) {
       bs.push({ tie: g, off: c.rb[g]!, cut: true })
     }
+
     if (c.lb[g + 1]) {
       bs.push({ tie: g + 1, off: -c.lb[g + 1]!, cut: true })
     }
   }
+
   bs.push({ tie: hi, off: t > f ? -cap : 0, cut: false })
   const ks = bs.slice(1).flatMap((b, k) => (b.tie > bs[k]!.tie ? [k] : []))
   const k = t > f ? ks[0]! : ks.at(-1)!
@@ -228,10 +246,13 @@ function stretch(c: Ctx, f: number, t: number, cap: number): [Bound, Bound] {
 // Each lifeline's column. The gap between neighbours is the largest of their pill halves + 2, the widest label of a
 // message spanning only that gap + pad, 2 × the frame borders between them + 1, and, where a box border stands between
 // them, what stands each side of the gap (that box's border, or a pill half or 2 × the frame borders) + 2; a
-// message spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 + its
-// width + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right of a
+// message spanning several gaps spreads its need evenly over them. Not in the plan: a self-message's label needs 2 +
+// its
+// width + pad / 2 right of its lifeline (+ its pill's right half if it creates its participant); a note left or right
+// of a
 // lifeline needs its box + 3 on that side; a message to a created participant needs the half of its pill facing the
-// sender too; a message crossing a box border needs its label's stretch to hold it + 2 blanks; a frame or box title fits
+// sender too; a message crossing a box border needs its label's stretch to hold it + 2 blanks; a frame or box title
+// fits
 // between its borders.
 function measure(c: Ctx): number[] {
   const { pills, at, pad } = c
@@ -248,20 +269,24 @@ function measure(c: Ctx): number[] {
     if (!m) {
       continue
     }
+
     const [a, z] = m
     if (a < z) {
       spread(a, z, width(b.label ?? '') - 1 - pills[a]!.left - pills[z]!.right)
     }
   }
+
   const born = new Set<string>()
   const walk = (items: readonly Item[]): void => items.forEach(one)
   const one = (it: Item): void => {
     if (it.kind === 'frame') {
       return frame(it)
     }
+
     if (it.kind === 'create') {
       born.add(it.id)
     }
+
     if (it.kind === 'note') {
       const is = it.ids.map((id) => at.get(id)!)
       const i = is[0]!
@@ -269,18 +294,23 @@ function measure(c: Ctx): number[] {
       if (it.side === 'right of' && i < last) {
         spread(i, i + 1, w + 3)
       }
+
       if (it.side === 'left of' && i > 0) {
         spread(i - 1, i, w + 3)
       }
+
       return
     }
+
     if (it.kind !== 'msg') {
       return
     }
+
     const f = at.get(it.from)!
     const t = at.get(it.to)!
     const w = widest(c.pcs.get(it)!)
-    // A created target's pill: the half facing the sender, or a self-message's right half, which its loop starts beyond.
+    // A created target's pill: the half facing the sender, or a self-message's right half, which its loop starts
+    // beyond.
     const cap = born.delete(it.to) ? (t > f ? pills[t]!.left : pills[t]!.right) : 0
     if (f === t) {
       if (f < last) {
@@ -300,6 +330,7 @@ function measure(c: Ctx): number[] {
     if (!o) {
       return
     }
+
     const tw = Math.max(...titles(f).map((t) => width(t)))
     if (o.lo < o.hi) {
       spread(o.lo, o.hi, tw + 3 - 2 * (o.l + o.r))
@@ -315,6 +346,7 @@ function measure(c: Ctx): number[] {
     if (!rb[g] && !lb[g + 1]) {
       return
     }
+
     const r = rb[g] || Math.max(pills[g]!.right, 2 * fr[g]!)
     const l = lb[g + 1] || Math.max(pills[g + 1]!.left, 2 * fl[g + 1]!)
     need[g] = Math.max(need[g]!, r + l + 2)
@@ -330,6 +362,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   if (isFail(c)) {
     return c
   }
+
   const xs = measure(c)
   const back: Op[] = []
   const fore: Op[] = []
@@ -395,6 +428,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
       for (let col = a; col <= b; col++) {
         fore.push(seg(line, col, 10, col === (right ? b : a) ? head : col === (right ? a : b) ? tail : null))
       }
+
       touch(a - 1, b + 1)
       // The label centers in its stretch: between the lifelines, or between the box borders and lifelines bounding it.
       const [p, q] = stretch(c, f, t, cap)
@@ -402,8 +436,10 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
       const to = xs[q.tie]! + q.off
       stack(top, ps, (w) => from + 1 + Math.floor((to - from - 1 - w) / 2), 'label', `${id}:label`)
     } else {
-      // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline. With a head
-      // at its start too (<<->>), each row runs one cell further, ◄─┐ over ◄─┘, so a straight cell shows its style: ◄┄┐ for
+      // ─┐ beyond the lifeline, or beyond its new pill's right cap, then back under ┘ to ◄ beside the lifeline. With a
+      // head
+      // at its start too (<<->>), each row runs one cell further, ◄─┐ over ◄─┘, so a straight cell shows its style: ◄┄┐
+      // for
       // a dotted one, which ◄┐ would draw as solid.
       const k = tail ? 1 : 0
       const turn = xf + cap + 2 + k
@@ -416,26 +452,32 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
       for (let col = xf + 1; col < turn; col++) {
         fore.push(seg(line + 1, col, 10, col === xf + 1 ? head : null))
       }
+
       touch(xf, turn)
       stack(top, ps, () => turn, 'label', `${id}:label`)
     }
+
     if (make) {
       born.set(m.to, line)
       pillAt(t, line)
     }
+
     const end = line + (xf === xt ? 1 : 0)
     for (const d of doomed) {
       died.set(d, end)
     }
+
     doomed.clear()
     row = end + 1
     // + activates the target from its arrow on; - deactivates the sender after this message.
     if (m.activate) {
       shift(m.to, end, 1)
     }
+
     if (m.deactivate) {
       shift(m.from, end + 1, -1)
     }
+
     labels.push({ owner: `${id}:label`, text: plain(c.text.get(m)!) })
     edges.push({
       id,
@@ -498,12 +540,14 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
       if (k > 0) {
         dividers.push(row++)
       }
+
       walk(s.items)
     })
     if (hi < lo) {
       lo = xs[0] ?? 0
       hi = xs.at(-1) ?? 0
     }
+
     const left = lo - 2
     const right = Math.max(hi + 2, left + Math.max(...ts.map((t) => width(t))) + 3)
     const bottom = row++
@@ -513,12 +557,14 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (o && ((o.lo > 0 && left <= xs[o.lo - 1]!) || (o.hi < xs.length - 1 && right >= xs[o.hi + 1]!))) {
       stray = true
     }
+
     const role: Ink = f.type === 'rect' ? 'note' : 'frame'
     back.push((cv, dx) => cv.frame(top, left + dx, bottom, right + dx, role, id, ts[0] || undefined))
     frames.push(id)
     if (ts[0]) {
       labels.push({ owner: id, text: ts[0] })
     }
+
     dividers.forEach((r, j) => {
       const own = `${id}.${j + 1}`
       const t = ts[j + 1]!
@@ -558,6 +604,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
   if (stray) {
     return fail(seq.boxes.length ? 'box-frame' : 'frame-extent')
   }
+
   const last = row - 1 // the last body row
   seq.participants.forEach((p, i) => {
     labels.push({ owner: p.id, text: p.label })
@@ -572,6 +619,7 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     if (!m) {
       return
     }
+
     const left = xs[m[0]]! - c.lb[m[0]]!
     const right = Math.max(xs[m[1]]! + c.rb[m[1]]!, left + width(b.label ?? '') + 3)
     back.unshift((cv, dx) =>
@@ -598,20 +646,24 @@ function draw(seq: Seq, pad: number, wrapAt: number | null, columns: number): Dr
     fore.push((cv) => void cv.text(0, 0, title, 'title', 'title'))
     labels.push({ owner: 'title', text: title })
   }
+
   const cv = createCanvas(last + 1 + (boxed ? 1 : 0), hi - lo + 1, columns)
   for (const op of [...back, ...life, ...fore]) {
     op(cv, -lo)
   }
+
   const glyphs = marks.map((m) => ({ owner: m.owner, ch: '┆', at: { r: m.r, c: m.c - lo } }))
   return cv.toDrawing({ labels, edges, edgeLabels, frames, ...(glyphs.length ? { glyphs } : {}) })
 }
 
-// natural and tight draw once, unwrapped; wrap tries each width in WRAPS: the first drawing validate accepts, else the last.
+// natural and tight draw once, unwrapped; wrap tries each width in WRAPS: the first drawing validate accepts, else the
+// last.
 function layout(seq: Seq, step: Step, columns: number): Drawing | Fail {
   const pad = step === 'natural' ? 4 : 2
   if (step !== 'wrap') {
     return draw(seq, pad, null, columns)
   }
+
   let last: Drawing | Fail = fail('too-wide')
   for (const wrapAt of WRAPS) {
     last = draw(seq, pad, wrapAt, columns)
@@ -619,6 +671,7 @@ function layout(seq: Seq, step: Step, columns: number): Drawing | Fail {
       return last
     }
   }
+
   return last
 }
 

@@ -16,13 +16,16 @@ export const parseModeArgs = (a: unknown): ModeArgs => {
   if (a === undefined) {
     return { report: true }
   }
+
   if (typeof a !== 'string') {
     return { error: USAGE }
   }
+
   const w = a.trim().toLowerCase()
   if (w === '') {
     return { report: true }
   }
+
   return w === 'source' || w === 'diagram' || w === 'text' ? { set: w } : { error: USAGE }
 }
 

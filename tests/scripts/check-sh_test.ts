@@ -67,6 +67,7 @@ function runCheckSh(env: Record<string, string> = {}) {
     rmSync(dir, { recursive: true, force: true })
   }
 }
+
 const POSIX_ONLY =
   process.platform === 'win32' && 'needs a POSIX bash and PATH; on Windows, CI runs check.sh itself under Git Bash'
 

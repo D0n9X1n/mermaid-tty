@@ -50,6 +50,7 @@ test('VR.gallery: <, & and " in text are escaped, and glyphXs reads each glyph b
   for (const e of ['>&lt;</text>', '>&amp;</text>', '>&quot;</text>']) {
     assert.ok(svg.includes(e), e)
   }
+
   assert.doesNotMatch(svg, />[<&"]<\/text>/)
   assert.deepEqual(glyphXs(svg), [
     ['a', 0],
@@ -111,7 +112,8 @@ test('VR.gallery: offGrid passes a true render, and reports a glyph moved off it
   assert.deepEqual(offGrid(svg.replace(/<text [^>]*>►<\/text>/, ''), rows, 10), ['expected 4 glyphs, found 3'])
 })
 
-// é is e + U+0301 COMBINING ACUTE ACCENT, one glyph; ​ is ZERO WIDTH SPACE, which draws nothing. Escapes, since a copy can lose either.
+// é is e + U+0301 COMBINING ACUTE ACCENT, one glyph; ​ is ZERO WIDTH SPACE, which draws nothing. Escapes, since a copy
+// can lose either.
 test('VR.gallery: offGrid passes a combining mark riding on its base, and a zero-width space that draws nothing', () => {
   const rows = [[{ text: 'éx​中y' }]]
   assert.deepEqual(offGrid(rowsToSvg(rows, CELLS), rows, 10), [])
@@ -120,7 +122,8 @@ test('VR.gallery: offGrid passes a combining mark riding on its base, and a zero
 const RENDER_SVG = fileURLToPath(new URL('../../scripts/render-svg.ts', import.meta.url))
 const LR = 'flowchart LR\nA[alpha one] --> B[beta two] --> C[gamma three] --> D[delta four]\n'
 
-// A temp dir, removed after the test, holding src as in.mmd; run spawns render-svg.ts with args, '@in' standing for in.mmd.
+// A temp dir, removed after the test, holding src as in.mmd; run spawns render-svg.ts with args, '@in' standing for
+// in.mmd.
 function cli(t: { after(fn: () => void): void }, src: string) {
   const dir = mkdtempSync(join(tmpdir(), 'mtty-svg-'))
   const file = join(dir, 'in.mmd')
@@ -149,6 +152,7 @@ test('VR.gallery: render-svg.ts prints its usage and exits 2 on a missing OUT.sv
     assert.equal(r.status, 2, args.join(' '))
     assert.match(r.stderr, /usage: node scripts\/render-svg\.ts FILE COLS THEME OUT\.svg/)
   }
+
   assert.equal(existsSync(out), false)
 })
 

@@ -37,7 +37,8 @@ test('section runs to the next h1/h2; text drops code; CJK', () => {
   assert.equal(section(md, 'Missing'), null)
   assert.equal(text(parse('`x` [甲](Y) z')).trim(), '甲 z')
   assert.ok(CJK.test('中') && CJK.test('한') && !CJK.test('─►é'))
-  // An h1 also ends a section, only an h2 opens one, the last runs to the end, and a heading on the last line has an empty body.
+  // An h1 also ends a section, only an h2 opens one, the last runs to the end, and a heading on the last line has an
+  // empty body.
   assert.deepEqual(
     [section('## A\nx\n# B\ny\n', 'A'), section('# A\nx\n', 'A'), section('## A\nx', 'A'), section('## A', 'A')],
     ['x\n', null, 'x', ''],
@@ -78,7 +79,8 @@ test('GFM: a table and an autolink literal parse; within walks the parent links 
   ])
 })
 test('lineOf: a node with no position takes the line of its nearest ancestor that has one; links() leaves out reference-style links', () => {
-  // The GFM transform makes this literal autolink, and its text, with no position: both take the paragraph's line 3, not the root's 1.
+  // The GFM transform makes this literal autolink, and its text, with no position: both take the paragraph's line 3,
+  // not the root's 1.
   const src = '# T\n\nsay "www.x.example"\n'
   const link = all(parse(src), 'link')[0]!
   assert.deepEqual(links(src), [{ line: 3, label: 'www.x.example', target: 'http://www.x.example' }])

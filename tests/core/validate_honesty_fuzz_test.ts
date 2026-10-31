@@ -1,7 +1,10 @@
 // A cell-level honesty fuzz. Each seeded graph the pipeline draws and the validator passes is read back from its cells
-// alone, by a checker that shares no code with core/validate.ts: (i) each edge's own cells form one simple path from beside
-// its from node to its head or heads, (ii) where two edges that share no endpoint meet in a line cell, every edge there runs
-// straight through it, (iii) every arrow cell is owned only by edges that end there, and (iv) lines that join imply no edge
+// alone, by a checker that shares no code with core/validate.ts: (i) each edge's own cells form one simple path from
+// beside
+// its from node to its head or heads, (ii) where two edges that share no endpoint meet in a line cell, every edge there
+// runs
+// straight through it, (iii) every arrow cell is owned only by edges that end there, and (iv) lines that join imply no
+// edge
 // the source does not have.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -23,13 +26,16 @@ function random(seed: number) {
     return (seed >>> 0) % n
   }
 }
+
 function pick<T>(next: (n: number) => number, xs: readonly T[]): T {
   return xs[next(xs.length)]!
 }
 
-// Graph i: TB, LR, BT or RL in turn, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a back edge to the
+// Graph i: TB, LR, BT or RL in turn, 2–9 nodes, a spanning tree, then up to count extra edges, each a forward edge, a
+// back edge to the
 // parent or the root, a repeat of an earlier pair, or a self-loop. A quarter of the edges are labelled; some ends are
-// circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the graphs frame a run of nodes.
+// circles, crosses, open or two-headed; some nodes have two-line or wide labels; a third of the graphs frame a run of
+// nodes.
 function graphFor(i: number, next: (n: number) => number): Graph {
   const count = 2 + next(8)
   const name = (k: number) => `N${k}`
@@ -46,6 +52,7 @@ function graphFor(i: number, next: (n: number) => number): Graph {
     parent.push(next(k))
     edge(parent[k]!, k)
   }
+
   for (let n = next(count + 1); n > 0; n--) {
     const a = next(count)
     const b = next(count)
@@ -60,27 +67,32 @@ function graphFor(i: number, next: (n: number) => number): Graph {
       edge(a, a)
     }
   }
+
   const labels: Record<string, string> = {}
   for (let k = 0; k < count; k++) {
     if (next(5) === 0) {
       labels[name(k)] = pick(next, ['two<br/>lines', '读取配置', 'a wider node'])
     }
   }
+
   const graph = g((['TB', 'LR', 'BT', 'RL'] as const)[i % 4]!, specs, labels)
   for (const e of graph.edges) {
     if (next(6) === 0) {
       e.tail = pick<End>(next, ['arrow', 'circle', 'cross'])
     }
+
     if (next(8) === 0) {
       e.head = pick<End>(next, ['none', 'circle', 'cross'])
     }
   }
+
   if (next(3) === 0) {
     const lo = next(count)
     const hi = lo + 1 + next(count - lo)
     const nodes = Array.from({ length: hi - lo }, (_, k) => name(lo + k))
     graph.clusters = [{ id: 'S', title: next(2) ? '组' : null, dir: null, nodes, clusters: [] }]
-    // Every other framed graph of three or more nodes nests its first two in T, with no draw from next, so the stream is A1's.
+    // Every other framed graph of three or more nodes nests its first two in T, with no draw from next, so the stream
+    // is A1's.
     if (nodes.length >= 3 && i % 2 === 0) {
       graph.clusters = [
         { ...graph.clusters[0]!, nodes: nodes.slice(2), clusters: ['T'] },
@@ -88,10 +100,12 @@ function graphFor(i: number, next: (n: number) => number): Graph {
       ]
     }
   }
+
   return graph
 }
 
-// The pipeline at explain's natural step, rankGap 3, nodeGap 4 and no wrap, on a grid wide enough that no row fails; null
+// The pipeline at explain's natural step, rankGap 3, nodeGap 4 and no wrap, on a grid wide enough that no row fails;
+// null
 // if it cannot draw. Retrying a route conflict wider, as A1 does, would cost more time than it adds drawings. finish is
 // drawGraph's, compact unless given.
 function drawn(graph: Graph, finish?: (d: Drawing) => Drawing): Drawing | null {
@@ -99,6 +113,7 @@ function drawn(graph: Graph, finish?: (d: Drawing) => Drawing): Drawing | null {
   if ('reason' in p) {
     return null
   }
+
   const routes = routeGraph(p)
   return Array.isArray(routes) ? drawGraph(p, routes, 10000, finish) : null
 }
@@ -117,9 +132,12 @@ const SIDES = [
 const POINTS: Readonly<Record<string, number>> = { '▲': 0, '►': 1, '▼': 2, '◄': 3 }
 const kindOf = (ch: string): End => (ch in POINTS ? 'arrow' : ch === 'o' ? 'circle' : ch === 'x' ? 'cross' : 'none')
 
-// e's cells as a graph. A vertex is a line or arrow cell of e. A link joins two lines of e whose dirs point at each other,
-// or a line of e and an arrow of e it points at, next to each other or across e's own label, which a route runs straight
-// through. An end is a line's arm into a cell of e's from or to node, F, T or FT, or an arrow's point at one; o and x point
+// e's cells as a graph. A vertex is a line or arrow cell of e. A link joins two lines of e whose dirs point at each
+// other,
+// or a line of e and an arrow of e it points at, next to each other or across e's own label, which a route runs
+// straight
+// through. An end is a line's arm into a cell of e's from or to node, F, T or FT, or an arrow's point at one; o and x
+// point
 // at whichever side touches one. A side is an index into SIDES, or -1 on an arrow, which has no dirs.
 type Vertex = { arrow: string | null; links: { to: string; side: number }[]; ends: { at: string; side: number }[] }
 function graphOf(d: Drawing, e: Src, mine: readonly Spot[]): Map<string, Vertex> {
@@ -148,16 +166,20 @@ function graphOf(d: Drawing, e: Src, mine: readonly Spot[]): Map<string, Vertex>
       if (face >= 0 && endOf(step(face, 1)) !== '') {
         v.ends.push({ at: endOf(step(face, 1)), side: face })
       }
+
       continue
     }
+
     SIDES.forEach(([bit, back, dr, dc], s) => {
       if ((p.cell.dirs & bit) === 0) {
         return
       }
+
       let n = 1
       while (isLabel(step(s, n))) {
         n++
       } // past e's own label, straight on
+
       const q = byPos.get(key(p.r + dr * n, p.c + dc * n))
       if (q?.cell.kind === 'line' && (q.cell.dirs & back) !== 0) {
         if (s === 1 || s === 2) {
@@ -170,11 +192,14 @@ function graphOf(d: Drawing, e: Src, mine: readonly Spot[]): Map<string, Vertex>
       }
     })
   }
+
   return verts
 }
 
-// One simple path through all of e's vertices: from e's from node, through its tail glyph if it has one, to its to node,
-// through its head glyph if it has one, with arrows only at its ends. Each vertex's sides on it as dirs bits, or null if
+// One simple path through all of e's vertices: from e's from node, through its tail glyph if it has one, to its to
+// node,
+// through its head glyph if it has one, with arrows only at its ends. Each vertex's sides on it as dirs bits, or null
+// if
 // there is none. A shared cell's dirs may hold arms of other edges, so the search tries each way on.
 function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number> | null {
   const bit = (s: number) => (s >= 0 ? SIDES[s]![0] : 0)
@@ -190,6 +215,7 @@ function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number>
     if (--budget < 0) {
       return false
     }
+
     if (seen.size === verts.size) {
       const out = fits(v, e.head, 'T')
         ? v.ends.find((x) => x.at.includes('T') && (seen.size > 1 || x.side !== s))
@@ -197,28 +223,35 @@ function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number>
       if (out) {
         used.set(k, bit(s) | bit(out.side))
       }
+
       return out !== undefined
     }
+
     if (v.arrow !== null && seen.size > 1) {
       return false
     }
+
     for (const l of v.links) {
       if (seen.has(l.to)) {
         continue
       }
+
       seen.add(l.to)
       used.set(k, bit(s) | bit(l.side))
       if (go(l.to, verts.get(l.to)!.links.find((x) => x.to === k)?.side ?? -1)) {
         return true
       }
+
       seen.delete(l.to)
     }
+
     return false
   }
   for (const [k, v] of verts) {
     if (!fits(v, e.tail, 'F')) {
       continue
     }
+
     for (const x of v.ends.filter((x) => x.at.includes('F'))) {
       seen.clear()
       seen.add(k)
@@ -228,14 +261,20 @@ function pathOf(e: Src, verts: ReadonlyMap<string, Vertex>): Map<string, number>
       }
     }
   }
+
   return null
 }
 
-// (iv) Lines that join read as one line, so each end drawn with no mark seems to lead to each node a mark on it points at.
-// Two edges join in a cell both own: an arrow; or a line, as its glyph shows, unless the glyph is ┼ and every edge there runs
-// straight through it by the sides its own path uses, when only edges on one axis join. An edge with no path runs no way
-// straight, so it joins every edge it shares a cell with. Each seeming pair of one edge's unmarked end t and another edge's
-// mark at h, h = t included, must be a source edge t to h, or one h to t whose tail at t is marked, so drawn from t to h.
+// (iv) Lines that join read as one line, so each end drawn with no mark seems to lead to each node a mark on it points
+// at.
+// Two edges join in a cell both own: an arrow; or a line, as its glyph shows, unless the glyph is ┼ and every edge
+// there runs
+// straight through it by the sides its own path uses, when only edges on one axis join. An edge with no path runs no
+// way
+// straight, so it joins every edge it shares a cell with. Each seeming pair of one edge's unmarked end t and another
+// edge's
+// mark at h, h = t included, must be a source edge t to h, or one h to t whose tail at t is marked, so drawn from t to
+// h.
 function falsePairs(
   src: readonly Src[],
   cells: ReadonlyMap<string, Spot[]>,
@@ -249,9 +288,11 @@ function falsePairs(
       if (!here.has(k)) {
         here.set(k, [])
       }
+
       here.get(k)!.push([e, p])
     }
   }
+
   const side = (e: Src, k: string) => paths.get(e.id)?.get(k)
   for (const [k, list] of here) {
     const cell = list[0]![1].cell
@@ -264,6 +305,7 @@ function falsePairs(
       }
     }
   }
+
   const real = (t: string, h: string) =>
     src.some((e) => (e.from === t && e.to === h) || (e.from === h && e.to === t && e.tail !== 'none'))
   const ends = (x: Src, marked: boolean) =>
@@ -279,6 +321,7 @@ function falsePairs(
     if (seen.has(e.id)) {
       continue
     }
+
     const group = [e]
     seen.add(e.id)
     for (const x of group) {
@@ -289,6 +332,7 @@ function falsePairs(
         }
       }
     }
+
     for (const a of group) {
       for (const b of group) {
         if (a !== b) {
@@ -303,11 +347,14 @@ function falsePairs(
       }
     }
   }
+
   return out
 }
 
-// Each way d's cells mislead about src's edges: (i) an edge that is not one simple path between its ends, (ii) an edge that
-// turns in a line cell where two unrelated edges meet, (iii) an arrow cell owned by an edge that does not end there, (iv) a
+// Each way d's cells mislead about src's edges: (i) an edge that is not one simple path between its ends, (ii) an edge
+// that
+// turns in a line cell where two unrelated edges meet, (iii) an arrow cell owned by an edge that does not end there,
+// (iv) a
 // merged line that seems to draw an edge src does not have, (v) an edge between nodes of one frame that leaves it.
 function honesty(d: Drawing, src: readonly Src[]): string[] {
   const byId = new Map(src.map((e) => [e.id, e]))
@@ -320,10 +367,12 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
       if (cell?.kind !== 'line' && cell?.kind !== 'arrow') {
         return
       }
+
       const p = { r, c, cell }
       for (const o of cell.owners) {
         cells.get(o)?.push(p)
       }
+
       if (cell.kind === 'line') {
         lines.push(p)
       } else {
@@ -338,12 +387,14 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
       out.push(`(i) ${e.id} is not one simple path from ${e.from} to ${e.to}`)
     }
   }
+
   const related = (a: Src, b: Src) => [a.from, a.to].some((x) => x === b.from || x === b.to)
   for (const p of lines) {
     const mine = p.cell.owners.flatMap((o) => byId.get(o) ?? [])
     if (!mine.some((a, i) => mine.slice(i + 1).some((b) => !related(a, b)))) {
       continue
     }
+
     for (const e of mine) {
       const s = paths.get(e.id)?.get(`${p.r},${p.c}`)
       if (s !== undefined && s !== 5 && s !== 10) {
@@ -351,6 +402,7 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
       }
     }
   }
+
   for (const p of arrows) {
     for (const o of p.cell.owners) {
       if (!graphs.get(o)?.get(`${p.r},${p.c}`)?.ends.length) {
@@ -358,8 +410,10 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
       }
     }
   }
+
   out.push(...falsePairs(src, cells, paths))
-  // (v): a frame's box, from its own frame cells, holds a node when every cell owned by the node is strictly inside it; an
+  // (v): a frame's box, from its own frame cells, holds a node when every cell owned by the node is strictly inside it;
+  // an
   // edge between two nodes one frame holds draws no line or arrow cell on that frame's border or past it.
   for (const f of d.expect.frames) {
     const own: [number, number][] = []
@@ -395,11 +449,14 @@ function honesty(d: Drawing, src: readonly Src[]): string[] {
       }
     }
   }
+
   return out
 }
 
-// 1,500 seeded graphs. Each the pipeline draws and the validator passes must read honestly from its cells. implied counts
-// the ones that seem to draw an edge the source does not have, (iv); the floor of validated drawings keeps the check meaningful.
+// 1,500 seeded graphs. Each the pipeline draws and the validator passes must read honestly from its cells. implied
+// counts
+// the ones that seem to draw an edge the source does not have, (iv); the floor of validated drawings keeps the check
+// meaningful.
 test('A1: every seeded drawing the validator passes reads honestly from its cells', async (t) => {
   const next = random(0x5eed2)
   const bad: string[] = []
@@ -414,26 +471,32 @@ test('A1: every seeded drawing the validator passes reads honestly from its cell
     if (!d) {
       continue
     }
+
     routed++
     if (validate(d)) {
       continue
     }
+
     validated++
     const pairs = drawnFalsePairs(d)
     if (pairs.length) {
       implications++
     }
+
     for (const pair of pairs) {
       bad.push(`graph ${i}: false implied pair ${pair}`)
     }
+
     const lies = honesty(d, src)
     if (lies.some((v) => v.startsWith('(iv)'))) {
       implied++
     }
+
     for (const v of lies) {
       bad.push(`graph ${i}: ${v}`)
     }
   }
+
   t.diagnostic(
     `graphs 1500, drawn ${routed}, validated ${validated}, implying a false pair ${implied}, shared-arm false pairs ${implications}, violations ${bad.length}`,
   )
@@ -449,7 +512,8 @@ test('A1: every seeded drawing the validator passes reads honestly from its cell
 })
 
 // Compaction (Q2a) changes no verdict but width. On a grid wide enough that no row fails, each seeded drawing validates
-// compacted exactly when it validates at layout coordinates, for the same reason. At 40 columns, where many are too wide,
+// compacted exactly when it validates at layout coordinates, for the same reason. At 40 columns, where many are too
+// wide,
 // compaction may fit one that failed only for width, and never breaks or passes any other.
 test("A1: Q2a compaction keeps every seeded drawing's verdict but width", (t) => {
   const next = random(0xc0a1a)
@@ -462,21 +526,25 @@ test("A1: Q2a compaction keeps every seeded drawing's verdict but width", (t) =>
     if (!raw) {
       continue
     }
+
     count++
     const wide = [verdict(raw), verdict(compact(raw))]
     const narrow = [verdict({ ...raw, columns: 40 }), verdict(compact({ ...raw, columns: 40 }))]
     if (wide[0] !== wide[1]) {
       bad.push(`graph ${i}: ${wide.join(' -> ')}`)
     }
+
     if (narrow[0] === 'row-too-wide' && narrow[1] === 'valid') {
       fitted++
     } else if (narrow[0] !== narrow[1]) {
       bad.push(`graph ${i} at 40 columns: ${narrow.join(' -> ')}`)
     }
   }
+
   t.diagnostic(`drawn ${count}, fitted at 40 columns by compaction ${fitted}, other verdicts changed ${bad.length}`)
   assert.deepEqual(bad.slice(0, 5), [], `${bad.length} verdicts changed`)
-  // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back (V6); V8 draws a back edge
+  // 1000: the router refuses (route-conflict) an edge it can only draw out of its frame and back (V6); V8 draws a back
+  // edge
   // between nodes of one open frame inside it, 1002 drawn.
   assert.ok(count >= 1000 && fitted > 0, `drawn ${count}, fitted ${fitted}`)
 })

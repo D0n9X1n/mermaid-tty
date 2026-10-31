@@ -1,5 +1,7 @@
-// Reads a classDiagram (plan C, T57; matrix, class) into its model: the classes, with their labels, annotations and members
-// as Mermaid displays them, the relations, the notes and the namespaces. A statement outside the subset fails, so the fence
+// Reads a classDiagram (plan C, T57; matrix, class) into its model: the classes, with their labels, annotations and
+// members
+// as Mermaid displays them, the relations, the notes and the namespaces. A statement outside the subset fails, so the
+// fence
 // draws as source.
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Member } from '../../graph/members.ts'
@@ -10,10 +12,12 @@ import { unsupported } from '../../width.ts'
 
 // A relation end: <| or |> triangle, * diamond, o odiamond, < or > arrow.
 export type ClassEnd = 'none' | 'triangle' | 'diamond' | 'odiamond' | 'arrow'
-// A class: label is its ["label"], else its name with ~T~ shown as <T>; annot is its annotation, null if none; members are in
+// A class: label is its ["label"], else its name with ~T~ shown as <T>; annot is its annotation, null if none; members
+// are in
 // source order, as members.ts takes them. order: its index among the classes.
 export type ClassBox = { id: string; label: string; annot: string | null; members: Member[]; order: number }
-// A relation from its left class to its right one, with each end's cardinality; each text is null when the source gives none.
+// A relation from its left class to its right one, with each end's cardinality; each text is null when the source gives
+// none.
 // order, on a relation and a note: its index among the relations and notes together, in source order (keys follow it).
 export type Relation = {
   id: string
@@ -41,9 +45,11 @@ export type ClassModel = {
 }
 
 const HEADER = /^classDiagram(?:-v2)?$/
-// An id: letters, digits, _ and -, or a `backtick name`. A ~ in a backtick name fails: Mermaid reads it as a generic there.
+// An id: letters, digits, _ and -, or a `backtick name`. A ~ in a backtick name fails: Mermaid reads it as a generic
+// there.
 const ID = '(?:[\\p{L}\\p{N}_-]+|`[^`~]+`)'
-// An annotation or a :::name, as Mermaid's lexer reads one word: \w+, but not a word a keyword rule reads first (keywords
+// An annotation or a :::name, as Mermaid's lexer reads one word: \w+, but not a word a keyword rule reads first
+// (keywords
 // end at a word boundary), nor a lone o, which its aggregation rule (\s*o\b) reads.
 const WORD =
   '(?!(?:classDiagram|style|classDef|namespace|class|cssClass|callback|link|click|note|href|call|_self|_blank|_parent|_top)\\b|o\\b)\\w+'
@@ -52,27 +58,34 @@ const QUOTED = '"([^"]*)"'
 const TEXT = '(?:[^:;]|#\\w+;)*'
 // A pattern that must match a whole trimmed line.
 const re = (s: string) => new RegExp(`^${s}$`, 'u')
-// class X, then one of ~T~ (a generic with no comma) and ["label"], then one of :::name and <<annotation>>, then an optional {.
+// class X, then one of ~T~ (a generic with no comma) and ["label"], then one of :::name and <<annotation>>, then an
+// optional {.
 const CLASS = re(
   `class\\s+(${ID})(?:~([^~,]+)~|\\[${QUOTED}\\])?(?:\\s*:::\\s*${WORD}|\\s*<<\\s*(${WORD})\\s*>>)?(\\s*\\{)?`,
 )
 const NAMESPACE = re(`namespace\\s+(${ID})(?:\\[${QUOTED}\\])?\\s*\\{`)
 const NOTE = re(`note(?:\\s+for\\s+(${ID}))?\\s+${QUOTED}`)
 const ANNOTATION = re(`<<\\s*(${WORD})\\s*>>\\s*(${ID})`)
-// X ["c"] <end><line><end> ["c"] Y [: label]: each end <|, |>, *, o, < or > (matrix: on either side), and -- or .. between.
-// As Mermaid's lexer reads it, o is an end only before a word boundary (\\w is ASCII there too): --orange is -- then orange.
+// X ["c"] <end><line><end> ["c"] Y [: label]: each end <|, |>, *, o, < or > (matrix: on either side), and -- or ..
+// between.
+// As Mermaid's lexer reads it, o is an end only before a word boundary (\\w is ASCII there too): --orange is -- then
+// orange.
 const END_RE = '(<\\||\\|>|\\*|o(?!\\w)|<|>)?'
 const RELATION = re(
   `(${ID})\\s*(?:${QUOTED}\\s*)?${END_RE}(--|\\.\\.)${END_RE}\\s*(?:${QUOTED}\\s*)?(${ID})(?:\\s*:(${TEXT}))?`,
 )
 const MEMBER = re(`(${ID})\\s*:(${TEXT})`)
-// As Mermaid's lexer reads it: a top-level line holding direction, then spaces (a line end too), then TB, BT, RL or LR, is
+// As Mermaid's lexer reads it: a top-level line holding direction, then spaces (a line end too), then TB, BT, RL or LR,
+// is
 // only that direction statement. direction XX alone is drawn as one; any other such line fails.
 const DIRECTION = /^direction\s+(TB|BT|RL|LR)$/
 const DIRECTED = /direction(?:\s+(?:TB|BT|RL|LR)|$)/
-// Styling, which draws nothing (common rule 4), in the grammar's shapes: STYLE ALPHA stylesOpt, CLASSDEF classList stylesOpt
-// and CSSCLASS STR ALPHA. A style is pieces Mermaid's lexer reads outside a block, spaces between: a word (ALPHA), :text to
-// the next : (LABEL, which takes commas), a : not starting ::: (COLON), # or a lone %; styles are comma-separated. No piece
+// Styling, which draws nothing (common rule 4), in the grammar's shapes: STYLE ALPHA stylesOpt, CLASSDEF classList
+// stylesOpt
+// and CSSCLASS STR ALPHA. A style is pieces Mermaid's lexer reads outside a block, spaces between: a word (ALPHA),
+// :text to
+// the next : (LABEL, which takes commas), a : not starting ::: (COLON), # or a lone %; styles are comma-separated. No
+// piece
 // holds a ; (source.ts drops the one encodeEntities drops), nor a -, . or quote, which the grammar takes nowhere here.
 const STYLE_WORD = `(?!acc(?:Title|Descr)\\s*[:{])${WORD}(?!\\w)`
 const PIECE = `(?:${STYLE_WORD}|:[^:;]+(?![^:;])|:(?!::)(?![^:;])|#|%(?!%))`
@@ -81,7 +94,8 @@ const STYLING = re(
   `(?:(?:style\\s+${STYLE_WORD}|classDef\\s+${STYLE_WORD}(?:\\s*,\\s*${STYLE_WORD})*)\\s*${STYLES}` +
     `|cssClass\\s*"[^"]+"\\s*${STYLE_WORD})`,
 )
-// click, link and callback, in each form Mermaid's grammar accepts; they draw nothing. A "tooltip" and a link target may follow.
+// click, link and callback, in each form Mermaid's grammar accepts; they draw nothing. A "tooltip" and a link target
+// may follow.
 const STR = '"[^"]+"'
 const TIP = `(?:\\s*${STR})?`
 const TARGET = '(?:\\s*(?:_self|_blank|_parent|_top))?'
@@ -90,7 +104,8 @@ const CLICK = re(
   `(?:click\\s+${ID}\\s+(?:href\\s*${STR}${TIP}${TARGET}|call\\s+[^(\\s][^(]*\\([^)]*\\)${TIP})` +
     `|link\\s+${ID}\\s*${STR}${TIP}${TARGET}|callback\\s+${ID}\\s*${STR}${TIP})`,
 )
-// As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither draws.
+// As Mermaid's lexer reads them: accTitle: and accDescr: run to the line's end, and accDescr { to its first }. Neither
+// draws.
 const ACC = /^acc(?:Title|Descr)\s*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
@@ -108,10 +123,12 @@ const END: Record<string, ClassEnd> = {
   '>': 'arrow',
 }
 
-// A class's model entry, its ~T~ (null if none), whether a ["label"] set its label, and its namespace's id, null if none.
+// A class's model entry, its ~T~ (null if none), whether a ["label"] set its label, and its namespace's id, null if
+// none.
 type Entry = { box: ClassBox; generic: string | null; labelled: boolean; ns: string | null }
 // The model so far, its classes by id, the class whose { } is open, the namespace whose { } is open, each with the line
-// it opened on (a namespace's filled once a statement comes), the line of an accDescr { whose } has not come (else 0), and each note's class, with the note's line.
+// it opened on (a namespace's filled once a statement comes), the line of an accDescr { whose } has not come (else 0),
+// and each note's class, with the note's line.
 type State = {
   model: ClassModel
   classes: Map<string, Entry>
@@ -126,8 +143,10 @@ function stop(reason: string): never {
   throw fail(reason)
 }
 
-// The model src's statements build, or why it cannot be drawn: 'header' (not classDiagram or classDiagram-v2), 'syntax:<n>'
-// (a statement on source line n outside the subset, such as a lollipop, a nested or dotted namespace or a bare X line; a {
+// The model src's statements build, or why it cannot be drawn: 'header' (not classDiagram or classDiagram-v2),
+// 'syntax:<n>'
+// (a statement on source line n outside the subset, such as a lollipop, a nested or dotted namespace or a bare X line;
+// a {
 // or an accDescr { there with no }, or a namespace's } with no statement before it; a line Mermaid reads as a direction
 // but for direction XX alone; a blank text; or a note for a class nothing declares), 'repeat:<n>' (a second
 // annotation, another label or generic, or another namespace for one class, or another label for one namespace),
@@ -140,6 +159,7 @@ export function parseClass(src: Source): ClassModel | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -148,6 +168,7 @@ function walk(src: Source): ClassModel {
   if (!HEADER.test(src.header)) {
     stop('header')
   }
+
   const model: ClassModel = { dir: 'TB', title: src.title, classes: [], relations: [], notes: [], namespaces: [] }
   const st: State = { model, classes: new Map(), body: null, ns: null, descr: 0, targets: [] }
   for (const { n, text: raw } of src.lines) {
@@ -166,6 +187,7 @@ function walk(src: Source): ClassModel {
       if (!st.ns.filled) {
         stop(`syntax:${n}`)
       }
+
       st.ns = null
     } else if (!st.ns && DIRECTED.test(t)) {
       st.model.dir = (DIRECTION.exec(t) ?? stop(`syntax:${n}`))[1] as Dir
@@ -186,6 +208,7 @@ function walk(src: Source): ClassModel {
   if (open) {
     stop(`syntax:${open}`)
   }
+
   ends(st)
   return model
 }
@@ -196,18 +219,22 @@ function closes(rest: string, n: number): boolean {
   if (i < 0) {
     return false
   }
+
   if (rest.slice(i + 1).trim()) {
     stop(`syntax:${n}`)
   }
+
   return true
 }
 
-// Reads trimmed source line n, outside a class's { }, into st. In a namespace's { }, only class and note statements come.
+// Reads trimmed source line n, outside a class's { }, into st. In a namespace's { }, only class and note statements
+// come.
 function statement(t: string, n: number, st: State): void {
   let m: RegExpExecArray | null
   if (st.ns && (CLASS.test(t) || NOTE.test(t))) {
     st.ns.filled = true
   }
+
   if ((m = CLASS.exec(t))) {
     classStatement(m, n, st)
   } else if ((m = NOTE.exec(t))) {
@@ -233,12 +260,14 @@ function statement(t: string, n: number, st: State): void {
   }
 }
 
-// A backtick name's text, else the id as written. An unquoted id with a standalone o (- and the ends are boundaries, \w is
+// A backtick name's text, else the id as written. An unquoted id with a standalone o (- and the ends are boundaries, \w
+// is
 // ASCII) fails on line n: Mermaid's lexer reads that o as aggregation, so `class o-X` is no class statement.
 function name(id: string, n: number): string {
   if (id.startsWith('`')) {
     return id.slice(1, -1)
   }
+
   return /\bo\b/.test(id) ? stop(`syntax:${n}`) : id
 }
 
@@ -249,12 +278,15 @@ function classStatement(m: RegExpExecArray, n: number, st: State): void {
   if (label !== null) {
     relabel(entry, label, n)
   }
+
   if (annot !== null) {
     annotate(entry, annot, n)
   }
+
   if (st.ns) {
     enter(entry, st.ns.space, n)
   }
+
   if (open) {
     st.body = { entry, n }
   }
@@ -268,12 +300,15 @@ function declare(id: string, generic: string | null, n: number, st: State): Entr
     if (generic !== null && generic !== had.generic) {
       stop(`repeat:${n}`)
     }
+
     return had
   }
+
   check(id, NAME)
   if (generic !== null) {
     check(generic, NAME)
   }
+
   const label = text(generic === null ? id : `${id}<${generic}>`, n, BUILT)
   const box: ClassBox = { id, label, annot: null, members: [], order: st.model.classes.length }
   const entry: Entry = { box, generic, labelled: false, ns: null }
@@ -282,16 +317,19 @@ function declare(id: string, generic: string | null, n: number, st: State): Entr
   return entry
 }
 
-// Sets entry's label from a ["label"]. A class with a ~T~ fails 'syntax', as the subset gives a class one or the other; a
+// Sets entry's label from a ["label"]. A class with a ~T~ fails 'syntax', as the subset gives a class one or the other;
+// a
 // second, different label fails 'repeat', as Mermaid keeps only one.
 function relabel(entry: Entry, raw: string, n: number): void {
   const label = text(raw, n, LINES)
   if (entry.generic !== null) {
     stop(`syntax:${n}`)
   }
+
   if (entry.labelled && label !== entry.box.label) {
     stop(`repeat:${n}`)
   }
+
   entry.box.label = label
   entry.labelled = true
 }
@@ -301,6 +339,7 @@ function annotate(entry: Entry, raw: string, n: number): void {
   if (entry.box.annot !== null) {
     stop(`repeat:${n}`)
   }
+
   entry.box.annot = text(raw, n, NAME)
 }
 
@@ -309,9 +348,11 @@ function enter(entry: Entry, space: Namespace, n: number): void {
   if (entry.ns === space.id) {
     return
   }
+
   if (entry.ns !== null) {
     stop(`repeat:${n}`)
   }
+
   entry.ns = space.id
   space.classes.push(entry.box.id)
 }
@@ -324,9 +365,11 @@ function member(entry: Entry, raw: string, n: number, braced: boolean): void {
   if (annot && braced) {
     return annotate(entry, t.slice(2, -2), n)
   }
+
   if (annot || t === '' || /[{}]/.test(t)) {
     stop(`syntax:${n}`)
   }
+
   check(t, MEMBER_TEXT)
   entry.box.members.push(t.includes(')') ? method(t, n) : attribute(t, n))
 }
@@ -341,7 +384,8 @@ function attribute(t: string, n: number): Member {
   }
 }
 
-// A method as Mermaid shows it: `vis name(params) : return`, each ~T~ as <T>, then its $ or *, just after the ) or at the
+// A method as Mermaid shows it: `vis name(params) : return`, each ~T~ as <T>, then its $ or *, just after the ) or at
+// the
 // return's end, kept last.
 function method(t: string, n: number): Member {
   const m = /^([#+~-])?([^()]+)\(([^()]*)\)([^()]*)$/.exec(t) ?? stop(`syntax:${n}`)
@@ -352,6 +396,7 @@ function method(t: string, n: number): Member {
     cls = ret.at(-1)!
     ret = ret.slice(0, -1).trim()
   }
+
   const sig = `${vis}${generics(spaced(name), n)}(${generics(params.trim(), n)})`
   return { text: text(sig + (ret ? ` : ${generics(ret, n)}` : '') + cls, n, BUILT), method: true }
 }
@@ -369,14 +414,17 @@ function generics(t: string, n: number): string {
       for (let i = piece.indexOf('~'); i >= 0; i = piece.indexOf('~', i + 1)) {
         at.push(i)
       }
+
       if (at.length % 2) {
         stop(`syntax:${n}`)
       }
+
       const out = piece.split('')
       for (let k = 0; k < at.length / 2; k++) {
         out[at[k]!] = '<'
         out[at[at.length - 1 - k]!] = '>'
       }
+
       return out.join('')
     })
     .join(',')
@@ -403,7 +451,8 @@ function check(s: string, field: Field): void {
   }
 }
 
-// Drawn text of field, trimmed. A blank one fails on line n; then text Mermaid shows otherwise (check); then a blank line
+// Drawn text of field, trimmed. A blank one fails on line n; then text Mermaid shows otherwise (check); then a blank
+// line
 // in it, from <br><br> or a <br> at an end. A LINES field (a label, note or relation label) draws its bold and italic
 // marked, as styled says.
 function text(s: string, n: number, field: Field): string {
@@ -411,17 +460,21 @@ function text(s: string, n: number, field: Field): string {
   if (t === '') {
     stop(`syntax:${n}`)
   }
+
   if (field === LINES || field === EDGE_LINES) {
     const d = styled(t, 'any', { breaks: field === EDGE_LINES })
     if (isFail(d)) {
       throw d
     }
+
     return labelLines(d).some((l) => !l.trim()) ? stop('label-blank-line') : d
   }
+
   check(t, field)
   if (labelLines(t).some((l) => !l.trim())) {
     stop('label-blank-line')
   }
+
   const bad = unsupported(t)
   return bad ? stop(`unsupported-char ${bad}`) : t
 }
@@ -450,7 +503,8 @@ function relation(m: RegExpExecArray, n: number, st: State): void {
   })
 }
 
-// note "t" or note for X "t", with id note<k>: its text as written, which only a <br> breaks (a literal \n Mermaid shows as
+// note "t" or note for X "t", with id note<k>: its text as written, which only a <br> breaks (a literal \n Mermaid
+// shows as
 // written). X must be a class by the end.
 function note(target: string | undefined, raw: string, n: number, st: State): void {
   const notes = st.model.notes
@@ -460,6 +514,7 @@ function note(target: string | undefined, raw: string, n: number, st: State): vo
   if (cls !== null) {
     st.targets.push({ id: cls, n })
   }
+
   if (st.ns) {
     st.ns.space.notes.push(id)
   }
@@ -476,16 +531,19 @@ function namespace(rawId: string, raw: string | undefined, n: number, st: State)
   } else if (label !== null && label !== space.label) {
     stop(`repeat:${n}`)
   }
+
   st.ns = { space, n, filled: false }
 }
 
-// Each note for X has a class X, and no two classes, notes, relations or namespaces share an id: each id owns what it draws.
+// Each note for X has a class X, and no two classes, notes, relations or namespaces share an id: each id owns what it
+// draws.
 function ends(st: State): void {
   for (const t of st.targets) {
     if (!st.classes.has(t.id)) {
       stop(`syntax:${t.n}`)
     }
   }
+
   const m = st.model
   const ids = [...m.classes, ...m.notes, ...m.relations, ...m.namespaces].map((x) => x.id)
   if (new Set(ids).size < ids.length) {

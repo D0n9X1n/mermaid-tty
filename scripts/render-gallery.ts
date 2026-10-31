@@ -1,7 +1,8 @@
 // node scripts/render-gallery.ts [OUT_DIR] [--png]: the review gallery, for judging the drawings outside a terminal. It
 // renders every non-reject fixture of every fixtures/<type> folder but corpus to SVG at 80 and 60 columns under nord,
 // stacks A's CJK fixtures in cjk.svg and each Tier 1 type's in cjk-<type>.svg, puts A's two fixtures and each Tier 1
-// type's first ok fixture under all 6 themes in palettes.svg, and links them all from index.html. Every SVG is B's toSvg
+// type's first ok fixture under all 6 themes in palettes.svg, and links them all from index.html. Every SVG is B's
+// toSvg
 // page, the README assets' serializer. It self-checks every SVG, with B's misplaced and with offGrid, which measures
 // columns on its own, and exits 1 on a problem. --png runs rsvg-convert on each SVG.
 import { spawnSync } from 'node:child_process'
@@ -21,7 +22,8 @@ const FIXTURES = fileURLToPath(new URL('../fixtures/', import.meta.url))
 const WIDTHS = [80, 60]
 type Section = { theme: string; id: string; cols: number }
 
-// The type folders under fixtures/, corpus excepted: flowchart, sequence and the Tier 1 types in that order, then any other.
+// The type folders under fixtures/, corpus excepted: flowchart, sequence and the Tier 1 types in that order, then any
+// other.
 const ORDER = ['flowchart', 'sequence', ...TIER1]
 const types = (): string[] => {
   const dirs = readdirSync(FIXTURES, { withFileTypes: true })
@@ -45,9 +47,11 @@ function hex(c: string): string {
   if (/^#[0-9a-f]{6}$/i.test(c)) {
     return c
   }
+
   if (Object.hasOwn(DARK_KEYS, c)) {
     return DARK_KEYS[c]!
   }
+
   throw new Error(`render-gallery: no color for ${JSON.stringify(c)}`)
 }
 // A span as B's Styled, as the README assets style it (render-image.ts): dim draws in inactive, no color in text.
@@ -85,6 +89,7 @@ export function gallery(
         if (!rows) {
           problems.push(`${file}: core fell back on ${label}`)
         }
+
         return [[{ text: label, bold: true }], ...(rows ?? []), []]
       }),
     )
@@ -106,16 +111,20 @@ export function gallery(
         }
       }
     }
+
     groups.push([type, files])
   }
+
   sheet('cjk.svg', ['flowchart-ok-40', 'sequence-ok-26'].flatMap(nord))
   for (const t of tier1) {
     const cjk = ids(t).filter((id) => id.includes('-ok-') && CJK.test(source(id)))
     if (!cjk.length) {
       problems.push(`cjk-${t}.svg: no ok fixture of ${t} holds Han, Kana or Hangul`)
     }
+
     sheet(`cjk-${t}.svg`, cjk.flatMap(nord))
   }
+
   const firsts = tier1.flatMap((t) => ids(t).find((id) => id.includes('-ok-')) ?? [])
   sheet(
     'palettes.svg',
@@ -149,6 +158,7 @@ function png(out: string): string[] {
     console.log('render-gallery: rsvg-convert is not on PATH (it comes with librsvg), so no PNGs')
     return []
   }
+
   return readdirSync(out)
     .filter((f) => f.endsWith('.svg'))
     .flatMap((f) => {
@@ -172,14 +182,17 @@ function main(): number {
     console.error(USAGE)
     return 2
   }
+
   const out = dirs[0] ?? join('out', 'gallery')
   const problems = [...gallery(out).problems, ...(args.includes('--png') ? png(out) : [])]
   for (const p of problems) {
     console.error(`render-gallery: ${p}`)
   }
+
   if (problems.length) {
     return 1
   }
+
   console.log(
     `render-gallery: wrote ${readdirSync(out).filter((f) => f.endsWith('.svg')).length} SVGs and index.html to ${out}`,
   )

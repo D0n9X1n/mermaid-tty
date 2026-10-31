@@ -37,6 +37,7 @@ function capture(args: string[], cwd: string): { status: number; stdout: string 
   if (r.error) {
     console.error(r.error)
   }
+
   process.stdout.write(r.stdout ?? '')
   return { status: r.status ?? 1, stdout: r.stdout ?? '' }
 }
@@ -47,6 +48,7 @@ function node(args: string[], cwd: string): number {
   if (r.error) {
     console.error(r.error)
   }
+
   return r.status ?? 1
 }
 
@@ -56,6 +58,7 @@ function git(args: string[]): { status: number; stdout: string } {
   if (r.error) {
     console.error(r.error)
   }
+
   return { status: r.status ?? 1, stdout: (r.stdout ?? '').trim() }
 }
 
@@ -65,6 +68,7 @@ function main(): number {
     console.log(`fresh-clone: FAIL git rev-parse HEAD: exit ${head.status}`)
     return 1
   }
+
   const dir = mkdtempSync(join(tmpdir(), 'mtty-clone-'))
   try {
     for (const args of [
@@ -77,6 +81,7 @@ function main(): number {
         return 1
       }
     }
+
     console.log(`fresh-clone: cloned ${head.stdout} into ${dir}`)
     console.error('> node --test')
     const bare = capture(['--test'], dir)
@@ -90,6 +95,7 @@ function main(): number {
       console.error(`> ${name}`)
       results.push([name, run()])
     }
+
     const n = testCount(bare.stdout)
     console.log(
       `fresh-clone: bare node --test ran more than 0 tests: ${n === null ? "unknown (no 'ℹ tests' line)" : `${n > 0 ? 'yes' : 'no'} (${n})`}`,
@@ -97,6 +103,7 @@ function main(): number {
     for (const [name, status] of results) {
       console.log(`fresh-clone: ${status === 0 ? 'ok' : 'FAIL'} ${name}: exit ${status}`)
     }
+
     return results.every(([, status]) => status === 0) ? 0 : 1
   } finally {
     rmSync(dir, { recursive: true, force: true })

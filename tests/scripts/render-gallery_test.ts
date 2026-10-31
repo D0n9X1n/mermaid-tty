@@ -92,12 +92,14 @@ test('VR.gallery: the sheets: CJK at 80 and 60; each of the 6 themes labelled an
       assert.ok(cjk.includes(`nord:${id}@${w}`), `cjk ${id}@${w}`)
     }
   }
+
   assert.ok(cjk.includes('读取配置文件'))
   for (const id of ['flowchart-ok-40', 'sequence-ok-38']) {
     for (const theme of Object.keys(THEMES)) {
       assert.ok(pal.includes(`${theme}:${id}@80`), `${theme}:${id}`)
     }
   }
+
   for (const {
     name,
     roles: { node },
@@ -124,6 +126,7 @@ test('VR.gallery: each Tier 1 type has a CJK sheet of its CJK fixtures at 80 and
         assert.ok(sheet.includes(`nord:${id}@${w}`), `cjk-${type} ${id}@${w}`)
       }
     }
+
     for (const theme of Object.keys(THEMES)) {
       assert.ok(pal.includes(`${theme}:${firstOk(type)}@80`), `${theme}:${firstOk(type)}`)
     }
@@ -202,7 +205,8 @@ test(
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
-// A copy of the gallery whose glyphCells advances a W/F glyph one cell, not two, so the renderer draws each glyph after a
+// A copy of the gallery whose glyphCells advances a W/F glyph one cell, not two, so the renderer draws each glyph after
+// a
 // CJK one a cell early. A self-check that shared glyphCells would agree with that renderer and pass it.
 test('VR.gallery: the self-check measures columns on its own: a renderer that advances a W/F glyph one cell fails it, by file', (t) => {
   const root = scratch(t)
@@ -219,6 +223,7 @@ test('VR.gallery: the self-check measures columns on its own: a renderer that ad
   ]) {
     cpSync(join(ROOT, p), join(root, p), { recursive: true })
   }
+
   const svgTs = join(root, 'scripts/lib/svg.ts')
   const src = readFileSync(svgTs, 'utf8')
   const mutated = src.replace(/col \+= w;?$/m, 'col += Math.min(w, 1)')

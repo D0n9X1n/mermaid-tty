@@ -26,6 +26,7 @@ export function parseIds(md: string): string[] {
       section = SECTION.exec(line)?.[1] ?? ''
       continue
     }
+
     const labels = [...line.matchAll(LABEL)].map((m) => slug(m[1]!))
     if (section === 'Visual review') {
       ids.push(...labels.map((l) => `VR.${l}`))
@@ -36,6 +37,7 @@ export function parseIds(md: string): string[] {
       }
     }
   }
+
   return ids
 }
 

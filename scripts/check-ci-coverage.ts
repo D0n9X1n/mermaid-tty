@@ -17,7 +17,9 @@ const errors = coverageErrors(
 for (const e of errors) {
   console.error(`check-ci-coverage: ${e}`)
 }
+
 if (errors.length) {
   process.exit(1)
 }
+
 console.log(`check-ci-coverage: ok (${ids.length} check IDs mapped)`)

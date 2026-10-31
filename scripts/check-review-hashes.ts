@@ -1,7 +1,8 @@
 // The review verdict hash check: each ci/reviews/<date>-<scope>.md records a verdict and the
 // SHA-256 of every file it reviewed, and this proves those files have not changed since.
 // Usage: node scripts/check-review-hashes.ts                    (checks every record's hashes)
-//        node scripts/check-review-hashes.ts --require-pass     (and that each scope in required.json has a pass for each path)
+//        node scripts/check-review-hashes.ts --require-pass     (and that each scope in required.json has a pass for
+//        each path)
 //        node scripts/check-review-hashes.ts --table <path>...  (prints Files rows to paste into a record)
 // Exits 1 on any problem or parse error.
 import { createHash } from 'node:crypto'
@@ -63,7 +64,8 @@ const HEX64 = /^[0-9a-f]{64}$/
 const DELIMITER = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
 
 // Whether a line belongs to a table: a row that starts with |, or a delimiter row, in a blockquote too (its > markers
-// stripped). Hyphens alone are a rule or a setext underline, never a delimiter row, so a delimiter row needs a | or a :.
+// stripped). Hyphens alone are a rule or a setext underline, never a delimiter row, so a delimiter row needs a | or a
+// :.
 function tableLine(line: string): boolean {
   const s = line.replace(/^(\s*>)+/, '')
   return line.trimStart().startsWith('|') || (DELIMITER.test(s) && /[|:]/.test(s))
@@ -77,15 +79,18 @@ function filesTable(path: string, lines: string[]): ReviewFile[] | { error: stri
   if (start < 0) {
     return { error: `${path}: no ## Files table` }
   }
+
   if (lines.indexOf('## Files', start + 1) >= 0) {
     return { error: `${path}: more than one ## Files heading` }
   }
+
   const next = lines.findIndex((l, i) => i > start && l.startsWith('## '))
   const stop = next < 0 ? lines.length : next
   const stray = lines.find((l, i) => (i < start || i >= stop) && tableLine(l))
   if (stray) {
     return { error: `${path}: table row outside ## Files ${JSON.stringify(stray)}` }
   }
+
   const [header, rule, ...rows] = lines.slice(start + 1, stop).filter((l) => l.trim() !== '')
   if (
     JSON.stringify(cells(header ?? '')) !== '["path","sha256"]' ||
@@ -93,17 +98,21 @@ function filesTable(path: string, lines: string[]): ReviewFile[] | { error: stri
   ) {
     return { error: `${path}: the Files table must start with | path | sha256 | and a |---|---| row` }
   }
+
   const files: ReviewFile[] = []
   for (const row of rows) {
     const [file, hash, ...rest] = cells(row)
     if (!file || !HEX64.test(hash ?? '') || rest.length) {
       return { error: `${path}: bad Files row ${JSON.stringify(row)}` }
     }
+
     if (files.some((f) => f.path === file)) {
       return { error: `${path}: ${file} appears twice in ## Files` }
     }
+
     files.push({ path: file, sha256: hash! })
   }
+
   return files
 }
 
@@ -120,10 +129,12 @@ export function parseRecord(path: string, text: string): ReviewRecord | { error:
   if (raw) {
     return { error: `${path}: raw HTML ${JSON.stringify(raw)}` }
   }
+
   const end = lines.indexOf('---', 1)
   if (lines[0] !== '---' || end < 0) {
     return { error: `${path}: no front matter between --- lines` }
   }
+
   const keys: string[] = []
   const meta: Record<string, string> = {}
   for (const line of lines.slice(1, end)) {
@@ -131,16 +142,20 @@ export function parseRecord(path: string, text: string): ReviewRecord | { error:
     if (!m) {
       return { error: `${path}: bad front matter line ${JSON.stringify(line)}` }
     }
+
     keys.push(m[1]!)
     meta[m[1]!] = m[2]!.trim()
   }
+
   if (keys.length !== KEYS.length || !KEYS.every((k) => keys.includes(k))) {
     return { error: `${path}: front matter keys must be exactly ${KEYS.join(', ')}; got ${JSON.stringify(keys)}` }
   }
+
   const bad = KEYS.find((k) => !VALID[k]!(meta[k]!))
   if (bad) {
     return { error: `${path}: bad ${bad} ${JSON.stringify(meta[bad])}` }
   }
+
   const reviewers = names(meta.reviewers!)!
   const crossFamily = meta.scope !== 'beauty'
   if (!reviewers.includes('PM') || (crossFamily && !reviewers.some((r) => CROSS_FAMILY.test(r)))) {
@@ -148,10 +163,12 @@ export function parseRecord(path: string, text: string): ReviewRecord | { error:
       error: `${path}: reviewers must include PM${crossFamily ? ' and a cross-family:<model id>' : ''}; got ${JSON.stringify(meta.reviewers)}`,
     }
   }
+
   const files = filesTable(path, lines)
   if (!Array.isArray(files)) {
     return files
   }
+
   return { path, scope: meta.scope!, verdict: meta.verdict as 'pass' | 'fail', date: meta.date!, reviewers, files }
 }
 
@@ -166,6 +183,7 @@ export function checkRecords(records: ReviewRecord[], read: (path: string) => st
       if (bytes === null) {
         return [`${f.path}: missing`]
       }
+
       const actual = sha256(bytes)
       return actual === f.sha256 ? [] : [`${f.path}: recorded ${f.sha256} actual ${actual}`]
     }),
@@ -188,9 +206,11 @@ function walk(root: string, rel: string): string[] {
   if (!stat) {
     return []
   }
+
   if (!stat.isDirectory()) {
     return [normalize(rel).split(sep).join('/')]
   }
+
   return readdirSync(join(root, rel)).flatMap((name) => walk(root, `${rel}/${name}`))
 }
 
@@ -201,9 +221,11 @@ export function expandGlobs(globs: string[], root = '.'): string[] {
     if (g.endsWith('/**') && !g.slice(0, -3).includes('*')) {
       return walk(root, g.slice(0, -3)).sort()
     }
+
     if (g.includes('*')) {
       throw new Error(`unsupported glob ${JSON.stringify(g)}: use a path or <dir>/**`)
     }
+
     return [g]
   })
 }
@@ -230,9 +252,11 @@ function table(paths: string[]): number {
       console.error(`${p}: no files`)
     }
   }
+
   for (const f of found.flatMap(([, files]) => files).sort()) {
     console.log(`| ${f} | ${sha256(readFileSync(f))} |`)
   }
+
   return found.some(([, files]) => !files.length) ? 1 : 0
 }
 
@@ -243,11 +267,13 @@ function main(): number {
   if (args[0] === '--table') {
     return table(args.slice(1))
   }
+
   const requirePassing = args.length === 1 && args[0] === '--require-pass'
   if (args.length && !requirePassing) {
     console.error(USAGE)
     return 1
   }
+
   const mds = existsSync(DIR)
     ? readdirSync(DIR)
         .filter((f) => f.endsWith('.md'))
@@ -263,9 +289,11 @@ function main(): number {
   for (const p of problems) {
     console.error(p)
   }
+
   if (problems.length) {
     return 1
   }
+
   console.log(
     `check-review-hashes: ${records.length} record(s); every reviewed file matches its SHA-256${requirePassing ? '; every required path has a passing verdict' : ''}`,
   )

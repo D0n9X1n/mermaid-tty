@@ -6,8 +6,10 @@ import type { Ink } from './themes.ts'
 import type { Expect } from './validate.ts'
 import { width } from './width.ts'
 
-export type Kind = 'text' | 'cap' | 'key' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont' // cont = 2nd cell of a W/F char; key = C's keyed-item key
-// On a line cell, the dirs one owner drew there; a cell's segs are OR-merged per owner in write order, their union its dirs.
+// cont = 2nd cell of a W/F char; key = C's keyed-item key
+export type Kind = 'text' | 'cap' | 'key' | 'fill' | 'line' | 'arrow' | 'frame' | 'title' | 'lifeline' | 'cont'
+// On a line cell, the dirs one owner drew there; a cell's segs are OR-merged per owner in write order, their union its
+// dirs.
 export type Seg = { owner: string; dirs: number }
 export type Cell = {
   ch: string
@@ -21,13 +23,18 @@ export type Cell = {
   segs?: readonly Seg[]
   legend?: true
   em?: number
-} // arms: per-arm weights 'urdl'; legend: a key cell in a legend row; em: a text cell's emphasis, BOLD | ITALIC (core/emphasis.ts)
-export type Conflict = { row: number; col: number; had: string; by: string } // had: owners[0] of the cell hit, or 'out-of-bounds'; by: owners[0] of the write
+  // arms: per-arm weights 'urdl'; legend: a key cell in a legend row; em: a text cell's emphasis, BOLD | ITALIC
+  // (core/emphasis.ts)
+}
+// had: owners[0] of the cell hit, or 'out-of-bounds'; by: owners[0] of the write
+export type Conflict = { row: number; col: number; had: string; by: string }
 export type Drawing = { columns: number; cells: (Cell | null)[][]; conflicts: readonly Conflict[]; expect: Expect }
 export type Canvas = {
-  text(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], join?: Piece['join']): number // columns used; owners[0] owns the text
+  // columns used; owners[0] owns the text
+  text(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], join?: Piece['join']): number
   cap(r: number, c: number, s: string, role: Ink, owner: string): void
-  key(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], legend: boolean): number // columns used
+  // columns used
+  key(r: number, c: number, s: string, role: Ink, owner: string | readonly string[], legend: boolean): number
   fill(r: number, c: number, n: number, role: Ink, owner: string): void
   line(r: number, c: number, dirs: number, weight: 'light' | 'heavy' | 'dotted', role: Ink, owner: string): void
   arrow(r: number, c: number, ch: string, owner: string): void
@@ -36,8 +43,10 @@ export type Canvas = {
   toDrawing(expect: Expect): Drawing
 }
 
-// A dotted cell's arms are all light, since a solid line makes it solid (see line): a straight run draws ┄ or ┆, and a bend or
-// branch the light glyph (rule 12). Any other line draws the glyph of its arms, light and heavy arms meeting in their mixed glyph.
+// A dotted cell's arms are all light, since a solid line makes it solid (see line): a straight run draws ┄ or ┆, and a
+// bend or
+// branch the light glyph (rule 12). Any other line draws the glyph of its arms, light and heavy arms meeting in their
+// mixed glyph.
 export const lineGlyph = (dirs: number, arms: string, style: NonNullable<Cell['style']>): string =>
   style === 'dotted' ? junction(dirs, 'dotted') : boxGlyph(arms)
 
@@ -53,15 +62,21 @@ function mergeArms(a: string, b: string): string | null {
     if (x !== '0' && y !== '0' && x !== y) {
       return null
     }
+
     out += x === '0' ? y : x
   }
+
   return out
 }
 
-// Write policy: text, cap, key, fill, arrow and title cells are exclusive, so a later text, cap, key, fill, arrow or line write
-// on one is a Conflict, and the old cell stays. A line on a line merges arm by arm when shares(old owner, new owner) holds for
-// any old owner; unrelated owners may only cross straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two weights, or
-// any other meeting, is a Conflict. An arrow on an arrow of the same glyph merges owners when shares holds for any old owner.
+// Write policy: text, cap, key, fill, arrow and title cells are exclusive, so a later text, cap, key, fill, arrow or
+// line write
+// on one is a Conflict, and the old cell stays. A line on a line merges arm by arm when shares(old owner, new owner)
+// holds for
+// any old owner; unrelated owners may only cross straight and perpendicular (┼ ╂ ┿ ╋). One arm claimed with two
+// weights, or
+// any other meeting, is a Conflict. An arrow on an arrow of the same glyph merges owners when shares holds for any old
+// owner.
 // A frame or lifeline draws only into empty cells, so on a drawn cell it is a no-op.
 // shares: may two owners merge a line or arrow cell (default a === b).
 export function createCanvas(
@@ -72,12 +87,14 @@ export function createCanvas(
 ): Canvas {
   const cells: (Cell | null)[][] = Array.from({ length: rows }, () => Array<Cell | null>(cols).fill(null))
   const conflicts: Conflict[] = []
-  // A write outside [0, rows) × [0, cols), or at a non-integer row or column, is a Conflict and is skipped: it never throws and
+  // A write outside [0, rows) × [0, cols), or at a non-integer row or column, is a Conflict and is skipped: it never
+  // throws and
   // never grows the grid, so validation fails closed and the render falls back.
   const inGrid = (r: number, c: number, by: string): boolean => {
     if (Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < rows && c >= 0 && c < cols) {
       return true
     }
+
     conflicts.push({ row: r, col: c, had: 'out-of-bounds', by })
     return false
   }
@@ -86,6 +103,7 @@ export function createCanvas(
     if (!inGrid(r, c, cell.owners[0]!)) {
       return
     }
+
     const old = cells[r]![c]
     if (old && !BACKGROUND.has(old.kind)) {
       conflicts.push({ row: r, col: c, had: old.owners[0]!, by: cell.owners[0]! })
@@ -93,7 +111,8 @@ export function createCanvas(
       cells[r]![c] = cell
     }
   }
-  // A frame or lifeline writes only into an empty cell: on a drawn cell it is a no-op, not a Conflict, which sequence layering relies on.
+  // A frame or lifeline writes only into an empty cell: on a drawn cell it is a no-op, not a Conflict, which sequence
+  // layering relies on.
   const under = (r: number, c: number, cell: Cell): void => {
     if (inGrid(r, c, cell.owners[0]!) && !cells[r]![c]) {
       cells[r]![c] = cell
@@ -111,13 +130,16 @@ export function createCanvas(
           em = emOf(ch)
           continue
         }
+
         const w = width(ch)
         if (w === 0) {
           if (lead) {
             lead.ch += ch
           }
+
           continue
         } // with no lead cell it drops; the validator's text compare catches that
+
         lead = {
           ch,
           role,
@@ -132,8 +154,10 @@ export function createCanvas(
         if (w === 2) {
           put(r, col + 1, { ch: '', role, kind: 'cont', owners, dirs: 0 })
         }
+
         col += w
       }
+
       return col - c
     },
     cap(r, c, s, role, owner) {
@@ -142,7 +166,8 @@ export function createCanvas(
         put(r, col++, { ch, role, kind: 'cap', owners: [owner], dirs: 0 })
       }
     },
-    // C: a keyed item's key, in place (legend false) or in its legend row. Exclusive like a cap, one cell per character, each
+    // C: a keyed item's key, in place (legend false) or in its legend row. Exclusive like a cap, one cell per
+    // character, each
     // owned by every owner given: a member's in-place key by [id, parent], an edge label's by [`${id}:label`, id].
     key(r, c, s, role, owner, legend) {
       const owners = [owner].flat()
@@ -150,6 +175,7 @@ export function createCanvas(
       for (const ch of s) {
         put(r, col++, { ch, role, kind: 'key', owners, dirs: 0, ...(legend ? { legend: true as const } : {}) })
       }
+
       return col - c
     },
     fill(r, c, n, role, owner) {
@@ -157,7 +183,8 @@ export function createCanvas(
         put(r, c + i, { ch: ' ', role, kind: 'fill', owners: [owner], dirs: 0 })
       }
     },
-    // An arrow on an arrow of the same glyph merges owners when shares holds for an old owner, so edges into one node end in
+    // An arrow on an arrow of the same glyph merges owners when shares holds for an old owner, so edges into one node
+    // end in
     // one head that each owns. Any other write on an arrow is a Conflict (put).
     arrow(r, c, ch, owner) {
       const old = cells[r]?.[c]
@@ -165,14 +192,17 @@ export function createCanvas(
         if (!old.owners.includes(owner)) {
           cells[r]![c] = { ...old, owners: [...old.owners, owner] }
         }
+
         return
       }
+
       put(r, c, { ch, role: 'arrow', kind: 'arrow', owners: [owner], dirs: 0 })
     },
     line(r, c, dirs, weight, role, owner) {
       if (!inGrid(r, c, owner)) {
         return
       }
+
       const k = weight === 'heavy' ? '2' : '1'
       const arms = [1, 2, 4, 8].map((b) => (dirs & b ? k : '0')).join('')
       const old = cells[r]![c]
@@ -194,6 +224,7 @@ export function createCanvas(
         conflicts.push({ row: r, col: c, had: old.owners[0]!, by: owner })
         return
       }
+
       const related = old.owners.some((o) => shares(o, owner))
       const crossing = (old.dirs === 10 && dirs === 5) || (old.dirs === 5 && dirs === 10)
       const merged = related || crossing ? mergeArms(old.arms!, arms) : null
@@ -201,8 +232,10 @@ export function createCanvas(
         conflicts.push({ row: r, col: c, had: old.owners[0]!, by: owner })
         return
       }
+
       const all = old.dirs | dirs
-      const style = old.style === 'dotted' ? weight : old.style! // a dotted cell takes the new line's style: dotted only while every line in it is
+      // a dotted cell takes the new line's style: dotted only while every line in it is
+      const style = old.style === 'dotted' ? weight : old.style!
       const owners = old.owners.includes(owner) ? old.owners : [...old.owners, owner]
       const had = old.segs ?? []
       const seg = had.find((s) => s.owner === owner)
@@ -225,10 +258,12 @@ export function createCanvas(
         edge(top, c, 10)
         edge(bottom, c, 10)
       }
+
       for (let r = top + 1; r < bottom; r++) {
         edge(r, left, 5)
         edge(r, right, 5)
       }
+
       edge(top, left, 6)
       edge(top, right, 12)
       edge(bottom, left, 3)

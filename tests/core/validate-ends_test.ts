@@ -24,12 +24,15 @@ function F(t: string): Drawing {
   if ('reason' in p) {
     throw new Error(p.reason)
   }
+
   const routes = routeGraph(p)
   if ('reason' in routes) {
     throw new Error(routes.reason)
   }
+
   return drawGraph(p, routes, 80)
 }
+
 type At = { r: number; c: number }
 const STEPS = [
   [0, 1],
@@ -50,6 +53,7 @@ function swap(d: Drawing, a: At, b: At): Drawing {
   d.cells[b.r]![b.c] = x
   return d
 }
+
 const show = (d: Drawing) => text(d).join('\n')
 
 // QA's repro: B-xA draws its x beside A; swapped with the line cell beside B, the x sits at the sender.
@@ -113,6 +117,7 @@ function past(ends: { node: string; glyph: string }[]): Drawing {
   for (let i = 1; i < 4; i++) {
     c.line(0, i, 10, 'light', 'edge', 'e')
   }
+
   return c.toDrawing({
     labels: [
       { owner: 'A', text: 'a' },
@@ -122,6 +127,7 @@ function past(ends: { node: string; glyph: string }[]): Drawing {
     edgeLabels: [],
   })
 }
+
 test('A5.mutation-tests: a directional mark beside its node must point at it, and a mark no end claims is an extra head', () => {
   assert.equal(validate(past([{ node: 'B', glyph: '►' }]))?.reason, 'end-misplaced')
   assert.equal(validate(past([]))?.reason, 'head-extra')

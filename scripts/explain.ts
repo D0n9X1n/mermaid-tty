@@ -13,17 +13,20 @@ function main(argv: readonly string[] = process.argv.slice(2)): number {
     console.error('usage: node scripts/explain.ts FILE COLS')
     return 2
   }
+
   const r = explain(readFileSync(file, 'utf8'), { columns: Number(cols) })
   if (isFail(r)) {
     console.log(`reason: ${r.reason}`)
     return 1
   }
+
   const rows = toRows(r.drawing, palette('default')).map((row) => row.map((s) => s.text).join(''))
   console.log(`step: ${r.step}`)
   console.log(`width: ${Math.max(0, ...rows.map((row) => width(row)))}`)
   for (const row of rows) {
     console.log(row)
   }
+
   return 0
 }
 

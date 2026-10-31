@@ -44,7 +44,8 @@ test('A4.fit-ladder: a W/F character counts 2 columns', () => {
   assert.equal(wrap('中', 1), null)
 })
 
-// U+20000 and U+20001 (CJK Extension B) are East Asian Width W and 2 code units each: the code point, not its high surrogate, is W.
+// U+20000 and U+20001 (CJK Extension B) are East Asian Width W and 2 code units each: the code point, not its high
+// surrogate, is W.
 test('A4.fit-ladder: an astral W/F character counts 2 columns and splits from a W/F neighbor, BMP or astral', () => {
   assert.deepEqual(wrap('\u{20000}\u{20001}', 2), [
     { text: '\u{20000}', join: '' },
@@ -192,7 +193,8 @@ test('A3: <br> splits only with HTML whitespace before its slash', () => {
     ODD.map((t) => [t]),
   )
 })
-// Mermaid's own splitter (common.ts lineBreakRegex, /<\/?br\s*\/?>/gi) splits at those and at </br> too; a field whose <br>
+// Mermaid's own splitter (common.ts lineBreakRegex, /<\/?br\s*\/?>/gi) splits at those and at </br> too; a field whose
+// <br>
 // splits would draw them as written, so it falls back, as a field with no <br> does.
 test('A5.errors: drawable: a <br> with another space, or a </br>, fails html where a <br> splits or none may be drawn', () => {
   const odd = [...ODD, 'a</br>b', 'a</BR >b']
@@ -203,6 +205,7 @@ test('A5.errors: drawable: a <br> with another space, or a </br>, fails html whe
       m,
     )
   }
+
   assert.deepEqual(
     odd.map((t) => D(t, 'plain', 'literal')),
     odd.map(() => null),
@@ -226,8 +229,10 @@ test('X2: a removed <br> joins nothing, so text on either side is checked on its
   assert.deepEqual(drawable('&am<br>p', 'html', 'any'), { reason: 'entity' })
 })
 
-// X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a markdown
-// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a plain one
+// X3. createText (Mermaid 12.2.0) renders every HTML label through replaceIconSubstring and, given $$…$$, KaTeX; a
+// markdown
+// one (labelType 'markdown', and every class member) through marked, whose emphasis and escapes show other text; a
+// plain one
 // turns a literal \n into <br />.
 const RENDERED: Mode[] = ['html', 'markdown', 'member']
 test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in every HTML-label mode, and nowhere else', () => {
@@ -258,6 +263,7 @@ test('X3: drawable: an icon token or a $$…$$ formula fails icon or math in eve
       m,
     )
   }
+
   for (const m of ['plain', 'sanitized', 'escaped'] as Mode[]) {
     assert.deepEqual(
       ['fa:fa-book', '$$x$$'].map((t) => D(t, m)),
@@ -288,6 +294,7 @@ test('X3: drawable: markdown and member fail emphasis marked renders and a \\ es
       m,
     )
   }
+
   const ok = [
     'bold',
     'snake_case',
@@ -312,6 +319,7 @@ test('X3: drawable: markdown and member fail emphasis marked renders and a \\ es
       m,
     )
   }
+
   assert.equal(D('a < b', 'markdown'), null)
   assert.deepEqual(
     md.map((t) => D(t, 'html')),

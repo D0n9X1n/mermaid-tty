@@ -1,4 +1,5 @@
-// The pie model and its parser (plan C T63; matrix, pie): the title, and the slices in source order, each with its value
+// The pie model and its parser (plan C T63; matrix, pie): the title, and the slices in source order, each with its
+// value
 // as written and as an exact decimal.
 import { parseDec, type Dec } from '../../charts/decimal.ts'
 import { fail, type Fail } from '../../fail.ts'
@@ -12,8 +13,10 @@ export type Pie = { title: string | null; slices: Slice[] }
 
 // The header: pie, then showData, then a title, each optional, on one line.
 const HEADER = /^pie( showData)?( title (.+))?$/
-// The statements, each a whole trimmed line: a title; an accTitle or accDescr line; an accDescr { block, whose text runs to
-// its first }, which must end its line; and a slice: a "…" or '…' label, a colon with spaces or tabs around it, and the rest.
+// The statements, each a whole trimmed line: a title; an accTitle or accDescr line; an accDescr { block, whose text
+// runs to
+// its first }, which must end its line; and a slice: a "…" or '…' label, a colon with spaces or tabs around it, and the
+// rest.
 const TITLE = /^title[ \t]+(.+)$/
 const ACC = /^(?:accTitle|accDescr)[ \t]*:/
 const ACC_BLOCK = /^accDescr[ \t]*\{(.*)$/
@@ -22,13 +25,15 @@ const SLICE = /^(?:"([^"]*)"|'([^']*)')[ \t]*:[ \t]*(.*)$/
 const TOKEN = /^[+-]?\d+(\.\d+)?$/
 const POSITIVE = /^(?:[1-9]\d*|\d+\.\d+)$/
 
-// Why text cannot be drawn, or null: text Mermaid shows otherwise in a field of mode and br fails as drawable says, and so
+// Why text cannot be drawn, or null: text Mermaid shows otherwise in a field of mode and br fails as drawable says, and
+// so
 // does an unsupported character. A slice is plain, each <br> drawn as written; a title is sanitized, with no <br>.
 function undrawable(text: string, mode: Mode, br: Br): Fail | null {
   const f = drawable(text, mode, br)
   if (f) {
     return f
   }
+
   const bad = unsupported(text)
   return bad ? fail(`unsupported-char ${bad}`) : null
 }
@@ -36,7 +41,8 @@ function undrawable(text: string, mode: Mode, br: Br): Fail | null {
 // The pie src declares, or why it cannot be drawn: 'header' (a header outside the subset), 'syntax:<n>' (a line that is
 // no statement, a label with a backslash, a value that is no token, or an accDescr { block left open or not ending its
 // line), 'domain:<n>' (a token outside the subset: 0, a sign or a leading 0), 'repeat:<n>' (a label seen before, or a
-// second title), 'repeat:header' (a header title after a frontmatter one: Source numbers neither line), 'entity', 'html' or
+// second title), 'repeat:header' (a header title after a frontmatter one: Source numbers neither line), 'entity',
+// 'html' or
 // 'unsupported-char U+XXXX' (text that cannot be drawn), or 'empty' (no slice).
 export function parsePie(src: Source): Pie | Fail {
   const head = HEADER.exec(src.header)
@@ -49,6 +55,7 @@ export function parsePie(src: Source): Pie | Fail {
   if (f) {
     return f
   }
+
   let open = 0 // the line an open accDescr { block starts on, or 0
   for (const { n, text } of src.lines) {
     const t = text.trim()
@@ -58,6 +65,7 @@ export function parsePie(src: Source): Pie | Fail {
       if (g) {
         return g
       }
+
       continue
     }
     // Accessibility text is not drawn.
@@ -65,11 +73,14 @@ export function parsePie(src: Source): Pie | Fail {
     if (end >= 0 && block.slice(end + 1).trim()) {
       return fail(`syntax:${n}`)
     }
+
     open = end >= 0 ? 0 : open || n
   }
+
   if (open) {
     return fail(`syntax:${open}`)
   }
+
   return pie.slices.length > 0 ? pie : fail('empty')
 }
 
@@ -79,9 +90,11 @@ function statement(pie: Pie, t: string, n: number): Fail | null {
   if (title) {
     return titled(pie, title[1]!, n)
   }
+
   if (ACC.test(t)) {
     return null
   } // accessibility text is not drawn
+
   const m = SLICE.exec(t)
   return m ? slice(pie, m, n) : fail(`syntax:${n}`)
 }
@@ -91,11 +104,13 @@ function titled(pie: Pie, text: string, where: number | 'header'): Fail | null {
   if (pie.title !== null) {
     return fail(`repeat:${where}`)
   }
+
   const t = text.trim()
   const bad = undrawable(t, 'sanitized', 'none')
   if (bad) {
     return bad
   }
+
   pie.title = t
   return null
 }
@@ -107,17 +122,21 @@ function slice(pie: Pie, m: RegExpExecArray, n: number): Fail | null {
   if (label.includes('\\') || !TOKEN.test(raw)) {
     return fail(`syntax:${n}`)
   }
+
   const value = POSITIVE.test(raw) ? parseDec(raw) : null
   if (!value || value.n <= 0n) {
     return fail(`domain:${n}`)
   }
+
   if (pie.slices.some((s) => s.label === label)) {
     return fail(`repeat:${n}`)
   }
+
   const bad = undrawable(label, 'plain', 'literal')
   if (bad) {
     return bad
   }
+
   pie.slices.push({ label, raw, value, order: pie.slices.length })
   return null
 }

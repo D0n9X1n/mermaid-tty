@@ -39,9 +39,11 @@ export const register: Register = (on, options) => {
     if ('error' in a) {
       return { text: a.error }
     }
+
     if ('report' in a) {
       return { text: modeReply(cur, false) }
     }
+
     await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false)
     $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
@@ -54,6 +56,7 @@ export const register: Register = (on, options) => {
     if (!plan) {
       return next(e)
     }
+
     const { parts, Box, Text, Image } = plan
     const kids: RenderElement[] = []
     let first = e.props.isFirstOfReply
@@ -62,6 +65,7 @@ export const register: Register = (on, options) => {
       if (!('prose' in p) && first) {
         kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))
       } // D5: keep the bullet
+
       if ('picture' in p) {
         kids.push(
           <Image
@@ -87,8 +91,10 @@ export const register: Register = (on, options) => {
       } else {
         kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } }))
       }
+
       first = false
     }
+
     return <Box flexDirection="column">{kids}</Box>
   })
 }

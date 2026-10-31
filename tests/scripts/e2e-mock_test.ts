@@ -1,5 +1,6 @@
 // The e2e package's mock Messages API and its scripted replies. The e2e harness points a real Claude Code at the mock
-// and checks how mermaid-tty draws REPLY's fences. Node built-ins only, so the main suite runs this with nothing installed.
+// and checks how mermaid-tty draws REPLY's fences. Node built-ins only, so the main suite runs this with nothing
+// installed.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
@@ -13,7 +14,8 @@ import { splitFences } from '../../hooks/fences.ts'
 const text = (sse: string) =>
   [...sse.matchAll(/"text":"((?:[^"\\]|\\.)*)"/g)].map((m) => JSON.parse(`"${m[1]}"`)).join('')
 
-// The events of an SSE body, in order. Each must be exactly `event: <name>\ndata: <json>\n\n`, the Messages API's wire format.
+// The events of an SSE body, in order. Each must be exactly `event: <name>\ndata: <json>\n\n`, the Messages API's wire
+// format.
 function events(sse: string): { event: string; data: any }[] {
   assert.ok(sse.endsWith('\n\n'), `the stream does not end with a blank line: ${JSON.stringify(sse.slice(-20))}`)
   return sse
@@ -43,6 +45,7 @@ test('A9.harness: the mock streams REPLY to every concurrent POST /v1/messages; 
       assert.equal(text(s), REPLY)
       assert.match(s, /event: message_stop/)
     }
+
     assert.equal(
       text(
         await fetch(`${m.url}/v1/messages`, {
@@ -62,6 +65,7 @@ test('A9.harness: REPLY has prose, a CJK flowchart, a sequence, an unsupported d
   for (const s of ['读取配置文件', 'sequenceDiagram', 'flowchart-elk TD']) {
     assert.ok(REPLY.includes(s), s)
   }
+
   assert.match(REPLY, /`{3}mermaid\nflowchart TD\nA --> B\n?$/)
 })
 
@@ -127,7 +131,8 @@ test("A9.harness: mermaid-tty's fence splitter finds REPLY's three closed diagra
   )
 })
 
-// U+1F600, an astral character: two UTF-16 code units, four UTF-8 bytes. 读, a CJK character: one code unit, three bytes.
+// U+1F600, an astral character: two UTF-16 code units, four UTF-8 bytes. 读, a CJK character: one code unit, three
+// bytes.
 const ASTRAL = '\u{1F600}'
 const CJK = '读'
 test('A9.harness: chunks splits text into runs of 64 code points, never inside a surrogate pair or a character', () => {
@@ -277,6 +282,7 @@ test('A9.harness: only stream: true streams; stream "false", stream 1 and no str
         JSON.stringify(body),
       )
     }
+
     const r = await post({ stream: true })
     const sse = await r.text()
     assert.equal(r.headers.get('content-type'), 'text/event-stream')

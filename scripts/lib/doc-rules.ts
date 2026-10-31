@@ -1,4 +1,5 @@
-// Pure acceptance rules on the GFM tree (D15c): B1 README and B6 icon. B3's publish-wiki.yml rules run on the parsed YAML tree in docs/workflow-tree.ts.
+// Pure acceptance rules on the GFM tree (D15c): B1 README and B6 icon. B3's publish-wiki.yml rules run on the parsed
+// YAML tree in docs/workflow-tree.ts.
 import { type Node, all, lineOf, parse, section, text, within } from '../docs/markdown.ts'
 import { INSTALL } from './workflow.ts'
 export { INSTALL }
@@ -37,7 +38,8 @@ const FAQ = [
 ]
 export const supportedTypes = (md: string) =>
   [...(section(md, 'Supported diagrams') ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!)
-// B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram list.
+// B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram
+// list.
 export const NON_DIAGRAM = ['assets/icon.svg']
 export const assetImages = (md: string) =>
   all(parse(md), 'image')
@@ -48,8 +50,10 @@ export const imageErrors = (where: string, md: string, diagrams: string[]) =>
     .filter((p) => !diagrams.includes(p) && !NON_DIAGRAM.includes(p))
     .map((p) => `${where}: displays ${p}, which is neither a rendered diagram nor allow-listed`)
 // D15b, read from the GFM tree (D15c): every accepted image is displayed and every link target is known.
-// README: one HTML node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs, LICENSE or allowlisted https hosts.
-// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks, reference forms, footnotes, extra table cells and [[wiki links]] fail.
+// README: one HTML node, the hero, before the first ##; images are inline or badges; links go to its two wiki URLs,
+// LICENSE or allowlisted https hosts.
+// Wiki: no HTML and no images; links go to page names or allowlisted https hosts. Autolinks, reference forms,
+// footnotes, extra table cells and [[wiki links]] fail.
 export const HERO = /^<p align="center"><img src="assets\/icon\.svg" alt="[^"<>]*" width="\d+"><\/p>$/
 const SRC = /^assets\/[a-z0-9/_-]+\.svg$/
 const PAGE = /^[A-Za-z0-9-]+$/
@@ -60,9 +64,11 @@ function linkOk(t: string, readme: boolean): boolean {
   if (readme ? [`${REPO}/wiki`, `${REPO}/wiki/Home-zh-CN`, 'LICENSE'].includes(t) : PAGE.test(t)) {
     return true
   }
+
   const host = /^https:\/\/([^/]+)/.exec(t)?.[1]
   return !!host && LINK_HOSTS.includes(host) && !/[%&\\]|\/\/|\/wiki/i.test(t.slice(8))
 }
+
 const firstH2 = (tree: Node, md: string) =>
   all(tree, 'heading').find((h) => h.depth === 2)?.position!.start.offset ?? md.length
 export function grammarErrors(where: string, md: string, readme: boolean): string[] {
@@ -86,6 +92,7 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
     } else if (!badge && !SRC.test(n.url!)) {
       at(n, `image src must match ^assets/[a-z0-9/_-]+.svg$: ${n.url}`)
     }
+
     if (within(n, 'listItem')) {
       at(n, 'image in a list item')
     }
@@ -98,9 +105,11 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
       at(n, n.url!.endsWith('.md') ? `link must omit .md: ${n.url}` : `link target not allowed: ${n.url}`)
     }
   }
+
   for (const n of REFS.flatMap((t) => all(tree, t))) {
     at(n, 'reference-style link, image, definition or footnote')
   }
+
   for (const t of all(tree, 'table')) {
     for (const r of t.children!.slice(1)) {
       if (r.children!.length > t.children![0]!.children!.length) {
@@ -108,12 +117,14 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
       }
     }
   }
+
   for (const n of all(tree, 'text')) {
     if (n.value!.includes('[[')) {
       at(n, '[[wiki link]]; link by page name: [Label](Page)')
     }
   }
-  // Defense in depth (D15d): cmark-gfm ends code spans at 1,000 backticks and micromark does not, so long runs fail on the raw text.
+  // Defense in depth (D15d): cmark-gfm ends code spans at 1,000 backticks and micromark does not, so long runs fail on
+  // the raw text.
   md.split('\n').forEach((l, i) => {
     const w = `${where}:${i + 1}`
     const fence = /^ {0,3}(`{3,})[^`]*$/.exec(l)
@@ -135,9 +146,11 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   if (!all(tree, 'html').some((n) => HERO.test(n.value!) && n.position!.start.offset < h2)) {
     e.push('hero: logo <img src="assets/icon.svg"> missing')
   }
+
   if (!top.map(text).join('\n').includes(TAGLINE)) {
     e.push('hero: tagline missing')
   }
+
   const badges = top
     .flatMap((n) => all(n, 'link'))
     .filter((l) => l.children!.length === 1 && l.children![0]!.type === 'image')
@@ -148,48 +161,59 @@ export function readmeErrors(md: string, generated: string[]): string[] {
       e.push(`hero: ${name} badge missing`)
     }
   }
+
   if (!all(tree, 'code').some((c) => c.value === INSTALL.join('\n'))) {
     e.push('install: no code block holding exactly the two install commands')
   }
+
   for (const s of SECTIONS) {
     if (section(md, s) === null) {
       e.push(`section missing: ## ${s}`)
     }
   }
+
   for (const re of FAQ) {
     if (!re.test(faq)) {
       e.push(`FAQ: no answer matching /${re.source}/`)
     }
   }
+
   const wiki = all(tree, 'link').map((l) => `${text(l)} ${l.url}`)
   if (!wiki.includes(`English ${REPO}/wiki`)) {
     e.push('wiki link missing: English')
   }
+
   if (!wiki.includes(`简体中文 ${REPO}/wiki/Home-zh-CN`)) {
     e.push('wiki link missing: 简体中文')
   }
+
   const shown = assetImages(md)
   for (const f of generated) {
     if (!shown.includes(f)) {
       e.push(`image not shown in README: ${f}`)
     }
   }
+
   e.push(...imageErrors('README', md, generated))
   for (const c of LOCAL) {
     if (!dev.includes(c)) {
       e.push(`Development: does not show ${c}`)
     }
   }
+
   const drawn = /[\u2500-\u25ff]/.exec(md)
   if (drawn) {
     e.push(`README: hand-drawn diagram glyph ${drawn[0]}; show render-svg output instead`)
   }
+
   if (CTRL_O.test(md)) {
     e.push('README: claims ctrl+o shows the source; document /mermaid-tty source instead')
   }
+
   if (!supportedTypes(md).length) {
     e.push('Supported diagrams: the table is empty')
   }
+
   e.push(...grammarErrors('README', md, true))
   return e
 }
@@ -201,6 +225,7 @@ export function iconErrors(png: Uint8Array): string[] {
   if (png.length < 24 || sig.some((b, i) => png[i] !== b) || String.fromCharCode(...png.subarray(12, 16)) !== 'IHDR') {
     return ['icon.png: not a PNG']
   }
+
   const v = new DataView(png.buffer, png.byteOffset, png.byteLength)
   const w = v.getUint32(16)
   const h = v.getUint32(20)

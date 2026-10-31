@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readSource, scanSource, type Source } from '../../core/source.ts'
 const src = (fm: string) => readSource(`---\n${fm}\n---\ngitGraph\ncommit`)
-// The scanner's config, before readSource checks each setting against its allowlist, so that any key tests the YAML subset.
+// The scanner's config, before readSource checks each setting against its allowlist, so that any key tests the YAML
+// subset.
 const cfg = (fm: string) => (scanSource(`---\n${fm}\n---\ngitGraph\ncommit`) as Source).config
 test('A5: frontmatter config scalars become dotted keys; other top-level keys are ignored', () => {
   assert.deepEqual(
@@ -32,6 +33,7 @@ test('A5: frontmatter config scalars become dotted keys; other top-level keys ar
   for (const q of ['"trunk" # note', '"trunk"\t# note', "'trunk' # note"]) {
     assert.deepEqual(cfg(`config:\n  gitGraph:\n    mainBranchName: ${q}`), { 'gitGraph.mainBranchName': 'trunk' }, q)
   }
+
   assert.deepEqual(cfg('config:\n  gitGraph:\n    mainBranchName: "a # b" # note'), {
     'gitGraph.mainBranchName': 'a # b',
   }) // a # inside the quotes is kept
@@ -111,7 +113,8 @@ test('A5: quoted and plain scalars, comment and blank lines, keys and nesting re
       'p.j': 'x',
     },
   )
-  // A comment or blank line at any indent is skipped and never ends a mapping, nor does a whitespace-only line with a tab.
+  // A comment or blank line at any indent is skipped and never ends a mapping, nor does a whitespace-only line with a
+  // tab.
   assert.deepEqual(
     cfg(
       yaml(
@@ -212,7 +215,8 @@ test('A5.errors: config in any other top-level form, a second config: block, or 
   for (const fm of bad) {
     assert.deepEqual(src(fm), { reason: 'frontmatter' }, fm)
   }
-  // Other plain top-level keys, indicators after their first character included, are still ignored, but for displayMode,
+  // Other plain top-level keys, indicators after their first character included, are still ignored, but for
+  // displayMode,
   // which processFrontmatter sets as gantt.displayMode.
   assert.deepEqual(cfg('displayMode: compact\ntitleTopMargin: 5\n.x: 1\nx-y: z\n-x: 1\n?x: 1\nconfig:\n  a: 1'), {
     a: 1,
@@ -233,6 +237,7 @@ test('X4: an htmlLabels key anywhere in config, set to anything but true, falls 
   for (const v of off) {
     assert.deepEqual(src(`config:\n  ${v}`), { reason: 'config:htmlLabels' }, v)
   }
+
   assert.deepEqual(cfg('config:\n  htmlLabels: true\n  flowchart:\n    htmlLabels: true'), {
     htmlLabels: true,
     'flowchart.htmlLabels': true,

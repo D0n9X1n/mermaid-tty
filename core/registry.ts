@@ -1,4 +1,5 @@
-// The diagram registry (plan A §6, A1; plan C T40): each header keyword's diagram type, the Tier 1 and Tier 2 types, the
+// The diagram registry (plan A §6, A1; plan C T40): each header keyword's diagram type, the Tier 1 and Tier 2 types,
+// the
 // types drawn, and their modules.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
@@ -87,7 +88,8 @@ export const TIER1: readonly DiagramType[] = [
   'xychart',
   'quadrant',
 ]
-// The types C gates (plan C §9): each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens, and
+// The types C gates (plan C §9): each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens,
+// and
 // one commit then adds it to TIER2_PASSED. None has passed in v1.
 export const TIER2: readonly DiagramType[] = [
   'requirement',
@@ -136,16 +138,20 @@ export function lookup(header: string): DiagramModule | Fail {
   if (type === undefined) {
     return fail('unknown-type')
   }
+
   if (type === null) {
     return fail(`fallback:${kw}`)
   }
+
   if (!ENABLED.has(type)) {
     return fail(`disabled:${type}`)
   }
+
   return MODULES[type] ?? fail(`unregistered:${type}`)
 }
 
-// The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its header
+// The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its
+// header
 // keywords in KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
 export function supportTable(): string {
   const keywords = (t: DiagramType) =>

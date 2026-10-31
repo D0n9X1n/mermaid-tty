@@ -11,6 +11,7 @@ const build: Build = ({ dir, keyed }) => {
   if (!keyed) {
     return { graph: gr, legend: [], keyable }
   }
+
   gr.edges[0]!.labelKey = 'a'
   return {
     graph: gr,

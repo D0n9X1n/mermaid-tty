@@ -8,6 +8,7 @@ export function createLru<K, V>(capacity: number): Lru<K, V> {
       if (!m.has(k)) {
         return undefined
       }
+
       const v = m.get(k) as V
       m.delete(k)
       m.set(k, v)

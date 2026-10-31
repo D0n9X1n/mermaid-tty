@@ -49,16 +49,20 @@ function parsed(s: string) {
   if (isFail(src)) {
     throw new Error(src.reason)
   }
+
   const mod = lookup(src.header)
   if (isFail(mod)) {
     throw new Error(mod.reason)
   }
+
   const model = mod.parse(src)
   if (isFail(model)) {
     throw new Error(model.reason)
   }
+
   return { mod, model }
 }
+
 test('A5.mutation-tests: no row of a drawing validate accepts is wider than its columns, as toRows emits it', () => {
   assert.ok(FIXTURES.length > 0)
   for (const s of SOURCES) {
@@ -71,12 +75,14 @@ test('A5.mutation-tests: no row of a drawing validate accepts is wider than its 
         if (isFail(d) || validate(d) !== null) {
           continue
         }
+
         validated++
         for (const row of plain(d)) {
           assert.ok(width(row) <= d.columns, `${name} ${step} at ${d.columns}: ${width(row)} wide`)
         }
       }
     }
+
     assert.ok(validated > 0, `${name} never validates`)
   }
 })

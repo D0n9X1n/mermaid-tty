@@ -28,6 +28,7 @@ for (const type of ['flowchart', 'sequence']) {
         for (const w of EDGE.has(id) ? [60] : W) {
           assert.ok('reason' in X(src(id), w), `${id}@${w}`)
         }
+
         if (EDGE.has(id)) {
           assert.ok(!('reason' in X(src(id), 61)))
         }
@@ -45,11 +46,13 @@ for (const type of ['flowchart', 'sequence']) {
         if (process.env.UPDATE_GOLDEN === '1') {
           writeFileSync(p, g)
         }
+
         assert.equal(g, readFileSync(p, 'utf8'))
       })
     }
   }
 }
+
 for (const [id, step] of Object.entries(LADDER)) {
   test(`A4.fit-ladder: ${id} first fits at ${step}`, () => {
     const r = X(src(id), 60)
@@ -59,6 +62,7 @@ for (const [id, step] of Object.entries(LADDER)) {
     }
   })
 }
+
 test('A3: shape fixtures draw each one-line label in exactly one row', () => {
   for (let i = 7; i <= 18; i++) {
     const id = `flowchart-ok-${String(i).padStart(2, '0')}`
@@ -74,7 +78,8 @@ test('A3: shape fixtures draw each one-line label in exactly one row', () => {
 })
 test('A8.platforms: every drawn glyph in every golden is allow-listed', () =>
   assert.deepEqual(goldenGlyphs('goldens'), []))
-// A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in the source text before it, so each drawn
+// A golden cannot tell a drawn cell whose whole ch is zero-width from a mark in the source text before it, so each
+// drawn
 // cell is checked on the drawing too. A fixture that falls back has no drawing; A1 and A2 report it.
 const OK = ['flowchart', 'sequence']
   .flatMap((t) => (existsSync(`fixtures/${t}`) ? readdirSync(`fixtures/${t}`) : []).map((f) => f.replace(/\.mmd$/, '')))

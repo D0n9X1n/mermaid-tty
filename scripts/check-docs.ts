@@ -1,4 +1,5 @@
-// Runs the B1/B3/B4/B6 rules against the real files; exit 1 lists every failure. Same result on Linux, macOS and Windows.
+// Runs the B1/B3/B4/B6 rules against the real files; exit 1 lists every failure. Same result on Linux, macOS and
+// Windows.
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,6 +39,7 @@ for (const p of new Set(['assets/icon.svg', ...[md, ...pages.map((p) => read(p))
     errors.push(`${p} is displayed but does not exist`)
   }
 }
+
 errors.push(...docsFolderErrors(existsSync(at('docs'))))
 errors.push(
   ...(existsSync(at('.claude-plugin/icon.png'))
@@ -52,6 +54,7 @@ for (const img of IMAGES) {
     if (file !== svg) {
       errors.push(`${img.file}: stale; run node scripts/render-svg.ts --readme`)
     }
+
     for (const m of misplaced(file, rows, width)) {
       errors.push(`${img.file}: glyph off its cell: ${m}`)
     }
@@ -66,7 +69,8 @@ for (const f of existsSync(at('assets/readme')) ? readdirSync(at('assets/readme'
     errors.push(`assets/readme/${f}: not in the image manifest`)
   }
 }
-// T18 begin: D15d, GitHub's render of each page must show the tree's links and images; CI passes GH_TOKEN, and a local run without it skips.
+// T18 begin: D15d, GitHub's render of each page must show the tree's links and images; CI passes GH_TOKEN, and a local
+// run without it skips.
 if (process.env.GH_TOKEN) {
   for (const p of ['README.md', ...pages]) {
     try {
@@ -84,7 +88,9 @@ if (process.env.GH_TOKEN) {
 for (const e of errors) {
   console.error(`check-docs: ${e}`)
 }
+
 if (errors.length) {
   process.exit(1)
 }
+
 console.log(`check-docs: ok (README, ${IMAGES.length} images, 4 workflows, check.sh, icon)`)

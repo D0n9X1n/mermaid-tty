@@ -12,7 +12,8 @@ test('A3: a class pill shows «annot», its name, then attributes before methods
     [at(' Duck '), at('+String beakColor'), at('+swim()')],
   )
   assert.ok(t.slice(at('«service»'), at('+swim()') + 1).every((l) => /\[.*\]/.test(l)))
-  const duck = X('class Duck {\n  <<service>>\n  +String beakColor\n  +swim()\n}').drawing // an annotated class with members validates
+  // an annotated class with members validates
+  const duck = X('class Duck {\n  <<service>>\n  +String beakColor\n  +swim()\n}').drawing
   assert.equal(validate(duck), null)
   assert.deepEqual(
     duck.expect.members.map((m: any) => m.id),
@@ -35,7 +36,8 @@ test('A4.fit-ladder: at keyed, relation labels and notes share one key sequence,
   ) // the class note node draws its key (B4)
 })
 
-// Beyond the plan's tests: each end sits at its own class with its own glyph; keys count only labelled relations, then notes;
+// Beyond the plan's tests: each end sits at its own class with its own glyph; keys count only labelled relations, then
+// notes;
 // a class or namespace named as a relation or note would make owners ambiguous, so it falls back.
 test('A3: each end is drawn at the class it faces, with the glyph its relation names', () => {
   const d = X('Animal <|-- Duck\nDuck *-- Egg\nLake o-- Duck\nDuck ..|> Swimmer\nDuck --> Pond').drawing
@@ -73,6 +75,7 @@ test('A5.errors: a class or namespace named as a relation or a note fails id-cla
   ]) {
     assert.deepEqual(X(body), { reason: 'id-clash' }, body)
   }
+
   assert.ok(X('class r\nclass notes\nclass r0a').drawing)
 })
 test('A4.fit-ladder: keyed, a note written above a labelled relation takes its key first, in source order', () => {

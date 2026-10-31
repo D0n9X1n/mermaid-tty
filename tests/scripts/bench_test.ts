@@ -19,6 +19,7 @@ function tree(t: { after(fn: () => void): void }, files: Record<string, string>)
     mkdirSync(dirname(join(dir, p)), { recursive: true })
     writeFileSync(join(dir, p), text)
   }
+
   return dir
 }
 

@@ -11,7 +11,8 @@ import { isMain } from './lib/is-main.ts'
 import { CC_DARK } from './lib/palette.ts'
 import { BG, PAD, esc, glyphCells, toSvg } from './lib/svg.ts'
 
-// A fixed hex preview of Claude Code's dark theme (palette.ts), for the ThemeKeys the default theme draws with. A preview,
+// A fixed hex preview of Claude Code's dark theme (palette.ts), for the ThemeKeys the default theme draws with. A
+// preview,
 // not the real theme: CC resolves each key at render time from the user's own theme, whose colors may differ.
 const USED = [
   'text',
@@ -35,9 +36,11 @@ function paint(c: string): string {
   if (/^#[0-9a-f]{6}$/i.test(c)) {
     return c
   }
+
   if (Object.hasOwn(DARK_KEYS, c)) {
     return DARK_KEYS[c]!
   }
+
   throw new Error(`render-svg: no color for ${JSON.stringify(c)}`)
 }
 
@@ -46,7 +49,8 @@ export const CELL_W = 10
 export const CELL_H = 20
 
 // rows as a dark SVG page of cellW × cellH cells: a <rect> per background run, the most neighbouring cells of a row
-// with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style; dimColor, which terminals
+// with one background, then a <text> per glyph that is not blank. Bold sets font-weight, italic font-style; dimColor,
+// which terminals
 // draw faint, sets opacity 0.5.
 export function rowsToSvg(
   rows: Rows,
@@ -66,6 +70,7 @@ export function rowsToSvg(
           runs.push({ r, col, w, fill })
         }
       }
+
       col += w
     }
   })
@@ -90,6 +95,7 @@ export function rowsToSvg(
       (sp.dimColor ? ' opacity="0.5"' : '')
     out.push(`<text x="${g.col * cellW}" y="${g.row * cellH + Math.round(cellH * 0.8)}"${style}>${esc(g.text)}</text>`)
   }
+
   return [...out, '</g>', '</svg>', ''].join('\n')
 }
 
@@ -105,7 +111,8 @@ export function glyphXs(svg: string): [string, number][] {
 
 // The self-check, which measures columns on its own rather than through glyphCells, the renderer's placement: it walks
 // each row's text a code point at a time, summing width(ch), and expects a glyph wherever ch is neither blank nor
-// zero-width, so a combining mark rides on its base. Returns each glyph svg does not draw, starting with its code point,
+// zero-width, so a combining mark rides on its base. Returns each glyph svg does not draw, starting with its code
+// point,
 // at x / cellW = its column, or both glyph counts when they differ. It counts code points, not graphemes: a base and a
 // spacing mark, which the renderer draws as one glyph, fail it, loudly rather than silently.
 export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
@@ -118,12 +125,14 @@ export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
       if (w > 0 && ch.trim()) {
         want.push({ row: r, col, ch })
       }
+
       col += w
     }
   })
   if (want.length !== got.length) {
     return [`expected ${want.length} glyphs, found ${got.length}`]
   }
+
   return want.flatMap((g, i) => {
     const [text, x] = got[i]!
     return text.startsWith(g.ch) && x / cellW === g.col
@@ -134,18 +143,21 @@ export function offGrid(svg: string, rows: Rows, cellW: number): string[] {
 
 const USAGE = 'usage: node scripts/render-svg.ts FILE COLS THEME OUT.svg'
 
-// Writes the SVG of FILE's rows at COLS columns under THEME to OUT.svg. Exits 1 when core falls back, 2 on bad arguments.
+// Writes the SVG of FILE's rows at COLS columns under THEME to OUT.svg. Exits 1 when core falls back, 2 on bad
+// arguments.
 function main(): number {
   const [file, cols, theme, out, ...rest] = process.argv.slice(2)
   if (!file || !cols || !theme || !out || rest.length || !/^\d+$/.test(cols) || !Object.hasOwn(THEMES, theme)) {
     console.error(USAGE)
     return 2
   }
+
   const rows = renderMermaid(readFileSync(file, 'utf8'), { columns: Number(cols), theme })
   if (!rows) {
     console.error(`render-svg: core fell back on ${file} at ${cols} columns`)
     return 1
   }
+
   writeFileSync(out, rowsToSvg(rows))
   console.log(`render-svg: wrote ${out}`)
   return 0
@@ -160,6 +172,7 @@ if (isMain(import.meta) && process.argv[2] === '--readme') {
     mkdirSync(dirname(join(ROOT, img.file)), { recursive: true })
     writeFileSync(join(ROOT, img.file), renderImage(img).svg)
   }
+
   console.log(`render-svg: wrote ${IMAGES.length} images`)
 } else if (isMain(import.meta) && process.argv[2] === '--stdout') {
   const [file, cols = '80', theme = 'default'] = process.argv.slice(3)

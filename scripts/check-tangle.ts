@@ -1,7 +1,10 @@
-// node scripts/check-tangle.ts [--corpus] [--private DIR]: the independent tangle check (VR.tangled) over every golden, each
-// -ok- fixture of every fixtures/<type> folder but corpus, drawn at 60, 80 and 120 columns in the mono theme. Prints the
+// node scripts/check-tangle.ts [--corpus] [--private DIR]: the independent tangle check (VR.tangled) over every golden,
+// each
+// -ok- fixture of every fixtures/<type> folder but corpus, drawn at 60, 80 and 120 columns in the mono theme. Prints
+// the
 // counts, a <type>: <n> ok line per type and each hit as <id>@<cols> <rule>, and exits 1 on any hit. --corpus adds
-// fixtures/corpus/*.mmd, and prints its counts and the ids that hit. --private DIR adds every closed mermaid fence of the
+// fixtures/corpus/*.mmd, and prints its counts and the ids that hit. --private DIR adds every closed mermaid fence of
+// the
 // .md files under DIR, and prints only its counts: no output names a private file or quotes a block.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -16,14 +19,16 @@ export type Block = { id: string; source: string }
 const COLUMNS = [60, 80, 120] as const
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 
-// The .mmd files of dir, a path from the repo root, whose names pass keep, in name order: each a block named by its file.
+// The .mmd files of dir, a path from the repo root, whose names pass keep, in name order: each a block named by its
+// file.
 const mmd = (dir: string, keep: (name: string) => boolean = () => true): Block[] =>
   readdirSync(join(ROOT, dir))
     .filter((n) => n.endsWith('.mmd') && keep(n))
     .sort()
     .map((n) => ({ id: n.slice(0, -'.mmd'.length), source: readFileSync(join(ROOT, dir, n), 'utf8') }))
 
-// The goldens: each -ok- fixture of each fixtures/ folder but corpus, flowchart and sequence first, then the rest in name order.
+// The goldens: each -ok- fixture of each fixtures/ folder but corpus, flowchart and sequence first, then the rest in
+// name order.
 const TYPES = (): string[] => {
   const dirs = readdirSync(join(ROOT, 'fixtures'), { withFileTypes: true })
     .filter((e) => e.isDirectory() && e.name !== 'corpus')
@@ -65,8 +70,10 @@ const count = (k: number, word: string): string => `${k} ${word}${k === 1 ? '' :
 // A block's type: its id up to the first '-'.
 const typeOf = (id: string): string => id.slice(0, id.indexOf('-'))
 
-// The report on blocks under label: a line of counts, then each hit, each id that hit once, or nothing more, as show says.
-// 'types' is 'hits' with a <type>: <n> ok line per type after the counts, in first-seen order: n counts its blocks with no hit.
+// The report on blocks under label: a line of counts, then each hit, each id that hit once, or nothing more, as show
+// says.
+// 'types' is 'hits' with a <type>: <n> ok line per type after the counts, in first-seen order: n counts its blocks with
+// no hit.
 export function report(
   label: string,
   blocks: readonly Block[],
@@ -88,7 +95,8 @@ export function report(
 
 const USAGE = 'usage: node scripts/check-tangle.ts [--corpus] [--private DIR]'
 
-// Reports the goldens, then the corpus with --corpus and DIR's blocks with --private DIR. 1 on any hit, 2 on a bad argument.
+// Reports the goldens, then the corpus with --corpus and DIR's blocks with --private DIR. 1 on any hit, 2 on a bad
+// argument.
 export function main(argv: readonly string[] = process.argv.slice(2), draw: typeof explain = explain): number {
   let withCorpus = false
   let priv: string | undefined
@@ -105,6 +113,7 @@ export function main(argv: readonly string[] = process.argv.slice(2), draw: type
       return 2
     }
   }
+
   const reports = [
     report('check-tangle', fixtures(), 'types', draw),
     ...(withCorpus ? [report('check-tangle --corpus', corpus(), 'ids', draw)] : []),
@@ -113,6 +122,7 @@ export function main(argv: readonly string[] = process.argv.slice(2), draw: type
   for (const line of reports.flatMap((r) => r.lines)) {
     console.log(line)
   }
+
   return reports.some((r) => r.hits > 0) ? 1 : 0
 }
 

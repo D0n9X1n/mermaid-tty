@@ -28,6 +28,7 @@ export function splitFences(reply: string): Segment[] {
           if (open.at > from) {
             out.push({ kind: 'prose', text: reply.slice(from, open.at) })
           }
+
           out.push({
             kind: 'mermaid',
             text: reply.slice(open.at, next),
@@ -35,13 +36,17 @@ export function splitFences(reply: string): Segment[] {
           })
           from = next
         }
+
         open = null
       }
     }
+
     pos = next
   }
+
   if (from < reply.length) {
     out.push({ kind: 'prose', text: reply.slice(from) })
   }
+
   return out
 }

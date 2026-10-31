@@ -9,6 +9,7 @@ function gcd(a: bigint, b: bigint): bigint {
   while (b !== 0n) {
     ;[a, b] = [b, a % b]
   }
+
   return a
 }
 // n/d in lowest terms, with the sign on n. d is never 0n.
@@ -17,9 +18,11 @@ function make(n: bigint, d: bigint): Dec {
     n = -n
     d = -d
   }
+
   const g = gcd(n, d)
   return { n: n / g, d: d / g }
 }
+
 const pow10 = (k: number): bigint => 10n ** BigInt(k)
 
 export const dec = (i: number): Dec => ({ n: BigInt(i), d: 1n })
@@ -31,6 +34,7 @@ export function parseDec(s: string): Dec | null {
   if (!DECIMAL.test(s)) {
     return null
   }
+
   const [whole = '', frac = ''] = s.replace(/^[+-]/, '').split('.')
   const n = BigInt(whole + frac)
   return make(s.startsWith('-') ? -n : n, pow10(frac.length))
@@ -72,6 +76,7 @@ function strip(x: bigint, p: bigint): [number, bigint] {
     x /= p
     k++
   }
+
   return [k, x]
 }
 // The shortest decimal, or null unless d's only prime factors are 2 and 5. A reduced n/d
@@ -82,6 +87,7 @@ export function toExact(a: Dec): string | null {
   if (one !== 1n) {
     return null
   }
+
   const k = Math.max(twos, fives)
   return digits((a.n * pow10(k)) / a.d, k)
 }

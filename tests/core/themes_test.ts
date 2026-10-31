@@ -18,12 +18,15 @@ test('A7: the 7 role colors under the default mapping and each palette', () => {
   for (const [t, cs] of Object.entries(T)) {
     cs.split(' ').forEach((c, i) => assert.equal(THEMES[t as 'nord'].roles[R[i]!], c, `${t}.${R[i]}`))
   }
+
   for (const r of R) {
     assert.equal(THEMES.mono.roles[r], null)
   }
+
   for (const p of Object.values(THEMES)) {
     assert.equal(Object.keys(p.series).length, 8)
   }
+
   assert.equal(palette('nope').name, 'default')
   assert.equal(THEMES.mono.fill, false)
 })
@@ -60,12 +63,14 @@ test("A7: every field of every palette matches plan A's table", () => {
       t,
     )
   }
+
   assert.deepEqual(Object.keys(THEMES).sort(), Object.keys(MORE).sort())
 })
 test('A7: palette() returns the named theme; any other name, inherited ones too, gives default', () => {
   for (const t of Object.keys(MORE)) {
     assert.equal(palette(t), THEMES[t as ThemeName], t)
   }
+
   for (const n of ['', 'nope', 'constructor', 'toString', '__proto__', 'hasOwnProperty']) {
     assert.equal(palette(n), THEMES.default, n)
   }
@@ -86,10 +91,12 @@ test('VR.in-ci: contrast is the WCAG 2 ratio, in either order', () => {
     assert.equal(contrast(a, b).toFixed(4), want, `${a} ${b}`)
     assert.equal(contrast(b, a).toFixed(4), want, `${b} ${a}`)
   }
+
   assert.equal(contrast('#0A0A0A', '#000000').toFixed(6), '1.060705')
   assert.equal(contrast('#0B0B0B', '#000000').toFixed(6), '1.066931')
 })
-// The sRGB primaries in OKLab: red (0.62796, 0.22486, 0.12585), green (0.86644, -0.23389, 0.17950), blue (0.45201, -0.03246, -0.31153).
+// The sRGB primaries in OKLab: red (0.62796, 0.22486, 0.12585), green (0.86644, -0.23389, 0.17950), blue (0.45201,
+// -0.03246, -0.31153).
 test('VR.in-ci: oklabDistance is the Euclidean distance in OKLab, in either order', () => {
   const cases = [
     ['#000000', '#FF0000', '0.6788'],
@@ -124,8 +131,10 @@ function broken(edits: Inks): typeof THEMES {
       throw new Error(`no such ink: ${key}`)
     }
   }
+
   return themes
 }
+
 test('VR.in-ci: paletteProblems reports a low contrast and look-alike roles or series, first to last', () => {
   assert.deepEqual(
     paletteProblems(
@@ -144,7 +153,8 @@ test('VR.in-ci: paletteProblems reports a low contrast and look-alike roles or s
     ],
   )
 })
-// Just under each limit. The curated palettes hold the other side: dracula.value has contrast 3.03, nord frame ~ value 0.0815.
+// Just under each limit. The curated palettes hold the other side: dracula.value has contrast 3.03, nord frame ~ value
+// 0.0815.
 test('VR.in-ci: the limits are contrast 3 and OKLab distance 0.08, for roles and series alike', () => {
   assert.deepEqual(
     paletteProblems(broken({ 'nord.note': '#5D7EA9', 'gruvbox.value': '#C0C9AA', 'solarized.s8': '#0071DD' })),
@@ -195,7 +205,8 @@ test('VR.in-ci: check-palettes prints every checked color with its contrast and 
   assert.deepEqual(cells(lines[72]), ['solarized', 's8', '#2AA198', '4.75', 's5', '0.1019'])
   assert.equal(lines[73], 'ok: nord, dracula, gruvbox, solarized pass: contrast >= 3, OKLab distance >= 0.08')
 })
-// The preload edits THEMES before the script reads it: nord.note takes the background's color, dracula loses its background.
+// The preload edits THEMES before the script reads it: nord.note takes the background's color, dracula loses its
+// background.
 test('VR.in-ci: check-palettes prints each problem on stderr, leaves malformed palettes out of the table, and exits 1', () => {
   const themes = new URL('../../core/themes.ts', import.meta.url).href
   const pre = `import { THEMES } from '${themes}'; THEMES.nord.roles.note = THEMES.nord.background; THEMES.dracula.background = null`

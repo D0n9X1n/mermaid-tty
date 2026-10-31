@@ -12,12 +12,15 @@ export function findReply(jsonl: string, reply: string): boolean {
     } catch {
       return false
     }
+
     if (typeof content === 'string') {
       return content === reply
     }
+
     if (!Array.isArray(content)) {
       return false
     }
+
     return (
       content
         .filter((b) => b?.type === 'text')
@@ -42,6 +45,7 @@ export function clipboardStubs(platform: string, out: string): Record<string, st
       'clip.cmd': `@powershell -NoProfile -Command "[Console]::In.ReadToEnd() | Set-Content -NoNewline -Encoding utf8 '${ps}'"\r\n`,
     }
   }
+
   const sh = `#!/bin/sh\ncat > '${out.replaceAll("'", "'\\''")}'\n`
   const names = platform === 'darwin' ? ['pbcopy'] : platform === 'linux' ? ['wl-copy', 'xclip', 'xsel'] : []
   return Object.fromEntries(names.map((n) => [n, sh]))

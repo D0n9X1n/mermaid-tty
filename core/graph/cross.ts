@@ -1,4 +1,5 @@
-// The cross axis (plan A §7.5): left-pack each rank, its items nodeGap apart, then two median pulls, dummies first, that keep
+// The cross axis (plan A §7.5): left-pack each rank, its items nodeGap apart, then two median pulls, dummies first,
+// that keep
 // the separation.
 import type { Item, Seg } from './chains.ts'
 import { longestPath } from './ranks.ts'
@@ -11,10 +12,12 @@ const group = (cons: readonly Link[], by: 'from' | 'to'): Map<string, Link[]> =>
   for (const c of cons) {
     m.set(c[by], [...(m.get(c[by]) ?? []), c])
   }
+
   return m
 }
 
-// Two median pulls: each item, dummies first and then the rest, rank by rank and right to left in each, moves its centre as
+// Two median pulls: each item, dummies first and then the rest, rank by rank and right to left in each, moves its
+// centre as
 // near as the constraints allow to the median of its neighbours' centres.
 function pull(ranks: Ranks, segs: readonly Seg[], cons: readonly Link[], x: Map<string, number>): void {
   const into = group(cons, 'to')
@@ -24,6 +27,7 @@ function pull(ranks: Ranks, segs: readonly Seg[], cons: readonly Link[], x: Map<
     nb.set(s.upper, [...(nb.get(s.upper) ?? []), s.lower])
     nb.set(s.lower, [...(nb.get(s.lower) ?? []), s.upper])
   }
+
   const cross = new Map(ranks.flat().map((i) => [i.id, i.cross]))
   const mid = (id: string) => x.get(id)! + (cross.get(id)! - 1) / 2
   for (let pass = 0; pass < 2; pass++) {
@@ -34,6 +38,7 @@ function pull(ranks: Ranks, segs: readonly Seg[], cons: readonly Link[], x: Map<
           if ((it.kind === 'dummy') !== dummies || cs.length === 0) {
             continue
           }
+
           const m = (cs[(cs.length - 1) >> 1]! + cs[cs.length >> 1]!) / 2
           const lo = Math.max(-Infinity, ...(into.get(it.id) ?? []).map((c) => x.get(c.from)! + c.minlen))
           const hi = Math.min(Infinity, ...(outOf.get(it.id) ?? []).map((c) => x.get(c.to)! - c.minlen))
@@ -69,6 +74,7 @@ function separations(
           minlen: last.end + extra + (last.opens || closes ? 2 : nodeGap + 1),
         })
       }
+
       last = { id, end, opens }
     }
     for (const it of r) {
@@ -78,21 +84,27 @@ function separations(
       for (const c of open.slice(n).reverse()) {
         put(RIGHT(c), 0, false, true, pad.get(c)?.[1])
       }
+
       for (const c of p.slice(n)) {
         put(LEFT(c), pad.get(c)?.[0] ?? 0, true, false)
       }
+
       put(it.id, it.cross - 1, false, false)
       open = p
     }
+
     for (const c of [...open].reverse()) {
       put(RIGHT(c), 0, false, true, pad.get(c)?.[1])
     }
   }
+
   return cons
 }
 
-// Each item's and strip border's start on the cross axis, the smallest is 0. fit: a strip's least width, for its title. A
-// strip narrower than that is padded on both sides, so its members stay centred; deepest first, as one widens those around it.
+// Each item's and strip border's start on the cross axis, the smallest is 0. fit: a strip's least width, for its title.
+// A
+// strip narrower than that is padded on both sides, so its members stay centred; deepest first, as one widens those
+// around it.
 export function crossAxis(
   ranks: Ranks,
   segs: readonly Seg[],
@@ -117,11 +129,13 @@ export function crossAxis(
       }
     }
   }
+
   const { cons, x } = solve()
   pull(ranks, segs, cons, x)
   const min = Math.min(...x.values())
   for (const [id, v] of x) {
     x.set(id, v - min)
   }
+
   return x
 }

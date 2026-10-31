@@ -1,5 +1,7 @@
-// Bar glyph runs (plan C, T44). A bar of e eighths is ⌊e/8⌋ full cells, then one partial cell when e mod 8 > 0. The glyphs
-// are core/glyphs.ts's bar set (spec C rule 5): █ shows 8 eighths and a partial its index + 1, ▏…▉ growing right and ▁…▇
+// Bar glyph runs (plan C, T44). A bar of e eighths is ⌊e/8⌋ full cells, then one partial cell when e mod 8 > 0. The
+// glyphs
+// are core/glyphs.ts's bar set (spec C rule 5): █ shows 8 eighths and a partial its index + 1, ▏…▉ growing right and
+// ▁…▇
 // growing up, as validate counts them back (T86).
 const FULL = '█'
 const PART = { h: [...'▏▎▍▌▋▊▉'], v: [...'▁▂▃▄▅▆▇'] } as const

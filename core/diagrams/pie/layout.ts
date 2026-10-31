@@ -19,7 +19,8 @@ const widest = (xs: readonly string[]): number => Math.max(0, ...xs.map(width))
 
 // Both steps draw each label as wrap's pieces, so a run of spaces draws as one and the ends trim, as validate reads it.
 // A label never splits at a <br>: Mermaid shows a slice's <br> as written, so it wraps only at spaces.
-// natural: labels unwrapped, and the bar field W = min(60, columns − N − V − P − 3), at least 10. wrap: W = 10, and labels
+// natural: labels unwrapped, and the bar field W = min(60, columns − N − V − P − 3), at least 10. wrap: W = 10, and
+// labels
 // wrap to columns − V − P − 13, so the row still fits. Any other step fails 'step'.
 function layout(pie: Pie, step: Step, columns: number): Drawing | Fail {
   if (step !== 'natural' && step !== 'wrap') {
@@ -37,13 +38,16 @@ function layout(pie: Pie, step: Step, columns: number): Drawing | Fail {
     if (!ps) {
       return fail('word-too-wide')
     }
+
     lines.push(ps)
   }
+
   const N = widest(lines.flat().map((p) => p.text))
   const W = step === 'natural' ? Math.min(60, columns - N - V - P - 3) : 10
   if (W < 10) {
     return fail('too-wide')
   }
+
   const cv = createCanvas(lines.flat().length, N + W + V + P + 3, columns)
   const labels: Expect['labels'][number][] = []
   const bars: NonNullable<Expect['bars']>[number][] = []
@@ -72,6 +76,7 @@ function layout(pie: Pie, step: Step, columns: number): Drawing | Fail {
   if (pie.title === null) {
     return body
   }
+
   const head = heading(pie.title, 'title', 'title', columns)
   return isFail(head) ? head : stack([head, body], columns)
 }

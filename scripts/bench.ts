@@ -1,7 +1,8 @@
 // node scripts/bench.ts DIR... [--private DIR]: the cold-render benchmark (A8.benchmark). Times each diagram under the
 // DIRs, and in the .md files under --private, as the mean of 20 cold explain calls at 80 columns, then prints n (the
 // number of diagrams), p50, p90 and the machine. Exits 1, naming each, when a diagram falls back or its timing is not a
-// finite number >= 0; 1 when p90 is over ceiling(process.env); and 2, after its usage, when there is no diagram to time.
+// finite number >= 0; 1 when p90 is over ceiling(process.env); and 2, after its usage, when there is no diagram to
+// time.
 import { readdirSync, readFileSync } from 'node:fs'
 import { cpus } from 'node:os'
 import { basename, join } from 'node:path'
@@ -19,17 +20,21 @@ export function percentile(xs: readonly number[], p: number): number {
   if (xs.length === 0) {
     throw new RangeError('percentile: no samples')
   }
+
   const s = xs.toSorted((a, b) => a - b)
   return s[Math.max(0, Math.ceil((p * s.length) / 100) - 1)]!
 }
 
-// The p90 ceiling in ms: BENCH_P90_MS when it is set; otherwise 200 in CI and 50 on the reference Mac. A BENCH_P90_MS that
-// is not a positive finite number throws a RangeError: NaN would compare as over no p90, and the benchmark would always pass.
+// The p90 ceiling in ms: BENCH_P90_MS when it is set; otherwise 200 in CI and 50 on the reference Mac. A BENCH_P90_MS
+// that
+// is not a positive finite number throws a RangeError: NaN would compare as over no p90, and the benchmark would always
+// pass.
 export function ceiling(env: Record<string, string | undefined>): number {
   const v = Number(env.BENCH_P90_MS ?? (env.CI ? 200 : 50))
   if (!Number.isFinite(v) || v <= 0) {
     throw new RangeError(`BENCH_P90_MS must be a positive number of ms, not ${JSON.stringify(env.BENCH_P90_MS)}`)
   }
+
   return v
 }
 
@@ -76,6 +81,7 @@ export function timeAll(
     for (let i = 0; i < 20; i++) {
       r = render(d.src, { columns: 80, theme: 'default' })
     }
+
     const mean = (now() - t0) / 20
     if (isFail(r)) {
       errors.push(`${d.name}: falls back (${r.reason})`)
@@ -85,6 +91,7 @@ export function timeAll(
       ms.push(mean)
     }
   }
+
   return { ms, errors }
 }
 
@@ -99,13 +106,16 @@ function main(argv: string[] = process.argv.slice(2)): number {
     console.error('usage: node scripts/bench.ts DIR... [--private DIR] (no diagram to time)')
     return 2
   }
+
   const { ms, errors } = timeAll(ds)
   for (const e of errors) {
     console.error(`bench: ${e}`)
   }
+
   if (errors.length > 0) {
     return 1
   }
+
   const p50 = percentile(ms, 50)
   const p90 = percentile(ms, 90)
   const max = ceiling(process.env)
@@ -115,6 +125,7 @@ function main(argv: string[] = process.argv.slice(2)): number {
     console.error(`bench: p90 ${p90.toFixed(2)} ms is over the ${max} ms ceiling`)
     return 1
   }
+
   return 0
 }
 

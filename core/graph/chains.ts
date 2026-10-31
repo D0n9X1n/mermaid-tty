@@ -1,4 +1,5 @@
-// A level's items and segments (plan A §7.1–3): its units on their longest-path ranks, a label node on the middle rank of a
+// A level's items and segments (plan A §7.1–3): its units on their longest-path ranks, a label node on the middle rank
+// of a
 // labelled edge, and a dummy on every other rank an edge spans. A back edge is reversed, its ends swapped.
 import type { GEdge } from './model.ts'
 import { backLinks, longestPath } from './ranks.ts'
@@ -9,7 +10,8 @@ export type Extent = { cross: number; main: number } // across the ranks and alo
 // owner: the innermost strip cluster that holds the item, or null. key: its place in source order.
 export type Unit = Extent & { id: string; kind: Kind; owner: string | null; key: number }
 export type Item = Unit & { rank: number }
-export type Seg = { edge: string; upper: string; lower: string } // a piece of an edge between adjacent ranks, upper above
+// a piece of an edge between adjacent ranks, upper above
+export type Seg = { edge: string; upper: string; lower: string }
 export type Level = { items: Item[]; segs: Seg[]; edges: GEdge[] }
 
 // labels: each labelled edge's label extent; common: the innermost strip cluster that holds both of two owners.
@@ -59,9 +61,11 @@ export function buildLevel(
       segs.push({ edge: e.id, upper: prev, lower: id })
       prev = id
     }
+
     if (e.from !== e.to) {
       segs.push({ edge: e.id, upper: prev, lower: e.to })
     }
   }
+
   return { items, segs, edges: out }
 }

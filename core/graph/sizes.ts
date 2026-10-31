@@ -1,5 +1,7 @@
-// Box sizes (plan A §7): a node is its widest piece, a pad cell each side and its caps wide; an edge label its widest piece and
-// a pad cell each side. Each takes one row per piece, its lines wrapped at wrapAt, or as they are when wrapAt is null; a
+// Box sizes (plan A §7): a node is its widest piece, a pad cell each side and its caps wide; an edge label its widest
+// piece and
+// a pad cell each side. Each takes one row per piece, its lines wrapped at wrapAt, or as they are when wrapAt is null;
+// a
 // member row built fixed, or a row of columns, is one piece and never wraps.
 import { CAPS } from '../caps.ts'
 import { fail } from '../fail.ts'
@@ -10,7 +12,8 @@ import type { GNode, NodeRow } from './model.ts'
 
 export type Size = { rows: number; cols: number }
 
-// lines' pieces, the widest plus extra wide, or word-too-wide when a word is wider than wrapAt. A line given as a number is
+// lines' pieces, the widest plus extra wide, or word-too-wide when a word is wider than wrapAt. A line given as a
+// number is
 // one piece that wide.
 function size(lines: readonly (string | number)[], wrapAt: number | null, extra: number): Size | Fail {
   const widths: number[] = []
@@ -19,12 +22,15 @@ function size(lines: readonly (string | number)[], wrapAt: number | null, extra:
       widths.push(line)
       continue
     }
+
     const ps = wrapAt === null ? [line] : wrap(line, wrapAt)?.map((p) => p.text)
     if (!ps) {
       return fail('word-too-wide')
     }
+
     widths.push(...ps.map(width))
   }
+
   return { rows: widths.length, cols: Math.max(0, ...widths) + extra }
 }
 
@@ -43,9 +49,11 @@ export function nodeSize(n: GNode, wrapAt: number | null, across = false): Size 
   if (n.mark === 'bar') {
     return across ? { rows: n.span ?? 1, cols: 1 } : { rows: 1, cols: n.span ?? 1 }
   }
+
   if (n.mark) {
     return { rows: 1, cols: 1 }
   }
+
   return size(
     n.rows.map((r) => fixedWidth(r) ?? r.text),
     wrapAt,

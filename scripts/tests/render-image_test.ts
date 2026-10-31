@@ -32,6 +32,7 @@ test('--readme writes exactly the ten manifest images from core, independent of 
   for (const p of ['package.json', 'core', 'hooks', 'scripts/render-svg.ts', 'scripts/lib', 'assets/readme/src']) {
     cpSync(join(ROOT, p), join(root, p), { recursive: true })
   }
+
   const r = spawnSync(process.execPath, [join(root, 'scripts/render-svg.ts'), '--readme'], {
     cwd: tmpdir(),
     encoding: 'utf8',

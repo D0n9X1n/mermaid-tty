@@ -175,11 +175,13 @@ test('A1: BT and RL mirror TB and LR along the main axis, frames included', () =
       assert.deepEqual(bt[k].get(id), { ...b, row: tb.rows - b.row - b.rows })
     }
   }
+
   for (const k of ['boxes', 'frames'] as const) {
     for (const [id, b] of lr[k]) {
       assert.deepEqual(rl[k].get(id), { ...b, col: lr.cols - b.col - b.cols })
     }
   }
+
   assert.ok(bt.boxes.get('Y')!.row < bt.boxes.get('X')!.row && rl.boxes.get('Y')!.col < rl.boxes.get('X')!.col)
 })
 test('A1: the same input always gives the same Placed', () => {

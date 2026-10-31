@@ -165,7 +165,8 @@ test('A5: reversed ends, an inline annotation, Mermaid member spacing, accTitle 
     [['A', 'B', 'C', 'D', 'E'], 'enum', ['+ x', '+ getX() : int$', '-f(List<T> a) : Map<K>']],
   )
 })
-// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text falls back.
+// Mermaid's Diagram.fromText encodes every #…; in the body and its SVG decodes it, so "#9829;" shows ♥: such text falls
+// back.
 test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text, and an ignored directive is not checked', () => {
   for (const body of [
     'class A["#9829;"]',
@@ -181,6 +182,7 @@ test('A5.errors: a #…; entity in any drawn text falls back; a lone # is text, 
   ]) {
     assert.deepEqual(P(body), { reason: 'entity' }, body)
   }
+
   const m = P('class A["C# 1"]\nA : #count\nclassDef hot fill:#f00;\nstyle A fill:#f9f;')
   assert.deepEqual([m.classes[0].label, m.classes[0].members[0].text], ['C# 1', '#count'])
 })
@@ -236,6 +238,7 @@ test('A5.errors: comma generics, nested namespaces, conflicting declarations and
   ]) {
     assert.deepEqual(P(body!), { reason: why }, body)
   }
+
   assert.deepEqual(
     P('class A["x"]\nclass A["x"]\nclass B~T~\nclass B~T~\nnamespace P {\nclass A\n}\nnamespace P {\nclass C\n}')
       .namespaces,
@@ -243,7 +246,8 @@ test('A5.errors: comma generics, nested namespaces, conflicting declarations and
   )
 })
 
-// Fix cycle 1: each input Mermaid 12.2.0's grammar reads otherwise is matched or falls back. S: the reason, under `class A`.
+// Fix cycle 1: each input Mermaid 12.2.0's grammar reads otherwise is matched or falls back. S: the reason, under
+// `class A`.
 const S = (body: string) => P(`class A\n${body}`)
 test('A5 (1): click, link and callback in each form the grammar accepts are parsed and ignored', () => {
   for (const body of [
@@ -287,7 +291,8 @@ test('A5.errors (1): a click, link or callback in any other form falls back', ()
     assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
   }
 })
-// Mermaid's lexer reads `.*direction\s+(TB|BT|RL|LR)[^\n]*` as a direction statement wherever a top-level line holds it, and its
+// Mermaid's lexer reads `.*direction\s+(TB|BT|RL|LR)[^\n]*` as a direction statement wherever a top-level line holds
+// it, and its
 // \s+ crosses a line end; only `direction XX` alone is drawn as one.
 test('A5.errors (2): a top-level line Mermaid reads as a direction, but for direction XX alone, falls back; inside a block it is text', () => {
   for (const body of [
@@ -300,6 +305,7 @@ test('A5.errors (2): a top-level line Mermaid reads as a direction, but for dire
   ]) {
     assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
   }
+
   const m = P('namespace N {\nclass A["direction LR"]\n}\nclass B {\n+direction TB\n}\ndirection BT')
   assert.deepEqual([m.classes[0].label, m.classes[1].members[0].text, m.dir], ['direction LR', '+direction TB', 'BT'])
 })
@@ -316,6 +322,7 @@ test('A5.errors (3): an annotation is one word and :::name one word, neither a k
   ]) {
     assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
   }
+
   const m = P('class A ::: hot\nclass B << iface >> {\n+x\n}\n<<I_1>> C\nclass D {\n<<two words>>\n}')
   assert.deepEqual(
     m.classes.map((c: any) => c.annot),
@@ -332,6 +339,7 @@ test('A5.errors (4, 5): an empty namespace, and a ~ in a backtick name, fall bac
   ]) {
     assert.deepEqual(S(body), { reason: why }, body)
   }
+
   assert.deepEqual(
     S('class `B T`').classes.map((c: any) => c.id),
     ['A', 'B T'],
@@ -369,7 +377,8 @@ test('A5 (7, 8): either end takes each of <| |> * o < >, each mapped as Mermaid 
   )
 })
 
-// Fix cycle 2: Mermaid's lexer reads `\s*o` as aggregation only before a word boundary (jison's /^(?:\s*o\b)/), ahead of \w+.
+// Fix cycle 2: Mermaid's lexer reads `\s*o` as aggregation only before a word boundary (jison's /^(?:\s*o\b)/), ahead
+// of \w+.
 const rels = (body: string) => P(body).relations.map((r: any) => [r.from, r.to, r.tail, r.head, r.line])
 test('A5 (9): an o that starts a longer word is the class name, not an aggregation end', () => {
   assert.deepEqual(rels('Fruit --orange\nFruit ..orange\nFruit --o B\nAo-- B\nC --oé'), [
@@ -398,6 +407,7 @@ test('A5.errors (10): an unquoted id with a standalone o, which Mermaid lexes as
   ]) {
     assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
   }
+
   const m = S(
     'class oX\nclass Xo-o1\nclass o_1\nclass `o`\nclass B <<observable>>\nclass C:::orange\nclick oX href "u"',
   )
@@ -414,7 +424,8 @@ test('A5.errors (10): an unquoted id with a standalone o, which Mermaid lexes as
     ],
   )
 })
-// The grammar: STYLE ALPHA stylesOpt, CLASSDEF classList stylesOpt, CSSCLASS STR ALPHA; a style is ALPHA, :label, :, # or % pieces.
+// The grammar: STYLE ALPHA stylesOpt, CLASSDEF classList stylesOpt, CSSCLASS STR ALPHA; a style is ALPHA, :label, :, #
+// or % pieces.
 test('A5.errors (11): style, classDef and cssClass lines outside their grammar fall back; their valid forms draw nothing', () => {
   for (const body of [
     'style A',
@@ -434,6 +445,7 @@ test('A5.errors (11): style, classDef and cssClass lines outside their grammar f
   ]) {
     assert.deepEqual(S(body), { reason: 'syntax:3' }, body)
   }
+
   const m = S(
     'style A fill:#f9f,stroke:#333,stroke-width:4px\nclassDef hot,cold fill:#f00\nclassDef x font:12pt , color : red\nstyle A fill:red,\nclassDef hot, fill:red\n' +
       'cssClass "A" hot\ncssClass "A,B" cold\nstyle A fill:#f9f;\nstyle A #f00 50%',
@@ -444,7 +456,8 @@ test('A5.errors (11): style, classDef and cssClass lines outside their grammar f
   )
 })
 // Each drawn field in the mode Mermaid 12.2.0 shows it in. Label, note and relation
-// label: html, any <br> splits; namespace title, annotation, cardinality and a backtick name: html, no <br>; a member: member.
+// label: html, any <br> splits; namespace title, annotation, cardinality and a backtick name: html, no <br>; a member:
+// member.
 test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back', () => {
   for (const [body, why] of [
     ['class B["a<!--c-->b"]', 'html'],
@@ -466,6 +479,7 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
   ]) {
     assert.deepEqual(S(body), { reason: why }, body)
   }
+
   const m = S(
     'class B["x<br>Q&A"]\nnote "a < b"\nA "Q&A" --> "a < b" B : Q&A\nclass C {\n<<Q&A>>\n+a > b\n}\nC : +Q&A\nnamespace N["a < b"] {\nclass D\n}',
   )
@@ -483,8 +497,10 @@ test('A5.errors (X2): text Mermaid shows otherwise in a class field falls back',
     ['x<br>Q&A', 'a < b', 'Q&A', 'Q&A', 'a < b', 'Q&A', ['+a > b', '+Q&A'], 'a < b'],
   )
 })
-// X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels (marked);
-// a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one through
+// X3. Mermaid 12.2.0 renders a class's name, label and annotation, a relation label and a note as markdown labels
+// (marked);
+// a cardinality and a namespace title through createLabel, a plain HTML label that splits a literal \n; every one
+// through
 // icon and KaTeX substitution. A note's text reaches the label as written: only a <br> Mermaid splits breaks it.
 test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotation or member, icons and math in class texts fall back; a note keeps a literal \\n and an odd <br> as Mermaid does', () => {
   for (const [body, why] of [
@@ -502,6 +518,7 @@ test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotatio
   ]) {
     assert.deepEqual(P(body), { reason: why }, body)
   }
+
   assert.deepEqual(
     P('note "First\\nSecond"\nnote "a<br/>b<BR >c"').notes.map((n: any) => n.text),
     ['First\\nSecond', 'a<br/>b<BR >c'],
@@ -514,7 +531,8 @@ test('X3: Markdown the emphasis port cannot match, emphasis in a name, annotatio
 })
 
 // X3. Mermaid 12.2.0 (JSDOM): class B["**lbl** x"], a relation label **r** _s_ and a note "**n** _o_" show <strong> and
-// <em>. A member's text Mermaid parses first (+foo() **x** shows "+foo() : <strong>x</strong>"), so members keep falling back.
+// <em>. A member's text Mermaid parses first (+foo() **x** shows "+foo() : <strong>x</strong>"), so members keep
+// falling back.
 test('X3.emphasis: bold and italic in a class label, a relation label or a note draw as Mermaid shows them', async () => {
   const { emphasize } = await import('../../core/emphasis.ts')
   const m = P('class B["**lbl** x"]\nB --> C : **r** _s_\nnote for B "**n**<br>_o_"')

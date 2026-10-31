@@ -16,6 +16,7 @@ function main(): number {
     console.error(`check-ids: ${JSON.stringify(diff)}`)
     return 1
   }
+
   console.log(`check-ids: CHECKS matches the ${doc.length} A and VR IDs`)
   return 0
 }

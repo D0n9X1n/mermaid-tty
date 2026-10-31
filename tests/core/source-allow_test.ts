@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readSource, type Source } from '../../core/source.ts'
 // A config setting draws only if a renderer here honours it, or if it was seen under Mermaid 12.2.0 (JSDOM) to change
-// only pixels, with a value of a type Mermaid takes. Each case is written as frontmatter config and as an init directive.
+// only pixels, with a value of a type Mermaid takes. Each case is written as frontmatter config and as an init
+// directive.
 type Obj = { [k: string]: string | number | boolean | Obj }
 const yaml = (o: Obj, pad = '  '): string =>
   Object.entries(o)
@@ -42,8 +43,10 @@ test('A setting that changes what Mermaid shows, or one of a type Mermaid reject
     [{ theme: 'nope' }, 'theme'],
     [{ themeVariables: { primaryColor: 'notacolor' } }, 'themeVariables.primaryColor'],
     [{ themeVariables: { primaryColor: 1 } }, 'themeVariables.primaryColor'],
-    // The second review's cases: a 0px text size, malformed or transparent colours, a text colour on its own background,
-    // a tiny quadrant chart, pie labels pushed off the chart. Any colour can match another and hide text, so none draws.
+    // The second review's cases: a 0px text size, malformed or transparent colours, a text colour on its own
+    // background,
+    // a tiny quadrant chart, pie labels pushed off the chart. Any colour can match another and hide text, so none
+    // draws.
     [{ themeVariables: { pieTitleTextSize: '0px' } }, 'themeVariables.pieTitleTextSize'],
     [{ themeVariables: { pieSectionTextSize: '17px' } }, 'themeVariables.pieSectionTextSize'],
     [{ themeVariables: { primaryColor: 'rgb(1)' } }, 'themeVariables.primaryColor'],
@@ -62,7 +65,8 @@ test('A setting that changes what Mermaid shows, or one of a type Mermaid reject
     ],
     [{ themeVariables: { pieOuterStrokeWidth: '0px' } }, 'themeVariables.pieOuterStrokeWidth'],
     [{ themeVariables: { pieOuterStrokeWidth: '21px' } }, 'themeVariables.pieOuterStrokeWidth'],
-    // Third review: wider than Mermaid's 2px default, the strokes cover more of a thin slice's label (52% at 5px, 21% at 2px).
+    // Third review: wider than Mermaid's 2px default, the strokes cover more of a thin slice's label (52% at 5px, 21%
+    // at 2px).
     [{ themeVariables: { pieOuterStrokeWidth: '20px' } }, 'themeVariables.pieOuterStrokeWidth'],
     [{ themeVariables: { pieOuterStrokeWidth: '5px' } }, 'themeVariables.pieOuterStrokeWidth'],
     [{ themeVariables: { pieStrokeWidth: '5px' } }, 'themeVariables.pieStrokeWidth'],
@@ -141,7 +145,8 @@ test('Settings honoured here, or seen to change only pixels with a value Mermaid
     got,
     good.flatMap((o) => [flat(o), flat(o)]),
   )
-  // cleanAndMerge lays the directive over the frontmatter, so its htmlLabels: true wins, as later inits win over earlier ones.
+  // cleanAndMerge lays the directive over the frontmatter, so its htmlLabels: true wins, as later inits win over
+  // earlier ones.
   assert.deepEqual(
     (readSource('---\nconfig:\n  htmlLabels: false\n---\n%%{init: {"htmlLabels": true}}%%\nflowchart TD\nA') as Source)
       .config,

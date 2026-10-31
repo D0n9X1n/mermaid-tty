@@ -1,5 +1,6 @@
 // node scripts/check-portable.ts: checks that core/ and hooks/ can run in the engine's module sandbox,
-// which has no Node and no DOM. In each .ts and .tsx file it flags process (but not $.process), Buffer, document, window,
+// which has no Node and no DOM. In each .ts and .tsx file it flags process (but not $.process), Buffer, document,
+// window,
 // globalThis, Reflect, require, eval, Function (a type too), constructor, import( and a \u escape outside
 // literals and comments, and each import or export … from specifier that is not a relative .ts or .tsx
 // path; a type-only claude-code import is erased, so it is allowed. It also flags a dependencies key in
@@ -58,10 +59,12 @@ function before(out: string[]): { char: string; word: string } {
   while (i >= 0 && /\s/.test(out[i]!)) {
     i--
   }
+
   let word = ''
   for (let j = i; j >= 0 && /[\w$]/.test(out[j]!); j--) {
     word = out[j] + word
   }
+
   return { char: out[i] ?? '', word }
 }
 
@@ -75,12 +78,15 @@ function regexStarts(out: string[], next: string, headClosed: boolean): boolean 
   if (word) {
     return BEFORE_REGEX.has(word)
   }
+
   if (char === ')') {
     return headClosed
   }
+
   if (char === '<') {
     return !(out.at(-1) === '<' && /[\w$>]/.test(next))
   }
+
   return char !== ']'
 }
 
@@ -91,6 +97,7 @@ function closeQuote(code: string, i: number): number {
   while (j < code.length && code[j] !== code[i] && code[j] !== '\n') {
     j += code[j] === '\\' ? 2 : 1
   }
+
   return Math.min(j, code.length)
 }
 
@@ -110,6 +117,7 @@ function closeRegex(code: string, i: number): number {
       return j
     }
   }
+
   return -1
 }
 
@@ -170,6 +178,7 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
       if (word === 'from' || word === 'import') {
         specifiers.push({ at: i, text: code.slice(i + 1, end) })
       }
+
       take(i + 1, true)
       take(end, false)
       if (code[end] === c) {
@@ -197,9 +206,11 @@ function lex(code: string): { text: string; specifiers: Specifier[] } {
       } else if (c === ')') {
         headClosed = heads.pop() ?? false
       }
+
       take(i + 1, true)
     }
   }
+
   return { text: out.join(''), specifiers }
 }
 
@@ -211,6 +222,7 @@ function statement(text: string, at: number): string {
   for (const m of head.matchAll(/\b(?:import|export)\b/g)) {
     start = m.index!
   }
+
   return head.slice(start)
 }
 // A type-only statement, which TypeScript erases. `import type from 'x'` imports a binding named type,
@@ -247,10 +259,12 @@ export function scanRepo(root: string): string[] {
       problems.push(...scanSource(readFileSync(join(root, f), 'utf8')).map((p) => `${f}:${p}`))
     }
   }
+
   const pkg = readFileSync(join(root, 'package.json'), 'utf8')
   if ('dependencies' in JSON.parse(pkg)) {
     problems.push(`package.json:${lineOf(pkg, Math.max(0, pkg.indexOf('"dependencies"')))} dependencies`)
   }
+
   return problems
 }
 
@@ -259,9 +273,11 @@ function main(): number {
   for (const p of problems) {
     console.error(p)
   }
+
   if (problems.length) {
     return 1
   }
+
   console.log('check-portable: core/ and hooks/ are portable, and package.json has no dependencies')
   return 0
 }

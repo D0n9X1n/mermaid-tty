@@ -75,7 +75,8 @@ test('A5.errors: every merge gitGraphAst throws on', () => {
     ['branch b\ncommit\ncheckout main\nmerge b', 'merge:5'],
     ['branch b\ncheckout main\ncommit\nmerge b', 'merge:5'],
     ['commit\nbranch b\ncheckout main\nmerge b', 'merge:5'],
-    ['commit\nbranch dev\ncommit\nbranch feat\ncheckout dev\ncommit\ncheckout feat\nmerge dev', 'merge:9'], // feat's head sits on dev
+    // feat's head sits on dev
+    ['commit\nbranch dev\ncommit\nbranch feat\ncheckout dev\ncommit\ncheckout feat\nmerge dev', 'merge:9'],
     ['commit id: "a"\nbranch b\ncommit\ncheckout main\nmerge b id: "a"', 'repeat:6'],
     ['commit\nbranch main', 'branch:3'],
     ['checkout "nope"', 'checkout:2'],
@@ -97,6 +98,7 @@ test('A5.errors: every cherry-pick gitGraphAst throws on', () => {
   ] as const) {
     assert.equal(E(body), why, body)
   }
+
   const tags = (b: string) => P(`gitGraph\n${b}`).events.at(-1).tags
   assert.deepEqual(
     [tags(M + 'cherry-pick id: "M" parent: "B"'), tags(M + 'cherry-pick id: "M" parent: "A"')],
@@ -164,6 +166,7 @@ test('A5.errors: ids, tags, parents and branch names are escaped; a #…; entity
   ] as const) {
     assert.equal(E(body), why, body)
   }
+
   const g = P('gitGraph\ncommit id: "Q&A" msg: "a<br>b" tag: "x y"\nbranch "分支"\ncommit id: "提交"')
   assert.deepEqual(
     g.events.slice(1).map((e: any) => [e.branch, e.id, e.msg, e.tags]),
@@ -209,6 +212,7 @@ test("A5.errors: what Mermaid's lexer reads another way, or its grammar rejects,
   ]) {
     assert.match(E(body), /^syntax:\d+$/, body)
   }
+
   for (const body of [
     'commit "a" "b"',
     'commit "a" msg: "b"',
@@ -217,6 +221,7 @@ test("A5.errors: what Mermaid's lexer reads another way, or its grammar rejects,
   ]) {
     assert.match(E(body), /^repeat:\d+$/, body)
   }
+
   const g = P(
     'gitGraph\ncommit id:"a" tag:"t"\nbranch a-b_c.d/e order:3\ncheckout "main"\ncommit "m" type:REVERSE tag: "u" id: "b"',
   )
@@ -262,6 +267,7 @@ test('X3: whitespace other than space and tab fails, where Mermaid throws a lexe
       JSON.stringify(b),
     )
   }
+
   assert.ok(!('reason' in P('gitGraph\n \tcommit\tid: "a" \t\n')))
 })
 test("X4: whitespace Mermaid 12.2.0's Langium lexer rejects (U+00A0 and other non-ASCII) falls back, outside quotes", () => {
@@ -275,5 +281,6 @@ test("X4: whitespace Mermaid 12.2.0's Langium lexer rejects (U+00A0 and other no
   ]) {
     assert.deepEqual(P(s), { reason: 'whitespace' }, JSON.stringify(s))
   }
+
   assert.equal(P(' gitGraph\ncommit id: "a"').events.at(-1).id, 'a') // before the header, Mermaid's trimStart drops it
 })

@@ -26,6 +26,7 @@ export function parseMindmap(src: Source): Mindmap | Fail {
     if (isFail(e)) {
       return e
     }
+
     throw e
   }
 }
@@ -50,16 +51,20 @@ function walk(src: Source): Mindmap {
       if (seen.length === 0 || t === ':::') {
         stop(`syntax:${n}`)
       }
+
       continue
     }
+
     const node = { k: seen.length, ...shaped(t, n), children: [] }
     if (seen.length > 0) {
       // Mermaid's getParent: the nearest earlier node with less indentation; the root's is the least any node may have.
       const parent = seen[0]!.indent < indent ? seen.findLast((s) => s.indent < indent)! : stop(`root:${n}`)
       parent.node.children.push(node)
     }
+
     seen.push({ indent, node })
   }
+
   const colorBy = src.config['mindmap.colorBy'] === 'depth' ? 'depth' : 'branch'
   return { title: src.title, colorBy, root: seen[0]!.node }
 }
@@ -85,20 +90,24 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
   if (/^mindmap/i.test(t) || /[\u2028\u2029]/.test(t) || /^(?:-\)|\(-)/.test(t)) {
     stop(`syntax:${n}`)
   }
+
   const id = /^[^([){}]*/.exec(t)![0]
   const rest = t.slice(id.length)
   // A bare text runs to the line's end, so a ::: in it is text to Mermaid, not a class.
   if (rest === '') {
     return t.includes(':::') ? stop(`syntax:${n}`) : { shape: 'plain', lines: label(t, n) }
   }
+
   const [open, shape, close] = OPENERS.find(([o]) => rest.startsWith(o)) ?? stop(`syntax:${n}`)
   if (/^(?:-\)|\(-)/.test(rest)) {
     stop(`syntax:${n}`)
   }
+
   const inner = rest.slice(open.length)
   if (inner.startsWith('"`')) {
     stop(`markdown:${n}`)
   }
+
   let text: string
   let after: string
   if (inner.startsWith('"')) {
@@ -107,6 +116,7 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
     if (end < 2) {
       stop(`syntax:${n}`)
     }
+
     text = inner.slice(1, end)
     after = inner.slice(end + 1)
   } else {
@@ -115,12 +125,15 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
     if (text === '') {
       stop(`syntax:${n}`)
     }
+
     after = inner.slice(text.length)
   }
+
   const closer = CLOSERS.find((c) => after.startsWith(c))
   if (closer !== close || after.slice(close.length).trim() !== '') {
     stop(`syntax:${n}`)
   }
+
   return { shape, lines: label(text, n) }
 }
 
@@ -128,8 +141,10 @@ function shaped(t: string, n: number): { shape: Shape; lines: string[] } {
 // word, or a \ before ASCII punctuation (an escape marked drops).
 const MARKDOWN = /[*\x60]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])|\\[!-/:-@[-`{-~]/u
 
-// A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap), its bold and
-// italic marked (core/emphasis.ts). Fails on line n for other Markdown, a blank line, or text drawable (a markdown HTML label: 'icon' and 'math' for text createText
+// A label's lines, as it draws: an HTML label, so <br> in any spelling splits (text ground truth, mindmap), its bold
+// and
+// italic marked (core/emphasis.ts). Fails on line n for other Markdown, a blank line, or text drawable (a markdown HTML
+// label: 'icon' and 'math' for text createText
 // replaces) or unsupported() rejects.
 function label(raw: string, n: number): string[] {
   const s = raw.trim()
@@ -140,17 +155,20 @@ function label(raw: string, n: number): string[] {
     if (isFail(r) || r === s) {
       stop(`markdown:${n}`)
     }
+
     d = r
   } else {
     const f = drawable(s, 'markdown', 'any')
     if (f) {
       stop(`${f.reason}:${n}`)
     }
+
     const bad = unsupported(s)
     if (bad) {
       stop(`unsupported-char ${bad}`)
     }
   }
+
   const lines = labelLines(d).map((l) => l.trim())
   return lines.some((l) => l === '') ? stop(`blank:${n}`) : lines
 }

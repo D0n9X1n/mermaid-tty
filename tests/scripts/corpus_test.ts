@@ -18,6 +18,7 @@ test("A10: at least 90 synthetic blocks with the owner's feature mix", () => {
   ] as const) {
     assert.ok(share(re) >= min, String(re))
   }
+
   assert.ok(C.filter((s) => /^sequenceDiagram/m.test(s) && /^\s*title /m.test(s)).length >= 3)
 })
 test('A10: every block renders and validates at 80 and 120 columns', () =>

@@ -69,13 +69,16 @@ const roleOf = (d: any, s: string): string | undefined => {
     if (at < 0) {
       continue
     }
+
     let col = 0
     let i = 0
     for (; i < row.length && col < at; i++) {
       col += row[i] === null ? 1 : row[i].kind === 'cont' ? 0 : row[i].ch.length
     }
+
     return row[i]?.role
   }
+
   return undefined
 }
 test('A3: roles: states, ● ◉ and bars node; ◇ decision; composites frame; transition labels label; notes note', () => {

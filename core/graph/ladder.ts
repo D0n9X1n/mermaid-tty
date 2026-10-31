@@ -24,7 +24,8 @@ export const SPACING: Readonly<Record<Row, { TB: Gaps; LR: Gaps }>> = {
   wrap: { TB: { rankGap: 2, nodeGap: 2 }, LR: { rankGap: 4, nodeGap: 1 } },
 }
 const WRAPS = [24, 20, 16, 12, 8] as const
-// Each ladder step's spacing row and wrapAt tries. Typed by GraphStep, so a step added there with no row fails to compile.
+// Each ladder step's spacing row and wrapAt tries. Typed by GraphStep, so a step added there with no row fails to
+// compile.
 const PLAN: Readonly<Record<GraphStep, { row: Row; wraps: readonly (number | null)[] }>> = {
   natural: { row: 'natural', wraps: [null] },
   tight: { row: 'tight', wraps: [null] },
@@ -35,7 +36,8 @@ const PLAN: Readonly<Record<GraphStep, { row: Row; wraps: readonly (number | nul
 const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
 
-// What a diagram builds for a direction and a try's wrapAt: its graph, keyed or not, the legend rows of its keys and the items
+// What a diagram builds for a direction and a try's wrapAt: its graph, keyed or not, the legend rows of its keys and
+// the items
 // it may key. A Fail (a member word wider than wrapAt) ends the try.
 export type Build = (o: {
   dir: Dir
@@ -52,7 +54,8 @@ export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
   ]
 }
 
-// One try at wrapAt: build the graph, add its notes, lay it out at 0, then 2, then 4 extra cells of rank and node gap while
+// One try at wrapAt: build the graph, add its notes, lay it out at 0, then 2, then 4 extra cells of rank and node gap
+// while
 // routing conflicts, draw it, stack the title above, then the legend below. Build runs once per layout, so each retry
 // starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing keyable fails 'step'.
 function attempt(
@@ -70,9 +73,11 @@ function attempt(
     if (isFail(b)) {
       return b
     }
+
     if (keyed && b.keyable.length === 0) {
       return fail('step')
     }
+
     const placed = layoutGraph(withNotes(b.graph), {
       rankGap: gaps.rankGap + extra,
       nodeGap: gaps.nodeGap + extra,
@@ -81,20 +86,25 @@ function attempt(
     if (isFail(placed)) {
       return placed
     }
+
     const routes = routeGraph(placed)
     if (isFail(routes)) {
       if (routes.reason !== 'route-conflict') {
         return routes
       }
+
       last = routes
       continue
     }
+
     const d = drawGraph(placed, routes, columns)
     const head = title === null ? null : heading(title, 'title', 'title', columns)
     const titled = head === null ? d : isFail(head) ? head : stack([head, d], columns)
-    // Nothing to key (flowchart): no legend pass, so the drawing's expect stays exactly A's, with no empty keys or keyable.
+    // Nothing to key (flowchart): no legend pass, so the drawing's expect stays exactly A's, with no empty keys or
+    // keyable.
     return b.legend.length === 0 && b.keyable.length === 0 ? titled : withLegend(titled, b.legend, columns, b.keyable)
   }
+
   return last
 }
 
@@ -104,6 +114,7 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
   if (!isGraphStep(step)) {
     return fail('step')
   }
+
   const { row, wraps } = PLAN[step]
   const turn = step === 'lrToTd' || step === 'keyed'
   const drawn: Dir = !turn ? dir : dir === 'LR' ? 'TB' : dir === 'RL' ? 'BT' : dir
@@ -115,5 +126,6 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
       return last
     }
   }
+
   return last
 }

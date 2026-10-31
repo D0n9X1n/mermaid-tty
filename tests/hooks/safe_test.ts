@@ -21,6 +21,7 @@ test('A5.errors: (a) frontmatter may hold one plain-scalar title and nothing els
   ]) {
     assert.equal(unsafeReason(ok), null, JSON.stringify(ok))
   }
+
   for (const bad of [
     `---\nconfig:\n  theme: dark\n---\n${FC}`, // config at all
     `---\ndisplayMode: compact\n---\n${FC}`, // another key
@@ -69,6 +70,7 @@ test('A5.errors: (c) a style, classDef, linkStyle, class, cssClass or click stat
   ] as const) {
     assert.equal(unsafeReason(src), `statement ${word}`, src)
   }
+
   for (const ok of [`flowchart TD\nstyled --> classy\nclicks --> B`, 'flowchart TD\nA[style] --> B[click here]']) {
     assert.equal(unsafeReason(ok), null, ok)
   }
@@ -90,6 +92,7 @@ test('A5.errors: (d) url(, image(, image-set(, @import, file:, data:, javascript
   ] as const) {
     assert.equal(unsafeReason(src), `token ${token}`, src)
   }
+
   for (const ok of ['flowchart TD\nA[a/b] --> B[urls] --> C[data x]', 'sequenceDiagram\nA->>B: files: 3, images: 2']) {
     assert.equal(unsafeReason(ok), null, ok)
   }
@@ -136,6 +139,7 @@ test("A5.errors: a character outside the safe set is unsafe: Mermaid's entity ma
   ] as const) {
     assert.equal(unsafeReason(`flowchart TD\nA[a${ch(code)}b] --> B`), `char U+${label}`, label)
   }
+
   assert.equal(unsafeReason(`flowchart TD\nA[a${ch(0xb0)}${ch(0xb0)}b] --> B`), 'marker')
   assert.equal(unsafeReason('flowchart TD\nA["#117;rl"] --> B'), 'entity #117;')
   for (const ok of [
@@ -160,6 +164,7 @@ test('A5.errors: statements split at newlines, ;, { and }; link, callback, call,
   ] as const) {
     assert.equal(unsafeReason(src), `statement ${word}`, src)
   }
+
   assert.equal(unsafeReason('flowchart TD\nA{ok} --> B{yes}'), null)
 })
 
@@ -175,6 +180,7 @@ test('A5.errors: a sequence rect takes only #hex or rgb()/rgba() with numbers; a
   ]) {
     assert.equal(unsafeReason(`sequenceDiagram\n${ok}\nA->>B: hi\nend`), null, ok)
   }
+
   for (const [bad, word] of [
     ['rect red', 'rect'],
     ['rect var(--x)', 'rect'],

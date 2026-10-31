@@ -15,14 +15,17 @@ function random(seed: number) {
     return (seed >>> 0) % n
   }
 }
+
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
 // Strict clearance can require another spacing attempt; both rates have a two-point regression allowance.
 const ceilings = { dag: 3.0, mixed: 6.2, clusters: 31.0, loops: 11.8 }
 // clusters rose with V6 (raw 17.6 -> 22.0, retry 6.8 -> 11.6): each graph lost had an edge between nodes of its frame,
-// most often a back edge on the outside lane, routed out of the frame and back, which validate rejects (edge-outside-frame).
+// most often a back edge on the outside lane, routed out of the frame and back, which validate rejects
+// (edge-outside-frame).
 // V8 won most back: a back edge between nodes of one open frame takes a lane inside it (raw 18.2, retry 7.4).
 // clusters rose with edge-crosses-frame (2026-10-29; raw 18.2 -> 37.8, retry 7.4 -> 29.0): each graph lost had an edge
-// that entered a frame holding neither of its ends, or crossed one more than once, which validate now rejects and the router
+// that entered a frame holding neither of its ends, or crossed one more than once, which validate now rejects and the
+// router
 // now refuses. Routing such edges round the frame instead lowers these again.
 const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 39.8, loops: 23.0 }
 
@@ -38,16 +41,19 @@ function graphFor(kind: (typeof classes)[number], index: number, next: (n: numbe
   for (let i = 1; i < count; i++) {
     edge(next(i), i)
   }
+
   for (let i = 0; i < next(count); i++) {
     const a = next(count - 1)
     const b = a + 1 + next(count - a - 1)
     const reverse = kind !== 'dag' && next(4) === 0
     edge(reverse ? b : a, reverse ? a : b)
   }
+
   if (kind === 'loops') {
     const n = next(count)
     edge(n, n)
   }
+
   const graph = g(
     ['TB', 'BT', 'LR', 'RL'][index % 4] as 'TB',
     specs,
@@ -69,6 +75,7 @@ function graphFor(kind: (typeof classes)[number], index: number, next: (n: numbe
       }
     }
   }
+
   return graph
 }
 
@@ -87,21 +94,26 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         raw++
         continue
       }
+
       let rs = routeGraph(p)
       if (!Array.isArray(rs)) {
         raw++
       }
+
       for (const extra of [2, 4]) {
         if (Array.isArray(rs) || rs.reason !== 'route-conflict') {
           break
         }
+
         const placed = layoutGraph(graph, { rankGap: 3 + extra, nodeGap: 4 + extra, wrapAt: null })
         if ('reason' in placed) {
           break
         }
+
         p = placed
         rs = routeGraph(p)
       }
+
       if (!Array.isArray(rs)) {
         conflicts++
         continue
@@ -112,6 +124,7 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
       if (error) {
         failures.push(`${kind}/${i}: ${error.reason} ${JSON.stringify(graph)}`)
       }
+
       assert.deepEqual(falsePairs(drawing), [], `${kind}/${i} false implied pair`)
       assert.deepEqual(falsePairs(compact(drawing)), [], `${kind}/${i} compacted false implied pair`)
       for (const r of rs) {
@@ -127,6 +140,7 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
             }
           }
         }
+
         for (const other of rs.slice(rs.indexOf(r) + 1)) {
           const otherCells = new Map(other.cells.map((c) => [`${c.r},${c.c}`, c]))
           const shared = new Set<string>()
@@ -136,16 +150,20 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
             if (a.r !== b.r || a.c !== b.c) {
               break
             }
+
             shared.add(`${a.r},${a.c}`)
           }
+
           for (let k = 1; k <= Math.min(r.cells.length, other.cells.length); k++) {
             const a = r.cells.at(-k)!
             const b = other.cells.at(-k)!
             if (a.r !== b.r || a.c !== b.c) {
               break
             }
+
             shared.add(`${a.r},${a.c}`)
           }
+
           for (const a of r.cells) {
             const b = otherCells.get(`${a.r},${a.c}`)
             if (b && !shared.has(`${a.r},${a.c}`)) {
@@ -155,10 +173,12 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
               )
             }
           }
+
           const ownCells = new Set(r.cells.map((c) => `${c.r},${c.c}`))
           assert.ok(r.ends.every((a) => !otherCells.has(`${a.r},${a.c}`)))
           assert.ok(other.ends.every((a) => !ownCells.has(`${a.r},${a.c}`)))
         }
+
         const e = p.graph.edges.find((e) => e.id === r.edge)!
         assert.equal(r.ends.length, Number(e.tail !== 'none') + Number(e.head !== 'none'))
         const drawnPath = [
@@ -183,8 +203,10 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
               path.push({ r: row, c: col })
             }
           }
+
           path.push(c)
         }
+
         const context = `${kind}/${i}/${e.id}`
         assert.equal(new Set(path.map((c) => `${c.r},${c.c}`)).size, path.length, context)
         assert.ok(
@@ -206,12 +228,14 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
           assert.ok(index > previous, context)
           previous = index
         }
+
         if (label) {
           assert.ok(
             drawnPath.some((c) => distance(c, label) === 1),
             context,
           )
         }
+
         for (const [id, b] of p.boxes) {
           if (!id.startsWith(`${e.id}#`) && id !== `${e.id}:label`) {
             assert.ok(
@@ -220,6 +244,7 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
             )
           }
         }
+
         assert.ok(
           r.cells.every((c) => drawing.cells[c.r]![c.c]!.kind === 'line'),
           context,
@@ -230,11 +255,13 @@ test('A1: seeded router property covers 2000 graphs without invalid drawings', (
         )
       }
     }
+
     rates[kind] = conflicts / 5
     console.log(`conflicts ${kind}: raw ${(raw / 5).toFixed(1)}%, retry ${rates[kind]!.toFixed(1)}%`)
     assert.ok(raw / 5 <= rawCeilings[kind], `${kind} raw conflict rate regressed`)
     assert.ok(rates[kind]! <= ceilings[kind], `${kind} conflict rate regressed`)
   }
+
   assert.deepEqual(failures.slice(0, 3), [])
   assert.equal(Object.keys(rates).length, 4)
 })

@@ -1,18 +1,21 @@
 // A stand-in for the Anthropic Messages API on 127.0.0.1, for the e2e harness's real Claude Code. startMock() answers
 // every POST /v1/messages, whatever its query string, with REPLY, or REPLY_LEAD when the last user message contains
 // lead: as SSE when the request has stream: true, else as one JSON message. Any other method or path gets an empty 404,
-// CONNECT is refused, and stop() closes every connection. Node built-ins only, so the main suite needs nothing installed.
+// CONNECT is refused, and stop() closes every connection. Node built-ins only, so the main suite needs nothing
+// installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { REPLY, REPLY_LEAD } from './reply.ts'
 
-// text in runs of at most 64 code points, one per text delta. A string iterates by code point, so no run splits a surrogate pair.
+// text in runs of at most 64 code points, one per text delta. A string iterates by code point, so no run splits a
+// surrogate pair.
 export function chunks(text: string): string[] {
   const points = [...text]
   const out: string[] = []
   for (let i = 0; i < points.length; i += 64) {
     out.push(points.slice(i, i + 64).join(''))
   }
+
   return out
 }
 
@@ -38,6 +41,7 @@ function wantsLead(messages: unknown): boolean {
   if (!Array.isArray(messages)) {
     return false
   }
+
   const content = messages.findLast((m) => m?.role === 'user')?.content
   const texts = typeof content === 'string' ? [content] : Array.isArray(content) ? content.map((b) => b?.text) : []
   return texts.some((t) => typeof t === 'string' && t.includes('lead'))
@@ -51,6 +55,7 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
       res.writeHead(404).end()
       return
     }
+
     const parts: Buffer[] = []
     // A request aborted before its body is whole, as stop() aborts one, has no client left to answer.
     try {
@@ -60,6 +65,7 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
     } catch {
       return
     }
+
     const body = parse(Buffer.concat(parts).toString('utf8'))
     const text = wantsLead(body.messages) ? REPLY_LEAD : REPLY
     const pieces = chunks(text)
@@ -85,6 +91,7 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
       )
       return
     }
+
     res.writeHead(200, { 'content-type': 'text/event-stream' })
     res.end(
       [
@@ -100,7 +107,8 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
       ].join(''),
     )
   })
-  // Refuse CONNECT: a client that uses the mock as a proxy gets no tunnel to a real host. Node closes an unheard CONNECT
+  // Refuse CONNECT: a client that uses the mock as a proxy gets no tunnel to a real host. Node closes an unheard
+  // CONNECT
   // too; this listener makes the refusal the mock's own.
   server.on('connect', (_r, s) => s.destroy())
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))

@@ -76,31 +76,37 @@ export function allSteps(checks: Check[]): string[][] {
       if (seen.has(key)) {
         return false
       }
+
       seen.add(key)
       return true
     })
   return [NT, ...rest]
 }
 
-// Runs one step and returns its exit code. id filters @nt and is the ID it proves; `all` passes none, and @nt proves every row's.
+// Runs one step and returns its exit code. id filters @nt and is the ID it proves; `all` passes none, and @nt proves
+// every row's.
 export function run(step: string[], id?: string): number {
   const [cmd = '', ...args] = step
   if (cmd === '@nt') {
     return nodeTests(id)
   }
+
   if (cmd === '@kit') {
     return claude(['plugin', 'test', '.'])
   }
+
   if (cmd !== 'node' && cmd !== 'claude') {
     console.error(`unsupported step ${cmd}`)
     return 1
   }
+
   const tmp = args.includes('@tmp') ? mkdtempSync(join(tmpdir(), 'mtty-')) : ''
   try {
     const argv = args.map((a) => (a === '@tmp' ? tmp : a))
     if (cmd === 'claude') {
       return claude(argv)
     }
+
     return spawnSync(process.execPath, argv, { stdio: 'inherit' }).status ?? 1
   } finally {
     if (tmp) {
@@ -142,6 +148,7 @@ function nodeTests(id?: string): number {
     if (r.status !== 0) {
       return r.status ?? 1
     }
+
     const tests = readFileSync(passed, 'utf8')
       .split('\n')
       .filter(Boolean)
@@ -154,6 +161,7 @@ function nodeTests(id?: string): number {
     for (const i of unproven) {
       console.error(`no tests ran for ${i}`)
     }
+
     return unproven.length > 0 ? 1 : 0
   } finally {
     rmSync(tmp, { recursive: true, force: true })
@@ -169,6 +177,7 @@ function main(): number {
     console.error(`unknown check ${id}`)
     return 1
   }
+
   for (const step of steps) {
     console.error(`> ${step.join(' ')}`)
     const code = run(step, id === 'all' ? undefined : id)
@@ -176,6 +185,7 @@ function main(): number {
       return code
     }
   }
+
   return 0
 }
 

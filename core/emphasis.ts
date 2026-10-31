@@ -1,13 +1,17 @@
-// Markdown bold and italic as Mermaid 12.2.0 shows them. Its markdownToHTML (rendering-util/handle-markdown-text.ts) lexes a
-// markdown label with marked 16.4.2 (gfm) and emits strong as <strong>, em as <em>, text and inline HTML as written. This is
+// Markdown bold and italic as Mermaid 12.2.0 shows them. Its markdownToHTML (rendering-util/handle-markdown-text.ts)
+// lexes a
+// markdown label with marked 16.4.2 (gfm) and emits strong as <strong>, em as <em>, text and inline HTML as written.
+// This is
 // a literal port of marked's inline lexer (inlineTokens' masking, emStrong, inlineText) on a fail-closed alphabet: no
-// control character, \, `, [, ], ~, @, ://, www., entity-like &, < or > outside a <br>, nor a leading or trailing space;
+// control character, \, `, [, ], ~, @, ://, www., entity-like &, < or > outside a <br>, nor a leading or trailing
+// space;
 // and no block start (heading, quote, list, rule, HTML). There marked reads nothing but text, <br> tags, strong and em.
 // tests/core/emphasis_test.ts checks it against Mermaid's output.
 //
 // A marked string carries its style inline: a marker before each styled character that takes a column, BOLD for bold,
 // ITALIC for italic, BOTH for both; a space or a zero-width character never has one. width() counts a marker 0 columns,
-// so measuring and wrapping work on a marked string as they do on the text it shows, and canvas.text() turns each marker
+// so measuring and wrapping work on a marked string as they do on the text it shows, and canvas.text() turns each
+// marker
 // into its cell's em.
 import { width } from './width.ts'
 
@@ -79,6 +83,7 @@ export function oneParagraph(text: string, blank = false): boolean {
       if (l.trim() === '') {
         return blank
       }
+
       const next = lines[i + 1]
       return (
         !BLOCK_LINE.test(l) &&
@@ -92,8 +97,10 @@ export function oneParagraph(text: string, blank = false): boolean {
 type Run = { type: 'strong' | 'em'; raw: string; tokens: Tok[] }
 type Tok = { type: 'text'; text: string } | { type: 'html'; text: string } | Run
 
-// marked's emStrong at src, where masked is the masked text of the run src is the tail of, and prev the character before
-// src (marked's prevChar): its strong or em token, undefined where marked reads none there, or null where its content fails.
+// marked's emStrong at src, where masked is the masked text of the run src is the tail of, and prev the character
+// before
+// src (marked's prevChar): its strong or em token, undefined where marked reads none there, or null where its content
+// fails.
 function emStrong(src: string, masked: string, prev: string): Run | null | undefined {
   let r = LDELIM.exec(src)
   if (!r || (r[3] && ALNUM.test(prev))) {
@@ -103,6 +110,7 @@ function emStrong(src: string, masked: string, prev: string): Run | null | undef
   if ((r[1] || r[2]) && prev && !PUNCTUATION.exec(prev)) {
     return undefined
   }
+
   const s = [...r[0]].length - 1
   let p = s
   let u = 0
@@ -114,25 +122,30 @@ function emStrong(src: string, masked: string, prev: string): Run | null | undef
     if (!a) {
       continue
     }
+
     let o = [...a].length
     if (r[3] || r[4]) {
       p += o
       continue
     }
+
     if ((r[5] || r[6]) && s % 3 && !((s + o) % 3)) {
       u += o
       continue
     }
+
     p -= o
     if (p > 0) {
       continue
     }
+
     o = Math.min(o, o + p + u)
     const h = src.slice(0, s + r.index + [...r[0]][0]!.length + o)
     const em = Math.min(s, o) % 2 === 1
     const tokens = inline(em ? h.slice(1, -1) : h.slice(2, -2))
     return tokens && ({ type: em ? 'em' : 'strong', raw: h, tokens } as Run)
   }
+
   return undefined
 }
 
@@ -146,6 +159,7 @@ function inline(src: string): Tok[] | null {
     if (!keep) {
       prev = ''
     }
+
     keep = false
     const t = TAG.exec(src)
     if (t) {
@@ -153,23 +167,28 @@ function inline(src: string): Tok[] | null {
       src = src.slice(t[0].length)
       continue
     }
+
     const e = emStrong(src, masked, prev)
     if (e === null) {
       return null
     }
+
     if (e) {
       out.push(e)
       src = src.slice(e.raw.length)
       continue
     }
+
     const x = TEXT.exec(src)
     if (!x) {
       return null
     } // marked throws here; the alphabet never gets here
+
     src = src.slice(x[0].length)
     if (!x[0].endsWith('_')) {
       prev = x[0].slice(-1)
     }
+
     keep = true
     const last = out.at(-1)
     if (last?.type === 'text') {
@@ -178,26 +197,32 @@ function inline(src: string): Tok[] | null {
       out.push({ type: 'text', text: x[0] })
     }
   }
+
   return out
 }
 
 // The marked string text shows, or null where this port cannot say: text outside the alphabet, or a style nested in
-// itself (<strong> in <strong>, <em> in <em>), which a terminal cannot draw apart from one. breaks: an edge label, where
+// itself (<strong> in <strong>, <em> in <em>), which a terminal cannot draw apart from one. breaks: an edge label,
+// where
 // each <br> is a newline to marked (LINE_BREAK); the text must then be one paragraph, and each newline, with the spaces
 // after it (markdownToHTML's /\n */), shows as one <br>.
 export function emphasize(text: string, breaks = false): string | null {
   if (OUTSIDE.test(text) || ENTITYISH.test(text) || text !== text.trim() || BLOCK.test(text)) {
     return null
   }
+
   if (breaks) {
     if (!oneParagraph(text)) {
       return null
     }
+
     text = text.replace(LINE_BREAK, '\n')
   }
+
   if (/[<>]/.test(text.replace(/<br *\/?>/gi, ''))) {
     return null
   }
+
   let out = ''
   const put = (toks: readonly Tok[], em: number): boolean =>
     toks.every((t) => {
@@ -205,12 +230,15 @@ export function emphasize(text: string, breaks = false): string | null {
         out += t.text
         return true
       }
+
       if (t.type === 'text') {
         for (const ch of t.text.replace(/\n */g, '\n')) {
           out += ch === '\n' ? '<br>' : (em && !/\s/.test(ch) && width(ch) > 0 ? marker(em) : '') + ch
         }
+
         return true
       }
+
       const bit = t.type === 'strong' ? BOLD : ITALIC
       return (em & bit) === 0 && put(t.tokens, em | bit)
     })

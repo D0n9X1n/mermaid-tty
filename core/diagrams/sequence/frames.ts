@@ -1,8 +1,10 @@
 // Mermaid 12.2.0's geometry for the frames of a sequence diagram. Mermaid sizes a frame (loop, alt, opt, par,
-// critical, break or rect) to the bounds inserted while it is open, 10 px beyond them for each frame open inside it then,
+// critical, break or rect) to the bounds inserted while it is open, 10 px beyond them for each frame open inside it
+// then,
 // and draws a box 20 px beyond its members' pills; both turn on text widths a terminal does not know. So a frame draws
 // only where, at every text width, it covers the lifelines its run covers and nests in or stands clear of each box:
-// checked on Mermaid's narrowest layout, every pill 150 px and every gap its least, since text only widens a gap. Mirrors
+// checked on Mermaid's narrowest layout, every pill 150 px and every gap its least, since text only widens a gap.
+// Mirrors
 // sequenceRenderer's addActorRenderingData, getMaxMessageWidthPerActor, bounds.insert, boundMessage, activationBounds,
 // buildNoteModel and box drawing.
 import type { Fail } from '../../fail.ts'
@@ -17,7 +19,8 @@ const TEXT = 5
 
 type Run = { lo: number; hi: number }
 type Reach = { l: number; r: number }
-// A bound whose reach past lifeline i on one side turns on text width: ok, if it stays short of the next lifeline there.
+// A bound whose reach past lifeline i on one side turns on text width: ok, if it stays short of the next lifeline
+// there.
 type Risk = { i: number; side: 'l' | 'r'; ok: boolean }
 
 // Each lifeline's center and each box border, in px, in Mermaid's narrowest layout. A box border stands 2 boxMargins
@@ -40,10 +43,12 @@ function narrowest(seq: Seq): { center: number[]; borders: number[] } {
       borders.push(width + TEXT + 2 * MARGIN)
       margin += MARGIN + TEXT
     }
+
     if (box !== -1 && box !== prev) {
       borders.push(width + margin - 2 * MARGIN)
       margin += TEXT
     }
+
     center.push(width + margin + WIDTH / 2)
     width += WIDTH + margin
     margin = GAP
@@ -55,7 +60,8 @@ function narrowest(seq: Seq): { center: number[]; borders: number[] } {
   return { center, borders }
 }
 
-// A Fail unless Mermaid draws each frame over the lifelines of its run (runs, as layout draws it) and inside or clear of
+// A Fail unless Mermaid draws each frame over the lifelines of its run (runs, as layout draws it) and inside or clear
+// of
 // each box, at every text width: box-frame with a box, frame-extent without. A participant created or destroyed in a
 // frame, or a frame with no bounds at all, falls back. With a box, so does a self-message or a note on or beside one
 // lifeline, whose bounds turn on text width. Without one, such a bound is drawn where Mermaid's own gap sizing keeps it
@@ -95,13 +101,15 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
       if (!got) {
         return
       }
+
       reach.set(f, { l: Math.min(got.l, l - pad), r: Math.max(got.r, r + pad) })
       if (risk) {
         risks.get(f)!.push({ i: risk.i, side: 'l', ok: risk.l(pad) }, { i: risk.i, side: 'r', ok: risk.r(pad) })
       }
     })
   const spoil = () => open.forEach((f) => reach.set(f, null))
-  // activationBounds: a lifeline's center ± 1, or across its open activations, each 10 px wide and 5 px right of the last.
+  // activationBounds: a lifeline's center ± 1, or across its open activations, each 10 px wide and 5 px right of the
+  // last.
   const bounds = (i: number): Reach =>
     active[i] ? { l: center[i]! - 5, r: center[i]! + 5 * active[i]! } : { l: center[i]! - 1, r: center[i]! + 1 }
   // An activation ends: its own bar is inserted.
@@ -137,12 +145,14 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
         } else if (boxed) {
           spoil()
         }
-        // Over one lifeline: centered, max(pill, 150, text + 20) px wide; the text widens the gap each side by half that,
+        // Over one lifeline: centered, max(pill, 150, text + 20) px wide; the text widens the gap each side by half
+        // that,
         // so the note stays short of either neighbour while pad < 50.
         else if (it.side === 'over') {
           insert(c - WIDTH / 2, c + WIDTH / 2, { i: is[0]!, l: (pad) => pad < 50, r: (pad) => pad < 50 })
         }
-        // Beside one lifeline: from half an actorMargin off it, max(pill, text + 20) px wide; a long pill widens no gap.
+        // Beside one lifeline: from half an actorMargin off it, max(pill, text + 20) px wide; a long pill widens no
+        // gap.
         else if (it.side === 'right of') {
           insert(c + GAP / 2, c + GAP / 2 + WIDTH, { i: is[0]!, l: always, r: never })
         } else {
@@ -154,7 +164,8 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
         if (changed.has(it.from) || changed.has(it.to) || (f === t && boxed)) {
           spoil()
         }
-        // boundMessage: a self-message reaches max(text / 2, 75) px either side of its start, a px right of its lifeline;
+        // boundMessage: a self-message reaches max(text / 2, 75) px either side of its start, a px right of its
+        // lifeline;
         // its text widens only the gap on its right, enough for the reach while a + pad < 60.
         else if (f === t) {
           const a = bounds(f).r - center[f]!
@@ -164,16 +175,19 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
           const b = bounds(t)
           insert(Math.min(a.l, b.l), Math.max(a.r, b.r))
         }
+
         if (it.activate) {
           active[t]!++
         }
+
         if (it.deactivate) {
           end(f)
         }
       }
     })
   walk(seq.items)
-  // Each frame reaches past its run's end lifelines but not to the next lifeline or box border beyond them; its run lies
+  // Each frame reaches past its run's end lifelines but not to the next lifeline or box border beyond them; its run
+  // lies
   // in each box or clear of it; and no bound of unknown reach faces a lifeline beyond its run.
   const points = [...center, ...borders]
   const last = center.length - 1
@@ -182,6 +196,7 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
     if (!got || !run || got.l > got.r) {
       return fail(why)
     }
+
     const lo = center[run.lo]!
     const hi = center[run.hi]!
     const below = Math.max(-Infinity, ...points.filter((p) => p < lo))
@@ -189,6 +204,7 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
     if (!(below < got.l && got.l < lo && hi < got.r && got.r < above)) {
       return fail(why)
     }
+
     for (const b of seq.boxes) {
       const is = b.ids.map((id) => at.get(id)!)
       const a = Math.min(...is)
@@ -202,5 +218,6 @@ export function frameExtents(seq: Seq, runs: ReadonlyMap<Frame, Run>): Fail | nu
       return fail(why)
     }
   }
+
   return null
 }

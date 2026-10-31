@@ -10,5 +10,6 @@ test("A8.platforms: C's section glyphs are allowed, one cell wide, and none has 
     assert.equal(width(g), 1, g)
     assert.ok(!/\p{Emoji}/u.test(g), g)
   }
+
   assert.equal(GLYPHS.size, 262)
 })

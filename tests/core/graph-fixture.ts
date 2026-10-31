@@ -4,7 +4,8 @@ import type { Dir, GEdge, GNode, Graph } from '../../core/graph/model.ts'
 
 const STYLES: Readonly<Record<string, GEdge['style']>> = { '>': 'solid', '=>': 'thick', '.>': 'dotted' }
 
-// g('TB', ['A>B', 'A=>C', 'A.>D', 'D>E|label'], { B: 'one<br/>two' }): nodes in first-seen order, rect, role node, rows the
+// g('TB', ['A>B', 'A=>C', 'A.>D', 'D>E|label'], { B: 'one<br/>two' }): nodes in first-seen order, rect, role node, rows
+// the
 // label split at <br/> (default the id); edge i is e${i}, tail none, head arrow, minlen 1, its label or null, order i.
 export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}): Graph {
   const nodes = new Map<string, GNode>()
@@ -33,7 +34,8 @@ export function g(dir: Dir, specs: string[], labels: Record<string, string> = {}
 const ch = (c: Cell | null) => (c === null ? ' ' : c.kind === 'cont' ? '' : c.ch)
 export const text = (d: Drawing): string[] => d.cells.map((row) => row.map(ch).join('').replace(/ +$/, ''))
 
-// Independently read shared arms as joined edge networks, then enumerate the bare-end/mark pairs they imply that no edge draws.
+// Independently read shared arms as joined edge networks, then enumerate the bare-end/mark pairs they imply that no
+// edge draws.
 export function falsePairs(d: Drawing): string[] {
   const edges = new Map(d.expect.edges.map((e) => [e.id, e]))
   const groups = new Map(d.expect.edges.map((e) => [e.id, new Set([e.id])]))
@@ -42,6 +44,7 @@ export function falsePairs(d: Drawing): string[] {
       if (c?.kind !== 'line') {
         continue
       }
+
       const segs = (c.segs ?? []).filter((s) => edges.has(s.owner))
       for (const a of segs) {
         for (const b of segs) {
@@ -55,7 +58,8 @@ export function falsePairs(d: Drawing): string[] {
       }
     }
   }
-  // Per edge, its bare ends (an endpoint no mark names; a self-loop's node twice) and its marks, each `-${kind}${node}`: an
+  // Per edge, its bare ends (an endpoint no mark names; a self-loop's node twice) and its marks, each
+  // `-${kind}${node}`: an
   // arrow `->`, a circle `-o`, a cross `-x`, any other glyph itself. A pair t-kh reads from a bare end t to a mark kh.
   const kind = (glyph: string) => ('▼▲►◄'.includes(glyph) ? '>' : glyph)
   const marks = (e: Drawing['expect']['edges'][number]) => (e.ends ?? []).map((end) => `-${kind(end.glyph)}${end.node}`)
@@ -71,6 +75,7 @@ export function falsePairs(d: Drawing): string[] {
     if (ids.size < 2) {
       continue
     }
+
     const members = [...ids].map((id) => edges.get(id)!)
     for (const a of members) {
       for (const b of members) {
@@ -82,5 +87,6 @@ export function falsePairs(d: Drawing): string[] {
       }
     }
   }
+
   return [...bad].sort()
 }

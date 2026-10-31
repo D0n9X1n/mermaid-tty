@@ -83,6 +83,7 @@ test('A5.errors: an element not on the list, a prefixed one, or one in the wrong
   ]) {
     assert.equal(svgUnsafe(doc(`<${el}/>`)), `element ${el}`, el)
   }
+
   assert.equal(svgUnsafe(doc('<svg/>')), 'element svg')
   assert.equal(svgUnsafe(doc('<foreignObject><rect/></foreignObject>')), 'element rect')
   assert.equal(svgUnsafe(doc(`<foreignObject><div ${XHTML}><img/></div></foreignObject>`)), 'element img')
@@ -149,6 +150,7 @@ test('A5.errors: a url( that is not exactly url(#id), or CSS that loads, escapes
   ] as const) {
     assert.equal(svgUnsafe(svg), reason, svg)
   }
+
   for (const token of [
     '@import',
     '@font-face',
@@ -164,6 +166,7 @@ test('A5.errors: a url( that is not exactly url(#id), or CSS that loads, escapes
     assert.equal(svgUnsafe(`<svg><style>.a{x:${token}y}</style></svg>`), `css ${token}`, token)
     assert.equal(svgUnsafe(doc(`<rect style="x:${token.replace('\\', '&#92;')}y"/>`)), `css ${token}`, token)
   }
+
   assert.equal(svgUnsafe('<svg><style>.a{x:-webkit-IMAGE-SET(y)}</style></svg>'), 'css image-set(')
 })
 

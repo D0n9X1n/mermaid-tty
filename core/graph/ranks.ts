@@ -6,10 +6,12 @@ const outLinks = (ids: readonly string[], links: readonly Link[]): Map<string, L
   for (const l of links) {
     out.get(l.from)!.push(l)
   }
+
   return out
 }
 
-// The links a DFS in source order (ids', then links' order) finds pointing back to a unit on its path: reversing them leaves
+// The links a DFS in source order (ids', then links' order) finds pointing back to a unit on its path: reversing them
+// leaves
 // no cycle. Iterative, so a long chain cannot overflow the stack.
 export function backLinks(ids: readonly string[], links: readonly Link[]): Set<string> {
   const out = outLinks(ids, links)
@@ -19,6 +21,7 @@ export function backLinks(ids: readonly string[], links: readonly Link[]): Set<s
     if (state.has(root)) {
       continue
     }
+
     const stack: [string, number][] = [[root, 0]]
     state.set(root, 'open')
     while (stack.length > 0) {
@@ -29,6 +32,7 @@ export function backLinks(ids: readonly string[], links: readonly Link[]): Set<s
         stack.pop()
         continue
       }
+
       const s = state.get(l.to)
       if (s === 'open') {
         back.add(l.id)
@@ -38,10 +42,12 @@ export function backLinks(ids: readonly string[], links: readonly Link[]): Set<s
       }
     }
   }
+
   return back
 }
 
-// Longest-path ranks of acyclic links: a unit with no in-link is on rank 0, any other at least minlen below each in-link's tail.
+// Longest-path ranks of acyclic links: a unit with no in-link is on rank 0, any other at least minlen below each
+// in-link's tail.
 export function longestPath(ids: readonly string[], links: readonly Link[]): Map<string, number> {
   const out = outLinks(ids, links)
   const rank = new Map(ids.map((id) => [id, 0]))
@@ -49,6 +55,7 @@ export function longestPath(ids: readonly string[], links: readonly Link[]): Map
   for (const l of links) {
     indeg.set(l.to, indeg.get(l.to)! + 1)
   }
+
   const queue = ids.filter((id) => indeg.get(id) === 0)
   for (let i = 0; i < queue.length; i++) {
     for (const l of out.get(queue[i]!)!) {
@@ -59,5 +66,6 @@ export function longestPath(ids: readonly string[], links: readonly Link[]): Map
       }
     }
   }
+
   return rank
 }

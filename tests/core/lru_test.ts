@@ -9,6 +9,7 @@ test('A8.cache: hit, miss, and LRU eviction on the 65th entry', () => {
   for (let i = 0; i < 63; i++) {
     c.set(`k${i}`, i)
   }
+
   c.get('a')
   c.set('k63', 63)
   assert.equal(c.size, 64)

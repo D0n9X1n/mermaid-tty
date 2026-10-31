@@ -105,6 +105,7 @@ test('A5.errors: a keyword in another case, starting a longer word or with no te
   ]) {
     assert.deepEqual(P(`timeline\n${body}`), { reason: 'syntax:2' }, body)
   }
+
   assert.deepEqual(P('timeline\n2002\naccDescr {\nopen'), { reason: 'syntax:3' })
 })
 test('A5: accTitle and accDescr are ignored, # and : included; no title is null', () => {
@@ -136,5 +137,6 @@ test('A5.errors: entity markers and unsupported characters fall back in every fi
   ] as const) {
     assert.deepEqual(P(`timeline\n${body}`), { reason: why }, body)
   }
+
   assert.equal(P('timeline\ntitle Q&A > x\n2002').title, 'Q&A > x')
 })

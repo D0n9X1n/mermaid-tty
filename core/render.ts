@@ -11,7 +11,8 @@ import { readSource } from './source.ts'
 import { drawable as drawableText } from './text.ts'
 import type { Color, Ink, Palette, Role, SeriesKey } from './themes.ts'
 import { palette } from './themes.ts'
-// Imported for their side effect: the flowchart and sequence modules, then each Tier 1 type's (diagrams/all.ts), register
+// Imported for their side effect: the flowchart and sequence modules, then each Tier 1 type's (diagrams/all.ts),
+// register
 // themselves once registry.ts has run.
 import './diagrams/flowchart/layout.ts'
 import './diagrams/sequence/layout.ts'
@@ -32,14 +33,17 @@ export type Options = { columns: number; theme?: string }
 // Whether columns is a width a drawing can have: a positive safe integer.
 const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
 
-// The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail wins,
-// after 'bad-columns' when o.columns is not drawable. A frontmatter title, in every type, is checked as Mermaid's sanitized
+// The source's header picks its module; the module parses the rest; the fit ladder draws the model. The first Fail
+// wins,
+// after 'bad-columns' when o.columns is not drawable. A frontmatter title, in every type, is checked as Mermaid's
+// sanitized
 // title text with no <br>, as Mermaid shows a title. explain never throws: a throw below
 // it is a bug, which falls back as 'internal-error'.
 export function explain(source: string, o: Options): { step: Step; drawing: Drawing } | Fail {
   if (!drawable(o.columns)) {
     return fail('bad-columns')
   }
+
   try {
     const p = parsed(source)
     return isFail(p) ? p : fitLadder(p.mod, p.model, o.columns)
@@ -54,14 +58,17 @@ function parsed(source: string): { mod: DiagramModule; model: unknown } | Fail {
   if (isFail(src)) {
     return src
   }
+
   const title = src.title === null ? null : drawableText(src.title, 'sanitized', 'none')
   if (title) {
     return title
   }
+
   const mod = lookup(src.header)
   if (isFail(mod)) {
     return mod
   }
+
   const model = mod.parse(src)
   return isFail(model) ? model : { mod, model }
 }
@@ -91,7 +98,8 @@ export function renderMermaid(source: string, o: Options): Rows | null {
 
 // One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
 // fills, take that color as their background and onFill as their color; caps and C's key cells keep it as their color.
-// Null colors are omitted, so mono's spans carry none. A title is bold; a text cell's em (core/emphasis.ts) sets bold and
+// Null colors are omitted, so mono's spans carry none. A title is bold; a text cell's em (core/emphasis.ts) sets bold
+// and
 // italic as Mermaid's <strong> and <em> show.
 function cellSpan(cell: Cell, p: Palette): Span {
   const ink =
@@ -104,18 +112,23 @@ function cellSpan(cell: Cell, p: Palette): Span {
   if (color !== null) {
     span.color = color
   }
+
   if (backgroundColor !== null) {
     span.backgroundColor = backgroundColor
   }
+
   if (cell.role === 'title' || (cell.em ?? 0) & BOLD) {
     span.bold = true
   }
+
   if ((cell.em ?? 0) & ITALIC) {
     span.italic = true
   }
+
   if ((p.dim as readonly Ink[]).includes(cell.role)) {
     span.dimColor = true
   }
+
   return span
 }
 
@@ -136,6 +149,7 @@ export function toRows(d: Drawing, p: Palette): Rows {
       if (cell?.kind === 'cont') {
         continue
       }
+
       const s: Span = cell ? cellSpan(cell, p) : { text: ' ' }
       const last = spans[spans.length - 1]
       if (last && sameStyle(last, s)) {
@@ -144,15 +158,19 @@ export function toRows(d: Drawing, p: Palette): Rows {
         spans.push(s)
       }
     }
+
     while (spans.length > 0 && spans[spans.length - 1]!.role === undefined) {
       spans.pop()
     }
+
     return spans
   })
 }
 
-// A renderer that caches each source's rows, or its Fail, in an LRU of capacity entries keyed by the source, the columns
-// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit. Columns that are not drawable
+// A renderer that caches each source's rows, or its Fail, in an LRU of capacity entries keyed by the source, the
+// columns
+// and the theme. inner draws a miss; onMiss gets a miss's Fail, and is never called on a hit. Columns that are not
+// drawable
 // fail 'bad-columns' uncached, so every key is lossless: JSON.stringify would key ±Infinity and NaN alike, as null.
 export function createRenderer(
   capacity = 64,
@@ -166,16 +184,19 @@ export function createRenderer(
         onMiss?.(refused)
         return refused
       }
+
       const key = JSON.stringify([s, o.columns, o.theme])
       const hit = cache.get(key)
       if (hit !== undefined) {
         return hit
       }
+
       const v = draw(s, o, inner)
       cache.set(key, v)
       if (isFail(v)) {
         onMiss?.(v)
       }
+
       return v
     },
     get size() {

@@ -59,14 +59,18 @@ const fake = (
           if (o.version instanceof Error) {
             throw o.version
           }
+
           return { exitCode: 0, stdout: `${o.version ?? '11.17.1'}\n`, stderr: '' }
         }
+
         if (argv[0] === 'mktemp') {
           return { exitCode: 0, stdout: '/tmp/mermaid-tty.Ab12Cd\n', stderr: '' }
         }
+
         if (argv[0] === 'rm') {
           return { exitCode: 0, stdout: '', stderr: '' }
         }
+
         return mmdc(argv, init)
       },
     },
@@ -136,6 +140,7 @@ test('A6.hook-tests: the look: dark or light from the Claude Code theme; none fo
     const f = fake({ theme: theme ?? null })
     assert.equal(await pictureLook(f.$, createPictures(), 'default'), want, String(theme))
   }
+
   assert.equal(await pictureLook(fake().$, createPictures(), 'nord'), 'dark')
   assert.equal(await pictureLook(fake().$, createPictures(), 'mono'), null)
   assert.equal(
@@ -158,7 +163,8 @@ test('A6.hook-tests: the terminal is told once per store', async () => {
   assert.equal(f.asked.length, n)
 })
 
-// Chromium under mmdc must reach no network, loopback included: every request goes to a proxy at the discard port, which
+// Chromium under mmdc must reach no network, loopback included: every request goes to a proxy at the discard port,
+// which
 // loopback does not bypass, and no host name resolves. The page is 12 CSS px a column (defaultViewport, which mmdc 12
 // sizes by; mmdc 11 takes -w).
 test('A6.hook-tests: the puppeteer config cuts Chromium off the network and sets the page width', () => {
@@ -260,6 +266,7 @@ test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed',
     assert.equal(r.argv.includes('-w'), false)
     assert.ok(r.argv.includes('-p'))
   }
+
   assert.ok(sv!.argv.includes('--no-font-embed'))
   assert.equal(m!.argv.includes('--no-font-embed'), false)
   assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
@@ -291,6 +298,7 @@ test('A5.errors: a source core does not parse, or one over 50000 characters, nev
   for (const body of ['flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
     assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined, body)
   }
+
   await s.idle()
   assert.deepEqual(f.runs, [])
   assert.deepEqual(f.logs, [])
@@ -361,6 +369,7 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
     assert.equal(argvOf(f, 'rm').length, 1)
     assert.equal(redraws(f), 0)
   }
+
   const f = fake({ svg: SVG })
   const s = createPictures()
   pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
@@ -376,6 +385,7 @@ test('A6.hook-tests: requests for one diagram, theme and width share one render;
   for (let i = 0; i < 3; i++) {
     pictureFor(f.$, s, body, 'dark', 80, f.log)
   }
+
   pictureFor(f.$, s, body, 'default', 80, f.log)
   pictureFor(f.$, s, body, 'dark', 60, f.log)
   await s.idle()
@@ -399,6 +409,7 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
   for (const b of ['A', 'B', 'C']) {
     pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
   }
+
   await s.idle()
   assert.equal(most, 1)
   assert.equal(renders(f), 3)
@@ -520,6 +531,7 @@ test('A8.cache: the picture cache is bounded by entries; a dropped picture is no
     pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
     await s.idle()
   }
+
   assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
   assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
   await s.idle()
@@ -533,6 +545,7 @@ test('A8.cache: the picture cache is bounded by bytes of PNG', async () => {
     pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
     await s.idle()
   }
+
   assert.ok(pictureFor(f.$, s, fc('B'), 'dark', 80, f.log))
   assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
   assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
@@ -546,6 +559,7 @@ test('A8.cache: at most 8 renders wait; a request past that is dropped, and aske
   for (let i = 0; i < 10; i++) {
     pictureFor(f.$, s, fc(`D${i}`), 'dark', 80, f.log)
   }
+
   await s.idle()
   assert.equal(renders(f), 8)
   pictureFor(f.$, s, fc('D9'), 'dark', 80, f.log)
@@ -560,6 +574,7 @@ test('A8.cache: the keys tried are bounded; past that, a new diagram stays text'
     pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
     await s.idle()
   }
+
   assert.equal(renders(f), 2)
   assert.equal(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log), undefined)
 })

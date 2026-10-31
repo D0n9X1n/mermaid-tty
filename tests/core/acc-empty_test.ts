@@ -1,4 +1,5 @@
-// An empty accTitle: or accDescr: (only spaces after the colon) in Mermaid 12.2.0: the lexer's value rule skips the line
+// An empty accTitle: or accDescr: (only spaces after the colon) in Mermaid 12.2.0: the lexer's value rule skips the
+// line
 // break, so the value is the next line, which then draws nothing. Verified under JSDOM per type: flowchart, class, er,
 // gantt, journey, quadrant, state, timeline and xychart swallow it; pie and gitGraph (Langium) keep it.
 import test from 'node:test'

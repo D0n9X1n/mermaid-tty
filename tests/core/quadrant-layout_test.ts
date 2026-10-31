@@ -93,6 +93,7 @@ test('A5.mutation-tests: a key that would run into the cross or the frame fails 
   for (const x of ['0.49', '0.99']) {
     assert.deepEqual(X(`${nine}\nJ: [${x}, 0]`, 80), { reason: 'key-collision' }, x)
   }
+
   assert.equal(text(X(`${nine}\nJ: [0.48, 0]`, 80).drawing)[13]!.slice(29, 32), '10│')
 })
 test('A4.fit-ladder: keyed fields follow the source, not the quadrant numbers', () => {
@@ -128,6 +129,7 @@ test('A5.errors: an entity, a keyword in another case or starting a longer word,
   ] as const) {
     assert.deepEqual(X(body, 80), { reason: why }, body)
   }
+
   assert.deepEqual(explain('---\ntitle: A\n---\nquadrantChart\ntitle B', { columns: 80 }), { reason: 'repeat:5' })
   assert.deepEqual(explain('quadrantChart x\nA: [0.1, 0.1]', { columns: 80 }), { reason: 'header' })
 })

@@ -3,10 +3,13 @@
 // what a program writes, so only the cells say what is shown.
 import xterm from '@xterm/headless'
 
-// A cell's color: the terminal's default, whose value is 0; an index into the 16-color or the 256-color palette; or 0xRRGGBB.
+// A cell's color: the terminal's default, whose value is 0; an index into the 16-color or the 256-color palette; or
+// 0xRRGGBB.
 export type Color = { mode: 'default' | 'p16' | 'p256' | 'rgb'; value: number }
-// A cell. ch is ' ' in a blank cell, whether a space was written to it or not, so that the pty driver, whose program may
-// move the cursor over blanks, reads what the tmux driver, whose capture-pane writes them, does. It is '' only in the cell
+// A cell. ch is ' ' in a blank cell, whether a space was written to it or not, so that the pty driver, whose program
+// may
+// move the cursor over blanks, reads what the tmux driver, whose capture-pane writes them, does. It is '' only in the
+// cell
 // after a wide character, whose width is 0.
 export type Cell = { ch: string; width: number; fg: Color; bg: Color }
 export type Screen = {
@@ -20,7 +23,8 @@ export type Screen = {
   clipboard(): string | undefined
 }
 
-// xterm's color modes, as getFgColorMode and getBgColorMode return them (its Attributes.CM_DEFAULT, CM_P16, CM_P256, CM_RGB).
+// xterm's color modes, as getFgColorMode and getBgColorMode return them (its Attributes.CM_DEFAULT, CM_P16, CM_P256,
+// CM_RGB).
 const MODES = new Map<number, Color['mode']>([
   [0, 'default'],
   [0x1000000, 'p16'],
@@ -41,6 +45,7 @@ export function createScreen(cols: number, rows: number): Screen {
     if (pd !== '?') {
       copied = Buffer.from(pd, 'base64').toString('utf8')
     }
+
     return true
   })
   // The active buffer's lines on the screen: those after the baseY lines scrolled off it.

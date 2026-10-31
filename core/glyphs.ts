@@ -8,9 +8,11 @@ export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string 
   if (w === 'dotted' && (dirs === 1 || dirs === 4 || dirs === 5)) {
     return '┆'
   }
+
   if (w === 'dotted' && (dirs === 2 || dirs === 8 || dirs === 10)) {
     return '┄'
   }
+
   const k = w === 'heavy' ? '2' : '1' // a dashed line bends and branches light (rule 12)
   return boxGlyph([1, 2, 4, 8].map((b) => (dirs & b ? k : '0')).join(''))
 }

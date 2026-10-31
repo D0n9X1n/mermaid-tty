@@ -144,7 +144,8 @@ test('A8.platforms: a straight dotted run draws ┄ or ┆; a dotted bend or bra
   })
   assert.deepEqual(d.conflicts, [])
 })
-// A cell stays dotted only while every line in it is dotted: otherwise it is no dotted run, and draws the glyph of its arms.
+// A cell stays dotted only while every line in it is dotted: otherwise it is no dotted run, and draws the glyph of its
+// arms.
 test('A8.platforms: a dotted run shared with a solid one draws solid in either order; dotted meeting heavy takes the mixed glyph', () => {
   const c = createCanvas(3, 1, 1, fromSameNode)
   c.line(0, 0, 10, 'dotted', 'edge', 'A>B')
@@ -255,6 +256,7 @@ test('A5.mutation-tests: a line on an exclusive cell conflicts before shares is 
   for (let col = 0; col < 6; col++) {
     c.line(0, col, 10, 'light', 'edge', 'e')
   }
+
   c.line(1, 1, 10, 'light', 'edge', 'e')
   c.line(1, 1, 4, 'light', 'edge', 'f')
   c.line(1, 3, 5, 'light', 'edge', 'e')
@@ -343,6 +345,7 @@ test('A5.mutation-tests: a lifeline is │ or ┃ in empty cells only; a line or
   for (let r = 0; r < 4; r++) {
     c.lifeline(r, 1, false, 'p1')
   }
+
   c.lifeline(4, 1, true, 'p1')
   c.line(1, 1, 10, 'heavy', 'edge', 'm1')
   c.text(2, 1, 'x', 'label', 'L1')
@@ -361,6 +364,7 @@ test('A8.platforms: every glyph a busy canvas draws outside text is in GLYPHS: i
     c.lifeline(r, 11, false, 'p1')
     c.lifeline(r, 13, true, 'p2')
   }
+
   c.cap(1, 2, CAPS.round[0], 'node', 'A')
   c.fill(1, 3, 1, 'node', 'A')
   c.text(1, 4, '中', 'label', 'A')
@@ -382,12 +386,14 @@ test('A8.platforms: every glyph a busy canvas draws outside text is in GLYPHS: i
   for (let col = 9; col < 12; col++) {
     c.line(2, col, 10, 'heavy', 'edge', 'm1')
   }
+
   c.arrow(2, 12, CAPS.arrowR[1], 'm1')
   const d = c.toDrawing(E)
   const drawn = d.cells.flat().filter((x): x is Cell => x !== null && x.kind !== 'text' && x.kind !== 'cont')
   for (const x of drawn) {
     assert.ok(GLYPHS.has(x.ch), `${x.kind} ${x.ch}`)
   }
+
   assert.deepEqual(new Set(drawn.map((x) => x.kind)), new Set(['frame', 'lifeline', 'line', 'arrow', 'cap', 'fill']))
   assert.deepEqual(rows(d), [
     '┌─G──────┐    ',
@@ -452,9 +458,11 @@ test('A5.mutation-tests: a line, cap, fill, arrow or lifeline cell outside the g
   for (let col = -1; col <= 2; col++) {
     c.line(0, col, 10, 'light', 'edge', 'e1')
   }
+
   for (let row = -1; row <= 2; row++) {
     c.line(row, 1, 5, 'heavy', 'edge', 'e2')
   }
+
   const sides = [
     [-1, 0],
     [2, 0],
@@ -467,6 +475,7 @@ test('A5.mutation-tests: a line, cap, fill, arrow or lifeline cell outside the g
     c.arrow(r, col, '►', 'e3')
     c.lifeline(r, col, false, 'p1')
   }
+
   const d = c.toDrawing(E)
   assert.deepEqual(keys(d), [
     ['0', '1'],
@@ -514,7 +523,8 @@ test('A5.mutation-tests: a write at a non-integer row or column is outside the g
   assert.deepEqual(keys(d), [['0']])
   assert.deepEqual(d.conflicts, [outside(0.5, 0, 'n1'), outside(0, 0.5, 'e1')])
 })
-// Edges into one node may end in one head: an arrow on an arrow of the same glyph merges owners when shares holds for an old
+// Edges into one node may end in one head: an arrow on an arrow of the same glyph merges owners when shares holds for
+// an old
 // owner. Another glyph, or an edge that shares nothing with the old owners, conflicts.
 test('A5.mutation-tests: an arrow on a same-glyph arrow of an edge it shares with merges owners; another glyph or an unrelated edge conflicts', () => {
   const c = createCanvas(1, 3, 3, (a, b) => a.split('>')[1] === b.split('>')[1])
@@ -531,7 +541,8 @@ test('A5.mutation-tests: an arrow on a same-glyph arrow of an edge it shares wit
     { row: 0, col: 2, had: 'A>C', by: 'B>D' },
   ])
 })
-// Beside the union dirs and owners, a line cell keeps the dirs each owner drew there, OR-merged per owner in write order,
+// Beside the union dirs and owners, a line cell keeps the dirs each owner drew there, OR-merged per owner in write
+// order,
 // so the validator can tell a crossing from a turn that shares its glyph.
 test('A5.mutation-tests: a line cell records the dirs each owner drew there', () => {
   const c = createCanvas(1, 2, 2, (a, b) => a[0] === b[0])

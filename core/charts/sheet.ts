@@ -7,8 +7,10 @@ import type { Ink } from '../themes.ts'
 import type { Expect } from '../validate.ts'
 import { width } from '../width.ts'
 
-// A label as a chart lists it: its owner and text, and at, its first drawn cell, when pieces ps are drawn one a row down
-// from row r at column c, a later piece at c + indent: the first piece with text. No at if none has text, as none draws.
+// A label as a chart lists it: its owner and text, and at, its first drawn cell, when pieces ps are drawn one a row
+// down
+// from row r at column c, a later piece at c + indent: the first piece with text. No at if none has text, as none
+// draws.
 export function placed(
   owner: string,
   text: string,
@@ -22,7 +24,8 @@ export function placed(
 }
 
 // text's <br> lines, each wrapped at columns, drawn one row per piece in ink and owned by owner (matrix common rules 3
-// and 6). The first piece has no join, a later piece its wrap join, and the first piece of each later line '\n', so validate
+// and 6). The first piece has no join, a later piece its wrap join, and the first piece of each later line '\n', so
+// validate
 // reads the rows back as one label. Its expect is the text as drawn, each <br> a '\n', as draw lists a <br> label.
 // 'word-too-wide' if a word is wider than columns.
 export function heading(text: string, ink: Ink, owner: string, columns: number): Drawing | Fail {
@@ -33,15 +36,18 @@ export function heading(text: string, ink: Ink, owner: string, columns: number):
     if (!ps) {
       return fail('word-too-wide')
     }
+
     ps.forEach((p, j) => pieces.push(j > 0 ? p : i > 0 ? { ...p, join: '\n' } : { text: p.text }))
   }
+
   const c = createCanvas(pieces.length, Math.max(0, ...pieces.map((p) => width(p.text))), columns)
   pieces.forEach((p, r) => c.text(r, 0, p.text, ink, owner, p.join))
   return c.toDrawing({ labels: [placed(owner, lines.join('\n'), pieces, 0, 0)], edges: [], edgeLabels: [], frames: [] })
 }
 
 // parts top to bottom in one drawing, columns wide so that validate measures every row against the budget. Each row is
-// padded with null to the widest part, each part's conflicts move down by its row offset, and its expect merges by name.
+// padded with null to the widest part, each part's conflicts move down by its row offset, and its expect merges by
+// name.
 export function stack(parts: readonly Drawing[], columns: number): Drawing {
   const wide = parts.reduce((w, p) => p.cells.reduce((v, r) => Math.max(v, r.length), w), 0)
   const cells: (Cell | null)[][] = []
@@ -52,14 +58,17 @@ export function stack(parts: readonly Drawing[], columns: number): Drawing {
     for (const x of p.conflicts) {
       conflicts.push({ ...x, row: x.row + cells.length })
     }
+
     for (const r of p.cells) {
       cells.push([...r, ...Array<Cell | null>(wide - r.length).fill(null)])
     }
   }
+
   return { columns, cells, conflicts, expect: merge(expects) }
 }
 
-// A part's expect as it sits dr rows down: an entry's at, in any field (a key's, a label's, a bar's, a glyph's), names a
+// A part's expect as it sits dr rows down: an entry's at, in any field (a key's, a label's, a bar's, a glyph's), names
+// a
 // cell, so it moves with the part's cells.
 type At = { at?: { r: number; c: number } }
 const shift = (e: Expect, dr: number): Expect =>
@@ -75,7 +84,8 @@ const shift = (e: Expect, dr: number): Expect =>
       ) as Expect)
 
 // Every array field of the expects, each concatenated in their order by name: A's labels, edges (with their ends and
-// endLabels), edgeLabels and frames, C's bars, members, keys and keyable, and any field a later task adds. A's four start
+// endLabels), edgeLabels and frames, C's bars, members, keys and keyable, and any field a later task adds. A's four
+// start
 // empty, since every Expect lists them; any other field no expect has stays absent, so nothing is invented or dropped.
 function merge(expects: readonly Expect[]): Expect {
   const out: Record<string, unknown[]> = { labels: [], edges: [], edgeLabels: [], frames: [] }
@@ -86,5 +96,6 @@ function merge(expects: readonly Expect[]): Expect {
       }
     }
   }
+
   return out as unknown as Expect
 }

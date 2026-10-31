@@ -155,7 +155,8 @@ const N = (id: string, shape: string, role: string, order: number, ...lines: str
   rows: lines.map((text) => ({ text, role, align: 'center' })),
 })
 const Box = (id: string, order: number) => N(id, 'rect', 'node', order, id)
-// The edge a parse should give: a solid arrow with no label, minlen 1 and its pair's first default id, but for what o gives.
+// The edge a parse should give: a solid arrow with no label, minlen 1 and its pair's first default id, but for what o
+// gives.
 const L = (from: string, to: string, order: number, o: object = {}) => ({
   id: `L_${from}_${to}_0`,
   from,
@@ -341,7 +342,8 @@ test('A5.errors: matrix row flowchart-reject-02, a subgraph with no end, falls b
 })
 
 // An LR chart with two subgraphs. Case 1 (flowchart-reject-06) can reach Data tier only by crossing it more than once
-// or not at all, so it falls back at every width. Case 2 draws left to right at 120, each edge crossing a frame once; at 80
+// or not at all, so it falls back at every width. Case 2 draws left to right at 120, each edge crossing a frame once;
+// at 80
 // and 60 every step crosses Data tier wrongly or conflicts, so it falls back rather than draw a broken frame.
 test('An LR chart with two subgraphs, case 2, draws at 120 columns and falls back at 80 and 60', () => {
   const src =

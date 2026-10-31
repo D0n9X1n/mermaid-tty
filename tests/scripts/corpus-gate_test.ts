@@ -1,4 +1,5 @@
-// corpus-gate.ts: gate(dir) draws each block of dir at 80 and 120 columns; the CLI prints counts, and exits 1 on a failure.
+// corpus-gate.ts: gate(dir) draws each block of dir at 80 and 120 columns; the CLI prints counts, and exits 1 on a
+// failure.
 import test, { type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -20,8 +21,10 @@ function dir(t: TestContext, files: Record<string, string>): string {
   for (const [name, text] of Object.entries(files)) {
     writeFileSync(join(d, name), text)
   }
+
   return d
 }
+
 const run = (...args: string[]) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' })
 
 test('A10: gate names a failing block <index>@<cols> <reason>, counting blocks from 1 in file-name order', (t) => {

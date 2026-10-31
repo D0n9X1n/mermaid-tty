@@ -7,8 +7,10 @@ import { stack } from '../../core/charts/sheet.ts'
 import { toRows } from '../../core/render.ts'
 import { palette, THEMES } from '../../core/themes.ts'
 const TEXT: Record<string, string> = { n1: 'memo', n2: 'other' }
-// Row 0: each item's in-place key, or its text when it is unkeyed. Row 1 + i: item i's legend row, its key and then its text.
-// Each tuple is [item, in-place key, legend key]; a null legend key drops that key cell, and an omitted one drops the whole row.
+// Row 0: each item's in-place key, or its text when it is unkeyed. Row 1 + i: item i's legend row, its key and then its
+// text.
+// Each tuple is [item, in-place key, legend key]; a null legend key drops that key cell, and an omitted one drops the
+// whole row.
 function keyed(drawn: readonly [string, string | null, (string | null)?][], keys: Expect['keys']): Drawing {
   const c = createCanvas(4, 12, 12)
   drawn.forEach(([item, key, lk], i) => {
@@ -16,11 +18,13 @@ function keyed(drawn: readonly [string, string | null, (string | null)?][], keys
       c.text(0, 6 * i, TEXT[item]!, 'note', item)
       return
     }
+
     c.key(0, 6 * i, key, 'note', item, false)
     if (lk !== undefined) {
       if (lk !== null) {
         c.key(1 + i, 0, lk, 'note', item, true)
       }
+
       c.text(1 + i, 2, TEXT[item]!, 'note', item)
     }
   })
@@ -36,6 +40,7 @@ function keyed(drawn: readonly [string, string | null, (string | null)?][], keys
     ],
   })
 }
+
 const K = [
   { key: 'a', item: 'n1', cls: 'note' },
   { key: 'b', item: 'n2', cls: 'note' },
@@ -147,6 +152,7 @@ test("A5.mutation-tests: an edge label's key cell carries its edge like the labe
     if (key) {
       c.key(2, 2, 'a', 'label', ['e0:label', 'e0'], false)
     }
+
     c.line(3, 2, 5, 'light', 'edge', 'e0')
     c.arrow(4, 2, '▼', 'e0')
     c.text(5, 2, 'B', 'node', 'B')
@@ -187,7 +193,8 @@ test('A5.mutation-tests: a keyed member keeps its in-place key with its parent; 
   assert.equal(validate(draw(['U.c0', 'U'])), null)
   assert.deepEqual(validate(draw(['U.c0'])), { reason: 'member' })
 })
-// U.c0's in-place key with its parent, then its legend row: its key, then 主键 of (wide cells and their cont cells) wrapped to user.
+// U.c0's in-place key with its parent, then its legend row: its key, then 主键 of (wide cells and their cont cells)
+// wrapped to user.
 test("A5.mutation-tests: a keyed member's legend text, its wide cells and its continuation row included, is owned by it alone", () => {
   const c = createCanvas(3, 10, 10)
   c.key(0, 0, 'a', 'note', ['U.c0', 'U'], false)
@@ -209,7 +216,8 @@ test("A5.mutation-tests: a keyed member's legend text, its wide cells and its co
     null,
   )
 })
-// U.c0's member row is only its in-place key, owned with its parent: no text cell. Omitting its members entry must still fail.
+// U.c0's member row is only its in-place key, owned with its parent: no text cell. Omitting its members entry must
+// still fail.
 test('A5.mutation-tests: with members set, a key cell with two distinct owners, the second no edge, is a listed member too', () => {
   const draw = (members: Expect['members']): Drawing => {
     const c = createCanvas(2, 10, 10)
@@ -248,7 +256,8 @@ test('A5.mutation-tests: key writes one key cell per character, owners flattened
     { row: 1, col: 4, had: 'out-of-bounds', by: 'n4' },
   ])
 })
-// A node pill [x] then a key in node ink: under a filling palette the key takes no background, as a cap does, so it merges with ].
+// A node pill [x] then a key in node ink: under a filling palette the key takes no background, as a cap does, so it
+// merges with ].
 test('A7: toRows draws a key cell as it draws a cap: in its ink, with no pill', () => {
   const c = createCanvas(1, 6, 6)
   c.cap(0, 0, '[', 'node', 'n1')
@@ -280,14 +289,19 @@ function board(extra?: (c: Canvas) => void, gap = 1): Drawing {
     keyable: [{ item: 'n1', cls: 'note' }],
   })
 }
+
 test('A5.mutation-tests: a second run fails key-dup; a legend key not one blank before its text, key-unbound; a run read longer, key-mismatch', () => {
   assert.equal(validate(board()), null)
-  assert.deepEqual(validate(board((c) => c.key(0, 4, 'a', 'note', 'n1', false))), { reason: 'key-dup' }) // a second in-place run
-  assert.deepEqual(validate(board((c) => c.key(2, 0, 'a', 'note', 'n1', true))), { reason: 'key-dup' }) // a second legend run
+  // a second in-place run
+  assert.deepEqual(validate(board((c) => c.key(0, 4, 'a', 'note', 'n1', false))), { reason: 'key-dup' })
+  // a second legend run
+  assert.deepEqual(validate(board((c) => c.key(2, 0, 'a', 'note', 'n1', true))), { reason: 'key-dup' })
   for (const gap of [0, 2]) {
     assert.deepEqual(validate(board(undefined, gap)), { reason: 'key-unbound' }, `gap ${gap}`)
   }
-  assert.deepEqual(validate(board((c) => c.key(0, 1, 'b', 'note', 'n1', false))), { reason: 'key-mismatch' }) // its in-place run reads ab
+
+  // its in-place run reads ab
+  assert.deepEqual(validate(board((c) => c.key(0, 1, 'b', 'note', 'n1', false))), { reason: 'key-mismatch' })
 })
 // One in-place key a owned by both points p1 and p2, at (0, 0) and (0, 1), then each point's own legend row.
 test('A5.mutation-tests: a point key owned by several points is one in-place run for each, and each still needs its legend row', () => {
@@ -370,11 +384,13 @@ function apart(k: number): Drawing {
     ],
   })
 }
+
 test('A5.mutation-tests: an in-place key touching another key on its row reads as one key and fails key-adjacent; a gap passes', () => {
   assert.deepEqual(validate(apart(1)), { reason: 'key-adjacent' })
   assert.equal(validate(apart(2)), null) // ab, then a b
 })
-// Two points as ● caps at (0, 0) and (0, c2), one key 1 at (0, 1) owned by both, then each point's own legend row; placed:
+// Two points as ● caps at (0, 0) and (0, c2), one key 1 at (0, 1) owned by both, then each point's own legend row;
+// placed:
 // each entry gives its point's cell as at.
 function points(c2: number, placed = true): Drawing {
   const c = createCanvas(3, 24, 24)
@@ -419,6 +435,7 @@ function lone(r: number, c: number): Drawing {
     keyable: [{ item: 'n1', cls: 'note' }],
   })
 }
+
 test("A5.mutation-tests: an entry's at is in its in-place key or beside it on its row, and a key several items own needs at on each", () => {
   assert.deepEqual(validate(points(20)), { reason: 'key-unplaced' })
   assert.equal(validate(points(2)), null) // the second point far off; then beside the key
@@ -426,6 +443,7 @@ test("A5.mutation-tests: an entry's at is in its in-place key or beside it on it
   for (const c of [1, 2, 3]) {
     assert.equal(validate(lone(0, c)), null, `${c}`)
   } // beside it on the left, in it, beside it on the right
+
   for (const [r, c] of [
     [0, 0],
     [0, 4],
@@ -434,7 +452,8 @@ test("A5.mutation-tests: an entry's at is in its in-place key or beside it on it
     assert.deepEqual(validate(lone(r, c)), { reason: 'key-unplaced' }, `${r},${c}`)
   }
 })
-// In-place keys a and b at (0, 0) and (0, 2), then the legend: a alpha · 0.3, its separator and value owned by others, then
+// In-place keys a and b at (0, 0) and (0, 2), then the legend: a alpha · 0.3, its separator and value owned by others,
+// then
 // n1's wrapped tail and b beta in the given order.
 function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
   const c = createCanvas(4, 16, 16)
@@ -469,7 +488,8 @@ function legendRows(order: readonly ('tail' | 'b')[]): Drawing {
     ],
   })
 }
-// A legend beside the diagram: a alpha in row 0 and its wrapped tail in row 1, b beta in row 2; the in-place keys at column 10,
+// A legend beside the diagram: a alpha in row 0 and its wrapped tail in row 1, b beta in row 2; the in-place keys at
+// column 10,
 // b's in row 0 and a's in row 1, tail's row.
 function beside(): Drawing {
   const c = createCanvas(3, 16, 16)
@@ -495,6 +515,7 @@ function beside(): Drawing {
     ],
   })
 }
+
 test("A5.mutation-tests: an item's legend text, wrapped rows included, stays in its own block, which runs to the next legend key row", () => {
   assert.equal(validate(legendRows(['tail', 'b'])), null)
   assert.deepEqual(validate(legendRows(['b', 'tail'])), { reason: 'key-unbound' }) // tail reads as b's
@@ -511,7 +532,8 @@ test('A5.mutation-tests: each entry matches a keyable item by item and class, el
     { item: 'n2', cls: 'note' },
   ]
   assert.equal(validate(classed(K, kn)), null)
-  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-class' }) // n2 keyed as a label, its class a note
+  // n2 keyed as a label, its class a note
+  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-class' })
   assert.deepEqual(
     validate(
       classed(
@@ -526,7 +548,8 @@ test('A5.mutation-tests: each entry matches a keyable item by item and class, el
   ) // label is n2's class, not n1's
   assert.deepEqual(validate(classed(K, [])), { reason: 'key-class' }) // entries for items no class keys
 })
-// n1's in-place key reads its entry's a, but its legend key reads b, as n2's does: only the legend key's read catches it.
+// n1's in-place key reads its entry's a, but its legend key reads b, as n2's does: only the legend key's read catches
+// it.
 test("A5.mutation-tests: a legend key reads its entry's key even where the in-place key does, else key-mismatch", () =>
   assert.deepEqual(
     validate(
@@ -540,8 +563,10 @@ test("A5.mutation-tests: a legend key reads its entry's key even where the in-pl
     ),
     { reason: 'key-mismatch' },
   )) // a / b; b memo, b other
-// In-place keys a and b at (0, 0) and (0, 2), then a alpha as the legend's first row. Shared: b beta on that row at column 12,
-// and alpha's wrapped tail under beta at column 14. Else alpha's tail at (2, 2), then b 设计, wide cells, in the next row.
+// In-place keys a and b at (0, 0) and (0, 2), then a alpha as the legend's first row. Shared: b beta on that row at
+// column 12,
+// and alpha's wrapped tail under beta at column 14. Else alpha's tail at (2, 2), then b 设计, wide cells, in the next
+// row.
 function oneRow(shared: boolean): Drawing {
   const c = createCanvas(4, 20, 20)
   c.key(0, 0, 'a', 'note', 'n1', false)
@@ -567,6 +592,7 @@ function oneRow(shared: boolean): Drawing {
     ],
   })
 }
+
 test("A5.mutation-tests: a legend key is its row's first drawn cell, so a row holds one entry, else key-unbound", () => {
   assert.deepEqual(validate(oneRow(true)), { reason: 'key-unbound' })
   assert.equal(validate(oneRow(false)), null) // tail reads as beta's; then CJK below
@@ -577,5 +603,6 @@ test('A5.mutation-tests: a class is keyed all or none by item and class, so keyi
     { item: 'n2', cls: 'note' },
     { item: 'n2', cls: 'label' },
   ]
-  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-partial' }) // n2 keyed as a label, not as a note
+  // n2 keyed as a label, not as a note
+  assert.deepEqual(validate(classed([K[0]!, { ...K[1]!, cls: 'label' }], kn)), { reason: 'key-partial' })
 })

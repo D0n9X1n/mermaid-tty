@@ -53,10 +53,12 @@ function world(o: { version?: string; mmdc?: boolean; capMs?: number; svg?: stri
     writeFileSync(join(bin, 'mmdc'), FAKE)
     chmodSync(join(bin, 'mmdc'), 0o755)
   }
+
   const svgFile = join(root, 'canned.svg')
   if (o.svg !== undefined) {
     writeFileSync(svgFile, o.svg)
   }
+
   const timeouts: number[] = []
   const logs: string[] = []
   const redraws: string[] = []
@@ -72,6 +74,7 @@ function world(o: { version?: string; mmdc?: boolean; capMs?: number; svg?: stri
           if (argv[0] === 'mmdc') {
             timeouts.push(init.timeoutMs)
           }
+
           const c = spawn(argv[0]!, argv.slice(1), {
             env: {
               PATH,
@@ -164,6 +167,7 @@ test(
       for (const flag of ['-p', '-c', '-o']) {
         assert.ok(c!.argv.includes(flag), flag)
       }
+
       assert.deepEqual(c!.argv.slice(c!.argv.indexOf('-w'), c!.argv.indexOf('-w') + 2), ['-w', '960'])
       assert.deepEqual(pictureFor(w.$, s, body, 'dark', 80, w.log), { png: PNG, columns: 20, rows: 20 })
       assert.deepEqual(w.redraws, ['ui.render'])
@@ -225,7 +229,8 @@ test(
   },
 )
 
-// The reviewer's exact repro: a frontmatter themeCSS that drew /tmp/private.svg into the PNG on mmdc 11.17 and 12.0 with
+// The reviewer's exact repro: a frontmatter themeCSS that drew /tmp/private.svg into the PNG on mmdc 11.17 and 12.0
+// with
 // every isolation flag on. Core parses it; the gate in hooks/safe.ts keeps it from running anything at all.
 test(
   "A5.errors: the reviewer's themeCSS repro runs nothing: no mmdc, no version probe, no mktemp",

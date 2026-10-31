@@ -1,4 +1,5 @@
-// The workflow rules run on the parsed YAML tree (docs/workflow-tree.ts): real keys and values, never substrings; what they cannot read fails.
+// The workflow rules run on the parsed YAML tree (docs/workflow-tree.ts): real keys and values, never substrings; what
+// they cannot read fails.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -55,6 +56,7 @@ test('every earlier spelling of a uses key is read as uses: quoted, spaced, capi
       s,
     )
   }
+
   for (const s of [`- "uses": ${PINNED}`, `- 'uses' : ${PINNED}`, `- uses: "actions/checkout@${SHA}" # v7.0.1`]) {
     assert.deepEqual(errors(wf(`      ${s}\n`)), [], s)
   }
@@ -72,9 +74,11 @@ test('a quoted or spaced run, id or shell key is that key, held to its rule', ()
       k,
     )
   }
+
   for (const k of ['"id"', "'id'", 'id ']) {
     assert.deepEqual(errors(wf(`      - ${k}: x\n        run: node scripts/x.ts\n`)), [], k)
   }
+
   for (const k of ['"shell"', "'shell'", 'shell ']) {
     assert.deepEqual(errors(wf(`      - id: x\n        ${k}: bash\n        run: bash scripts/x.sh\n`)), [], k)
   }
@@ -94,6 +98,7 @@ test('an anchor/alias fixture fails: a step reused by alias, or a uses key spell
       want,
     )
   }
+
   assert.ok(
     errors(`x: &k uses\n${wf('      - *k : actions/checkout@v7\n')}`).some((e) => e.includes('unreadable: alias *k')),
   )
@@ -124,6 +129,7 @@ test('the real workflows are readable and pin every action, and publish-wiki.yml
     const { unreadable, errors: e } = readWorkflow(f, readFileSync(new URL(f, dir), 'utf8'))
     assert.deepEqual([unreadable, e.filter((x) => x.includes('not pinned'))], [[], []], f)
   }
+
   assert.deepEqual(publishWikiErrors(readFileSync(new URL('publish-wiki.yml', dir), 'utf8')), [])
 })
 test('the # vN comment must follow the uses value on its own line', () => {

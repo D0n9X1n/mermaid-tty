@@ -1,4 +1,5 @@
-// tests/golden/c-lib.ts — C's golden harness helpers (plan C T48): the gated fixture folders, each ladder fixture's widths,
+// tests/golden/c-lib.ts — C's golden harness helpers (plan C T48): the gated fixture folders, each ladder fixture's
+// widths,
 // a fixture's %% expect lines, the Coverage rows' problems, and probes of a drawing or its rows.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -76,6 +77,7 @@ export function expectLines(src: string): ExpectLine[] {
     if (!m) {
       return []
     }
+
     const e: ExpectLine = { cols: Number(m[1]), step: m[2] as ExpectLine['step'] }
     return [m[3] === undefined ? e : { ...e, widest: Number(m[3]) }]
   })
@@ -115,9 +117,12 @@ export function unlistedFrames(d: Drawing): string[] {
   return [...ownersOf(d, ['frame'])].filter((o) => !listed.has(o)).sort()
 }
 
-// Every fault A4 checks on each drawing beyond render and validate: its border-only rows, its unlisted frames, and each drawn
-// cell that is not one allow-listed glyph. A golden reads a drawn cell whose whole ch is zero-width as a mark joined to the
-// cell before it, which the glyph scan skips after source text, so drawn cells are checked on the drawing (drawnGlyphs).
+// Every fault A4 checks on each drawing beyond render and validate: its border-only rows, its unlisted frames, and each
+// drawn
+// cell that is not one allow-listed glyph. A golden reads a drawn cell whose whole ch is zero-width as a mark joined to
+// the
+// cell before it, which the glyph scan skips after source text, so drawn cells are checked on the drawing
+// (drawnGlyphs).
 export const drawingFaults = (d: Drawing): string[] => [...borderRows(d), ...unlistedFrames(d), ...drawnGlyphs(d)]
 
 // The first span of rows, in reading order, whose text matches re (search ignores re's lastIndex).
@@ -128,7 +133,8 @@ export const spanOf = (rows: Rows, re: RegExp): Span | undefined => rows.flat().
 const BARS = { h: [...'▏▎▍▌▋▊▉█'], v: [...'▁▂▃▄▅▆▇█'] }
 const eighths = (cell: Cell | null | undefined, axis: 'h' | 'v'): number =>
   cell?.kind === 'cap' ? BARS[axis].indexOf(cell.ch) + 1 : 0
-// The summed eighths of the bar caps from (r, c) on, a step of dr rows and dc columns at a time, up to the first other cell.
+// The summed eighths of the bar caps from (r, c) on, a step of dr rows and dc columns at a time, up to the first other
+// cell.
 function run(d: Drawing, r: number, c: number, dr: number, dc: number, axis: 'h' | 'v'): number {
   let sum = 0
   let e = eighths(d.cells[r]?.[c], axis)
@@ -138,6 +144,7 @@ function run(d: Drawing, r: number, c: number, dr: number, dc: number, axis: 'h'
     c += dc
     e = eighths(d.cells[r]?.[c], axis)
   }
+
   return sum
 }
 // The eighths of the consecutive ▏…█ caps rightward from (row, col).

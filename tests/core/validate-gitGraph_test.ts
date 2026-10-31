@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { explain } from '../../core/render.ts'
 import { validate } from '../../core/validate.ts'
 const X = (body: string, columns = 80) => (explain(`gitGraph\n${body}`, { columns, theme: 'mono' }) as any).drawing
-// Rows: ╷ main, ● root, ├─╮ a, │ ● a1, ├─┼─╮ b, │ ╵ ● b1, ◉───┘ m. Lane a runs on past a1 with no link, under b's fork, and
+// Rows: ╷ main, ● root, ├─╮ a, │ ● a1, ├─┼─╮ b, │ ╵ ● b1, ◉───┘ m. Lane a runs on past a1 with no link, under b's fork,
+// and
 // ends a row before the merge, which runs over its empty column.
 const CROSS =
   'commit id: "root"\nbranch a\ncommit id: "a1"\ncheckout main\nbranch b\ncommit id: "b1"\ncheckout main\nmerge b id: "m"'
@@ -61,12 +62,14 @@ test("A5.mutation-tests: a commit drawn with another type's glyph fails glyph-wr
       if (d.cells[r][c].ch === ch) {
         continue
       }
+
       d.cells[r][c] = { ...d.cells[r][c], ch }
       assert.deepEqual(validate(d), { reason: 'glyph-wrong' }, `${r},${c} ${ch}`)
     }
   }
 })
-// Moves every text cell each owner draws (owners[0]) down by its dr, all lifted before any is placed, so labels can swap.
+// Moves every text cell each owner draws (owners[0]) down by its dr, all lifted before any is placed, so labels can
+// swap.
 function relocate(d: any, moves: [string, number][]): any {
   const lifted: [number, number, any][] = []
   for (const [owner, dr] of moves) {
@@ -79,11 +82,14 @@ function relocate(d: any, moves: [string, number][]): any {
       }),
     )
   }
+
   for (const [r, c, x] of lifted) {
     d.cells[r][c] = x
   }
+
   return d
 }
+
 const LOG = 'commit id: "a"\nbranch dev\ncommit id: "b"\ncheckout main\nmerge dev id: "m"'
 test("A3: each row lists its mark and the labels drawn beside it, a forked start's mark on its corner", () => {
   const d = X(LOG + ' tag: "t"')
@@ -119,7 +125,8 @@ test("A5.mutation-tests: a tag, commit id or branch name drawn on another commit
     ),
     { reason: 'label-unbound' },
   )
-  // Rows: ╷   main, ●, ├─╮ dev, │ ●, ● │ aaa bbb, │ │ ccc, ╵ ●: ccc, a wrapped piece, moved under the next commit's row.
+  // Rows: ╷   main, ●, ├─╮ dev, │ ●, ● │ aaa bbb, │ │ ccc, ╵ ●: ccc, a wrapped piece, moved under the next commit's
+  // row.
   const wrapped = structuredClone(
     X('commit\nbranch dev\ncommit\ncheckout main\ncommit msg: "aaa bbb ccc"\ncheckout dev\ncommit', 12),
   )
@@ -128,5 +135,6 @@ test("A5.mutation-tests: a tag, commit id or branch name drawn on another commit
     wrapped.cells[6][c] = wrapped.cells[5][c]
     wrapped.cells[5][c] = null
   }
+
   assert.deepEqual(validate(wrapped), { reason: 'label-unbound' })
 })

@@ -25,6 +25,7 @@ test('VR.gallery: every golden at 80 and 60, the CJK sheet, the palette sheet an
         assert.ok(files.includes(`${id}@${w}.svg`), `${id}@${w}`)
       }
     }
+
     for (const f of ['cjk.svg', 'palettes.svg', 'index.html']) {
       assert.ok(files.includes(f), f)
     }
