@@ -124,7 +124,11 @@ function vertical(xy: Xy, sc: Scale, ss: Drawn[], columns: number): Part[] | Fai
   const bs: Bar[] = []
   const gs: Glyph[] = []
   for (let r = 0; r <= H; r++) {
-    const ch = r === H ? '└' : r % (H / 2) === 0 ? '┤' : '│'
+    let ch = r % (H / 2) === 0 ? '┤' : '│'
+    if (r === H) {
+      ch = '└'
+    }
+
     plot.cap(r, G, ch, 'frame', 'axis')
     gs.push({ owner: 'axis', ch, at: { r, c: G } })
   }

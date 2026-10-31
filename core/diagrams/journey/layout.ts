@@ -127,7 +127,13 @@ function layout(journey: Journey, step: Step, columns: number): Drawing | Fail {
       let c = N + S + 16
       for (let k = from; k < to; k++) {
         const owner = `${id}.a${k}`
-        const sep = k === t.actors.length - 1 ? '' : k < to - 1 ? ', ' : ','
+        let sep = ','
+        if (k === t.actors.length - 1) {
+          sep = ''
+        } else if (k < to - 1) {
+          sep = ', '
+        }
+
         labels.push({ owner, text: t.actors[k]!, at: { r: r + j, c } })
         c += cv.text(r + j, c, t.actors[k]!, 'label', owner)
         cv.cap(r + j, c, sep, 'label', owner)

@@ -19,6 +19,24 @@ import { parseGitGraph, type GitEvent, type GitGraph } from './parse.ts'
 const STEPS: readonly Step[] = ['natural', 'wrap']
 const GLYPH = { NORMAL: '●', REVERSE: '⊗', HIGHLIGHT: '■' } as const
 
+// The cap e draws on its lane: a start draws a lane end (╷, or ╵ under BT) only when its branch forks from no commit,
+// else none; a pick draws ◎, an untyped commit or merge ◉, any other its type's glyph.
+function markOf(e: GitEvent, unforked: boolean, bt: boolean): string | null {
+  if (e.kind === 'start') {
+    if (!unforked) {
+      return null
+    }
+
+    return bt ? '╵' : '╷'
+  }
+
+  if (e.kind === 'pick') {
+    return '◎'
+  }
+
+  return e.type === null ? '◉' : GLYPH[e.type]
+}
+
 // A drawn label: its owner, its text as expect lists it, and its ink.
 type Item = { owner: string; text: string; ink: Ink }
 // One placed piece of a label row: its column within the label column, its text, and its join to the owner's last
@@ -33,8 +51,13 @@ function items(e: GitEvent, i: number, ink: Ink): Item[] {
     return [{ owner: `b:${e.branch}`, text: e.branch, ink }]
   }
 
-  const head =
-    e.kind === 'commit' ? [e.id, e.msg].filter((x) => x !== null).join(': ') : e.kind === 'merge' ? e.id : null
+  let head: string | null = null
+  if (e.kind === 'commit') {
+    head = [e.id, e.msg].filter((x) => x !== null).join(': ')
+  } else if (e.kind === 'merge') {
+    head = e.id
+  }
+
   const out: Item[] = head !== null && head.trim() !== '' ? [{ owner: `e${i}`, text: head, ink: 'label' }] : []
   e.tags.forEach((t, j) => out.push({ owner: `e${i}.t${j}`, text: `[${t}]`, ink: 'note' }))
   return out
@@ -273,18 +296,7 @@ function draw(g: GitGraph, L: Links, max: number, columns: number): Drawing | Fa
     const k = ink.get(e.branch)!
     const c = col.get(e.branch)!
     const r = rowOf(i)
-    const mark =
-      e.kind === 'start'
-        ? L.fork.get(e.branch) === null
-          ? bt
-            ? '╵'
-            : '╷'
-          : null
-        : e.kind === 'pick'
-          ? '◎'
-          : e.type === null
-            ? '◉'
-            : GLYPH[e.type]
+    const mark = markOf(e, L.fork.get(e.branch) === null, bt)
     const id = e.kind === 'start' ? `s${i}` : `c${i}`
     if (mark !== null) {
       cv.cap(r, c, mark, k, id)

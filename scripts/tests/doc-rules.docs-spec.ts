@@ -154,7 +154,7 @@ for (const [rule, base, from, to, want] of cases) {
     ))
 }
 
-test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image is displayed, every link target is known', () => {
+test('D15b on the GFM tree (D15c): only the hero is HTML, each accepted image shows, each link target is known', () => {
   const H = '<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>'
   const G = (md: string, readme = true) => grammarErrors('x.md', md, readme)
   const F = (rest: string) => '``` `\n' + rest // an invalid fence opener: a backtick info string is not a fence
@@ -213,7 +213,7 @@ test('D15b on the GFM tree (D15c): only the hero is HTML, every accepted image i
     )
   }
 })
-test('D15b: every autolink literal is reported on its own line, including one the GFM transform leaves with no position', () => {
+test('D15b: every autolink literal is reported on its own line, even one the GFM transform gives no position', () => {
   // markdown.docs-spec.ts shows the transform gives `say "www.x.example"` no position; the tokenizer positions
   // https://x.dev.
   assert.deepEqual(grammarErrors('x.md', '# T\n\nsee https://x.dev\n\nsay "www.x.example"\n', false), [

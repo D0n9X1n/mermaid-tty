@@ -323,9 +323,13 @@ function jsonlFiles(dir: string): string[] {
     return []
   }
 
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? jsonlFiles(join(dir, e.name)) : e.name.endsWith('.jsonl') ? [join(dir, e.name)] : [],
-  )
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (e.isDirectory()) {
+      return jsonlFiles(join(dir, e.name))
+    }
+
+    return e.name.endsWith('.jsonl') ? [join(dir, e.name)] : []
+  })
 }
 
 // Polls check every 100 ms for up to ms; resolves to its first truthy answer, or to undefined.
@@ -399,7 +403,15 @@ async function stored({ s, config, copied }: Ctx): Promise<string[]> {
 
   const exact = (t: string | undefined) => t === want || t === `${want}\n`
   const stub = () => (existsSync(copied) ? readFileSync(copied, 'utf8') : undefined)
-  const via = await poll(async () => (exact(stub()) ? 'stub' : exact(await s.clipboard()) ? 'osc52' : undefined), 5000)
+  // The stub file is read first, so the terminal's clipboard is asked only when the stub does not hold the body.
+  const copiedVia = async () => {
+    if (exact(stub())) {
+      return 'stub'
+    }
+
+    return exact(await s.clipboard()) ? 'osc52' : undefined
+  }
+  const via = await poll(copiedVia, 5000)
   if (via) {
     console.log(`stored: ran on ${os} via ${via}`)
   } else {

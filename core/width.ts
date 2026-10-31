@@ -29,7 +29,9 @@ export function isWide(cp: number): boolean {
 export function width(s: string): number {
   let w = 0
   for (const ch of s) {
-    w += ZERO.test(ch) ? 0 : isWide(ch.codePointAt(0)!) ? 2 : 1
+    if (!ZERO.test(ch)) {
+      w += isWide(ch.codePointAt(0)!) ? 2 : 1
+    }
   }
 
   return w

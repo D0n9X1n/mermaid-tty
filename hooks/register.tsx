@@ -11,13 +11,19 @@ import { safePlan } from './plan.ts'
 // shows pixels, diagram mode draws a fence as an Image of mermaid-cli's PNG once it is rendered
 // (hooks/image.ts); text mode never does.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
+// The value each mode keeps in $.state, as mode() reads it back.
+const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
 
 // The loader follows $ only into top-level functions, so mode lives here. A read while a
 // ui.render hook draws subscribes that drawing, so a later set draws it again.
 // The value is true for source, 'text' for text, and anything else for diagram.
 async function mode($: StateDollar): Promise<Mode> {
   const v = (await $.state.get(SOURCE)).value
-  return v === true ? 'source' : v === 'text' ? 'text' : 'diagram'
+  if (v === true) {
+    return 'source'
+  }
+
+  return v === 'text' ? 'text' : 'diagram'
 }
 
 export const register: Register = (on, options) => {
@@ -44,7 +50,7 @@ export const register: Register = (on, options) => {
       return { text: modeReply(cur, false) }
     }
 
-    await $.state.set(SOURCE, a.set === 'source' ? true : a.set === 'text' ? 'text' : false)
+    await $.state.set(SOURCE, STORED[a.set])
     $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
   })

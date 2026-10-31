@@ -231,8 +231,15 @@ function element(name: string, attrs: Map<string, string>, stack: string[]): str
     return `element ${name} in style`
   }
 
-  const known =
-    stack.length === 0 ? name === 'svg' : html ? HTML_ELEMENTS.has(name) : name !== 'svg' && SVG_ELEMENTS.has(name)
+  let known: boolean
+  if (stack.length === 0) {
+    known = name === 'svg'
+  } else if (html) {
+    known = HTML_ELEMENTS.has(name)
+  } else {
+    known = name !== 'svg' && SVG_ELEMENTS.has(name)
+  }
+
   if (!known) {
     return `element ${name}`
   }

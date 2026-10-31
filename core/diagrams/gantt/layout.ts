@@ -36,11 +36,29 @@ function scale(tasks: readonly GanttTask[]): Scale | null {
 
 // A task's status, bar and ◆ ink: arrow for crit, else note for done, else decision for active, else its section's
 // series.
-const inkOf = (t: GanttTask, series: SeriesKey): Ink =>
-  t.tags.includes('crit') ? 'arrow' : t.tags.includes('done') ? 'note' : t.tags.includes('active') ? 'decision' : series
+function inkOf(t: GanttTask, series: SeriesKey): Ink {
+  if (t.tags.includes('crit')) {
+    return 'arrow'
+  }
+
+  if (t.tags.includes('done')) {
+    return 'note'
+  }
+
+  return t.tags.includes('active') ? 'decision' : series
+}
+
+// The progress cell: ✓ for done, else ▸ for active, else blank.
+function progressOf(t: GanttTask): string {
+  if (t.tags.includes('done')) {
+    return '✓'
+  }
+
+  return t.tags.includes('active') ? '▸' : ' '
+}
+
 // The status cells: ! for crit, then ✓ for done, else ▸ for active.
-const statusOf = (t: GanttTask): string =>
-  (t.tags.includes('crit') ? '!' : ' ') + (t.tags.includes('done') ? '✓' : t.tags.includes('active') ? '▸' : ' ')
+const statusOf = (t: GanttTask): string => (t.tags.includes('crit') ? '!' : ' ') + progressOf(t)
 
 // Why g's text would draw other text than Mermaid 12.2.0 shows: 'section-repeat' for two sections of one name, which
 // Mermaid merges into one label; 'section-empty' for a section with no task, whose header Mermaid does not draw;

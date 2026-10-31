@@ -36,6 +36,12 @@ export function fenceBody(reply: string): string {
   return fence?.kind === 'mermaid' ? fence.body : ''
 }
 
+// The clipboard commands Claude Code tries on each platform other than Windows.
+const CLIPBOARD_COMMANDS = new Map([
+  ['darwin', ['pbcopy']],
+  ['linux', ['wl-copy', 'xclip', 'xsel']],
+])
+
 // Stand-ins for the platform's clipboard commands, by file name: each writes its stdin to out. On Windows,
 // clip.cmd, which Claude Code runs as clip.
 export function clipboardStubs(platform: string, out: string): Record<string, string> {
@@ -47,6 +53,6 @@ export function clipboardStubs(platform: string, out: string): Record<string, st
   }
 
   const sh = `#!/bin/sh\ncat > '${out.replaceAll("'", "'\\''")}'\n`
-  const names = platform === 'darwin' ? ['pbcopy'] : platform === 'linux' ? ['wl-copy', 'xclip', 'xsel'] : []
+  const names = CLIPBOARD_COMMANDS.get(platform) ?? []
   return Object.fromEntries(names.map((n) => [n, sh]))
 }

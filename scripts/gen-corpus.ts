@@ -774,7 +774,12 @@ function generate(): string[] {
     const f = before.filter((x) => x >= 0).length
     const b: Block = { zh: zh[f]!, quoted: quoted[f]!, br: br[f]!, dash: dash[f]!, pad, drawn: new Set<string>() }
     const { title, lines } = FLOWS[k]!.make(b, before.filter((x) => x === k).length)
-    const dir = bare[f] ? '' : chance(FLOWS[k]!.lr) ? ' LR' : ' TD'
+    // A bare header names no direction and draws no chance, so the seeded sequence stays the same.
+    let dir = ''
+    if (!bare[f]) {
+      dir = chance(FLOWS[k]!.lr) ? ' LR' : ' TD'
+    }
+
     const head = [
       ...(front[f] ? ['---', `title: ${text(b, title)}`, '---'] : []),
       `${graph[f] ? 'graph' : 'flowchart'}${dir}`,

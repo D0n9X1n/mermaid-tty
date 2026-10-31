@@ -401,7 +401,13 @@ function walk(stmts: Stmt[], composites: Map<string, string>): Omit<Graph, 'titl
     return id
   }
   // A transition's end: [*] is a mark, else a state mentioned here; null for one another body has.
-  const end = (id: string, kind: 'start' | 'end') => (id === '[*]' ? ends(kind) : mention(id) ? id : null)
+  const end = (id: string, kind: 'start' | 'end') => {
+    if (id === '[*]') {
+      return ends(kind)
+    }
+
+    return mention(id) ? id : null
+  }
   // Gives id its description, if the statement has one.
   const describe = (id: string, descr: string | null): Why | null => {
     if (!mention(id)) {

@@ -98,7 +98,14 @@ function plot(
   const right = 2 * q + 2
   cv.frame(0, 0, BOX - 1, right, 'frame', 'plot')
   for (let c = 0; c <= right; c++) {
-    cv.line(7, c, c === 0 ? 7 : c === right ? 13 : 10, 'light', 'frame', 'plot.1')
+    let dirs = 10
+    if (c === 0) {
+      dirs = 7
+    } else if (c === right) {
+      dirs = 13
+    }
+
+    cv.line(7, c, dirs, 'light', 'frame', 'plot.1')
   }
 
   for (let r = 1; r < BOX - 1; r++) {

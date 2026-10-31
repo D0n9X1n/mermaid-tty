@@ -38,6 +38,13 @@ const STRING = /"`[^`"]+`"|"[^"]+"(?!`)/y
 const MAX_MINLEN = 10
 // The end each type draws at the tail and the head (flowDb destructEdgeType).
 const MARK: Readonly<Record<string, End>> = { point: 'arrow', circle: 'circle', cross: 'cross' }
+// The type a link token's last character gives it, and a text form's first; any other character is open.
+const HEAD: Readonly<Record<string, string>> = { x: 'cross', '>': 'point', o: 'circle' }
+const TAIL: Readonly<Record<string, string>> = { '<': 'point', x: 'cross', o: 'circle' }
+// The stroke an undotted line's first character gives it; any other is normal.
+const LINE: Readonly<Record<string, string>> = { '=': 'thick', '~': 'invisible' }
+// The style each stroke draws; normal draws solid.
+const STYLE: Readonly<Record<string, GEdge['style']>> = { thick: 'thick', dotted: 'dotted', invisible: 'invisible' }
 
 // The link at `at`, as Mermaid reads it, or null.
 export function readLink(text: string, at: number): RawLink | null {
@@ -129,32 +136,33 @@ function edgeText(
 }
 
 // A link token as flowDb's destructEndLink reads it: its last character the head (x cross, > point, o circle, else
-// open),
-// double when the first character pairs with it; the line, less the head and any paired mark, then gives the stroke
-// (= first thick, ~ first invisible, any dot dotted) and the length (dots, or the line's length less 1). An unpaired
-// mark
-// stays in the line: <==o is a normal line of length 2.
+// open), double when the first character pairs with it; the line, less the head and any paired mark, then gives the
+// stroke (= first thick, ~ first invisible, any dot dotted) and the length (dots, or the line's length less 1). An
+// unpaired mark stays in the line: <==o is a normal line of length 2.
 function endLink(token: string): { type: string; stroke: string; length: number } {
   const last = token.at(-1)!
-  const type = last === 'x' ? 'cross' : last === '>' ? 'point' : last === 'o' ? 'circle' : 'open'
+  const type = HEAD[last] ?? 'open'
   const paired = type !== 'open' && token[0] === (last === '>' ? '<' : last)
   const line = token.slice(paired ? 1 : 0, -1)
   const dots = line.replace(/[^.]/g, '').length
-  const stroke = dots ? 'dotted' : line[0] === '=' ? 'thick' : line[0] === '~' ? 'invisible' : 'normal'
+  const stroke = dots ? 'dotted' : (LINE[line[0]!] ?? 'normal')
   return { type: paired ? `double_${type}` : type, stroke, length: dots || line.length - 1 }
 }
 
 // A text form's opener as destructStartLink reads it: a leading <, x or o its type, and its stroke (= thick, . dotted).
 function startLink(token: string): { type: string; stroke: string } {
   const t = token.trim()
-  const type = t[0] === '<' ? 'point' : t[0] === 'x' ? 'cross' : t[0] === 'o' ? 'circle' : 'open'
-  return { type, stroke: t.includes('.') ? 'dotted' : t.includes('=') ? 'thick' : 'normal' }
+  const type = TAIL[t[0]!] ?? 'open'
+  if (t.includes('.')) {
+    return { type, stroke: 'dotted' }
+  }
+
+  return { type, stroke: t.includes('=') ? 'thick' : 'normal' }
 }
 
 // What a read link draws (flowDb getData): a double type marks both ends, one type the head; open and invisible none.
 function ends(l: { type: string; stroke: string; length: number }): Ends {
-  const style =
-    l.stroke === 'thick' ? 'thick' : l.stroke === 'dotted' ? 'dotted' : l.stroke === 'invisible' ? 'invisible' : 'solid'
+  const style = STYLE[l.stroke] ?? 'solid'
   const mark = l.stroke === 'invisible' ? 'none' : (MARK[l.type.replace('double_', '')] ?? 'none')
   return {
     style,

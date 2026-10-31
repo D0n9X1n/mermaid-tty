@@ -54,10 +54,19 @@ function hex(c: string): string {
 
   throw new Error(`render-gallery: no color for ${JSON.stringify(c)}`)
 }
+// A span's foreground: dim draws in inactive, else its color, else text.
+function fgOf(sp: Span): string {
+  if (sp.dimColor) {
+    return DARK_KEYS.inactive!
+  }
+
+  return sp.color ? hex(sp.color) : DARK_KEYS.text!
+}
+
 // A span as B's Styled, as the README assets style it (render-image.ts): dim draws in inactive, no color in text.
 export const styled = (sp: Span): Styled => ({
   text: sp.text,
-  fg: sp.dimColor ? DARK_KEYS.inactive! : sp.color ? hex(sp.color) : DARK_KEYS.text!,
+  fg: fgOf(sp),
   ...(sp.backgroundColor ? { bg: hex(sp.backgroundColor) } : {}),
   ...(sp.bold ? { bold: true } : {}),
 })

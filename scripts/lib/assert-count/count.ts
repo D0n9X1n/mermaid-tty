@@ -132,18 +132,23 @@ function adopt(t: Context, store: Store): void {
     assert: { get: () => (assert ??= counting(Reflect.get(context, 'assert', t), () => store)), configurable: true },
   })
 }
+// Where test([name][, options][, fn]) holds its function, as node:test reads its arguments: first when it is first;
+// second after a name or options; else third.
+function fnIndex(args: unknown[]): number {
+  if (typeof args[0] === 'function') {
+    return 0
+  }
+
+  return (typeof args[0] === 'object' && args[0] !== null) || typeof args[1] === 'function' ? 1 : 2
+}
+
 // register, node:test's test or a context's t.test, made to run each test's function counted under parentOf() at the
-// call.
-// It finds the function as node:test does in test([name][, options][, fn]), and gives a test with none a function that
-// executes no assertion. Its only, skip, todo and expectFailure, where it has them, register the same way.
+// call. It finds the function as node:test does in test([name][, options][, fn]), and gives a test with none a
+// function that executes no assertion. Its only, skip, todo and expectFailure, where it has them, register the same
+// way.
 export function registrar(register: Function, parentOf: () => Store | undefined): Function {
   const wrapped = (...args: unknown[]) => {
-    const at =
-      typeof args[0] === 'function'
-        ? 0
-        : (typeof args[0] === 'object' && args[0] !== null) || typeof args[1] === 'function'
-          ? 1
-          : 2
+    const at = fnIndex(args)
     const fn = args[at]
     args[at] = counted(typeof fn === 'function' ? fn : () => {}, parentOf())
     return Reflect.apply(register, undefined, args)

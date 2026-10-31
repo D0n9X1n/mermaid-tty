@@ -275,23 +275,26 @@ function classify(rows: readonly Row[], fmt: DateFmt): Spec[] {
     const n = r.line
     const after = r.start === null ? null : AFTER.exec(r.start)
     const until = UNTIL.exec(r.end)
-    const start: Start =
-      r.start === null
-        ? i > 0
-          ? { prev: true }
-          : stop(`start:${n}`)
-        : after
-          ? { after: refs(after[1]!, n) }
-          : { at: parseDate(r.start, fmt) ?? stop(`date:${n}`) }
+    let start: Start
+    if (r.start === null) {
+      start = i > 0 ? { prev: true } : stop(`start:${n}`)
+    } else if (after) {
+      start = { after: refs(after[1]!, n) }
+    } else {
+      start = { at: parseDate(r.start, fmt) ?? stop(`date:${n}`) }
+    }
+
     const at = parseDate(r.end, fmt)
     const dur = parseDuration(r.end)
-    const end: End = until
-      ? { until: refs(until[1]!, n) }
-      : at !== null
-        ? { at }
-        : dur !== null
-          ? { dur }
-          : stop(`syntax:${n}`)
+    let end: End
+    if (until) {
+      end = { until: refs(until[1]!, n) }
+    } else if (at !== null) {
+      end = { at }
+    } else {
+      end = dur !== null ? { dur } : stop(`syntax:${n}`)
+    }
+
     return { start, end, line: n }
   })
 }
@@ -304,21 +307,33 @@ function resolve(specs: readonly Spec[]): number[] {
     const i = v >> 1
     const s = specs[i]!
     if (v % 2 === 0) {
-      return 'prev' in s.start ? [2 * i - 1] : 'after' in s.start ? s.start.after.map((j) => 2 * j + 1) : []
+      if ('prev' in s.start) {
+        return [2 * i - 1]
+      }
+
+      return 'after' in s.start ? s.start.after.map((j) => 2 * j + 1) : []
     }
 
-    return 'until' in s.end ? s.end.until.map((j) => 2 * j) : 'dur' in s.end ? [2 * i] : []
+    if ('until' in s.end) {
+      return s.end.until.map((j) => 2 * j)
+    }
+
+    return 'dur' in s.end ? [2 * i] : []
   }
   const time: number[] = []
   const value = (v: number): number => {
     const i = v >> 1
     const s = specs[i]!
     if (v % 2 === 0) {
-      return 'at' in s.start
-        ? s.start.at
-        : 'prev' in s.start
-          ? time[2 * i - 1]!
-          : s.start.after.reduce((t, j) => Math.max(t, time[2 * j + 1]!), -Infinity)
+      if ('at' in s.start) {
+        return s.start.at
+      }
+
+      if ('prev' in s.start) {
+        return time[2 * i - 1]!
+      }
+
+      return s.start.after.reduce((t, j) => Math.max(t, time[2 * j + 1]!), -Infinity)
     }
 
     if ('at' in s.end) {
@@ -408,15 +423,17 @@ function mermaidTimes(specs: readonly Spec[]): (number | undefined)[] {
         return
       }
 
-      t[2 * i + 1] =
-        'at' in s.end
-          ? s.end.at
-          : 'until' in s.end
-            ? pick(
-                s.end.until.map((j) => t[2 * j]),
-                (a, b) => a < b,
-              )
-            : start + s.end.dur
+      if ('at' in s.end) {
+        t[2 * i + 1] = s.end.at
+      } else if ('until' in s.end) {
+        t[2 * i + 1] = pick(
+          s.end.until.map((j) => t[2 * j]),
+          (a, b) => a < b,
+        )
+      } else {
+        t[2 * i + 1] = start + s.end.dur
+      }
+
       if (t[2 * i + 1] !== undefined) {
         done[i] = true
       }

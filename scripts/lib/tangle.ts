@@ -16,9 +16,13 @@ const ownedBy = (x: Cell | null, id: string): boolean => x?.owners.includes(id) 
 function nodes(d: Drawing, all: readonly Drawn[]): string[] {
   const edges = new Set(d.expect.edges.map((e) => e.id))
   const frames = new Set(
-    all.flatMap(({ x }) =>
-      x.kind === 'frame' ? x.owners : x.kind === 'line' ? x.owners.filter((o) => !edges.has(o)) : [],
-    ),
+    all.flatMap(({ x }) => {
+      if (x.kind === 'frame') {
+        return x.owners
+      }
+
+      return x.kind === 'line' ? x.owners.filter((o) => !edges.has(o)) : []
+    }),
   )
   return d.expect.labels.map((l) => l.owner).filter((o) => !o.endsWith(':label') && !frames.has(o))
 }
@@ -56,7 +60,14 @@ const isLine = (x: Cell | null): boolean => x?.kind === 'line'
 function fork(d: Drawing, r: number, c: number): string[] {
   const x = cellAt(d, r, c)!
   const side = x.dirs & 10
-  const dr = x.dirs & 4 ? -1 : x.dirs & 1 ? 1 : 0
+  // The forward arm's row step: up (4) is -1, else down (1) is 1, else none.
+  let dr = 0
+  if (x.dirs & 4) {
+    dr = -1
+  } else if (x.dirs & 1) {
+    dr = 1
+  }
+
   const dc = side === 8 ? -1 : 1
   if (side === 0 || side === 10 || dr === 0) {
     return []
@@ -104,7 +115,11 @@ function ends(d: Drawing, id: string, r: number, c: number): string[] {
     return [e.from, e.to]
   }
 
-  return id.startsWith('lane:') ? laneEnds(d, r, c, id) : marks(d).has(id) ? fork(d, r, c) : []
+  if (id.startsWith('lane:')) {
+    return laneEnds(d, r, c, id)
+  }
+
+  return marks(d).has(id) ? fork(d, r, c) : []
 }
 
 // The dirs owner o runs in line cell x, by its segs; 0 when x has no seg for o.

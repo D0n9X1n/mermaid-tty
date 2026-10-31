@@ -62,9 +62,17 @@ const label = (t: string): string => t.split('<br>').join('\n')
 type Item = { k: number; s: number; text: string; events: string[]; ink: SeriesKey }
 function items(tl: Timeline): Item[] {
   const named = tl.sections.some((s) => s.name !== null)
+  // Named sections ink by section; else multicolor inks each period its own series, and plain ones share the first.
+  const seriesOf = (s: number, k: number) => {
+    if (named) {
+      return s
+    }
+
+    return tl.multicolor ? k : 0
+  }
   return tl.sections
     .flatMap((sec, s) => sec.periods.map((p) => ({ s, text: p.text, events: p.events })))
-    .map((p, k) => ({ ...p, k, ink: ink(named ? p.s : tl.multicolor ? k : 0) }))
+    .map((p, k) => ({ ...p, k, ink: ink(seriesOf(p.s, k)) }))
 }
 
 // LR at step. A column is as wide as its widest pill, a pill its text with a pad cell each side, its events pills too;
