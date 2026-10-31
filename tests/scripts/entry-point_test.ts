@@ -39,7 +39,7 @@ test('A8.portability: every script with a main() guards it with isMain(import.me
   for (const f of ['scripts/check.ts', 'scripts/check-ids.ts', 'scripts/check-palettes.ts']) assert.ok(mains.includes(f), `${f} was not scanned`)
   const bad = mains.flatMap(f => {
     const text = readFileSync(join(ROOT, f), 'utf8')
-    return [...(/if \(isMain\(import\.meta\)\) process\.exitCode = (await )?main\(\)/.test(text) ? [] : [`${f}: no isMain(import.meta) guard`]),
+    return [...(/if \(isMain\(import\.meta\)\) \{?\s*process\.exitCode = (await )?main\([^)]*\)/.test(text) ? [] : [`${f}: no isMain(import.meta) guard`]),
       ...(/process\.argv\[1\]|realpathSync/.test(text) ? [`${f}: an inline argv[1] or realpath guard`] : [])]
   })
   assert.deepEqual(bad, [])
