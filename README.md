@@ -155,14 +155,20 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **Can diagrams show as images?** Yes, in kitty, Ghostty and SonicTerm, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on.
 
-**Can images show inside tmux or RMUX?** Not yet; you keep the text drawing there. tmux and RMUX forward a kitty image only when it arrives wrapped in their passthrough sequence, and only with passthrough allowed:
+**Can images show inside tmux or RMUX?** Yes, through `bin/claude-tmux.py`, a launcher that ships with the plugin. Inside a multiplexer Claude Code sends its kitty image commands unwrapped, and tmux and RMUX drop them. The launcher runs `claude` in a pty and rewraps those commands as tmux passthrough, which the multiplexer forwards. It needs Python 3.9 or later and passthrough turned on:
 
 ```tmux
-# ~/.tmux.conf, or rmux.conf for RMUX
+# ~/.tmux.conf, or ~/.rmux.conf for RMUX
 set -g allow-passthrough on
 ```
 
-Claude Code 2.1.309 sends its kitty image uploads unwrapped inside tmux, so the multiplexer drops them before they reach the terminal. With `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` the picture's cells still arrive, but they show blank. mermaid-tty therefore keeps text inside tmux, screen and Zellij until Claude Code wraps those uploads. Start Claude Code outside the multiplexer to see pictures.
+Then start Claude Code through it, for example with an alias:
+
+```sh
+alias claude='python3 ~/.claude/plugins/marketplaces/mermaid-tty/bin/claude-tmux.py'
+```
+
+It wraps only inside tmux or RMUX, with passthrough on, in an interactive terminal, when the terminal underneath is kitty, Ghostty or SonicTerm. tmux 3.3 and later report that from the attached client; RMUX keeps no such report, so the launcher reads the `TERM_PROGRAM` its server started with. Anywhere else it runs `claude` unchanged. With several clients attached, or after reattaching from another terminal, start Claude Code again. Without the launcher, mermaid-tty keeps the text drawing inside tmux, screen and Zellij. Claude Code tracks wrapping the commands itself in anthropics/claude-code#100146.
 
 **Which platforms and terminals work?** macOS, Linux and Windows, in any terminal Claude Code supports: Windows Terminal; macOS Terminal, iTerm2 and Ghostty; and Linux terminals. Truecolor terminals show the palettes exactly; 256-color terminals use their available colors. Use a monospaced font with box-drawing and geometric-shape glyphs, plus a CJK font for CJK labels. Keep ambiguous-width characters set to one column so lines meet.
 

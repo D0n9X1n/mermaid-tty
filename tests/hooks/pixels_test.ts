@@ -190,6 +190,23 @@ test('A5.errors: a listing that fails or throws means no pixels', async () => {
   assert.equal(await showsPixels(run(async () => Promise.reject(new Error('denied')))), false)
 })
 
+test('A6.hook-tests: inside tmux or RMUX, pixels only when bin/claude-tmux.py wraps Claude Code', async () => {
+  const tmux = { TMUX: '/tmp/tmux-501/default,1,0', TERM: 'tmux-256color' }
+  for (const [vars, want] of [
+    [{ ...tmux, MERMAID_TTY_TMUX_IMAGES: '1' }, true], // the launcher checked passthrough and the client terminal
+    [{ ...tmux, TERM_PROGRAM: 'tmux', MERMAID_TTY_TMUX_IMAGES: '1' }, true], // whatever the pane's own TERM_PROGRAM
+    [{ TMUX: '/private/tmp/rmux-501/default,37545,0', MERMAID_TTY_TMUX_IMAGES: '1' }, true],
+    [tmux, false], // without the launcher Claude Code's kitty commands are dropped
+    [{ ...tmux, MERMAID_TTY_TMUX_IMAGES: '0' }, false],
+    [{ ...tmux, TERM: 'xterm-kitty' }, false],
+    [{ ...PAIR, TMUX: '/tmp/tmux-501/default,1,0' }, false],
+    [{ ...tmux, MERMAID_TTY_TMUX_IMAGES: '1', STY: '1.pts-0.host' }, false], // screen inside tmux passes nothing
+    [{ ...tmux, MERMAID_TTY_TMUX_IMAGES: '1', ZELLIJ: '0' }, false],
+  ] as [Record<string, string>, boolean][]) {
+    assert.equal(await showsPixels(env(vars, SONICTERM_MAC)), want, JSON.stringify(vars))
+  }
+})
+
 test('A6.hook-tests: pixels only where TERM names kitty or Ghostty, outside tmux, screen and Zellij', async () => {
   for (const [vars, want] of [
     [{ TERM: 'xterm-kitty' }, true],

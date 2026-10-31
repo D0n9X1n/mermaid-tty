@@ -82,7 +82,7 @@ Python scripts: one statement per line, no compound one-line statements, the sam
 bash scripts/check.sh                       # must-pass suite
 node --test                                 # unit and integration tests
 npm ci --prefix scripts/docs && node --test 'scripts/tests/*.docs-spec.ts'
-python3 -m unittest scripts/release-issues_tests.py scripts/release-notes_tests.py
+python3 -m unittest scripts/release-issues_tests.py scripts/release-notes_tests.py bin/claude-tmux_tests.py
 node scripts/e2e/run.ts                     # real Claude Code against a mock API (npm ci --prefix scripts/e2e first)
 ```
 
