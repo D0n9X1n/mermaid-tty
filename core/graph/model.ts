@@ -1,5 +1,4 @@
-// The graph model from plan A §6: shared by flowchart now; by state, class, ER, requirement, C4 and architecture in C.
-// Types only.
+// The graph model shared by flowchart, state, class and ER. Types only.
 import type { Shape } from '../caps.ts'
 import type { Piece } from '../text.ts'
 import type { Role } from '../themes.ts'

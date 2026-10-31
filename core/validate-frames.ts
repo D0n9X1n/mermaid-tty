@@ -32,7 +32,7 @@ export const CORNERS: readonly ReadonlySet<string>[] = ['┌┍┎┏', '┐┑�
 // smaller
 // box, and no crossing or title sits on a corner. Each other cell on the box's border is a frame cell of its own
 // drawing
-// that border (V5), ─ or ━ across and │ or ┃ down a side, or a tee ┬ ┴ ├ ┤ one of its own dividers continues inside;
+// that border, ─ or ━ across and │ or ┃ down a side, or a tee ┬ ┴ ├ ┤ one of its own dividers continues inside;
 // or:
 // its title, text or cont whose owners[0] is the frame, on the top border; a joint of one of its own dividers
 // `${id}.${k}`,
@@ -123,11 +123,11 @@ export function frames(d: Drawing, all: readonly Spot[]): Fail | null {
   return null
 }
 
-// V6: an edge between nodes of one frame stays inside it. A frame holds a node when every cell drawn for the node, by
-// its owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose
-// own border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and
-// label cell of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame.
-// Run after frames, so every listed frame spans a box.
+// An edge between nodes of one frame stays inside it. A frame holds a node when every cell drawn for the node, by its
+// owners, lies strictly inside the frame's box; a node with no cells, or an endpoint that is itself a frame, whose own
+// border is drawn for it, is held by none. For each frame that holds both ends of an edge, every line, arrow and label
+// cell of the edge lies strictly inside too: one on its border or past it reads as the edge leaving the frame. Run
+// after frames, so every listed frame spans a box.
 export function inFrames(d: Drawing, all: readonly Spot[]): Fail | null {
   const boxes = d.expect.frames.flatMap((id) => frameBox(all, id) ?? [])
   const within = (p: Spot, b: FrameBox) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right

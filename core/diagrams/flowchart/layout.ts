@@ -9,7 +9,8 @@ import { parseFlowchart } from './parse.ts'
 
 export { SPACING } from '../../graph/ladder.ts'
 
-// natural, tight and wrap, plus lrToTd for LR and RL; nothing to key. The title stays in the graph, where T18 draws it.
+// natural, tight and wrap, plus lrToTd for LR and RL; nothing to key. The title stays in the graph, where graph/draw.ts
+// draws it on row 0.
 export const flowchart: DiagramModule<Graph> = {
   type: 'flowchart',
   parse: parseFlowchart,

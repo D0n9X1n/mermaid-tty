@@ -1,5 +1,5 @@
-// Side notes (plan C A3): a note is drawn beside its node when its node's ranks go down (TB, BT), placed by layered;
-// when they go across (LR, RL) it becomes a note node joined to its node by a dotted, headless link edge.
+// Side notes: a note is drawn beside its node when its node's ranks go down (TB, BT), placed by layered; when they go
+// across (LR, RL) it becomes a note node joined to its node by a dotted, headless link edge.
 import { labelLines } from '../text.ts'
 import { ancestors, clusterTree } from './clusters.ts'
 import type { Dir, GEdge, GNode, Graph, NodeRow } from './model.ts'

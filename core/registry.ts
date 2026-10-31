@@ -1,5 +1,5 @@
-// The diagram registry (plan A §6, A1; plan C T40): each header keyword's diagram type, the Tier 1 and Tier 2 types,
-// the types drawn, and their modules.
+// The diagram registry: each header keyword's diagram type, the Tier 1 and Tier 2 types, the types drawn, and their
+// modules.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -118,8 +118,8 @@ export type DiagramModule<M = unknown> = {
   layout(model: M, step: Step, columns: number): Drawing | Fail
 }
 
-// Each type's module, filed by register under the module's own type. It starts empty: T19 and T24 register flowchart's
-// and sequence's here, and diagrams/all.ts loads each Tier 1 type's.
+// Each type's module, filed by register under the module's own type. It starts empty: each type's layout module
+// registers itself here on import, and diagrams/all.ts loads each Tier 1 type's.
 const MODULES: Partial<Record<DiagramType, DiagramModule>> = {}
 
 // Files mod under mod.type, replacing any module filed there before.
@@ -148,8 +148,8 @@ export function lookup(header: string): DiagramModule | Fail {
   return MODULES[type] ?? fail(`unregistered:${type}`)
 }
 
-// The support table (plan C §4, B1): two header rows, then one row per ENABLED type, in ENABLED's order, listing its
-// header keywords in KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
+// The support table: two header rows, then one row per ENABLED type, in ENABLED's order, listing its header keywords in
+// KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
 export function supportTable(): string {
   const keywords = (t: DiagramType) =>
     Object.keys(KEYWORDS)

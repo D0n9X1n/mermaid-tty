@@ -291,8 +291,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     }
   }
   // A back edge leaves its nodes on the outside, its end labels beside them: its lane lies the widest + 1 cells further
-  // out. A block's back edges stay in the lanes its own layout reserved inside its frame (V7), so only this level's
-  // move here.
+  // out. A block's back edges stay in the lanes its own layout reserved inside its frame, so only this level's move
+  // here.
   const blocked = new Set([...subs.values()].flatMap((x) => x.graph.edges.map((e) => e.id)))
   const inStrip = stripLanes(graph, t, boxes, frames, notes, across, room, blocked)
   const backs = graph.edges.filter((e) => e.reversed && !blocked.has(e.id) && !inStrip.has(e.id))
@@ -331,10 +331,10 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
   return { graph, boxes, frames, rows, cols, bands, ...(notes.size > 0 ? { notes } : {}) }
 }
 
-// V8: a back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside
+// A back edge between nodes of one drawn strip at this level takes its lane inside the innermost such strip, beside
 // what the strip holds, as the top level's lie beside all: the strip's far border moves out by what its lanes need, all
 // past it moves with it and each frame around it widens. Innermost strips first, so a strip around one sees it grown.
-// An edge into the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes (V7).
+// An edge into the strip from outside makes it open, not sealed, so its cycle cannot keep to a block's own lanes.
 // Returns the edges.
 function stripLanes(
   g: Graph,

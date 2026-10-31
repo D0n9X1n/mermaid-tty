@@ -96,10 +96,9 @@ export function instances(d: Drawing): Map<string, string[]> {
   return drawn
 }
 
-// X3. em is a text cell's emphasis (BOLD, ITALIC or both); no other cell has one. instances reads it back as its
-// marker, so labels compares emphasis as part of the text. No cell's ch holds a control character: a marker there would
-// read as em, and the row would show the character with no style. Source text never holds one (unsupported), nor does a
-// glyph.
+// em is a text cell's emphasis (BOLD, ITALIC or both); no other cell has one. instances reads it back as its marker, so
+// labels compares emphasis as part of the text. No cell's ch holds a control character: a marker there would read as
+// em, and the row would show the character with no style. Source text never holds one (unsupported), nor does a glyph.
 export const CONTROL = /\p{Cc}/u
 
 export function emphasis(all: readonly Spot[]): Fail | null {

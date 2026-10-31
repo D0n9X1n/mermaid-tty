@@ -1,6 +1,6 @@
 // Member rows: a class's members and an ER entity's attribute columns, built fixed, so that sizes.ts and the drawing
-// never re-wrap them. A row's id, or a column's, owns its cells: T50 draws them, and T86's members contract checks
-// them.
+// never re-wrap them. A row's id, or a column's, owns its cells: graph/draw.ts draws them, and the validator's members
+// check checks them.
 import { fail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
 import { wrap } from '../text.ts'

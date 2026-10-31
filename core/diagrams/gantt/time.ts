@@ -1,7 +1,6 @@
-// Gantt time (plan C T67; matrix gantt section): dateFormat and axisFormat token lists, dates, durations and tick
-// steps. Time is naive wall-clock time: a date is Date.UTC of its fields, so 1d is always 24 h and nothing depends on
-// the host. What Mermaid would not read exactly this way is null or a Fail, so the source is drawn instead; nothing
-// throws.
+// Gantt time: dateFormat and axisFormat token lists, dates, durations and tick steps. Time is naive wall-clock time: a
+// date is Date.UTC of its fields, so 1d is always 24 h and nothing depends on the host. What Mermaid would not read
+// exactly this way is null or a Fail, so the source is drawn instead; nothing throws.
 import { fail, type Fail } from '../../fail.ts'
 import { dec, div, floor, mul, parseDec } from '../../charts/decimal.ts'
 

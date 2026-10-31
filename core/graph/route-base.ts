@@ -148,8 +148,7 @@ export const walls = (p: Placed): Box[] => {
 }
 
 // Whether c lies strictly inside frame box f, off its border; and the drawn frames that hold both of e's ends that way.
-// An edge between nodes of one frame stays inside it (V6): a cell outside one of these, or on its border, is never
-// used.
+// An edge between nodes of one frame stays inside it: a cell outside one of these, or on its border, is never used.
 export const within = (c: Point, f: Box) =>
   c.r > f.row && c.r < f.row + f.rows - 1 && c.c > f.col && c.c < f.col + f.cols - 1
 export function fences(p: Placed, e: GEdge): Box[] {

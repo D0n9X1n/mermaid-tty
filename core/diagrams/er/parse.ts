@@ -98,8 +98,7 @@ const IGNORED = /^(?:style|classDef|class)\s/
 const ACC = /^acc(?:Title|Descr)\s*:/
 // An empty accTitle: or accDescr: fails: Mermaid's lexer then reads the next line as its text (12.2.0, verified).
 const ACC_BLOCK = /^accDescr\s*\{/
-// A keyword where a line starts, in any case, alone or starting a longer word: it is only its own statement (common
-// rule 5).
+// A keyword where a line starts, in any case, alone or starting a longer word: it is only its own statement.
 const KEYWORD = /^(?:erDiagram|direction|subgraph|end|style|classDef|class|click|accTitle|accDescr)/i
 // An attribute: type, name, keys and comment. The type may end in ? and hold (…), [] and a comma, as decimal(10,2); the
 // name may start with *. Either may hold ~, which inBlock checks as Mermaid's lexer reads it. Both are narrower than

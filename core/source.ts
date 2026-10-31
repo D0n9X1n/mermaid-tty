@@ -74,7 +74,7 @@ export function scanSource(text: string): Source | Fail {
     if (!read) {
       return fail('frontmatter')
     }
-    // Typed only once the whole block reads, so a block T41 rejects still falls back as frontmatter.
+    // Typed only once the whole block reads, so a block readConfig rejects still falls back as frontmatter.
     for (const [key, raw] of Object.entries(read)) {
       const value = raw.quoted ? raw.text : typed(raw.text)
       if (value === undefined) {
@@ -99,8 +99,8 @@ export function scanSource(text: string): Source | Fail {
   for (let i = start; i < all.length; i++) {
     const line = all[i]!
     const t = line.trimStart()
-    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config (X4).
-    // Only a line that is one whole directive is read; Mermaid removes it, leaving a blank line.
+    // Mermaid's directiveRegex runs over the whole text, so a %%{ in a comment or in quotes still sets config. Only a
+    // line that is one whole directive is read; Mermaid removes it, leaving a blank line.
     if (line.includes('%%{')) {
       const d = directive(line)
       if (!d) {
@@ -155,7 +155,7 @@ export function scanSource(text: string): Source | Fail {
 
 // Why setting key, value cannot be drawn, or null. A setting draws only if a renderer here honours it, or if Mermaid
 // 12.2.0 was seen (JSDOM, every ok fixture type but mindmap) to change only pixels with it, its value of a type Mermaid
-// takes; any other falls back as 'config:<key>'. X4: Mermaid reads htmlLabels and flowchart.htmlLabels
+// takes; any other falls back as 'config:<key>'. Mermaid reads htmlLabels and flowchart.htmlLabels
 // (getEffectiveHtmlLabels); any value but true draws SVG text through markdownToLines, which drops tokens every
 // drawn-text mode keeps, so any *.htmlLabels but those two set true falls back 'config:htmlLabels'.
 function allowed(key: string, value: Scalar): string | null {
@@ -289,7 +289,7 @@ function flat(o: Record<string, unknown>, prefix: string, out: Record<string, Sc
   return true
 }
 
-// X4. Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.
+// Whitespace that is not space, tab or a line break: JS's \s, which trim() and Jison's \s skip, less those.
 const ODD_WS = /[^\S \t\n]/
 // Headers whose Jison grammar skips ODD_WS in the header line, blank lines and indents as \s, verified against Mermaid
 // 12.2.0 in Chrome.

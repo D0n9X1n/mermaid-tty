@@ -1,6 +1,6 @@
 // Chart scales: where a value lands on a field of w cells or h rows at scale m, and its share of a total. Each is exact
-// on Dec, a Number only at the end; half up is ⌊x + ½⌋ (shared rule 6). m > 0 is the caller's duty, since each layout
-// fails `domain` before it scales.
+// on Dec, a Number only at the end; half up is ⌊x + ½⌋. m > 0 is the caller's duty, since each layout fails `domain`
+// before it scales.
 import { dec, mul, div, floor, ceil, roundHalfUp, toFixed, type Dec } from './decimal.ts'
 
 // k·v/m, exact. k is a small integer: w, 8·w, h or 100.

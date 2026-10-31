@@ -38,8 +38,7 @@ const HREF = String.raw`href\s+"[^"\n]+"`
 const CALL = String.raw`call\s+[^\s(][^(\n]*\([^)\n]*\)`
 const CLICK = new RegExp(String.raw`^click\s+\S+\s+(?:${HREF}(?:\s*${CALL})?|${CALL}(?:\s*${HREF})?)$`)
 // Mermaid's gantt keywords, which its lexer reads in any case and some at any word end. A line that starts with one and
-// that no statement above reads (another case, a longer word, or a statement outside the subset) falls back (common
-// rule 5).
+// that no statement above reads (another case, a longer word, or a statement outside the subset) falls back.
 const KEYWORD =
   /^(?:title|section|dateformat|axisformat|todaymarker|click|acctitle|accdescr|gantt|excludes|includes|weekday|weekend|tickinterval|topaxis|inclusiveenddates)/i
 // A task name Mermaid's lexer reads as something else: % first or second (a comment), a leading YYYY-MM-DD (a date),

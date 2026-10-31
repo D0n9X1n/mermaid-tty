@@ -6,8 +6,8 @@ import { drawable, type Br, type Mode } from '../../text.ts'
 import { unsupported } from '../../width.ts'
 
 // Each text is trimmed. A period's text, its events and a section's name keep every <br> as written: Mermaid 12.2.0
-// splits them only at an exact lowercase <br>, and T83's layout splits there and nowhere else, so <BR>, <br/> and <br
-// /> draw as written.
+// splits them only at an exact lowercase <br>, and the timeline layout splits there and nowhere else, so <BR>, <br/>
+// and <br /> draw as written.
 export type Period = { text: string; events: string[] }
 // A section's name is null for the one section that holds every period of a timeline with no section statement.
 export type Section = { name: string | null; periods: Period[] }

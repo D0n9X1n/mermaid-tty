@@ -1,4 +1,4 @@
-// Exact decimal arithmetic for chart numbers (matrix common rule 8). A Dec is a BigInt fraction n/d with d > 0n,
+// Exact decimal arithmetic for chart numbers, as Mermaid reads them. A Dec is a BigInt fraction n/d with d > 0n,
 // reduced by its gcd, so each value has one form and 0.1 + 0.2 is exactly 0.3.
 export type Dec = { readonly n: bigint; readonly d: bigint }
 

@@ -1,6 +1,6 @@
 // Keyed legends. When an item's text does not fit in place, the item draws a short key there, and its legend row, below
-// the chart, draws that key, one blank, then the item's own text. T87's keys rule checks both: each key once in place
-// and once in its own row, bound to the text its item owns, and a class keyed all or none.
+// the chart, draws that key, one blank, then the item's own text. The validator's keys check checks both: each key once
+// in place and once in its own row, bound to the text its item owns, and a class keyed all or none.
 import { createCanvas, type Drawing } from '../canvas.ts'
 import type { Fail } from '../fail.ts'
 import { fail, isFail } from '../fail.ts'
@@ -136,8 +136,8 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
 }
 
 // d with rows' legend stacked under it, columns wide. Its expect.keys gains every row's key and its expect.keyable
-// gains keyable, with or without rows, so T87 checks the keys d drew in place: one missing there, or one no row lists,
-// fails. A Fail, d's or the legend's, is returned as is.
+// gains keyable, with or without rows, so the validator's keys check checks the keys d drew in place: one missing
+// there, or one no row lists, fails. A Fail, d's or the legend's, is returned as is.
 export function withLegend(
   d: Drawing | Fail,
   rows: readonly LegendRow[],

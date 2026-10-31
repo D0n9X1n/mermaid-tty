@@ -1,6 +1,5 @@
-// Reads a flowchart's header, nodes, shapes, labels, links and subgraphs (plan A, T13, T14, T15 and §7) into the graph
-// model; its styling and accessibility directives draw nothing. A statement it cannot read whole fails, so the fence
-// draws as source.
+// Reads a flowchart's header, nodes, shapes, labels, links and subgraphs into the graph model; its styling and
+// accessibility directives draw nothing. A statement it cannot read whole fails, so the fence draws as source.
 import { ALIASES, type Shape } from '../../caps.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
 import type { Dir, GCluster, GEdge, GNode, Graph, NodeRow } from '../../graph/model.ts'

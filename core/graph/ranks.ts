@@ -1,4 +1,4 @@
-// Cycle breaking and ranks (plan A §7.1–2) over a level's units and the links between them, self-loops left out.
+// Cycle breaking and ranks over a level's units and the links between them, self-loops left out.
 export type Link = { id: string; from: string; to: string; minlen: number }
 
 const outLinks = (ids: readonly string[], links: readonly Link[]): Map<string, Link[]> => {

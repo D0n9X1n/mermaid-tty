@@ -1,4 +1,4 @@
-// The rule-12 glyph set, and the Box Drawing glyph for a cell's arms.
+// The allowed glyph set, and the Box Drawing glyph for a cell's arms.
 import { BOX } from './box-table.ts' // generated: arms 'urdl' (0 none, 1 light, 2 heavy) → glyph; 80 entries
 
 export const boxGlyph = (arms: string): string => BOX[arms]! // arms is never '0000'
@@ -13,7 +13,7 @@ export function junction(dirs: number, w: 'light' | 'heavy' | 'dotted'): string 
     return '┄'
   }
 
-  const k = w === 'heavy' ? '2' : '1' // a dashed line bends and branches light (rule 12)
+  const k = w === 'heavy' ? '2' : '1' // a dashed line bends and branches light
   return boxGlyph([1, 2, 4, 8].map((b) => (dirs & b ? k : '0')).join(''))
 }
 

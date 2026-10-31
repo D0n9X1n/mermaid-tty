@@ -54,7 +54,7 @@ export function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null
   const label = p.boxes.get(`${e.id}:label`)
   const ink = labelInk(p, e)
   const boxes = routeObstacles(p, e)
-  // V7: the lanes beside what lies inside the innermost frame holding both ends, where its layout left room for them.
+  // The lanes beside what lies inside the innermost frame holding both ends, where its layout left room for them.
   const room = fs.toSorted((u, v) => u.rows * u.cols - v.rows * v.cols)[0]
   const held = (b: Box) =>
     !room || (within({ r: b.row, c: b.col }, room) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, room))

@@ -39,6 +39,19 @@ const RULES: Readonly<Record<Mode, readonly (readonly [RegExp, string])[]>> = {
   ],
 }
 
+// text with each <br> that splits under br made a line break.
+function splitBreaks(text: string, br: Br): string {
+  if (br === 'any') {
+    return text.replace(BR_ANY, '\n')
+  }
+
+  if (br === 'lower') {
+    return text.replaceAll('<br>', '\n')
+  }
+
+  return text
+}
+
 // Why text, in a field of mode and br, would draw other text than Mermaid shows: 'entity' or 'html'; null if it draws
 // as written. Each <br> that splits becomes a line break first, so the text on either side is checked on its own.
 export function drawable(text: string, mode: Mode, br: Br): Fail | null {
@@ -50,7 +63,7 @@ export function drawable(text: string, mode: Mode, br: Br): Fail | null {
     return fail('html')
   }
 
-  const t = br === 'any' ? text.replace(BR_ANY, '\n') : br === 'lower' ? text.replaceAll('<br>', '\n') : text
+  const t = splitBreaks(text, br)
   if (br === 'any' && BR_MERMAID.test(t)) {
     return fail('html')
   }
@@ -63,7 +76,7 @@ export function drawable(text: string, mode: Mode, br: Br): Fail | null {
   return mode === 'html' || mode === 'markdown' || mode === 'member' ? rendered(text, mode) : null
 }
 
-// X5. The names Mermaid 12.2.0 was seen to show as their character (rendered under JSDOM); any other name falls back.
+// The names Mermaid 12.2.0 was seen to show as their character (rendered under JSDOM); any other name falls back.
 const NAMED: Readonly<Record<string, string>> = {
   quot: '"',
   amp: '&',
@@ -105,9 +118,9 @@ function codeChar(name: string): string | null {
   return /\s/.test(ch) ? null : ch
 }
 
-// X5. The text a field of mode and br shows once Mermaid decodes its #…; codes (encodeEntities, then the browser), or
-// why it cannot be drawn. Text with no code is drawable's. Otherwise every code must show one character, as codeChar
-// says; the text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a
+// The text a field of mode and br shows once Mermaid decodes its #…; codes (encodeEntities, then the browser), or why
+// it cannot be drawn. Text with no code is drawable's. Otherwise every code must show one character, as codeChar says;
+// the text with each code masked must pass drawable; and so must each piece between <br>s, decoded, as written: a
 // decoded &, <, *, fa: or \n counts as the text it shows, and can never make a <br>.
 export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   if (!/#\w+;/.test(text)) {
@@ -144,10 +157,10 @@ export function decoded(text: string, mode: Mode, br: Br): string | Fail {
   return out
 }
 
-// X3. A markdown field's text as Mermaid shows it, or why it cannot be drawn: the text itself, or with decode its #…;
-// codes decoded (as decoded says), when marked shows it as written; else the marked string core/emphasis.ts makes of
-// its bold and italic. Every other Fail drawable gives stands, and so does 'markdown' where the port cannot match
-// Mermaid, or where the text also has a #…; code or, in a field no <br> splits, a <. An unsupported character fails as
+// A markdown field's text as Mermaid shows it, or why it cannot be drawn: the text itself, or with decode its #…; codes
+// decoded (as decoded says), when marked shows it as written; else the marked string core/emphasis.ts makes of its bold
+// and italic. Every other Fail drawable gives stands, and so does 'markdown' where the port cannot match Mermaid, or
+// where the text also has a #…; code or, in a field no <br> splits, a <. An unsupported character fails as
 // 'unsupported-char U+XXXX', checked before any marker is written, so no marker comes from the source. breaks: an edge,
 // transition or relation label, where Mermaid makes each <br> a newline before marked: text that is not one paragraph
 // then (oneParagraph; a blank line is left to the caller) fails 'markdown', emphasis or not.
@@ -177,7 +190,7 @@ export function styled(
   return emphasize(text, breaks) ?? d
 }
 
-// X3. What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token
+// What createText (Mermaid 12.2.0) does to every HTML label's raw text: replaceIconSubstring swaps an icon token
 // (/(fa[bklrs]?):fa-([\w-]+)/; fad too, to be safe) for an icon, and a $$…$$ makes the whole label KaTeX. A markdown
 // label goes through marked, which drops a \ before ASCII punctuation and renders * and _ emphasis; a plain one shows a
 // literal \n as a <br />. Code, links, headings and lists marked leaves as written (markdownToHTML emits their raw

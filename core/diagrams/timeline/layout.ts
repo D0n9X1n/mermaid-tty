@@ -211,8 +211,7 @@ function td(tl: Timeline, wrapped: boolean, columns: number): Drawing | Fail {
 
 // LR, and a bare header: natural, tight, wrap, then lrToTd, which draws TD wrapped. TD: natural, unwrapped, then wrap.
 // lrToTd needs no unwrapped try first: TD unwrapped fits only when every text fits its field, and then wrapping to
-// those fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns
-// (common rule 3).
+// those fields changes nothing. Any step off the ladder fails 'step'. The title heads the body, wrapped at columns.
 function layout(tl: Timeline, step: Step, columns: number): Drawing | Fail {
   if (!(tl.dir === 'TD' ? TD : LR).includes(step)) {
     return fail('step')

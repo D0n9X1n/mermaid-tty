@@ -1,5 +1,4 @@
-// The fit ladder runner (plan A §6, A4.fit-ladder): a type's layout steps, tried in its order until one draws a drawing
-// the validator accepts.
+// The fit ladder runner: a type's layout steps, tried in its order until one draws a drawing the validator accepts.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail, isFail } from './fail.ts'
