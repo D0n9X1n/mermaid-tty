@@ -160,6 +160,8 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 ```tmux
 # ~/.tmux.conf, or ~/.rmux.conf for RMUX
 set -g allow-passthrough on
+# RMUX only: tell it which terminal each client attaches from
+set -ga update-environment TERM_PROGRAM
 ```
 
 Then start Claude Code through it, for example with an alias:
@@ -168,7 +170,7 @@ Then start Claude Code through it, for example with an alias:
 alias claude='python3 ~/.claude/plugins/marketplaces/mermaid-tty/bin/claude-tmux.py'
 ```
 
-It wraps only inside tmux or RMUX, with passthrough on, in an interactive terminal, when the terminal underneath is kitty, Ghostty or SonicTerm. tmux 3.3 and later report that from the attached client; RMUX keeps no such report, so the launcher reads the `TERM_PROGRAM` its server started with. Anywhere else it runs `claude` unchanged. With several clients attached, or after reattaching from another terminal, start Claude Code again. Without the launcher, mermaid-tty keeps the text drawing inside tmux, screen and Zellij. Claude Code tracks wrapping the commands itself in anthropics/claude-code#100146.
+It wraps only inside tmux or RMUX, with passthrough on, in an interactive terminal, when the terminal underneath is kitty, Ghostty or SonicTerm. tmux 3.3 and later report that from the attached client; RMUX keeps no such report, so there the launcher reads the session's `TERM_PROGRAM`, and only when `update-environment` refreshes it on every attach. Anywhere else it runs `claude` unchanged. With several clients attached, or after reattaching from another terminal, start Claude Code again: the launcher decides when it starts. Without the launcher, mermaid-tty keeps the text drawing inside tmux, screen and Zellij. Claude Code tracks wrapping the commands itself in anthropics/claude-code#100146.
 
 **Which platforms and terminals work?** macOS, Linux and Windows, in any terminal Claude Code supports: Windows Terminal; macOS Terminal, iTerm2 and Ghostty; and Linux terminals. Truecolor terminals show the palettes exactly; 256-color terminals use their available colors. Use a monospaced font with box-drawing and geometric-shape glyphs, plus a CJK font for CJK labels. Keep ambiguous-width characters set to one column so lines meet.
 
