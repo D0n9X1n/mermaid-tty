@@ -117,7 +117,8 @@ const SPEC_LABELS = [
   /§\s?\d/,
   /(?<![\w.-])T\d{1,3}\b(?![\w-]|\.\w)/,
   /(?<![\w.#-])[DVXS]\d{1,2}[a-z]?\b(?![\w-]|\.\w)/,
-  /\b(?:common )?rules? \d+\b/,
+  // A rule of Mermaid's own grammar (flow.jison rule 108) is a real place to look; a spec's numbered rule is not.
+  /(?<!jison )\b(?:common )?rules? \d+\b/,
 ]
 
 export function citesSpec(prose: string): boolean {

@@ -104,7 +104,19 @@ test('spec-reference: comments state the fact, not a label of a spec or task the
   }
 
   // Acceptance check IDs name CI steps and test prefixes, and words that merely look like labels are not.
-  for (const text of ['A8.no-build', 'VR.gallery', 'TS7', 'utf-8', 'UTF-16', 'D3.js', 'H2', 'x2', 'e3#2', 'step 2']) {
+  for (const text of [
+    'A8.no-build',
+    'VR.gallery',
+    'TS7',
+    'utf-8',
+    'UTF-16',
+    'D3.js',
+    'H2',
+    'x2',
+    'e3#2',
+    'step 2',
+    'flow.jison rule 108',
+  ]) {
     assert.ok(!citesSpec(text), text)
   }
 })
