@@ -25,7 +25,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 |---|---|
 | ![A mermaid fence as Claude Code shows it today](assets/readme/before.svg) | ![The same fence drawn by mermaid-tty](assets/readme/after.svg) |
 
-**Mermaid's own picture**, in kitty, Ghostty and SonicTerm, in your theme's colors on its own background:
+**Mermaid's own picture**, in kitty, Ghostty and SonicTerm: every node in its own palette color, on your theme's background:
 
 ![The reply from the top of this page in Ghostty, its fence shown as Mermaid's own picture](assets/readme/picture.svg)
 
@@ -62,7 +62,8 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme.
 - **Six themes.** `default` follows your Claude Code theme; `nord`, `dracula`, `gruvbox` and `solarized` use their official colors; `mono` draws without color.
 - **The source stays yours.** The transcript keeps the Mermaid text, `/copy` copies it exactly, and one command shows it again.
-- **Nothing else to install.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies.
+- **Nothing else to install, nothing left behind.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies, and no picture files once a session closes.
+- **Made for the CLI.** It works in Claude Code's terminal; the desktop app and SDK keep their own drawing.
 
 ## Quick start
 
