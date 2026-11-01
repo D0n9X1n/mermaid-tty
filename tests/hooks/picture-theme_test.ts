@@ -250,7 +250,9 @@ test('a curated look fills with its surface only where the spec says', () => {
 })
 
 // Every theme variable the styles of the 13 drawn types read in Mermaid 11.17 and 12.2, and the families base derives
-// from them: a curated look sets each, so nothing is left for base to derive.
+// from them: a curated look sets each, so nothing they draw is left for base to derive. Families only other types read
+// (architecture, requirement, venn, event modeling, and base's own surface and surfacePeer steps) are left to base,
+// since no picture mermaid-tty makes draws them.
 const READ = [
   'activationBkgColor activationBorderColor activeTaskBkgColor activeTaskBorderColor actorBkg actorBorder',
   'actorLineColor actorTextColor altBackground altSectionBkgColor arrowheadColor background border2 classText',
