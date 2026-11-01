@@ -291,7 +291,7 @@ test('A2: no sequence golden draws a label on a frame border or beside one of it
     }
   }
 })
-// vr-A: mono has no fill, so a note must show itself by glyphs: ┆ caps either side of each line, the note's own.
+// mono has no fill, so a note must show itself by glyphs: ┆ caps either side of each line, the note's own.
 const mono = (t: string) => (explain(`sequenceDiagram\n${t}`, { columns: 60, theme: 'mono' }) as any).drawing
 test('A2: in mono a note reads apart from a message label: Note right of A then A->>B differs from A->>B: n<br/>x', () => {
   const a = mono('Note right of A: n\nA->>B: x')

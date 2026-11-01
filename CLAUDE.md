@@ -88,6 +88,7 @@ node scripts/e2e/run.ts                     # real Claude Code against a mock AP
 
 - Write the failing test first, watch it fail, then make it pass.
 - Goldens (`goldens/**`) change only on purpose: regenerate with `UPDATE_GOLDEN=1`, then review every changed drawing.
+- **No process artifacts in the repo.** Review records, verdicts, hash ledgers, logs and checkpoints belong in the PR and its issue, never in tracked files, and no check reads them. The repo holds the product, its tests and the wiki.
 - `core/` and `hooks/` run in Claude Code's module sandbox: no Node globals, no DOM, relative `.ts` imports only. `scripts/check-portable.ts` enforces it.
 - No build step and no runtime dependency. Tooling that needs packages gets its own folder and lockfile, as `scripts/docs/` and `scripts/e2e/` do; default tests must not import them.
 - CI runs on Linux, macOS and Windows; all must pass.

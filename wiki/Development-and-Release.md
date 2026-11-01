@@ -18,7 +18,7 @@ The repository root is the plugin root: the marketplace entry in `.claude-plugin
 | `fixtures/` | Mermaid sources for tests and scripts. |
 | `scripts/` | Checks, generators, the end-to-end harness and the docs tooling. |
 | `assets/` | `icon.svg` and the README images. |
-| `ci/` | `coverage.json`, which maps each check ID to its CI step, and `reviews/`, the recorded verdicts of the golden reviews. |
+| `ci/` | `coverage.json`, which maps each check ID to its CI step. Reviews live in their PRs, not in the repo. |
 | `CLAUDE.md` | Working rules for coding agents: workflow, release, documentation, code style and tests. |
 | `wiki/` | This wiki: the only documentation. There is no `docs/` folder, and `check-docs` fails if one appears. |
 | `.github/workflows/` | CI, the wiki publisher and the release workflow. |
@@ -47,7 +47,7 @@ node scripts/render-gallery.ts
 node scripts/check-ci-coverage.ts
 ```
 
-- `bash scripts/check.sh` is the must-pass suite, under `set -euo pipefail`. It runs `claude plugin validate .`, then `claude plugin test .` (the mods kit tests), then `node scripts/check.ts all`: every `tests/**/*_test.ts`, then the portability, benchmark, fresh-clone, corpus, gallery, tangle, review-verdict and palette checks. It does not discover `scripts/tests/` or docs specs; CI runs those separately.
+- `bash scripts/check.sh` is the must-pass suite, under `set -euo pipefail`. It runs `claude plugin validate .`, then `claude plugin test .` (the mods kit tests), then `node scripts/check.ts all`: every `tests/**/*_test.ts`, then the portability, benchmark, fresh-clone, corpus, gallery, tangle and palette checks. It does not discover `scripts/tests/` or docs specs; CI runs those separately.
 - `npm ci --prefix scripts/e2e` installs the end-to-end harness's pinned packages. `node scripts/e2e/run.ts` runs the harness: real Claude Code, in a pseudo-terminal, against a mock Messages API, with no account or secret.
 - `node scripts/render-gallery.ts` renders every non-reject fixture of every diagram type (each `fixtures/` folder except `corpus`) at 60 and 80 columns under `nord`, plus a CJK sheet per type and a six-theme sheet, as SVG for visual review.
 - `node scripts/check-ci-coverage.ts` fails if an acceptance check has no CI step.
@@ -58,7 +58,6 @@ For a faster loop:
 |---|---|
 | `node --test` | All automatically discovered Node tests, including `scripts/tests/*_test.ts`; no install needed. Docs specs use a separate command. |
 | `node scripts/typecheck.ts` | Checks `core/` with pinned TypeScript; includes hooks when the generated Claude Code types are present. Uses the npx cache, not a build step. |
-| `node scripts/check-review-hashes.ts` | Verifies recorded review hashes; add `--require-pass` to require passing coverage of `ci/reviews/required.json`. |
 | `node --test 'scripts/tests/*.docs-spec.ts'` | Docs-tooling tests, after installing `scripts/docs` dependencies. |
 | `node scripts/check.ts <ID>` | One acceptance check's steps, such as `A4` or `A8.portability`. |
 | `node scripts/explain.ts FILE COLS` | How the fit ladder draws `FILE`'s diagram at `COLS` columns: the step it took and the rows, or the reason it falls back. |
@@ -105,10 +104,10 @@ Reviewed, not enforced: comments say why (the Mermaid behavior mirrored, the ter
 
 `.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.308 installed from npm.
 
-- **check**, on all three OSes: the code style gate (`node scripts/style/run.ts`), bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh`, review hashes and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
+- **check**, on all three OSes: the code style gate (`node scripts/style/run.ts`), bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh` and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
 - **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
 - **gallery**, on Ubuntu only: renders the SVG gallery and uploads it as a build artifact for visual review.
-- **claude-code-versions**, every four hours: runs the A9 end-to-end harness against each newly published Claude Code version, so a release that breaks the plugin shows up within hours.
+- **claude-code-versions**, every four hours: runs the A9 end-to-end harness against each newly published Claude Code version, so a release that breaks the plugin shows up within hours. Each leg uploads its result as an artifact, and those artifacts are the record of which versions were tested: the job writes nothing back to the repo.
 
 Every step that runs a `.sh` script uses `shell: bash`, which is Git Bash on Windows, and every script runs under `set -euo pipefail`. So any failing command fails the job, the native Windows `claude plugin validate .` and `claude plugin test .` included. Actions are pinned by commit SHA.
 
@@ -174,7 +173,7 @@ flowchart LR
 
 ## Release
 
-1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes. Its review step needs a passing verdict for every path in `ci/reviews/required.json`, and every reviewed file must still match its recorded SHA-256. Re-review changed files; translation review is not replaced by the wiki checker.
+1. Check that CI is green on `main` on all three OSes, that `version` in `.claude-plugin/plugin.json` is the version you are releasing, and that `bash scripts/check.sh` passes.
 2. Don't write release notes: the tag workflow generates them. Every change goes through a PR whose title reads well in a list and whose commit body says `Fixes #N` for each issue it resolves. The release PR, titled `mermaid-tty v<version>`, only bumps the version and is left out of the notes. Preview the notes for a tag with `python3 scripts/release-notes.py v<version>` (set `PREVIOUS_TAG` to compare with another tag).
 
 3. **Publish the wiki first.** Wait for `publish-wiki` to succeed on the exact `main` commit to be tagged, and check the published pages. GitHub creates a wiki's repository only after its first page is saved in the web UI. If cloning fails, save one page there, then re-run the workflow.

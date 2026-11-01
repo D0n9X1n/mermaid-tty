@@ -44,27 +44,11 @@
     "gallery-upload",
     "check"
   ],
-  "VR.reviewers": [
-    "review-hashes",
-    "check"
-  ],
   "VR.tangled": "check",
-  "VR.passes": [
-    "review-hashes",
-    "check"
-  ],
-  "B1": [
-    "check",
-    "review-hashes"
-  ],
+  "B1": "check",
   "B1.docs-check": "check",
-  "B1.beauty-review": "review-hashes",
-  "B2": [
-    "check",
-    "review-hashes"
-  ],
+  "B2": "check",
   "B2.per-paragraph": "check",
-  "B2.translation-review": "review-hashes",
   "B3": [
     "check",
     "release-wiki-run",
