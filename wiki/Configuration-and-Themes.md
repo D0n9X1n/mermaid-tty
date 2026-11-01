@@ -51,10 +51,11 @@ mermaid-tty reads the option once, when it loads, so restart Claude Code after a
 | `value` | `success` | `#81A1C1` | `#6272A4` | `#458588` | `#859900` |
 | text on a filled pill | `inverseText` | `#2E3440` | `#282A36` | `#282828` | `#FDF6E3` |
 | background | none | `#2E3440` | `#282A36` | `#282828` | `#002B36` |
+| surface (pictures only) | none | `#3B4252` | `#44475A` | `#3C3836` | `#073642` |
 
 In every palette but `mono`, node and decision pills are filled: a pill's label and fill cells take the role's color as their background, and the "text on a filled pill" color as their text. Its end caps keep the role's color. `mono` fills nothing.
 
-mermaid-tty doesn't paint a palette's background. A diagram sits on your terminal's own background, and only pills are filled. The background row is the color each curated palette is checked against: `scripts/check-palettes.ts` asserts that every role has a contrast ratio of at least 3:1 against it, and that every pair of roles, and every pair of series colors, is at least 0.08 apart in OKLab. So a curated palette reads best on a terminal background close to its own. `default` and `mono` are exempt from the check.
+A text drawing doesn't paint a palette's background. It sits on your terminal's own background, and only pills are filled. A picture does paint it (see Pictures below). `scripts/check-palettes.ts` also checks that each surface sits close to its background but visibly apart from it, between 0.03 and 0.2 in OKLab. The background row is the color each curated palette is checked against: `scripts/check-palettes.ts` asserts that every role has a contrast ratio of at least 3:1 against it, and that every pair of roles, and every pair of series colors, is at least 0.08 apart in OKLab. So a curated palette reads best on a terminal background close to its own. `default` and `mono` are exempt from the check.
 
 Series-colored items, such as lanes, branches, sections and chart series, take the series colors `s1` to `s8`, cycling through them in source order:
 
@@ -68,6 +69,21 @@ Series-colored items, such as lanes, branches, sections and chart series, take t
 | `s6` | `claude` | `#81A1C1` | `#BD93F9` | `#D3869B` | `#D33682` |
 | `s7` | `permission` | `#BF616A` | `#FF5555` | `#458588` | `#6C71C4` |
 | `s8` | `planMode` | `#5E81AC` | `#6272A4` | `#928374` | `#2AA198` |
+
+## Pictures
+
+Where the terminal shows pictures (see Pictures in [Usage](Usage)), each one is drawn in the same theme as the text drawings:
+
+- **Curated palettes** (`nord`, `dracula`, `gruvbox`, `solarized`) draw on Mermaid's `base` theme, with every color taken from the palette, on the palette's own background.
+  - Nodes and actors are filled in `node`. Edges, lines and canvas text use `edge`. Notes use `note`, and sequence activations `decision`.
+  - Edge labels are chips in the node color. Subgraphs, state groups and gantt bands are filled with the surface and framed in `frame`.
+  - Pie, git, journey, timeline, mindmap and chart series cycle through `s1` to `s8`. Journey sections are toned toward the background, so its task text stays readable.
+- **`default`** keeps Mermaid's own dark or light theme, following your Claude Code theme, on a transparent background. Its pie, git, timeline and mindmap colors are Claude Code's.
+- **`mono`** draws no picture.
+
+Mermaid fills a flowchart decision like any other node, and colors a sequence arrowhead like its line, so a picture does too. A sequence `rect` or `box` color written in the diagram is drawn as written.
+
+`hooks/picture-theme.ts` builds each look's Mermaid config, and `goldens/pictures/` keeps the reviewed result. Every color it chooses is `#rrggbb`. Every text and line color it chooses has a contrast of at least 3:1 against what it is drawn on, the same floor the text drawings meet. Where a role's own color can't meet that on a fill, such as a title on dracula's surface, the text takes the palette color that reads best. `node scripts/render-picture-gallery.ts OUT_DIR [MMDC]` draws one rich diagram of each type in every look, for review by eye, and flags any picture whose text falls under 3:1.
 
 ## Roles
 

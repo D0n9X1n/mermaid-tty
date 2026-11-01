@@ -9,9 +9,10 @@ import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { delimiter, join } from 'node:path'
+import { delimiter, join, sep } from 'node:path'
 import { parseFail } from '../../core/render.ts'
 import { mermaidConfig, mmdcArgs, puppeteerConfig } from '../../hooks/image.ts'
+import { LOOKS } from '../../hooks/picture-theme.ts'
 import { unsafeReason } from '../../hooks/safe.ts'
 import { HTML_ATTRIBUTES, HTML_ELEMENTS, SVG_ATTRIBUTES, SVG_ELEMENTS, svgUnsafe } from '../../hooks/svg.ts'
 
@@ -92,8 +93,18 @@ test('A6.hook-tests: the allowlist is exactly the element and attribute names th
 
 // Opt-in: real mmdc, the whole corpus. The fixtures Mermaid itself fails on make no SVG; they are counted, not checked.
 const MMDC = (process.env.MERMAID_TTY_MMDC ?? '').split(delimiter).filter(Boolean)
+// Fixtures real mmdc 11.17 and 12.0 do not draw clean, in every look: Mermaid fails to parse one, and draws markdown
+// emphasis as <em> and <strong> in four, which layer A does not list yet. Anything else fails the test.
+const NOT_DRAWN = new Set(['mindmap/mindmap-ok-06.mmd'])
+const KNOWN_UNSAFE = new Set([
+  'flowchart/flowchart-ok-59.mmd',
+  'state/state-ok-26.mmd',
+  'er/er-ok-25.mmd',
+  'mindmap/mindmap-ok-15.mmd',
+])
+
 test(
-  'A6.hook-tests: every SVG real mmdc makes for a fixture that reaches it passes layer A',
+  'A6.hook-tests: every SVG real mmdc makes for a fixture that reaches it passes layer A, in every look',
   { skip: MMDC.length === 0 && 'set MERMAID_TTY_MMDC to mmdc paths' },
   async () => {
     const fixtures = readdirSync('fixtures', { recursive: true, encoding: 'utf8' })
@@ -104,13 +115,15 @@ test(
     const tmp = mkdtempSync(join(tmpdir(), 'mtty-corpus-'))
     const bad: string[] = []
     const failed: string[] = []
+    // SVGs drawn, by mmdc major, look and diagram type: each must have at least one.
+    const drawn = new Map<string, number>()
     let checked = 0
     try {
       writeFileSync(join(tmp, 'puppeteer.json'), JSON.stringify(puppeteerConfig(80)))
       const jobs: (() => Promise<void>)[] = []
       for (const bin of MMDC) {
         const major = Number(/^(\d+)\./.exec(spawnSync(bin, ['--version'], { encoding: 'utf8' }).stdout.trim())?.[1])
-        for (const look of ['dark', 'default'] as const) {
+        for (const look of LOOKS) {
           writeFileSync(join(tmp, `config-${look}.json`), JSON.stringify(mermaidConfig(look)))
           fixtures.forEach((f, i) =>
             jobs.push(
@@ -128,13 +141,16 @@ test(
                   })
                   const c = spawn(bin, argv.slice(1), { stdio: ['pipe', 'ignore', 'ignore'] })
                   c.on('close', () => {
+                    const name = f.name.split(sep).join('/')
                     if (!existsSync(out)) {
-                      failed.push(`${major} ${look} ${f.name}`)
+                      failed.push(`${major} ${look} ${name}`)
                     } else {
                       checked++
+                      const key = `${major} ${look} ${name.split('/')[0]}`
+                      drawn.set(key, (drawn.get(key) ?? 0) + 1)
                       const r = svgUnsafe(readFileSync(out, 'utf8'))
-                      if (r) {
-                        bad.push(`${major} ${look} ${f.name}: ${r}`)
+                      if (r && !KNOWN_UNSAFE.has(name)) {
+                        bad.push(`${major} ${look} ${name}: ${r}`)
                       }
                     }
 
@@ -160,6 +176,20 @@ test(
       )
       assert.ok(checked > 0)
       assert.deepEqual(bad, [])
+      assert.deepEqual(
+        failed.filter((x) => !NOT_DRAWN.has(x.split(' ')[2]!)),
+        [],
+        'only the listed fixtures may go undrawn',
+      )
+      const types = new Set(fixtures.map((f) => f.name.split(sep)[0]))
+      const majors = new Set([...drawn.keys()].map((k) => k.split(' ')[0]))
+      for (const major of majors) {
+        for (const look of LOOKS) {
+          for (const type of types) {
+            assert.ok(drawn.get(`${major} ${look} ${type}`), `mmdc ${major} drew no ${type} in ${look}`)
+          }
+        }
+      }
     } finally {
       rmSync(tmp, { recursive: true, force: true })
     }

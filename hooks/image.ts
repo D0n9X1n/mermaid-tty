@@ -3,18 +3,19 @@
 // undefined (the text drawing stands) and queues one render, at most one running at a time. Safety, in layers: a source
 // goes to mmdc only when hooks/safe.ts (layer B) finds no way in it to style, configure, fetch or load anything and
 // core parses it; Chromium under mmdc runs with no network, loopback included (puppeteerConfig); mmdc's Mermaid config
-// holds only securityLevel strict and the theme; and the authority, layer A (hooks/svg.ts), checks the SVG mmdc draws
-// for the source before a second run makes the PNG. Termination: each source, look and width is rendered at most once
-// per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
-// redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
+// holds only securityLevel strict and the look's theme and #rrggbb colors; and the authority, layer A (hooks/svg.ts),
+// checks the SVG mmdc draws for the source before a second run makes the PNG. Termination: each source, look and width
+// is rendered at most once per store, so a picture the bounded cache drops stays text rather than rendering again, and
+// a batch of renders redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import type { Images } from './mode.ts'
+import { mmdcTheme, pictureTheme, type Look } from './picture-theme.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
 import { svgUnsafe } from './svg.ts'
 
 export type Picture = { png: string; columns: number; rows: number }
-export type Look = 'dark' | 'default' // Mermaid's theme: dark, or its light default
+export type { Look }
 export type Limits = { entries: number; bytes: number; tried: number }
 export type Pictures = {
   limits: Limits
@@ -62,8 +63,9 @@ export const puppeteerConfig = (columns: number) => ({
   defaultViewport: { width: columns * PAGE, height: 600 },
 })
 
-// The Mermaid config mmdc gets with -c: securityLevel strict and the theme, nothing else.
-export const mermaidConfig = (look: Look) => ({ securityLevel: 'strict', theme: look })
+// The Mermaid config mmdc gets with -c: securityLevel strict, the look's theme and its colors, and the journey colors
+// Mermaid takes from diagram config (hooks/picture-theme.ts); nothing else.
+export const mermaidConfig = (look: Look) => pictureTheme(look).config
 
 // The arguments that differ by mmdc's major version: before 12, -w sizes the page; from 12, an SVG gets
 // --no-font-embed, and a PNG nothing more.
@@ -96,9 +98,9 @@ export function mmdcArgs(o: {
     '-e',
     o.format,
     '-b',
-    'transparent',
+    pictureTheme(o.look).background,
     '-t',
-    o.look,
+    mmdcTheme(o.look),
     '-c',
     o.config,
     '-p',
@@ -132,8 +134,9 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
 }
 
 // The look a picture is drawn in, or null for none: images off or mono means none; under images auto the terminal must
-// show pixels (told once per store), while images on takes that on the person's word; and Claude Code's theme must say
-// dark or light, since the background is transparent and a guess could draw dark lines on a dark terminal.
+// show pixels (told once per store), while images on takes that on the person's word. A curated palette paints its own
+// background, so it is its own look; default draws on a transparent background, so Claude Code's theme must say dark or
+// light, since a guess could draw dark lines on a dark terminal.
 export async function pictureLook($: any, s: Pictures, theme: string, images: Images = 'auto'): Promise<Look | null> {
   if (images === 'off' || theme === 'mono') {
     return null
@@ -146,6 +149,10 @@ export async function pictureLook($: any, s: Pictures, theme: string, images: Im
     }
   }
 
+  if (theme === 'nord' || theme === 'dracula' || theme === 'gruvbox' || theme === 'solarized') {
+    return theme
+  }
+
   try {
     const v = (await $.config.list()).find((r: any) => r.key === 'theme')?.value
     if (typeof v !== 'string') {
@@ -153,10 +160,10 @@ export async function pictureLook($: any, s: Pictures, theme: string, images: Im
     }
 
     if (v.startsWith('dark')) {
-      return 'dark'
+      return 'default-dark'
     }
 
-    return v.startsWith('light') ? 'default' : null
+    return v.startsWith('light') ? 'default-light' : null
   } catch {
     return null
   }

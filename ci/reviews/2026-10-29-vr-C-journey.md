@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
+| core/themes.ts | e47d91952041be69bb7c74837f0e93160662abbea680f00fbecbd363fe995067 |
 | goldens/journey/journey-ok-01.golden | 9a0a0ebf2cb6da9bd0d6017db46b06c95f813dd29b69fd93197a8b88b095bf9e |
 | goldens/journey/journey-ok-02.golden | 54e229eb2fc132b35e40a5401200e8659a2953007b2c34ad01eb85e839f6376f |
 | goldens/journey/journey-ok-03.golden | 8304994c3a2630c5ec320f6df9cd92814e163be37719a3fc2db7a63f3b223b75 |
@@ -21,3 +21,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 - The cross-family reviewer (gpt-6-astra) read every journey golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
 - 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
 - 2026-10-31: 4 golden(s) re-hashed after the title moved to the center of its drawing (journey-ok-01, journey-ok-03, journey-ok-04, journey-ok-08). Each changed only in its title row's leading spaces, checked line by line against the reviewed golden; every other row and every role row is byte-identical, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after each palette gained `surface`, a second shade only pictures use. No role, series or background changed, and every golden is byte-identical, so the verdict stands.

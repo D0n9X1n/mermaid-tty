@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
+| core/themes.ts | e47d91952041be69bb7c74837f0e93160662abbea680f00fbecbd363fe995067 |
 | goldens/gitGraph/gitGraph-ok-01.golden | 740ac97923e622628c3c175f9e8e01b5125dd6d5831052dd7607d69927fca2cb |
 | goldens/gitGraph/gitGraph-ok-02.golden | 8dc87042ef0aeaf4f59cbe1b2525261442196e0f400c83e2dbf1504832e85dd9 |
 | goldens/gitGraph/gitGraph-ok-03.golden | 4ee8cbc78ea2d016f032e70f8d78bcaa231a03b4b94db5b18216cff7d141dd0c |
@@ -30,3 +30,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 - v1.1.1 (#16): the cross-family reviewer (gpt-6-astra) read gitGraph-ok-16 (a %%{init}%% directive setting mainBranchName) against its source at 60, 80 and 120 columns: branches, topology and roles pass. Mermaid also shows the two bare commits' generated ids (0- or 1- plus a random suffix), which change on every render; the PM ruled they stay hidden, as wiki Usage documents.
 - 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
 - 2026-10-31: 1 golden(s) re-hashed after the title moved to the center of its drawing (gitGraph-ok-07). Each changed only in its title row's leading spaces, checked line by line against the reviewed golden; every other row and every role row is byte-identical, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after each palette gained `surface`, a second shade only pictures use. No role, series or background changed, and every golden is byte-identical, so the verdict stands.

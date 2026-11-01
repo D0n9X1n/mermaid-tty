@@ -1,0 +1,745 @@
+{
+  "config": {
+    "securityLevel": "strict",
+    "theme": "base",
+    "themeVariables": {
+      "darkMode": true,
+      "background": "#282A36",
+      "fontFamily": "\"trebuchet ms\", verdana, arial, sans-serif",
+      "dropShadow": "none",
+      "useGradient": false,
+      "nodeBorder": "#8BE9FD",
+      "primaryBorderColor": "#8BE9FD",
+      "nodeBkg": "#8BE9FD",
+      "mainBkg": "#8BE9FD",
+      "primaryColor": "#8BE9FD",
+      "edgeLabelBackground": "#8BE9FD",
+      "primaryTextColor": "#282A36",
+      "nodeTextColor": "#282A36",
+      "secondaryColor": "#F1FA8C",
+      "secondaryTextColor": "#282A36",
+      "tertiaryColor": "#44475A",
+      "tertiaryTextColor": "#F8F8F2",
+      "defaultLinkColor": "#F8F8F2",
+      "lineColor": "#F8F8F2",
+      "arrowheadColor": "#FF79C6",
+      "textColor": "#F8F8F2",
+      "titleColor": "#F8F8F2",
+      "altBackground": "#44475A",
+      "compositeBackground": "#44475A",
+      "clusterBkg": "#44475A",
+      "border2": "#BD93F9",
+      "clusterBorder": "#BD93F9",
+      "compositeTitleBackground": "#44475A",
+      "noteBorderColor": "#FFB86C",
+      "noteBkgColor": "#FFB86C",
+      "noteTextColor": "#282A36",
+      "actorBorder": "#8BE9FD",
+      "actorBkg": "#8BE9FD",
+      "actorTextColor": "#282A36",
+      "actorLineColor": "#F8F8F2",
+      "signalColor": "#F8F8F2",
+      "signalTextColor": "#50FA7B",
+      "activationBorderColor": "#F1FA8C",
+      "activationBkgColor": "#F1FA8C",
+      "labelBoxBkgColor": "#44475A",
+      "labelBoxBorderColor": "#BD93F9",
+      "labelTextColor": "#BD93F9",
+      "loopTextColor": "#50FA7B",
+      "sequenceNumberColor": "#282A36",
+      "classText": "#282A36",
+      "stateBkg": "#8BE9FD",
+      "stateLabelColor": "#282A36",
+      "transitionColor": "#F8F8F2",
+      "transitionLabelColor": "#282A36",
+      "labelBackgroundColor": "#8BE9FD",
+      "specialStateColor": "#F8F8F2",
+      "innerEndBackground": "#8BE9FD",
+      "attributeBackgroundColorEven": "#8BE9FD",
+      "attributeBackgroundColorOdd": "#8BE9FD",
+      "rowEven": "#8BE9FD",
+      "rowOdd": "#8BE9FD",
+      "pie1": "#8BE9FD",
+      "pie2": "#50FA7B",
+      "pie3": "#F1FA8C",
+      "pie4": "#FFB86C",
+      "pie5": "#FF79C6",
+      "pie6": "#BD93F9",
+      "pie7": "#FF5555",
+      "pie8": "#6272A4",
+      "pie9": "#8BE9FD",
+      "pie10": "#50FA7B",
+      "pie11": "#F1FA8C",
+      "pie12": "#FFB86C",
+      "pieSectionTextColor": "#282A36",
+      "pieTitleTextColor": "#FF5555",
+      "pieLegendTextColor": "#F8F8F2",
+      "pieStrokeColor": "#282A36",
+      "pieOuterStrokeColor": "#F8F8F2",
+      "pieOpacity": "1",
+      "git0": "#8BE9FD",
+      "gitBranchLabel0": "#282A36",
+      "gitInv0": "#282A36",
+      "git1": "#50FA7B",
+      "gitBranchLabel1": "#282A36",
+      "gitInv1": "#282A36",
+      "git2": "#F1FA8C",
+      "gitBranchLabel2": "#282A36",
+      "gitInv2": "#282A36",
+      "git3": "#FFB86C",
+      "gitBranchLabel3": "#282A36",
+      "gitInv3": "#282A36",
+      "git4": "#FF79C6",
+      "gitBranchLabel4": "#282A36",
+      "gitInv4": "#282A36",
+      "git5": "#BD93F9",
+      "gitBranchLabel5": "#282A36",
+      "gitInv5": "#282A36",
+      "git6": "#FF5555",
+      "gitBranchLabel6": "#282A36",
+      "gitInv6": "#282A36",
+      "git7": "#6272A4",
+      "gitBranchLabel7": "#282A36",
+      "gitInv7": "#282A36",
+      "commitLabelBackground": "#44475A",
+      "commitLabelColor": "#F8F8F2",
+      "tagLabelBorder": "#F1FA8C",
+      "tagLabelBackground": "#F1FA8C",
+      "tagLabelColor": "#282A36",
+      "cScale0": "#8BE9FD",
+      "cScaleInv0": "#282A36",
+      "cScaleLabel0": "#282A36",
+      "cScale1": "#50FA7B",
+      "cScaleInv1": "#282A36",
+      "cScaleLabel1": "#282A36",
+      "cScale2": "#F1FA8C",
+      "cScaleInv2": "#282A36",
+      "cScaleLabel2": "#282A36",
+      "cScale3": "#FFB86C",
+      "cScaleInv3": "#282A36",
+      "cScaleLabel3": "#282A36",
+      "cScale4": "#FF79C6",
+      "cScaleInv4": "#282A36",
+      "cScaleLabel4": "#282A36",
+      "cScale5": "#BD93F9",
+      "cScaleInv5": "#282A36",
+      "cScaleLabel5": "#282A36",
+      "cScale6": "#FF5555",
+      "cScaleInv6": "#282A36",
+      "cScaleLabel6": "#282A36",
+      "cScale7": "#6272A4",
+      "cScaleInv7": "#282A36",
+      "cScaleLabel7": "#282A36",
+      "cScale8": "#8BE9FD",
+      "cScaleInv8": "#282A36",
+      "cScaleLabel8": "#282A36",
+      "cScale9": "#50FA7B",
+      "cScaleInv9": "#282A36",
+      "cScaleLabel9": "#282A36",
+      "cScale10": "#F1FA8C",
+      "cScaleInv10": "#282A36",
+      "cScaleLabel10": "#282A36",
+      "cScale11": "#8BE9FD",
+      "cScaleInv11": "#282A36",
+      "cScaleLabel11": "#6272A4",
+      "fillType0": "#5A8A9A",
+      "fillType1": "#3C9259",
+      "fillType2": "#8D9261",
+      "fillType3": "#947151",
+      "fillType4": "#94527E",
+      "fillType5": "#735F98",
+      "fillType6": "#944046",
+      "fillType7": "#454E6D",
+      "actor0": "#8BE9FD",
+      "actor1": "#50FA7B",
+      "actor2": "#F1FA8C",
+      "actor3": "#FFB86C",
+      "actor4": "#FF79C6",
+      "actor5": "#BD93F9",
+      "faceColor": "#F1FA8C",
+      "sectionBkgColor2": "#44475A",
+      "sectionBkgColor": "#44475A",
+      "altSectionBkgColor": "#282A36",
+      "excludeBkgColor": "#44475A",
+      "taskBorderColor": "#8BE9FD",
+      "taskBkgColor": "#8BE9FD",
+      "activeTaskBorderColor": "#F1FA8C",
+      "activeTaskBkgColor": "#F1FA8C",
+      "doneTaskBorderColor": "#6272A4",
+      "doneTaskBkgColor": "#6272A4",
+      "critBorderColor": "#FF79C6",
+      "critBkgColor": "#FF79C6",
+      "taskTextLightColor": "#282A36",
+      "taskTextColor": "#282A36",
+      "taskTextDarkColor": "#282A36",
+      "taskTextOutsideColor": "#F8F8F2",
+      "taskTextClickableColor": "#50FA7B",
+      "gridColor": "#F8F8F2",
+      "todayLineColor": "#FF79C6",
+      "vertLineColor": "#BD93F9",
+      "quadrant4Fill": "#44475A",
+      "quadrant1Fill": "#44475A",
+      "quadrant3Fill": "#282A36",
+      "quadrant2Fill": "#282A36",
+      "quadrant1TextFill": "#F8F8F2",
+      "quadrant2TextFill": "#F8F8F2",
+      "quadrant3TextFill": "#F8F8F2",
+      "quadrant4TextFill": "#F8F8F2",
+      "quadrantPointFill": "#FF79C6",
+      "quadrantPointTextFill": "#50FA7B",
+      "quadrantYAxisTextFill": "#F8F8F2",
+      "quadrantXAxisTextFill": "#F8F8F2",
+      "quadrantExternalBorderStrokeFill": "#BD93F9",
+      "quadrantInternalBorderStrokeFill": "#BD93F9",
+      "quadrantTitleFill": "#FF5555",
+      "xyChart": {
+        "backgroundColor": "#282A36",
+        "titleColor": "#FF5555",
+        "dataLabelColor": "#F8F8F2",
+        "legendTextColor": "#F8F8F2",
+        "xAxisTitleColor": "#F8F8F2",
+        "xAxisLabelColor": "#F8F8F2",
+        "xAxisTickColor": "#F8F8F2",
+        "xAxisLineColor": "#F8F8F2",
+        "yAxisTitleColor": "#F8F8F2",
+        "yAxisLabelColor": "#F8F8F2",
+        "yAxisTickColor": "#F8F8F2",
+        "yAxisLineColor": "#F8F8F2",
+        "plotColorPalette": "#8BE9FD,#50FA7B,#F1FA8C,#FFB86C,#FF79C6,#BD93F9,#FF5555,#6272A4"
+      }
+    },
+    "journey": {
+      "actorColours": [
+        "#8BE9FD",
+        "#50FA7B",
+        "#F1FA8C",
+        "#FFB86C",
+        "#FF79C6",
+        "#BD93F9"
+      ]
+    }
+  },
+  "background": "#282A36",
+  "pairs": [
+    {
+      "what": "node and edge label text",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "secondary text",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "subgraph title",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "edges",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "arrowheads",
+      "ink": "#FF79C6",
+      "on": "#282A36"
+    },
+    {
+      "what": "text on the canvas",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "titles",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "titles",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "note text",
+      "ink": "#282A36",
+      "on": "#FFB86C"
+    },
+    {
+      "what": "actor text",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "lifelines",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "messages",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "message text",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "loop boxes",
+      "ink": "#BD93F9",
+      "on": "#282A36"
+    },
+    {
+      "what": "loop label",
+      "ink": "#BD93F9",
+      "on": "#44475A"
+    },
+    {
+      "what": "loop condition",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "sequence number",
+      "ink": "#282A36",
+      "on": "#F8F8F2"
+    },
+    {
+      "what": "class text",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "state text",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "transitions",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "transition label",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "start and end states",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#50FA7B"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#FFB86C"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#FF79C6"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#BD93F9"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#FF5555"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282A36",
+      "on": "#6272A4"
+    },
+    {
+      "what": "pie title",
+      "ink": "#FF5555",
+      "on": "#282A36"
+    },
+    {
+      "what": "pie legend",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "pie outline",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 0",
+      "ink": "#8BE9FD",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 0 label",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "branch 1",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 1 label",
+      "ink": "#282A36",
+      "on": "#50FA7B"
+    },
+    {
+      "what": "branch 2",
+      "ink": "#F1FA8C",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 2 label",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "branch 3",
+      "ink": "#FFB86C",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 3 label",
+      "ink": "#282A36",
+      "on": "#FFB86C"
+    },
+    {
+      "what": "branch 4",
+      "ink": "#FF79C6",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 4 label",
+      "ink": "#282A36",
+      "on": "#FF79C6"
+    },
+    {
+      "what": "branch 5",
+      "ink": "#BD93F9",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 5 label",
+      "ink": "#282A36",
+      "on": "#BD93F9"
+    },
+    {
+      "what": "branch 6",
+      "ink": "#FF5555",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 6 label",
+      "ink": "#282A36",
+      "on": "#FF5555"
+    },
+    {
+      "what": "branch 7",
+      "ink": "#6272A4",
+      "on": "#282A36"
+    },
+    {
+      "what": "branch 7 label",
+      "ink": "#282A36",
+      "on": "#6272A4"
+    },
+    {
+      "what": "commit labels",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "tag labels",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "section 0",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "section 1",
+      "ink": "#282A36",
+      "on": "#50FA7B"
+    },
+    {
+      "what": "section 2",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "section 3",
+      "ink": "#282A36",
+      "on": "#FFB86C"
+    },
+    {
+      "what": "section 4",
+      "ink": "#282A36",
+      "on": "#FF79C6"
+    },
+    {
+      "what": "section 5",
+      "ink": "#282A36",
+      "on": "#BD93F9"
+    },
+    {
+      "what": "section 6",
+      "ink": "#282A36",
+      "on": "#FF5555"
+    },
+    {
+      "what": "section 7",
+      "ink": "#282A36",
+      "on": "#6272A4"
+    },
+    {
+      "what": "section 8",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "section 9",
+      "ink": "#282A36",
+      "on": "#50FA7B"
+    },
+    {
+      "what": "section 10",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#6272A4",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#6272A4",
+      "on": "#282A36"
+    },
+    {
+      "what": "journey section 0",
+      "ink": "#F8F8F2",
+      "on": "#5A8A9A"
+    },
+    {
+      "what": "journey section 1",
+      "ink": "#F8F8F2",
+      "on": "#3C9259"
+    },
+    {
+      "what": "journey section 2",
+      "ink": "#F8F8F2",
+      "on": "#8D9261"
+    },
+    {
+      "what": "journey section 3",
+      "ink": "#F8F8F2",
+      "on": "#947151"
+    },
+    {
+      "what": "journey section 4",
+      "ink": "#F8F8F2",
+      "on": "#94527E"
+    },
+    {
+      "what": "journey section 5",
+      "ink": "#F8F8F2",
+      "on": "#735F98"
+    },
+    {
+      "what": "journey section 6",
+      "ink": "#F8F8F2",
+      "on": "#944046"
+    },
+    {
+      "what": "journey section 7",
+      "ink": "#F8F8F2",
+      "on": "#454E6D"
+    },
+    {
+      "what": "gantt task text",
+      "ink": "#282A36",
+      "on": "#8BE9FD"
+    },
+    {
+      "what": "gantt task text",
+      "ink": "#282A36",
+      "on": "#FF79C6"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#282A36",
+      "on": "#F1FA8C"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#282A36",
+      "on": "#6272A4"
+    },
+    {
+      "what": "gantt text beside a task",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "gantt text beside a task",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "gantt clickable task",
+      "ink": "#50FA7B",
+      "on": "#44475A"
+    },
+    {
+      "what": "gantt clickable task",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "gantt grid",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "gantt today line",
+      "ink": "#FF79C6",
+      "on": "#282A36"
+    },
+    {
+      "what": "gantt marker line",
+      "ink": "#BD93F9",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant 1 text",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "quadrant 2 text",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant 3 text",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant 4 text",
+      "ink": "#F8F8F2",
+      "on": "#44475A"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#FF79C6",
+      "on": "#44475A"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#FF79C6",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#50FA7B",
+      "on": "#44475A"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant axes",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#BD93F9",
+      "on": "#282A36"
+    },
+    {
+      "what": "quadrant title",
+      "ink": "#FF5555",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart axes",
+      "ink": "#F8F8F2",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart title",
+      "ink": "#FF5555",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 1",
+      "ink": "#8BE9FD",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 2",
+      "ink": "#50FA7B",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 3",
+      "ink": "#F1FA8C",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 4",
+      "ink": "#FFB86C",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 5",
+      "ink": "#FF79C6",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 6",
+      "ink": "#BD93F9",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 7",
+      "ink": "#FF5555",
+      "on": "#282A36"
+    },
+    {
+      "what": "chart series 8",
+      "ink": "#6272A4",
+      "on": "#282A36"
+    }
+  ]
+}

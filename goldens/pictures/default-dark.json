@@ -1,0 +1,225 @@
+{
+  "config": {
+    "securityLevel": "strict",
+    "theme": "dark",
+    "themeVariables": {
+      "pie1": "#b1b9f9",
+      "pie2": "#4eba65",
+      "pie3": "#ffc107",
+      "pie4": "#ff6b80",
+      "pie5": "#af87ff",
+      "pie6": "#d77757",
+      "pie7": "#6a9bcc",
+      "pie8": "#48968c",
+      "pie9": "#b1b9f9",
+      "pie10": "#4eba65",
+      "pie11": "#ffc107",
+      "pie12": "#ff6b80",
+      "pieSectionTextColor": "#000000",
+      "pieOpacity": "1",
+      "git0": "#b1b9f9",
+      "gitBranchLabel0": "#000000",
+      "git1": "#4eba65",
+      "gitBranchLabel1": "#000000",
+      "git2": "#ffc107",
+      "gitBranchLabel2": "#000000",
+      "git3": "#ff6b80",
+      "gitBranchLabel3": "#000000",
+      "git4": "#af87ff",
+      "gitBranchLabel4": "#000000",
+      "git5": "#d77757",
+      "gitBranchLabel5": "#000000",
+      "git6": "#6a9bcc",
+      "gitBranchLabel6": "#000000",
+      "git7": "#48968c",
+      "gitBranchLabel7": "#000000",
+      "cScale0": "#b1b9f9",
+      "cScaleLabel0": "#000000",
+      "cScale1": "#4eba65",
+      "cScaleLabel1": "#000000",
+      "cScale2": "#ffc107",
+      "cScaleLabel2": "#000000",
+      "cScale3": "#ff6b80",
+      "cScaleLabel3": "#000000",
+      "cScale4": "#af87ff",
+      "cScaleLabel4": "#000000",
+      "cScale5": "#d77757",
+      "cScaleLabel5": "#000000",
+      "cScale6": "#6a9bcc",
+      "cScaleLabel6": "#000000",
+      "cScale7": "#48968c",
+      "cScaleLabel7": "#000000",
+      "cScale8": "#b1b9f9",
+      "cScaleLabel8": "#000000",
+      "cScale9": "#4eba65",
+      "cScaleLabel9": "#000000",
+      "cScale10": "#ffc107",
+      "cScaleLabel10": "#000000",
+      "cScale11": "#d77757",
+      "cScaleLabel11": "#ffffff"
+    },
+    "journey": {
+      "actorColours": [
+        "#b1b9f9",
+        "#4eba65",
+        "#ffc107",
+        "#ff6b80",
+        "#af87ff",
+        "#d77757"
+      ]
+    }
+  },
+  "background": "transparent",
+  "pairs": [
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#b1b9f9"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#4eba65"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#ffc107"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#ff6b80"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#af87ff"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#d77757"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#6a9bcc"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#000000",
+      "on": "#48968c"
+    },
+    {
+      "what": "branch 0 label",
+      "ink": "#000000",
+      "on": "#b1b9f9"
+    },
+    {
+      "what": "branch 1 label",
+      "ink": "#000000",
+      "on": "#4eba65"
+    },
+    {
+      "what": "branch 2 label",
+      "ink": "#000000",
+      "on": "#ffc107"
+    },
+    {
+      "what": "branch 3 label",
+      "ink": "#000000",
+      "on": "#ff6b80"
+    },
+    {
+      "what": "branch 4 label",
+      "ink": "#000000",
+      "on": "#af87ff"
+    },
+    {
+      "what": "branch 5 label",
+      "ink": "#000000",
+      "on": "#d77757"
+    },
+    {
+      "what": "branch 6 label",
+      "ink": "#000000",
+      "on": "#6a9bcc"
+    },
+    {
+      "what": "branch 7 label",
+      "ink": "#000000",
+      "on": "#48968c"
+    },
+    {
+      "what": "section 0",
+      "ink": "#000000",
+      "on": "#b1b9f9"
+    },
+    {
+      "what": "section 1",
+      "ink": "#000000",
+      "on": "#4eba65"
+    },
+    {
+      "what": "section 2",
+      "ink": "#000000",
+      "on": "#ffc107"
+    },
+    {
+      "what": "section 3",
+      "ink": "#000000",
+      "on": "#ff6b80"
+    },
+    {
+      "what": "section 4",
+      "ink": "#000000",
+      "on": "#af87ff"
+    },
+    {
+      "what": "section 5",
+      "ink": "#000000",
+      "on": "#d77757"
+    },
+    {
+      "what": "section 6",
+      "ink": "#000000",
+      "on": "#6a9bcc"
+    },
+    {
+      "what": "section 7",
+      "ink": "#000000",
+      "on": "#48968c"
+    },
+    {
+      "what": "section 8",
+      "ink": "#000000",
+      "on": "#b1b9f9"
+    },
+    {
+      "what": "section 9",
+      "ink": "#000000",
+      "on": "#4eba65"
+    },
+    {
+      "what": "section 10",
+      "ink": "#000000",
+      "on": "#ffc107"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#ffffff",
+      "on": "#d77757"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#ffffff",
+      "on": "#000000"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#ffffff",
+      "on": "#1e1e1e"
+    }
+  ]
+}

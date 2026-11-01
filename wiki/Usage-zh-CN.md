@@ -112,7 +112,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 - **kitty、Ghostty 或 SonicTerm**，并直接运行：`TERM` 为 `xterm-kitty` 或 `xterm-ghostty`，或 `TERM_PROGRAM` 为 `SonicTerm` 且 `TERM` 为它设置的 `xterm-256color`，且不在 tmux、screen 或 Zellij 中，它们不传递像素。对于 SonicTerm，mermaid-tty 还会用 `ps` 列出进程，确认持有当前会话终端的是 SonicTerm 自己的可执行文件（`sonicterm-mac` 或 `sonicterm`），因此从 SonicTerm 内部启动的其他终端即使保留了这两个变量也不算。在 Windows 上只有 SonicTerm 算数：`TERM_PROGRAM` 必须为 `SonicTerm`，mermaid-tty 用 PowerShell 列出进程，确认承载当前会话控制台的是 `sonicterm-windows.exe`。从 kitty 或 Ghostty 内部启动的其他终端同样不算。
 - PATH 上有 **mermaid-cli** 11 或 12：`npm i -g @mermaid-js/mermaid-cli` 会安装 `mmdc`。mermaid-tty 不内置它，因此插件仍然没有依赖。
 
-新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题、透明背景和 `securityLevel: strict`，并按可用列宽缩放。
+新图表先以文本绘制。`mmdc` 在后台逐个渲染，完成后回复会带着图片重绘。图片使用你的 mermaid-tty 主题绘制：精选配色使用其颜色并铺满其背景；`default` 使用与 Claude Code 主题匹配的 Mermaid 深色或浅色主题，背景透明（见[配置与主题](Configuration-and-Themes-zh-CN)中的“图片”）。图片以 `securityLevel: strict` 渲染，并按可用列宽缩放。
 
 只有 mermaid-tty 能解析的图表才会变成图片，因此图片不会显示文本渲染器拒绝的类型或语句，例如 HTML 标签、图标或图片节点。已解析但过宽、无法以文本绘制的图表，可以显示为图片。`mmdc` 运行的 Chromium 没有任何网络访问（包括本机回环），因此图表无法让它获取任何内容。每个图表在一个会话中最多渲染一次：如果图片缓存将其丢弃，它会回到文本绘制。
 

@@ -11,6 +11,7 @@ import {
   puppeteerConfig,
   REMOVE_TEMP,
 } from '../../hooks/image.ts'
+import { pictureTheme } from '../../hooks/picture-theme.ts'
 
 // The temp dir's two Node runs, named for what they do: make (MAKE_TEMP) and remove (REMOVE_TEMP).
 const D = '/tmp/mermaid-tty.Ab12Cd'
@@ -149,13 +150,13 @@ test('A6.hook-tests: a picture taller than 255 rows is no picture', () => {
   assert.equal(fit(160, 9000, 80), null)
 })
 
-test('A6.hook-tests: the look: dark or light from the Claude Code theme; none for mono, no pixels, or an unknown theme', async () => {
+test('A6.hook-tests: the look: default follows the Claude Code theme; none for mono, no pixels, or an unknown theme', async () => {
   for (const [theme, want] of [
-    ['dark', 'dark'],
-    ['dark-daltonized', 'dark'],
-    ['dark-ansi', 'dark'],
-    ['light', 'default'],
-    ['light-ansi', 'default'],
+    ['dark', 'default-dark'],
+    ['dark-daltonized', 'default-dark'],
+    ['dark-ansi', 'default-dark'],
+    ['light', 'default-light'],
+    ['light-ansi', 'default-light'],
     ['auto', null],
     [undefined, null],
     [3, null],
@@ -164,7 +165,6 @@ test('A6.hook-tests: the look: dark or light from the Claude Code theme; none fo
     assert.equal(await pictureLook(f.$, createPictures(), 'default'), want, String(theme))
   }
 
-  assert.equal(await pictureLook(fake().$, createPictures(), 'nord'), 'dark')
   assert.equal(await pictureLook(fake().$, createPictures(), 'mono'), null)
   assert.equal(
     await pictureLook(fake({ vars: { TERM: 'xterm-kitty', TMUX: '1' } }).$, createPictures(), 'default'),
@@ -184,10 +184,27 @@ test('A6.hook-tests: images off is no look; images on needs no detected terminal
   assert.equal(await pictureLook(fake().$, createPictures(), 'default', 'off'), null)
   assert.equal(await pictureLook(fake(bare).$, createPictures(), 'default', 'auto'), null)
   const f = fake(bare)
-  assert.equal(await pictureLook(f.$, createPictures(), 'default', 'on'), 'dark')
+  assert.equal(await pictureLook(f.$, createPictures(), 'default', 'on'), 'default-dark')
   assert.deepEqual(f.asked, [])
   assert.equal(await pictureLook(fake(bare).$, createPictures(), 'mono', 'on'), null)
   assert.equal(await pictureLook(fake({ ...bare, theme: 'auto' }).$, createPictures(), 'default', 'on'), null)
+})
+
+// A curated palette paints its own background, so its look is the palette whatever Claude Code's theme, unknown too.
+test('a curated palette is its own look, light or dark Claude Code theme alike', async () => {
+  for (const palette of ['nord', 'dracula', 'gruvbox', 'solarized']) {
+    for (const theme of ['dark', 'light', 'auto', null]) {
+      assert.equal(await pictureLook(fake({ theme }).$, createPictures(), palette), palette, `${palette} ${theme}`)
+    }
+  }
+
+  const f = fake()
+  f.$.config.list = async () => {
+    throw new Error('no')
+  }
+  assert.equal(await pictureLook(f.$, createPictures(), 'nord'), 'nord')
+  assert.equal(await pictureLook(fake().$, createPictures(), 'nord', 'off'), null)
+  assert.equal(await pictureLook(fake({ vars: { TERM: 'xterm-256color' } }).$, createPictures(), 'nord'), null)
 })
 
 test('A6.hook-tests: the terminal is told once per store', async () => {
@@ -221,7 +238,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
   const f = fake()
   const s = createPictures()
   const body = fc('A')
-  assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
+  assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.deepEqual(
     f.runs.map((r) => label(r.argv)),
@@ -276,14 +293,14 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
   assert.deepEqual(
     f.writes.map(([p, t]) => [p, JSON.parse(t)]),
     [
-      [`${D}/config.json`, { securityLevel: 'strict', theme: 'dark' }],
+      [`${D}/config.json`, pictureTheme('default-dark').config],
       [`${D}/puppeteer.json`, puppeteerConfig(80)],
     ],
   )
   assert.deepEqual(f.runs.filter((r) => isRemove(r.argv))[0]!.argv, ['node', '-e', REMOVE_TEMP, D])
   assert.equal(redraws(f), 1)
   assert.deepEqual(f.logs, [])
-  assert.deepEqual(pictureFor(f.$, s, body, 'dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
+  assert.deepEqual(pictureFor(f.$, s, body, 'default-dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
   assert.equal(f.runs.length, 5) // the hit runs nothing
 })
 
@@ -292,7 +309,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
 test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed', async () => {
   const f = fake({ version: '12.0.0' })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
   const [sv, m] = argvOf(f, 'mmdc')
   for (const r of [sv!, m!]) {
@@ -302,7 +319,7 @@ test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed',
 
   assert.ok(sv!.argv.includes('--no-font-embed'))
   assert.equal(m!.argv.includes('--no-font-embed'), false)
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
   assert.deepEqual(f.logs, [])
 })
 
@@ -310,9 +327,9 @@ test('A5.errors: mmdc missing, or a version that is not one, logs once and rende
   for (const version of [new Error('spawn mmdc ENOENT'), 'hello']) {
     const f = fake({ version })
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
-    pictureFor(f.$, s, fc('B'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(probes(f), 1)
     assert.equal(renders(f), 0)
@@ -329,15 +346,15 @@ test('A5.errors: a source core does not parse, or one over 50000 characters, nev
   const f = fake()
   const s = createPictures()
   for (const body of ['flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
-    assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined, body)
+    assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined, body)
   }
 
   await s.idle()
   assert.deepEqual(f.runs, [])
   assert.deepEqual(f.logs, [])
   const big = `flowchart TD\nA["${'x'.repeat(50000)}"] --> B`
-  pictureFor(f.$, s, big, 'dark', 80, f.log)
-  pictureFor(f.$, s, big, 'dark', 80, f.log)
+  pictureFor(f.$, s, big, 'default-dark', 80, f.log)
+  pictureFor(f.$, s, big, 'default-dark', 80, f.log)
   await s.idle()
   assert.deepEqual(f.runs, [])
   assert.deepEqual(f.logs, ['image: source over 50000 characters'])
@@ -372,8 +389,8 @@ test('A5.errors: an unsafe source never reaches mmdc: the themeCSS repro, and on
     f.$.process.run = async (argv: string[]) => {
       assert.fail(`ran ${argv.join(' ')} for ${JSON.stringify(body)}`)
     }
-    assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
-    pictureFor(f.$, s, body, 'dark', 80, f.log)
+    assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined)
+    pictureFor(f.$, s, body, 'default-dark', 80, f.log)
     await s.idle()
     assert.deepEqual(f.logs, [`image: unsafe source (${reason})`], body)
   }
@@ -394,10 +411,10 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
   ] as const) {
     const f = fake({ svg })
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(renders(f), 0, svg)
-    assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+    assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
     assert.deepEqual(f.logs, [`image: unsafe svg (${reason})`], svg)
     assert.equal(f.runs.filter((r) => isRemove(r.argv)).length, 1)
     assert.equal(redraws(f), 0)
@@ -405,10 +422,10 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
 
   const f = fake({ svg: SVG })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
   assert.equal(renders(f), 1)
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
 })
 
 test('A6.hook-tests: requests for one diagram, theme and width share one render; another theme or width is its own', async () => {
@@ -416,11 +433,11 @@ test('A6.hook-tests: requests for one diagram, theme and width share one render;
   const s = createPictures()
   const body = fc('A')
   for (let i = 0; i < 3; i++) {
-    pictureFor(f.$, s, body, 'dark', 80, f.log)
+    pictureFor(f.$, s, body, 'default-dark', 80, f.log)
   }
 
-  pictureFor(f.$, s, body, 'default', 80, f.log)
-  pictureFor(f.$, s, body, 'dark', 60, f.log)
+  pictureFor(f.$, s, body, 'default-light', 80, f.log)
+  pictureFor(f.$, s, body, 'default-dark', 60, f.log)
   await s.idle()
   assert.equal(renders(f), 3)
   assert.equal(probes(f), 1)
@@ -440,7 +457,7 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
   })
   const s = createPictures()
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
   }
 
   await s.idle()
@@ -455,9 +472,13 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
 test('A6.hook-tests: a picture inside 90% of the page is scaled into the columns', async () => {
   const f = fake({ w: 1700, h: 100 })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
-  assert.deepEqual(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), { png: png(1700, 100), columns: 80, rows: 2 })
+  assert.deepEqual(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), {
+    png: png(1700, 100),
+    columns: 80,
+    rows: 2,
+  })
   assert.deepEqual(f.logs, [])
 })
 
@@ -494,7 +515,7 @@ for (const [name, o, reason] of [
   test(`A5.errors: ${name} keeps the text drawing, logs why, and cleans up`, async () => {
     const f = fake(o)
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(f.logs.length, 1)
     assert.match(f.logs[0]!, reason)
@@ -503,7 +524,7 @@ for (const [name, o, reason] of [
       [['node', '-e', REMOVE_TEMP, D]],
     )
     assert.equal(redraws(f), 0)
-    assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+    assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
     await s.idle()
     assert.equal(f.runs.filter((r) => isMake(r.argv)).length, 1)
   })
@@ -520,7 +541,7 @@ test('A5.errors: no temp dir, or a path the temp run should not have made, runs 
     const run = f.$.process.run
     f.$.process.run = async (argv: string[], init: any) =>
       isMake(argv) ? (f.runs.push({ argv, init }), made) : run(argv, init)
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.deepEqual(
       f.runs.map((r) => label(r.argv)),
@@ -537,18 +558,18 @@ test('A5.errors: a failing log or redraw never escapes the background render', a
   f.$.ui.invalidate = () => {
     throw new Error('gone')
   }
-  pictureFor(f.$, s, fc('A'), 'dark', 80, () => {
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, () => {
     throw new Error('log down')
   })
   await s.idle()
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
   const g = fake({
     run: async () => {
       throw new Error('x')
     },
   })
   const t = createPictures()
-  pictureFor(g.$, t, fc('A'), 'dark', 80, () => {
+  pictureFor(g.$, t, fc('A'), 'default-dark', 80, () => {
     throw new Error('log down')
   })
   await t.idle()
@@ -561,12 +582,12 @@ test('A8.cache: the picture cache is bounded by entries; a dropped picture is no
   const f = fake()
   const s = createPictures({ entries: 2 })
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
-  assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
-  assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+  assert.ok(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log))
+  assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.equal(renders(f), 3)
 })
@@ -575,13 +596,13 @@ test('A8.cache: the picture cache is bounded by bytes of PNG', async () => {
   const f = fake()
   const s = createPictures({ bytes: 100 }) // each PNG here is 44 base64 characters
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
-  assert.ok(pictureFor(f.$, s, fc('B'), 'dark', 80, f.log))
-  assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
-  assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+  assert.ok(pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log))
+  assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.equal(renders(f), 3)
 })
@@ -590,12 +611,12 @@ test('A8.cache: at most 8 renders wait; a request past that is dropped, and aske
   const f = fake()
   const s = createPictures()
   for (let i = 0; i < 10; i++) {
-    pictureFor(f.$, s, fc(`D${i}`), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(`D${i}`), 'default-dark', 80, f.log)
   }
 
   await s.idle()
   assert.equal(renders(f), 8)
-  pictureFor(f.$, s, fc('D9'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('D9'), 'default-dark', 80, f.log)
   await s.idle()
   assert.equal(renders(f), 9)
 })
@@ -604,12 +625,12 @@ test('A8.cache: the keys tried are bounded; past that, a new diagram stays text'
   const f = fake()
   const s = createPictures({ tried: 2 })
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
   assert.equal(renders(f), 2)
-  assert.equal(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log), undefined)
+  assert.equal(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log), undefined)
 })
 
 // The review's repro: 17 diagrams in one reply, a cache of 16, and every redraw asking for all 17 again. Each renders
@@ -620,7 +641,7 @@ test('A8.cache: 17 diagrams over a 16-picture cache render 17 times and stop', a
   const bodies = Array.from({ length: 17 }, (_, i) => fc(`N${i}`))
   let shown = 0
   const draw = () => {
-    shown = bodies.filter((b) => pictureFor(f.$, s, b, 'dark', 80, f.log)).length
+    shown = bodies.filter((b) => pictureFor(f.$, s, b, 'default-dark', 80, f.log)).length
   }
   f.$.ui.invalidate = () => {
     f.asked.push('invalidate')
@@ -654,4 +675,21 @@ test('A5.errors: only a fresh mermaid-tty dir directly in the named temp dir is 
   assert.equal(made(3, D), null)
   assert.equal(madeTempDir('/tmp/mermaid-tty.Ab12Cd\n'), null)
   assert.equal(madeTempDir(''), null)
+})
+
+// A curated look paints its palette's background behind both runs, and names a theme mmdc 11 accepts; the config's own
+// theme, base, is the one Mermaid draws with.
+test('a curated look renders on its background, with its own config', async () => {
+  const s = createPictures()
+  const f = fake({ run: async () => ({ exitCode: 0, stdout: '', stderr: '' }) })
+  pictureFor(f.$, s, fc('A'), 'nord', 80, f.log)
+  await s.idle()
+  const runs = argvOf(f, 'mmdc')
+  for (const r of runs) {
+    const argv = r!.argv
+    assert.equal(argv[argv.indexOf('-b') + 1], '#2E3440')
+    assert.equal(argv[argv.indexOf('-t') + 1], 'dark')
+  }
+
+  assert.deepEqual(JSON.parse(f.writes.find(([p]) => p.endsWith('config.json'))![1]), pictureTheme('nord').config)
 })

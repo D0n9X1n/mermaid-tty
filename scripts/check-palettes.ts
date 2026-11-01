@@ -10,12 +10,17 @@ const CHECKED: readonly ThemeName[] = ['nord', 'dracula', 'gruvbox', 'solarized'
 const MIN_CONTRAST = 3
 const MIN_DISTANCE = 0.08
 const HEX = /^#[0-9a-f]{6}$/i
+// How far a surface sits from its background in OKLab: far enough to see a subgraph's box, close enough to read as the
+// same canvas, as nord1 does on nord0.
+const SURFACE_DISTANCE = [0.03, 0.2] as const
 
 type Swatch = readonly [ink: string, color: string]
 
 // The inks whose color is not '#rrggbb'. Only a palette with none of them is measured.
 const notHex = (p: Palette) =>
-  Object.entries({ background: p.background, ...p.roles, ...p.series }).filter(([, c]) => !HEX.test(c ?? ''))
+  Object.entries({ background: p.background, surface: p.surface, ...p.roles, ...p.series }).filter(
+    ([, c]) => !HEX.test(c ?? ''),
+  )
 // A group's [ink, color] pairs, for a palette that notHex passed.
 const swatches = (group: Readonly<Record<string, string | null>>) => Object.entries(group) as Swatch[]
 
@@ -38,7 +43,14 @@ export function paletteProblems(themes: Readonly<Record<ThemeName, Palette>> = T
 
     const bg = p.background!
     const roles = swatches(p.roles)
+    const [near, far] = SURFACE_DISTANCE
+    const shade = oklabDistance(p.surface!, bg)
     return [
+      ...(shade < near || shade > far
+        ? [
+            `${t}.surface ${p.surface}: OKLab distance ${shade.toFixed(4)} from the background, outside ${near} to ${far}`,
+          ]
+        : []),
       ...roles.flatMap(([ink, c]) => {
         const k = contrast(c, bg)
         return k < MIN_CONTRAST ? [`${t}.${ink} ${c}: contrast ${k.toFixed(2)} < ${MIN_CONTRAST} on ${bg}`] : []
