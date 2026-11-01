@@ -76,3 +76,5 @@ flowchart TD
 更新时，运行 `claude plugin update mermaid-tty@mermaid-tty` 并重启 Claude Code。移除插件的方法见[用法](Usage-zh-CN)中的“卸载”。
 
 如果图表显示为源码，这是 mermaid-tty 主动回退：它无法准确绘制该图。使用 `claude --debug` 启动 Claude Code，在调试日志中查看原因，并参阅[用法](Usage-zh-CN)中的“回退”。
+
+mermaid-tty 是自由软件，以 [MIT 许可证](https://github.com/D0n9X1n/mermaid-tty/blob/main/LICENSE)发布。

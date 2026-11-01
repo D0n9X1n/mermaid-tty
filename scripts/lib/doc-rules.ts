@@ -20,25 +20,27 @@ const BADGES: [string, RegExp][] = [
   ['license', /\[!\[License[^\]]*\]\([^)]*license[^)]*\)\]/i],
   ['stars', new RegExp(`\\[!\\[Stars\\]\\([^)]*${SHIELDS}\\/stars\\/D0n9X1n\\/mermaid-tty[^)]*\\)\\]`)],
 ]
-const SECTIONS = ['Install', 'Before and after', 'Supported diagrams', 'Themes', 'Configuration', 'FAQ', 'Development']
-const FAQ = [
+// The README is the front page: previews, features and a quick start; everything else lives in the wiki it links to.
+const SECTIONS = ['Previews', 'Features', 'Quick start']
+// What the front page must still say, somewhere: what happens when a diagram can't be drawn, that it fits the width,
+// CJK, where pictures show, the three platforms, and the commands to see the source and copy it.
+const FACTS = [
   /falls? ?back/i,
   /width|columns/i,
   /CJK/,
-  /Windows Terminal/,
-  /macOS Terminal/,
-  /iTerm2/,
   /Ghostty/,
+  /macOS/,
   /Linux/,
-  /256-colou?r/,
-  /fonts?\b/i,
+  /Windows/,
   /\/mermaid-tty source/,
   /\/mermaid-tty diagram/,
   /\/copy\b/,
 ]
-// The diagram types the README's Supported diagrams table lists: the backquoted name opening each row.
+// The diagram types the README's Features section names: each backquoted word on its supported-types line.
 export const supportedTypes = (md: string) =>
-  [...(section(md, 'Supported diagrams') ?? '').matchAll(/^\| `([\w-]+)` \|/gm)].map((m) => m[1]!)
+  [...((section(md, 'Features') ?? '').match(/^.*13 diagram types.*$/m)?.[0] ?? '').matchAll(/`([\w-]+)`/g)].map(
+    (m) => m[1]!,
+  )
 // B1 images: only what renders counts; each displayed assets/ image is a rendered diagram or on this short non-diagram
 // list.
 export const NON_DIAGRAM = ['assets/icon.svg']
@@ -143,14 +145,13 @@ export function grammarErrors(where: string, md: string, readme: boolean): strin
   return e
 }
 // B1: what the README must hold, read from the GFM tree: the hero (logo, tagline, badges) before the first ##, the
-// install block, every section and FAQ answer, both wiki links, every generated image, and the local commands; and what
-// it must not: hand-drawn diagram glyphs, the ctrl+o claim, or anything grammarErrors rejects.
+// install block, every section and fact, both wiki links and every generated image; and what it must not: hand-drawn
+// diagram glyphs, the ctrl+o claim, or anything grammarErrors rejects. The local commands live in the wiki's
+// Development pages (check-wiki.ts).
 export function readmeErrors(md: string, generated: string[]): string[] {
   const e: string[] = []
   const tree = parse(md)
   const h2 = firstH2(tree, md)
-  const faq = section(md, 'FAQ') ?? ''
-  const dev = section(md, 'Development') ?? ''
   const top = tree.children!.filter((n) => n.position!.start.offset < h2)
   if (!all(tree, 'html').some((n) => HERO.test(n.value!) && n.position!.start.offset < h2)) {
     e.push('hero: logo <img src="assets/icon.svg"> missing')
@@ -181,9 +182,9 @@ export function readmeErrors(md: string, generated: string[]): string[] {
     }
   }
 
-  for (const re of FAQ) {
-    if (!re.test(faq)) {
-      e.push(`FAQ: no answer matching /${re.source}/`)
+  for (const re of FACTS) {
+    if (!re.test(md)) {
+      e.push(`README: says nothing matching /${re.source}/`)
     }
   }
 
@@ -204,11 +205,6 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   }
 
   e.push(...imageErrors('README', md, generated))
-  for (const c of LOCAL) {
-    if (!dev.includes(c)) {
-      e.push(`Development: does not show ${c}`)
-    }
-  }
 
   const drawn = /[\u2500-\u25ff]/.exec(md)
   if (drawn) {
@@ -220,7 +216,7 @@ export function readmeErrors(md: string, generated: string[]): string[] {
   }
 
   if (!supportedTypes(md).length) {
-    e.push('Supported diagrams: the table is empty')
+    e.push('Features: no line naming the 13 diagram types')
   }
 
   e.push(...grammarErrors('README', md, true))

@@ -26,7 +26,7 @@ test('every README image renders through core without falling back', () => {
     assert.ok(renderImage(img).svg.startsWith('<svg '), img.file)
   }
 })
-test('--readme writes exactly the ten manifest images from core, independent of cwd', (t) => {
+test('--readme writes exactly the manifest images from core, independent of cwd', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'mtty-readme-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   for (const p of ['package.json', 'core', 'hooks', 'scripts/render-svg.ts', 'scripts/lib', 'assets/readme/src']) {
@@ -39,7 +39,7 @@ test('--readme writes exactly the ten manifest images from core, independent of 
   })
   assert.equal(r.status, 0, r.stderr)
   assert.equal(r.stderr, '')
-  assert.equal(r.stdout, 'render-svg: wrote 17 images\n')
+  assert.equal(r.stdout, `render-svg: wrote ${IMAGES.length} images\n`)
   assert.deepEqual(
     readdirSync(join(root, 'assets/readme'))
       .filter((f) => f.endsWith('.svg'))
