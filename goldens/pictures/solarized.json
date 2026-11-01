@@ -8,17 +8,17 @@
       "fontFamily": "\"trebuchet ms\", verdana, arial, sans-serif",
       "dropShadow": "none",
       "useGradient": false,
-      "stateBorder": "#268BD2",
-      "nodeBorder": "#268BD2",
-      "primaryBorderColor": "#268BD2",
       "nodeBkg": "#268BD2",
       "mainBkg": "#268BD2",
       "primaryColor": "#268BD2",
+      "stateBorder": "#083E55",
+      "nodeBorder": "#083E55",
+      "primaryBorderColor": "#083E55",
       "edgeLabelBackground": "#268BD2",
       "primaryTextColor": "#FDF6E3",
       "nodeTextColor": "#FDF6E3",
-      "secondaryBorderColor": "#B58900",
       "secondaryColor": "#B58900",
+      "secondaryBorderColor": "#364726",
       "secondaryTextColor": "#002B36",
       "tertiaryColor": "#073642",
       "tertiaryTextColor": "#FDF6E3",
@@ -35,17 +35,17 @@
       "border2": "#FDF6E3",
       "clusterBorder": "#FDF6E3",
       "compositeTitleBackground": "#268BD2",
-      "noteBorderColor": "#2AA198",
       "noteBkgColor": "#2AA198",
+      "noteBorderColor": "#0A484E",
       "noteTextColor": "#002B36",
-      "actorBorder": "#268BD2",
       "actorBkg": "#268BD2",
+      "actorBorder": "#083E55",
       "actorTextColor": "#FDF6E3",
       "actorLineColor": "#93A1A1",
       "signalColor": "#93A1A1",
       "signalTextColor": "#EEE8D5",
-      "activationBorderColor": "#B58900",
       "activationBkgColor": "#B58900",
+      "activationBorderColor": "#364726",
       "labelBoxBkgColor": "#073642",
       "labelBoxBorderColor": "#FDF6E3",
       "labelTextColor": "#FDF6E3",
@@ -108,8 +108,8 @@
       "commitLabelBackground": "#002B36",
       "commitLabelColor": "#93A1A1",
       "commitLineColor": "#93A1A1",
-      "tagLabelBorder": "#B58900",
       "tagLabelBackground": "#B58900",
+      "tagLabelBorder": "#364726",
       "tagLabelColor": "#002B36",
       "cScale0": "#268BD2",
       "cScaleInv0": "#002B36",
@@ -178,10 +178,10 @@
       "sectionBkgColor": "#073642",
       "altSectionBkgColor": "#002B36",
       "excludeBkgColor": "#073642",
-      "taskBorderColor": "#268BD2",
       "taskBkgColor": "#268BD2",
-      "critBorderColor": "#CB4B16",
+      "taskBorderColor": "#083E55",
       "critBkgColor": "#CB4B16",
+      "critBorderColor": "#142E33",
       "taskTextLightColor": "#FDF6E3",
       "taskTextColor": "#FDF6E3",
       "activeTaskBorderColor": "#AC8403",
@@ -241,9 +241,19 @@
   "background": "#002B36",
   "pairs": [
     {
+      "what": "node borders and inner lines",
+      "ink": "#083E55",
+      "on": "#268BD2"
+    },
+    {
       "what": "node and edge label text",
       "ink": "#FDF6E3",
       "on": "#268BD2"
+    },
+    {
+      "what": "decision borders",
+      "ink": "#364726",
+      "on": "#B58900"
     },
     {
       "what": "secondary text",
@@ -291,9 +301,19 @@
       "on": "#073642"
     },
     {
+      "what": "note borders",
+      "ink": "#0A484E",
+      "on": "#2AA198"
+    },
+    {
       "what": "note text",
       "ink": "#002B36",
       "on": "#2AA198"
+    },
+    {
+      "what": "actor borders",
+      "ink": "#083E55",
+      "on": "#268BD2"
     },
     {
       "what": "actor text",
@@ -314,6 +334,11 @@
       "what": "message text",
       "ink": "#EEE8D5",
       "on": "#002B36"
+    },
+    {
+      "what": "activation borders",
+      "ink": "#364726",
+      "on": "#B58900"
     },
     {
       "what": "loop boxes",
@@ -511,6 +536,11 @@
       "on": "#002B36"
     },
     {
+      "what": "tag borders",
+      "ink": "#364726",
+      "on": "#B58900"
+    },
+    {
       "what": "tag labels",
       "ink": "#002B36",
       "on": "#B58900"
@@ -679,6 +709,16 @@
       "what": "journey section 7",
       "ink": "#FDF6E3",
       "on": "#248F89"
+    },
+    {
+      "what": "task borders",
+      "ink": "#083E55",
+      "on": "#268BD2"
+    },
+    {
+      "what": "critical task borders",
+      "ink": "#142E33",
+      "on": "#CB4B16"
     },
     {
       "what": "gantt task text",

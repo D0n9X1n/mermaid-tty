@@ -300,3 +300,30 @@ test('a curated look sets every theme variable the drawn types read', () => {
     }
   }
 })
+
+// Mermaid draws a shape's outline, and the lines inside it (a cylinder's lid, a class's compartments, an entity's
+// rows), in its border color over its own fill: a border the color of the fill hides them.
+test("every filled shape's border reads on its fill, so a cylinder's lid and a class's compartments show", () => {
+  const borders: [string, string][] = [
+    ['nodeBorder', 'mainBkg'],
+    ['primaryBorderColor', 'primaryColor'],
+    ['stateBorder', 'stateBkg'],
+    ['actorBorder', 'actorBkg'],
+    ['noteBorderColor', 'noteBkgColor'],
+    ['activationBorderColor', 'activationBkgColor'],
+    ['secondaryBorderColor', 'secondaryColor'],
+    ['taskBorderColor', 'taskBkgColor'],
+    ['critBorderColor', 'critBkgColor'],
+    ['tagLabelBorder', 'tagLabelBackground'],
+  ]
+  for (const look of CURATED) {
+    const t = pictureTheme(look)
+    const v = t.config.themeVariables!
+    for (const [border, fill] of borders) {
+      assert.ok(
+        t.pairs.some((p) => p.ink === v[border] && p.on === v[fill]),
+        `${look} ${border} on ${fill}: ${v[border]} on ${v[fill]}`,
+      )
+    }
+  }
+})

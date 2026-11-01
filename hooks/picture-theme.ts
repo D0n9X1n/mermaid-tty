@@ -182,6 +182,20 @@ function eventPairs(pairs: Pairs, i: number, label: string, fill: string, extra:
   return label
 }
 
+// A filled shape's border: its fill toned toward the canvas, as far as it takes to read on the fill. Mermaid draws the
+// lines inside a shape in it too, a cylinder's lid, a class's compartments, an entity's rows, so a border the color of
+// the fill would hide them; toned, the outline reads as a darker rim of the same color.
+function rim(fill: string, canvas: string): string {
+  for (let t = 0.95; t > 0; t -= 0.05) {
+    const c = mix(fill, canvas, t)
+    if (contrast(c, fill) >= MIN) {
+      return c
+    }
+  }
+
+  return canvas
+}
+
 // A curated palette's theme on Mermaid's base theme.
 function curated(look: Curated): PictureTheme {
   const p = THEMES[look]
@@ -205,11 +219,14 @@ function curated(look: Curated): PictureTheme {
   }
 
   // Nodes, and the edge labels Mermaid draws in the same text color: a label chip is filled like a node, so one color
-  // reads on both.
-  v.primaryColor = v.mainBkg = v.nodeBkg = v.primaryBorderColor = v.nodeBorder = v.stateBorder = r.node
+  // reads on both. The border, with the lines inside a shape, as a darker rim of each fill.
+  const border = (what: string, f: string) => pairs.on(what, rim(f, bg), f)
+  v.primaryColor = v.mainBkg = v.nodeBkg = r.node
+  v.primaryBorderColor = v.nodeBorder = v.stateBorder = border('node borders and inner lines', r.node)
   v.edgeLabelBackground = r.node
   v.nodeTextColor = v.primaryTextColor = text('node and edge label text', fill, r.node)
-  v.secondaryColor = v.secondaryBorderColor = r.decision
+  v.secondaryColor = r.decision
+  v.secondaryBorderColor = border('decision borders', r.decision)
   v.secondaryTextColor = text('secondary text', fill, r.decision)
   v.tertiaryColor = surface
   v.tertiaryTextColor = text('subgraph title', r.title, surface)
@@ -229,17 +246,20 @@ function curated(look: Curated): PictureTheme {
   // A composite state's title bar: node-colored, so the state label color reads on it as on a state.
   v.compositeTitleBackground = r.node
   // Notes.
-  v.noteBkgColor = v.noteBorderColor = r.note
+  v.noteBkgColor = r.note
+  v.noteBorderColor = border('note borders', r.note)
   v.noteTextColor = text('note text', fill, r.note)
 
   // Sequence: actors like nodes, activations in the decision color, messages in the edge color. A loop box is lines;
   // only its label tab is filled.
-  v.actorBkg = v.actorBorder = r.node
+  v.actorBkg = r.node
+  v.actorBorder = border('actor borders', r.node)
   v.actorTextColor = text('actor text', fill, r.node)
   v.actorLineColor = line('lifelines', r.edge, bg)
   v.signalColor = line('messages', r.edge, bg)
   v.signalTextColor = text('message text', r.label, bg)
-  v.activationBkgColor = v.activationBorderColor = r.decision
+  v.activationBkgColor = r.decision
+  v.activationBorderColor = border('activation borders', r.decision)
   v.labelBoxBkgColor = surface
   v.labelBoxBorderColor = line('loop boxes', r.frame, bg, surface)
   v.labelTextColor = text('loop label', r.frame, surface)
@@ -279,7 +299,8 @@ function curated(look: Curated): PictureTheme {
   v.commitLabelBackground = bg
   v.commitLabelColor = text('commit labels', r.edge, bg)
   v.commitLineColor = line('commit lines', r.edge, bg)
-  v.tagLabelBackground = v.tagLabelBorder = r.decision
+  v.tagLabelBackground = r.decision
+  v.tagLabelBorder = border('tag borders', r.decision)
   v.tagLabelColor = text('tag labels', fill, r.decision)
 
   // Timeline and mindmap: twelve slots, each label on its slot; the last slot's label also draws the connectors.
@@ -309,8 +330,10 @@ function curated(look: Curated): PictureTheme {
   v.sectionBkgColor = v.sectionBkgColor2 = surface
   v.altSectionBkgColor = bg
   v.excludeBkgColor = surface
-  v.taskBkgColor = v.taskBorderColor = r.node
-  v.critBkgColor = v.critBorderColor = r.arrow
+  v.taskBkgColor = r.node
+  v.taskBorderColor = border('task borders', r.node)
+  v.critBkgColor = r.arrow
+  v.critBorderColor = border('critical task borders', r.arrow)
   v.taskTextColor = v.taskTextLightColor = text('gantt task text', fill, r.node, r.arrow)
   // Mermaid writes an active or done task's label in one color inside its bar and beside it, on a section band: so the
   // canvas text color, with the active and done fills toned toward the canvas until it reads on them.
