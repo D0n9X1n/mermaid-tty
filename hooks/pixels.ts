@@ -64,7 +64,8 @@ export function sonicTermOwnsTty(listing: string): boolean {
   for (const row of rows) {
     const fields = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+?)\s*$/.exec(row)
     if (fields) {
-      byPid.set(fields[1], { ppid: fields[2], tty: fields[3], command: fields[4] })
+      const [, pid = '', ppid = '', tty = '', command = ''] = fields
+      byPid.set(pid, { ppid, tty, command })
     }
   }
 
@@ -121,7 +122,8 @@ export function sonicTermOwnsConsole(listing: string): boolean {
   for (const row of rows) {
     const fields = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+?)\s*$/.exec(row)
     if (fields) {
-      byPid.set(fields[1], { ppid: fields[2], started: BigInt(fields[3]), name: fields[4].toLowerCase() })
+      const [, pid = '', ppid = '', started = '0', name = ''] = fields
+      byPid.set(pid, { ppid, started: BigInt(started), name: name.toLowerCase() })
     }
   }
 
