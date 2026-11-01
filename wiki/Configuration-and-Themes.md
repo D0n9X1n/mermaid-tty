@@ -75,13 +75,15 @@ Series-colored items, such as lanes, branches, sections and chart series, take t
 Where the terminal shows pictures (see Pictures in [Usage](Usage)), each one is drawn in the same theme as the text drawings:
 
 - **Curated palettes** (`nord`, `dracula`, `gruvbox`, `solarized`) draw on Mermaid's `base` theme, with every color taken from the palette, on the palette's own background.
-  - Nodes and actors are filled in `node`. Edges, lines and canvas text use `edge`. Notes use `note`, and sequence activations `decision`.
+  - Flowchart nodes take the series colors `s1` to `s8` in turn, each with its own label color and a darker rim, so a picture shows the whole palette. Other diagrams' nodes and actors are filled in `node`, rimmed in a darker shade of it. Edges, lines and canvas text use `edge`. Notes use `note`, and sequence activations `decision`.
   - Edge labels are chips in the node color. Subgraphs, state groups and gantt bands are filled with the surface and framed in `frame`.
   - Pie, git, journey, timeline, mindmap and chart series cycle through `s1` to `s8`. Journey sections are toned toward the background, so its task text stays readable.
-- **`default`** keeps Mermaid's own dark or light theme, following your Claude Code theme, on a transparent background. Its pie, git, timeline and mindmap colors are Claude Code's.
+- **`default`** keeps Mermaid's own dark or light theme, following your Claude Code theme, on a transparent background. Its flowchart nodes, pie, git, timeline, mindmap and chart colors are Claude Code's.
 - **`mono`** draws no picture.
 
 Mermaid fills a flowchart decision like any other node, and colors a sequence arrowhead like its line, so a picture does too. A sequence `rect` or `box` color written in the diagram is drawn as written.
+
+The flowchart colors come from CSS mermaid-tty writes into the Mermaid config itself: selectors that reach only flowchart nodes, and `#rrggbb` colors. A diagram's own source still can't style anything.
 
 `hooks/picture-theme.ts` builds each look's Mermaid config, and `goldens/pictures/` keeps the reviewed result. Every color it chooses is `#rrggbb`. Every text and line color it chooses has a contrast of at least 3:1 against what it is drawn on, the same floor the text drawings meet. Where a role's own color can't meet that on a fill, such as a title on dracula's surface, the text takes the palette color that reads best. `node scripts/render-picture-gallery.ts OUT_DIR [MMDC]` draws one rich diagram of each type in every look, for review by eye, and flags any picture whose text falls under 3:1.
 

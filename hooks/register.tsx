@@ -82,7 +82,7 @@ export const register: Register = (on, options) => {
   // behind, within the end's short bound.
   on('session.end', async ($, e, next) => {
     if (inTerminal) {
-      await sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)))
+      await sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)), true)
     }
 
     return next(e)

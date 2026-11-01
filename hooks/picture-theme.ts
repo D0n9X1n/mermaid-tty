@@ -200,8 +200,9 @@ function rimOf(fill: string, canvas: string): string {
 
 // Mermaid gives every flowchart node the one fill mainBkg; a picture colors them apart, each node a series color in
 // turn with its label and rim chosen for it, so it shows the palette where the text drawing shows a role. The selectors
-// reach only flowchart nodes (their ids hold -flowchart-), never a state's start or end dot, which share the class;
-// they outrank Mermaid's own `.node rect` rules, and a node's label is its HTML span or its SVG text.
+// reach only flowchart nodes: mmdc names its SVG my-svg, and Mermaid names a flowchart node my-svg-flowchart-<id>-<n>,
+// where a class or state node is my-svg-classId-… or my-svg-state-…, whatever the diagram calls it. They outrank
+// Mermaid's own `.node rect` rules, and a node's label is its HTML span or its SVG text.
 const SHAPES = ['rect', 'polygon', 'path', 'circle', 'ellipse']
 const LABELS = ['.nodeLabel', '.nodeLabel *', 'span', 'text', 'tspan']
 function flowchartNodes(
@@ -214,7 +215,7 @@ function flowchartNodes(
   return series
     .slice(0, 8)
     .map((fill, i) => {
-      const node = `.nodes > .node[id*="-flowchart-"]:nth-child(8n+${(i + 1) % 8})`
+      const node = `.nodes > .node[id^="my-svg-flowchart-"]:nth-child(8n+${(i + 1) % 8})`
       const rim = pairs.on(`flowchart node ${i + 1} rim`, rimOf(fill, canvas), fill)
       const label = pairs.on(`flowchart node ${i + 1} label`, pick(prefer, texts, [fill]), fill)
       const shapes = SHAPES.map((x) => `${node} ${x}`).join(',')
@@ -250,7 +251,9 @@ function curated(look: Curated): PictureTheme {
   // reads on both. The border, with the lines inside a shape, as a darker rim of each fill.
   const border = (what: string, f: string) => pairs.on(what, rimOf(f, bg), f)
   v.primaryColor = v.mainBkg = v.nodeBkg = r.node
-  v.primaryBorderColor = v.nodeBorder = v.stateBorder = border('node borders and inner lines', r.node)
+  v.primaryBorderColor = v.nodeBorder = border('node borders and inner lines', r.node)
+  // A state's outline also frames a composite state's body on the surface, on the canvas: a line on both.
+  v.stateBorder = line('state and composite state outlines', r.frame, surface, bg)
   v.edgeLabelBackground = r.node
   v.nodeTextColor = v.primaryTextColor = text('node and edge label text', fill, r.node)
   v.secondaryColor = r.decision

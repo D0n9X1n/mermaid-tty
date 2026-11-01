@@ -9,10 +9,11 @@ import { passThrough, type Images, type Mode } from './mode.ts'
 const renderer = createRenderer(64)
 const pictures = createPictures()
 
-// Removes the picture temp dirs this session's renders still hold, and any stale ones; within timeoutMs, quietly. A
-// function declaration: the engine's loader follows $ only into one.
-export async function sweepPictures($: any, timeoutMs?: number): Promise<void> {
-  await sweepTemp($, pictures, timeoutMs)
+// Removes the picture temp dirs this session's renders still hold, and any stale ones; within timeoutMs, quietly. At
+// the session's end (ending) it also stops new renders and takes the dirs still being made. A function declaration:
+// the engine's loader follows $ only into one.
+export async function sweepPictures($: any, timeoutMs?: number, ending = false): Promise<void> {
+  await sweepTemp($, pictures, timeoutMs, ending)
 }
 
 // The picture setting images() answers, auto when it throws, before or after it returns a promise.

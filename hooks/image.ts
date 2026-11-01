@@ -25,6 +25,13 @@ export type Pictures = {
   inflight: Set<string>
   // The temp dirs a render made and has not yet removed, so the session's end can remove them.
   dirs: Set<string>
+  // Named into every temp dir this store makes, mermaid-tty.<token>.XXXXXX, so the session's end can sweep one it was
+  // still making.
+  token: string
+  // Temp dirs being made right now: the session's end waits for them before it sweeps.
+  making: Set<Promise<unknown>>
+  // Set when the session ends: no render starts after, and one that finds it set on its new dir removes the dir.
+  closed: boolean
   tail: Promise<void>
   fresh: boolean
   pixels?: Promise<boolean>
@@ -113,6 +120,10 @@ export function mmdcArgs(o: {
   ]
 }
 
+// A store's token: eight letters and digits, as a temp dir's name allows.
+const ALNUM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+const newToken = () => Array.from({ length: 8 }, () => ALNUM[Math.floor(Math.random() * ALNUM.length)]).join('')
+
 // A store of pictures: at most `entries` kept and `bytes` of base64 PNG, and at most `tried` keys ever rendered. idle()
 // resolves once no render is queued.
 export function createPictures(limits: Partial<Limits> = {}): Pictures {
@@ -123,6 +134,9 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
     tried: new Set(),
     inflight: new Set(),
     dirs: new Set(),
+    token: newToken(),
+    making: new Set(),
+    closed: false,
     tail: Promise.resolve(),
     fresh: false,
     idle: async () => {
@@ -194,6 +208,7 @@ export function pictureFor(
 
   const id = hash(key)
   if (
+    s.closed ||
     s.noMmdc ||
     s.tried.has(id) ||
     s.inflight.has(key) ||
@@ -238,7 +253,9 @@ async function job(
   s.mmdc ??= mmdcMajor($)
   const major = await s.mmdc
   let r: Picture | string | null
-  if (typeof major === 'string') {
+  if (s.closed) {
+    r = null
+  } else if (typeof major === 'string') {
     r = s.noMmdc ? null : `no usable mmdc (${major})`
     s.noMmdc = true
   } else {
@@ -290,11 +307,12 @@ function keep(s: Pictures, key: string, p: Picture) {
 
 // The temp dir is made and removed by Node, which mmdc itself runs on, so it works where there is no mktemp or rm
 // (Windows). MAKE_TEMP prints the OS temp dir, resolved so it is spelled as the dir made in it is, and a fresh
-// mermaid-tty.XXXXXX dir in it as JSON, with / separators; REMOVE_TEMP removes the dir named by its argument, and only
-// a mermaid-tty.* one.
+// mermaid-tty.<token>.XXXXXX dir in it (its argument, a store's token), as JSON, with / separators; REMOVE_TEMP removes
+// the dir named by its argument, and only a mermaid-tty.* one.
 export const MAKE_TEMP =
-  "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/');" +
-  "const t=p.resolve(o.tmpdir());process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,'mermaid-tty.')))}))"
+  "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/'),k=process.argv[1];" +
+  "const t=p.resolve(o.tmpdir()),b='mermaid-tty.'+(/^[A-Za-z0-9]{8}$/.test(k||'')?k+'.':'');" +
+  'process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,b)))}))'
 export const REMOVE_TEMP =
   "const f=require('fs'),p=require('path'),d=process.argv[1];" +
   "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"
@@ -303,26 +321,44 @@ export const REMOVE_TEMP =
 // and the temp dir's own steps), so another session's render in progress is never one.
 export const STALE_S = 600
 
-// SWEEP_TEMP removes, from the OS temp dir only, each mermaid-tty.* dir older than its first argument in seconds, and
-// each dir its other arguments name that is a mermaid-tty.* dir directly inside it: what a render cut short (the
-// session ended, the process was killed, a removal failed) left behind.
+// SWEEP_TEMP removes, from the OS temp dir only, each mermaid-tty.* picture dir older than its first argument in
+// seconds, each one named with its second, a store's token ('-' for none), and each one its other arguments name: what
+// a render cut short (the session ended, the process was killed, a removal failed) left behind.
 export const SWEEP_TEMP =
-  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),[age,...named]=process.argv.slice(1);" +
-  'const ours=(d)=>p.dirname(p.resolve(d))===t&&/^mermaid-tty\\.[A-Za-z0-9]{6}$/.test(p.basename(d));' +
+  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),[age,tok,...named]=process.argv.slice(1);" +
+  'const ours=(d)=>p.dirname(p.resolve(d))===t&&/^mermaid-tty\\.(?:[A-Za-z0-9]{8}\\.)?[A-Za-z0-9]{6}$/.test(p.basename(d));' +
+  "const mine=(n)=>/^[A-Za-z0-9]{8}$/.test(tok)&&n.startsWith('mermaid-tty.'+tok+'.');" +
   'const rm=(d)=>{try{f.rmSync(d,{recursive:true,force:true})}catch{}};' +
-  'for(const n of f.readdirSync(t)){const d=p.join(t,n);try{if(ours(d)&&Date.now()-f.statSync(d).mtimeMs>Number(age)*1000)rm(d)}catch{}}' +
+  'for(const n of f.readdirSync(t)){const d=p.join(t,n);' +
+  'try{if(ours(d)&&(mine(n)||Date.now()-f.statSync(d).mtimeMs>Number(age)*1000))rm(d)}catch{}}' +
   'for(const d of named)if(ours(d))rm(p.resolve(d))'
 
 // Removes what pictures left in the temp dir: the dirs a render of store still holds, and any left long enough to be
 // stale. Run when a session starts, for what a crashed one left, and when it ends; quiet, as a failing sweep only
-// leaves what was there.
-export async function sweepTemp($: any, store?: Pictures, timeoutMs = SHORT_MS): Promise<void> {
+// leaves what was there. At the end (ending), the store closes first, so no render starts after; the dirs being made
+// are waited for, within half of timeoutMs; and every dir named with the store's token goes too.
+export async function sweepTemp($: any, store?: Pictures, timeoutMs = SHORT_MS, ending = false): Promise<void> {
+  let left = timeoutMs
+  if (store && ending) {
+    store.closed = true
+    // The engine's clock, as the hooks have no timers of their own; a failing one waits no more.
+    const wait = Promise.resolve()
+      .then(() => $.clock.sleep(timeoutMs / 2))
+      .catch(() => {})
+    await Promise.race([Promise.allSettled([...store.making]), wait])
+    left = timeoutMs / 2
+  }
+
+  const token = store && ending ? store.token : '-'
   try {
-    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), ...(store?.dirs ?? [])], { timeoutMs })
+    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), token, ...(store?.dirs ?? [])], {
+      timeoutMs: Math.max(100, left),
+    })
   } catch {}
 }
 
-// The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.XXXXXX dir directly inside the temp dir it named.
+// The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.[<token>.]XXXXXX dir directly inside the temp dir it
+// named.
 export function madeTempDir(stdout: string): string | null {
   try {
     const { tmp, dir } = JSON.parse(stdout)
@@ -331,7 +367,7 @@ export function madeTempDir(stdout: string): string | null {
     }
 
     const base = tmp.replace(/\/+$/, '') + '/mermaid-tty.'
-    return dir.startsWith(base) && /^[A-Za-z0-9]{6}$/.test(dir.slice(base.length)) ? dir : null
+    return dir.startsWith(base) && /^(?:[A-Za-z0-9]{8}\.)?[A-Za-z0-9]{6}$/.test(dir.slice(base.length)) ? dir : null
   } catch {
     return null
   }
@@ -347,7 +383,9 @@ async function draw(
   columns: number,
   major: number,
 ): Promise<Picture | string> {
-  const made = await $.process.run(['node', '-e', MAKE_TEMP], { timeoutMs: SHORT_MS })
+  const making = $.process.run(['node', '-e', MAKE_TEMP, s.token], { timeoutMs: SHORT_MS })
+  s.making.add(making)
+  const made = await making.finally(() => s.making.delete(making))
   const dir = made.exitCode === 0 ? madeTempDir(made.stdout) : null
   if (!dir) {
     return 'no temp dir'
@@ -355,6 +393,10 @@ async function draw(
 
   s.dirs.add(dir)
   try {
+    if (s.closed) {
+      return 'the session ended'
+    }
+
     const config = `${dir}/config.json`
     const puppeteer = `${dir}/puppeteer.json`
     const svg = `${dir}/out.svg`

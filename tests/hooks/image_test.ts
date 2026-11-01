@@ -722,11 +722,18 @@ test('SWEEP_TEMP removes stale picture dirs and the ones it names, and nothing e
   dir('mermaid-tty.Stale1', 3600)
   dir('mermaid-tty.Fresh1', 5)
   const named = dir('mermaid-tty.Named1', 5)
+  dir('mermaid-tty.Tok3n9Zq.Fresh2', 5)
+  dir('mermaid-tty.Other9Zq.Fresh3', 5)
   dir('other.Stale2', 3600)
   dir('mermaid-tty-not.Stale3', 3600)
-  const r = sweep(tmp, ['600', named.split(sep).join('/'), join(tmpdir(), 'mermaid-tty.Elsewh')])
+  const r = sweep(tmp, ['600', 'Tok3n9Zq', named.split(sep).join('/'), join(tmpdir(), 'mermaid-tty.Elsewh')])
   assert.equal(r.status, 0, r.stderr)
-  assert.deepEqual(readdirSync(tmp).sort(), ['mermaid-tty-not.Stale3', 'mermaid-tty.Fresh1', 'other.Stale2'])
+  assert.deepEqual(readdirSync(tmp).sort(), [
+    'mermaid-tty-not.Stale3',
+    'mermaid-tty.Fresh1',
+    'mermaid-tty.Other9Zq.Fresh3',
+    'other.Stale2',
+  ])
 })
 
 // The session ends: every dir a render of this store made and has not removed yet goes, with any stale one; at the
@@ -737,10 +744,10 @@ test('sweepTemp names the dirs a render still holds, and asks for the stale ones
   const f = fake()
   await sweepTemp(f.$, s)
   const run = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!
-  assert.deepEqual(run.argv.slice(3), [String(STALE_S), '/tmp/mermaid-tty.Live01'])
+  assert.deepEqual(run.argv.slice(3), [String(STALE_S), '-', '/tmp/mermaid-tty.Live01'])
   const g = fake()
   await sweepTemp(g.$)
-  assert.deepEqual(g.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3), [String(STALE_S)])
+  assert.deepEqual(g.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3), [String(STALE_S), '-'])
 })
 
 test('a render holds its temp dir in the store while it runs and lets it go once removed', async () => {
@@ -764,4 +771,57 @@ test('a failing sweep is quiet: it never throws', async () => {
     throw new Error('no node')
   }
   await assert.doesNotReject(sweepTemp(f.$, createPictures()))
+})
+
+// The session ends while a render is making its temp dir: the end closes the store, so no render starts after it, waits
+// for the dir being made, and sweeps every dir named with this store's token, so nothing a render was about to make
+// survives the session.
+test('the end of a session closes the store, waits for a temp dir being made, and sweeps its token', async () => {
+  const s = createPictures()
+  let release!: () => void
+  const held = new Promise<void>((done) => (release = done))
+  const f = fake()
+  const order: string[] = []
+  const run = f.$.process.run
+  f.$.process.run = async (argv: string[], init: any) => {
+    if (isMake(argv)) {
+      await held
+      order.push('made')
+    } else if (argv[2] === SWEEP_TEMP) {
+      order.push('swept')
+    }
+
+    return run(argv, init)
+  }
+  // A clock whose wait never ends: only the dir being made can let the sweep go.
+  ;(f.$ as any).clock = { sleep: () => new Promise(() => {}) }
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await new Promise((done) => setTimeout(done, 10))
+  const ending = sweepTemp(f.$, s, 1000, true)
+  await new Promise((done) => setTimeout(done, 10))
+  assert.deepEqual(order, [], 'the sweep waits for the dir being made')
+  release()
+  await ending
+  await s.idle()
+  assert.deepEqual(order.slice(0, 2), ['made', 'swept'])
+  const sweepArgs = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3)
+  assert.equal(sweepArgs[1], s.token)
+  assert.equal(
+    f.runs.some((r) => r.argv[0] === 'mmdc' && r.argv[1] === '-i'),
+    false,
+    'no render after the end',
+  )
+  assert.equal(pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log), undefined)
+})
+
+test("MAKE_TEMP names a dir with the store's token, which madeTempDir accepts", () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'make-'))
+  try {
+    const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+    const r = spawnSync(process.execPath, ['-e', MAKE_TEMP, 'Tok3n9Zq'], { env, encoding: 'utf8' })
+    const dir = madeTempDir(r.stdout)
+    assert.match(dir ?? '', /\/mermaid-tty\.Tok3n9Zq\.[A-Za-z0-9]{6}$/)
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
 })

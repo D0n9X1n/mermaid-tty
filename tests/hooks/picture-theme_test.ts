@@ -307,7 +307,6 @@ test("every filled shape's border reads on its fill, so a cylinder's lid and a c
   const borders: [string, string][] = [
     ['nodeBorder', 'mainBkg'],
     ['primaryBorderColor', 'primaryColor'],
-    ['stateBorder', 'stateBkg'],
     ['actorBorder', 'actorBkg'],
     ['noteBorderColor', 'noteBkgColor'],
     ['activationBorderColor', 'activationBkgColor'],
@@ -330,7 +329,7 @@ test("every filled shape's border reads on its fill, so a cylinder's lid and a c
 
 // A flowchart's nodes, each a series color in turn, its label and rim chosen for it: the picture shows many colors
 // where Mermaid's theme gives one. The rules are the plugin's own CSS, never the diagram's.
-const NODE_CSS = /^(?:[#.\w\s>:()+\-\[\]*="',]+\{(?:[a-z-]+:#[0-9A-Fa-f]{6}(?: !important)?;)+\})+$/
+const NODE_CSS = /^(?:[#.\w\s>:()+\-\[\]^*="',]+\{(?:[a-z-]+:#[0-9A-Fa-f]{6}(?: !important)?;)+\})+$/
 
 test('a picture colors flowchart nodes in turn from the series, each label readable on its fill', () => {
   for (const look of LOOKS) {
@@ -341,7 +340,7 @@ test('a picture colors flowchart nodes in turn from the series, each label reada
     assert.doesNotMatch(css!, /url\(|@|\\|\/\*/, look)
     for (let i = 1; i <= 8; i++) {
       const rule = new RegExp(
-        `id\\*="-flowchart-"\\]:nth-child\\(8n\\+${i % 8}\\) [^{]*rect[^{]*\\{fill:(#\\w{6}) !important;stroke:(#\\w{6})`,
+        `id\\^="my-svg-flowchart-"\\]:nth-child\\(8n\\+${i % 8}\\) [^{]*rect[^{]*\\{fill:(#\\w{6}) !important;stroke:(#\\w{6})`,
       )
       const m = rule.exec(css!)
       assert.ok(m, `${look} slot ${i}`)
@@ -357,4 +356,26 @@ test('a picture colors flowchart nodes in turn from the series, each label reada
       )
     }
   }
+})
+
+// A state's outline frames both a state and a composite state's body: it must read on the surface and the canvas.
+test("a state's outline reads around a composite state's body as well as on the canvas", () => {
+  for (const look of CURATED) {
+    const t = pictureTheme(look)
+    const v = t.config.themeVariables!
+    for (const on of [THEMES[look].surface, t.background]) {
+      assert.ok(
+        t.pairs.some((p) => p.ink === v.stateBorder && p.on === on),
+        `${look} stateBorder on ${on}`,
+      )
+    }
+  }
+})
+
+// A class or state diagram may name a node flowchart: its id is my-svg-classId-flowchart-… or my-svg-state-flowchart-…,
+// which the node rules, anchored at my-svg-flowchart-, never match.
+test('the flowchart node rules match only a flowchart node, whatever another diagram names its own', () => {
+  const css = pictureTheme('nord').config.themeCSS
+  const selectors = [...new Set(css.match(/\[id[^\]]*\]/g))]
+  assert.deepEqual(selectors, ['[id^="my-svg-flowchart-"]'])
 })
