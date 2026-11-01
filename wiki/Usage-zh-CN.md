@@ -27,7 +27,7 @@ claude plugin install mermaid-tty@mermaid-tty
 
 mermaid-tty 支持 Windows、macOS 和 Linux。`core/` 与 `hooks/` 中的运行时代码不依赖特定操作系统；CI 在三个系统上运行检查和真实 Claude Code 端到端测试。测试框架在 Windows 上使用 ConPTY，在 macOS 和 Linux 上使用 tmux；普通用户无需安装测试框架或其依赖。
 
-插件只在 Claude Code 的终端界面中绘图。其他界面的回复不经修改，保留该界面自己的显示方式。
+插件只在 Claude Code 的 CLI 终端中工作。在桌面应用、`-p` 运行或 SDK 中，回复不经修改，保留该界面自己的显示方式，mermaid-tty 也不做任何工作：不生成图片，不写临时文件。
 
 **终端。** mermaid-tty 不直接向终端写入内容，而是将带样式的文字交给 Claude Code 显示。因此，它适用于 Claude Code 支持的终端，包括 Windows Terminal、macOS Terminal、iTerm2、Ghostty 和 Linux 终端。
 
@@ -119,11 +119,13 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 以下情况保留文本绘制（文本渲染器无法绘制时显示源码）：
 
 - 终端不是上述之一；
-- 插件主题为 `mono`，或 Claude Code 主题既非深色也非浅色；
+- 插件主题为 `mono`，或主题为 `default` 且 Claude Code 主题既非深色也非浅色；
 - mermaid-tty 无法解析该图表，或其源码超过 Mermaid 的上限 50,000 个字符；
 - 源码含有纯文本 `title` 以外的 frontmatter、`%%{` 指令、`style`、`classDef`、`linkStyle`、`class`、`cssClass`、`click`、`link`、`call`、`callback`、`href`、`accTitle` 或 `accDescr` 语句、`#hex`、`rgb()` 或 `rgba()` 以外的时序图 `rect` 或 `box` 颜色、`#117;` 这样的实体、普通空格和制表符以外的空白、控制字符，或任何可能指向 URL 或文件的内容（如 `url(`、`http:`、`file:`、`//` 或反斜杠）；
 - Mermaid 为它绘制的 SVG 使用了 Mermaid 自身图表所用固定集合以外的元素或属性，或引用了自身以外的任何内容（mermaid-tty 先渲染 SVG 并检查，再生成图片）；
 - `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
+
+每张图片都在系统临时文件夹中自己的 `mermaid-tty.XXXXXX` 文件夹里渲染，完成后立即删除。终端会话结束时，mermaid-tty 还会删除渲染仍占用的文件夹；会话开始或结束时，会清除崩溃的会话遗留的、超过十分钟的 `mermaid-tty.*` 文件夹。会话关闭后，磁盘上不会留下任何图片文件。
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在本次会话中保留文本绘制，运行 `/mermaid-tty images off` 可在所有会话中保留；`/mermaid-tty diagram` 和 `/mermaid-tty images auto` 重新启用图片。`/mermaid-tty images on` 跳过终端检查，适用于能显示 kitty 图形但不在上述列表中的终端；其他条件仍然适用，无法显示图片的终端会显示空白或替代文本。`/copy` 仍然复制源码。
 

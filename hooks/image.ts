@@ -23,6 +23,8 @@ export type Pictures = {
   bytes: number
   tried: Set<string>
   inflight: Set<string>
+  // The temp dirs a render made and has not yet removed, so the session's end can remove them.
+  dirs: Set<string>
   tail: Promise<void>
   fresh: boolean
   pixels?: Promise<boolean>
@@ -120,6 +122,7 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
     bytes: 0,
     tried: new Set(),
     inflight: new Set(),
+    dirs: new Set(),
     tail: Promise.resolve(),
     fresh: false,
     idle: async () => {
@@ -239,7 +242,7 @@ async function job(
     r = s.noMmdc ? null : `no usable mmdc (${major})`
     s.noMmdc = true
   } else {
-    r = await draw($, body, look, columns, major).catch((e: unknown) =>
+    r = await draw($, s, body, look, columns, major).catch((e: unknown) =>
       oneLine(e instanceof Error ? e.message : String(e)),
     )
   }
@@ -296,6 +299,29 @@ export const REMOVE_TEMP =
   "const f=require('fs'),p=require('path'),d=process.argv[1];" +
   "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"
 
+// How old a mermaid-tty.* dir must be for a sweep to take it as left behind: far past the longest render (two mmdc runs
+// and the temp dir's own steps), so another session's render in progress is never one.
+export const STALE_S = 600
+
+// SWEEP_TEMP removes, from the OS temp dir only, each mermaid-tty.* dir older than its first argument in seconds, and
+// each dir its other arguments name that is a mermaid-tty.* dir directly inside it: what a render cut short (the
+// session ended, the process was killed, a removal failed) left behind.
+export const SWEEP_TEMP =
+  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),[age,...named]=process.argv.slice(1);" +
+  'const ours=(d)=>p.dirname(p.resolve(d))===t&&/^mermaid-tty\\.[A-Za-z0-9]{6}$/.test(p.basename(d));' +
+  'const rm=(d)=>{try{f.rmSync(d,{recursive:true,force:true})}catch{}};' +
+  'for(const n of f.readdirSync(t)){const d=p.join(t,n);try{if(ours(d)&&Date.now()-f.statSync(d).mtimeMs>Number(age)*1000)rm(d)}catch{}}' +
+  'for(const d of named)if(ours(d))rm(p.resolve(d))'
+
+// Removes what pictures left in the temp dir: the dirs a render of store still holds, and any left long enough to be
+// stale. Run when a session starts, for what a crashed one left, and when it ends; quiet, as a failing sweep only
+// leaves what was there.
+export async function sweepTemp($: any, store?: Pictures, timeoutMs = SHORT_MS): Promise<void> {
+  try {
+    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), ...(store?.dirs ?? [])], { timeoutMs })
+  } catch {}
+}
+
 // The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.XXXXXX dir directly inside the temp dir it named.
 export function madeTempDir(stdout: string): string | null {
   try {
@@ -313,13 +339,21 @@ export function madeTempDir(stdout: string): string | null {
 
 // One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same
 // source, config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
-async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
+async function draw(
+  $: any,
+  s: Pictures,
+  body: string,
+  look: Look,
+  columns: number,
+  major: number,
+): Promise<Picture | string> {
   const made = await $.process.run(['node', '-e', MAKE_TEMP], { timeoutMs: SHORT_MS })
   const dir = made.exitCode === 0 ? madeTempDir(made.stdout) : null
   if (!dir) {
     return 'no temp dir'
   }
 
+  s.dirs.add(dir)
   try {
     const config = `${dir}/config.json`
     const puppeteer = `${dir}/puppeteer.json`
@@ -370,7 +404,10 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
     return box ? { png: base64, ...box } : 'over 255 rows'
   } finally {
     try {
-      await $.process.run(['node', '-e', REMOVE_TEMP, dir], { timeoutMs: SHORT_MS })
+      const removed = await $.process.run(['node', '-e', REMOVE_TEMP, dir], { timeoutMs: SHORT_MS })
+      if (removed.exitCode === 0) {
+        s.dirs.delete(dir)
+      }
     } catch {}
   }
 }

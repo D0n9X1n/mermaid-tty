@@ -1,5 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, sep } from 'node:path'
 import {
   createPictures,
   fit,
@@ -10,6 +14,9 @@ import {
   pngSize,
   puppeteerConfig,
   REMOVE_TEMP,
+  STALE_S,
+  SWEEP_TEMP,
+  sweepTemp,
 } from '../../hooks/image.ts'
 import { pictureTheme } from '../../hooks/picture-theme.ts'
 
@@ -692,4 +699,69 @@ test('a curated look renders on its background, with its own config', async () =
   }
 
   assert.deepEqual(JSON.parse(f.writes.find(([p]) => p.endsWith('config.json'))![1]), pictureTheme('nord').config)
+})
+
+// SWEEP_TEMP, run as the hook runs it, against a stand-in temp dir: TMPDIR on macOS and Linux, TMP and TEMP on Windows.
+function sweep(tmp: string, args: string[]) {
+  const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+  return spawnSync(process.execPath, ['-e', SWEEP_TEMP, ...args], { env, encoding: 'utf8' })
+}
+
+test('SWEEP_TEMP removes stale picture dirs and the ones it names, and nothing else', (t) => {
+  const tmp = mkdtempSync(join(tmpdir(), 'sweep-'))
+  t.after(() => rmSync(tmp, { recursive: true, force: true }))
+  const dir = (name: string, ageS: number) => {
+    const p = join(tmp, name)
+    mkdirSync(p)
+    writeFileSync(join(p, 'out.png'), 'x')
+    const at = new Date(Date.now() - ageS * 1000)
+    utimesSync(p, at, at)
+    return p
+  }
+
+  dir('mermaid-tty.Stale1', 3600)
+  dir('mermaid-tty.Fresh1', 5)
+  const named = dir('mermaid-tty.Named1', 5)
+  dir('other.Stale2', 3600)
+  dir('mermaid-tty-not.Stale3', 3600)
+  const r = sweep(tmp, ['600', named.split(sep).join('/'), join(tmpdir(), 'mermaid-tty.Elsewh')])
+  assert.equal(r.status, 0, r.stderr)
+  assert.deepEqual(readdirSync(tmp).sort(), ['mermaid-tty-not.Stale3', 'mermaid-tty.Fresh1', 'other.Stale2'])
+})
+
+// The session ends: every dir a render of this store made and has not removed yet goes, with any stale one; at the
+// start, only the stale ones a past session left.
+test('sweepTemp names the dirs a render still holds, and asks for the stale ones', async () => {
+  const s = createPictures()
+  s.dirs.add('/tmp/mermaid-tty.Live01')
+  const f = fake()
+  await sweepTemp(f.$, s)
+  const run = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!
+  assert.deepEqual(run.argv.slice(3), [String(STALE_S), '/tmp/mermaid-tty.Live01'])
+  const g = fake()
+  await sweepTemp(g.$)
+  assert.deepEqual(g.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3), [String(STALE_S)])
+})
+
+test('a render holds its temp dir in the store while it runs and lets it go once removed', async () => {
+  const s = createPictures()
+  let held: string[] = []
+  const f = fake({
+    run: async (argv: string[]) => {
+      held = [...s.dirs]
+      return { exitCode: 1, stdout: '', stderr: 'boom' }
+    },
+  })
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await s.idle()
+  assert.deepEqual(held, [D])
+  assert.deepEqual([...s.dirs], [])
+})
+
+test('a failing sweep is quiet: it never throws', async () => {
+  const f = fake()
+  f.$.process.run = async () => {
+    throw new Error('no node')
+  }
+  await sweepTemp(f.$, createPictures())
 })

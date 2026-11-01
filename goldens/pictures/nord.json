@@ -227,6 +227,7 @@
         "plotColorPalette": "#88C0D0,#A3BE8C,#EBCB8B,#D08770,#B48EAD,#81A1C1,#BF616A,#5E81AC"
       }
     },
+    "themeCSS": ".nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) ellipse{fill:#88C0D0 !important;stroke:#4D6572 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+1) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) ellipse{fill:#A3BE8C !important;stroke:#57645B !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+2) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) ellipse{fill:#EBCB8B !important;stroke:#7A705E !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+3) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) ellipse{fill:#D08770 !important;stroke:#56494C !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+4) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) ellipse{fill:#B48EAD !important;stroke:#4F4A5B !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+5) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) ellipse{fill:#81A1C1 !important;stroke:#434F60 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+6) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) ellipse{fill:#BF616A !important;stroke:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+7) tspan{color:#2E3440 !important;fill:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) rect,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) polygon,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) path,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) circle,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) ellipse{fill:#5E81AC !important;stroke:#2E3440 !important;}.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) .nodeLabel,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) .nodeLabel *,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) span,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) text,.nodes > .node[id*=\"-flowchart-\"]:nth-child(8n+0) tspan{color:#2E3440 !important;fill:#2E3440 !important;}",
     "journey": {
       "actorColours": [
         "#88C0D0",
@@ -954,6 +955,86 @@
       "what": "chart series 8",
       "ink": "#5E81AC",
       "on": "#2E3440"
+    },
+    {
+      "what": "flowchart node 1 rim",
+      "ink": "#4D6572",
+      "on": "#88C0D0"
+    },
+    {
+      "what": "flowchart node 1 label",
+      "ink": "#2E3440",
+      "on": "#88C0D0"
+    },
+    {
+      "what": "flowchart node 2 rim",
+      "ink": "#57645B",
+      "on": "#A3BE8C"
+    },
+    {
+      "what": "flowchart node 2 label",
+      "ink": "#2E3440",
+      "on": "#A3BE8C"
+    },
+    {
+      "what": "flowchart node 3 rim",
+      "ink": "#7A705E",
+      "on": "#EBCB8B"
+    },
+    {
+      "what": "flowchart node 3 label",
+      "ink": "#2E3440",
+      "on": "#EBCB8B"
+    },
+    {
+      "what": "flowchart node 4 rim",
+      "ink": "#56494C",
+      "on": "#D08770"
+    },
+    {
+      "what": "flowchart node 4 label",
+      "ink": "#2E3440",
+      "on": "#D08770"
+    },
+    {
+      "what": "flowchart node 5 rim",
+      "ink": "#4F4A5B",
+      "on": "#B48EAD"
+    },
+    {
+      "what": "flowchart node 5 label",
+      "ink": "#2E3440",
+      "on": "#B48EAD"
+    },
+    {
+      "what": "flowchart node 6 rim",
+      "ink": "#434F60",
+      "on": "#81A1C1"
+    },
+    {
+      "what": "flowchart node 6 label",
+      "ink": "#2E3440",
+      "on": "#81A1C1"
+    },
+    {
+      "what": "flowchart node 7 rim",
+      "ink": "#2E3440",
+      "on": "#BF616A"
+    },
+    {
+      "what": "flowchart node 7 label",
+      "ink": "#2E3440",
+      "on": "#BF616A"
+    },
+    {
+      "what": "flowchart node 8 rim",
+      "ink": "#2E3440",
+      "on": "#5E81AC"
+    },
+    {
+      "what": "flowchart node 8 label",
+      "ink": "#2E3440",
+      "on": "#5E81AC"
     }
   ]
 }

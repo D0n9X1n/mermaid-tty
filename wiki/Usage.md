@@ -27,7 +27,7 @@ To update, run `claude plugin update mermaid-tty@mermaid-tty`, then restart Clau
 
 mermaid-tty runs on Windows, macOS and Linux. The runtime in `core/` and `hooks/` has no OS-specific code; CI runs the checks and real-Claude-Code end-to-end tests on all three. The test harness uses ConPTY on Windows and tmux on macOS and Linux; users need neither harness nor its dependencies.
 
-It draws only in Claude Code's terminal interface. On any other surface, a reply passes through untouched and keeps that surface's own drawing.
+It works only in Claude Code's CLI, in the terminal. In the desktop app, in a `-p` run or through the SDK, a reply passes through untouched and keeps that surface's own drawing, and mermaid-tty does no work at all: no pictures, no temp files.
 
 **Terminals.** mermaid-tty never writes to the terminal itself. It hands Claude Code styled text, and Claude Code draws it, so it works in any terminal Claude Code supports, including Windows Terminal, macOS Terminal, iTerm2, Ghostty and Linux terminals.
 
@@ -119,11 +119,13 @@ Only a diagram mermaid-tty can parse becomes a picture, so a picture never shows
 You keep the text drawing, or the source when the text renderer can't draw it, when:
 
 - the terminal isn't one of the above;
-- the plugin theme is `mono`, or the Claude Code theme is neither dark nor light;
+- the plugin theme is `mono`, or it is `default` and the Claude Code theme is neither dark nor light;
 - mermaid-tty can't parse the diagram, or its source is over 50,000 characters, Mermaid's limit;
 - the source has frontmatter beyond a plain `title`, a `%%{` directive, a `style`, `classDef`, `linkStyle`, `class`, `cssClass`, `click`, `link`, `call`, `callback`, `href`, `accTitle` or `accDescr` statement, a sequence `rect` or `box` colour other than `#hex`, `rgb()` or `rgba()`, an entity such as `#117;`, a space other than a plain space or tab, a control character, or anything that could name a URL or file (such as `url(`, `http:`, `file:`, `//` or a backslash);
 - the SVG Mermaid draws for it uses an element or attribute outside the fixed set Mermaid's own diagrams use, or refers to anything outside itself (mermaid-tty renders the SVG first and checks it before making the picture);
 - `mmdc` is missing, fails, takes over 30 seconds, or makes a picture over 2 MiB, over 255 rows tall, or too wide to read at the available width.
+
+Each picture renders in its own `mermaid-tty.XXXXXX` folder in the system temp folder, removed as soon as it is done. When a terminal session ends, mermaid-tty also removes any folder a render still holds; when one starts or ends, it sweeps away any `mermaid-tty.*` folder over ten minutes old that a crashed session left. Nothing of a picture stays on disk once the session closes.
 
 `claude --debug` logs why a picture wasn't used. Run `/mermaid-tty text` to keep text drawings for this session, or `/mermaid-tty images off` to keep them in every session; `/mermaid-tty diagram` and `/mermaid-tty images auto` turn pictures back on. `/mermaid-tty images on` skips the terminal check, for a terminal that shows kitty graphics but is not listed above; the other conditions still apply, and a terminal that cannot show the picture shows an empty space or its alt text. `/copy` still copies the source.
 

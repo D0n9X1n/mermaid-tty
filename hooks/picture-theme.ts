@@ -22,6 +22,8 @@ export type MermaidConfig = {
   securityLevel: 'strict'
   theme: 'base' | 'dark' | 'default'
   themeVariables: Record<string, unknown>
+  // The plugin's own CSS, after Mermaid's: only selectors and #rrggbb declarations (flowchartNodes).
+  themeCSS: string
   // The colors journey draws its actors' dots in.
   journey: { actorColours: string[] }
 }
@@ -185,7 +187,7 @@ function eventPairs(pairs: Pairs, i: number, label: string, fill: string, extra:
 // A filled shape's border: its fill toned toward the canvas, as far as it takes to read on the fill. Mermaid draws the
 // lines inside a shape in it too, a cylinder's lid, a class's compartments, an entity's rows, so a border the color of
 // the fill would hide them; toned, the outline reads as a darker rim of the same color.
-function rim(fill: string, canvas: string): string {
+function rimOf(fill: string, canvas: string): string {
   for (let t = 0.95; t > 0; t -= 0.05) {
     const c = mix(fill, canvas, t)
     if (contrast(c, fill) >= MIN) {
@@ -194,6 +196,32 @@ function rim(fill: string, canvas: string): string {
   }
 
   return canvas
+}
+
+// Mermaid gives every flowchart node the one fill mainBkg; a picture colors them apart, each node a series color in
+// turn with its label and rim chosen for it, so it shows the palette where the text drawing shows a role. The selectors
+// reach only flowchart nodes (their ids hold -flowchart-), never a state's start or end dot, which share the class;
+// they outrank Mermaid's own `.node rect` rules, and a node's label is its HTML span or its SVG text.
+const SHAPES = ['rect', 'polygon', 'path', 'circle', 'ellipse']
+const LABELS = ['.nodeLabel', '.nodeLabel *', 'span', 'text', 'tspan']
+function flowchartNodes(
+  pairs: Pairs,
+  series: readonly string[],
+  canvas: string,
+  texts: readonly string[],
+  prefer: string,
+): string {
+  return series
+    .slice(0, 8)
+    .map((fill, i) => {
+      const node = `.nodes > .node[id*="-flowchart-"]:nth-child(8n+${(i + 1) % 8})`
+      const rim = pairs.on(`flowchart node ${i + 1} rim`, rimOf(fill, canvas), fill)
+      const label = pairs.on(`flowchart node ${i + 1} label`, pick(prefer, texts, [fill]), fill)
+      const shapes = SHAPES.map((x) => `${node} ${x}`).join(',')
+      const labels = LABELS.map((x) => `${node} ${x}`).join(',')
+      return `${shapes}{fill:${fill} !important;stroke:${rim} !important;}${labels}{color:${label} !important;fill:${label} !important;}`
+    })
+    .join('')
 }
 
 // A curated palette's theme on Mermaid's base theme.
@@ -220,7 +248,7 @@ function curated(look: Curated): PictureTheme {
 
   // Nodes, and the edge labels Mermaid draws in the same text color: a label chip is filled like a node, so one color
   // reads on both. The border, with the lines inside a shape, as a darker rim of each fill.
-  const border = (what: string, f: string) => pairs.on(what, rim(f, bg), f)
+  const border = (what: string, f: string) => pairs.on(what, rimOf(f, bg), f)
   v.primaryColor = v.mainBkg = v.nodeBkg = r.node
   v.primaryBorderColor = v.nodeBorder = v.stateBorder = border('node borders and inner lines', r.node)
   v.edgeLabelBackground = r.node
@@ -400,6 +428,7 @@ function curated(look: Curated): PictureTheme {
       securityLevel: 'strict',
       theme: 'base',
       themeVariables: v,
+      themeCSS: flowchartNodes(pairs, series, bg, all, fill),
       journey: { actorColours: series.slice(0, 6) },
     },
     background: bg,
@@ -462,6 +491,7 @@ function standard(look: 'default-dark' | 'default-light'): PictureTheme {
       securityLevel: 'strict',
       theme: look === 'default-dark' ? 'dark' : 'default',
       themeVariables: v,
+      themeCSS: flowchartNodes(pairs, series, cc.canvas[0]!, texts, cc.inverse),
       journey: { actorColours: series.slice(0, 6) },
     },
     background: 'transparent',

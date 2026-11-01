@@ -3,11 +3,17 @@
 import { isFail } from '../core/fail.ts'
 import { createRenderer, type Rows } from '../core/render.ts'
 import { splitFences } from './fences.ts'
-import { createPictures, pictureFor, pictureLook, type Picture, type Pictures } from './image.ts'
+import { createPictures, pictureFor, pictureLook, sweepTemp, type Picture, type Pictures } from './image.ts'
 import { passThrough, type Images, type Mode } from './mode.ts'
 
 const renderer = createRenderer(64)
 const pictures = createPictures()
+
+// Removes the picture temp dirs this session's renders still hold, and any stale ones; within timeoutMs, quietly. A
+// function declaration: the engine's loader follows $ only into one.
+export async function sweepPictures($: any, timeoutMs?: number): Promise<void> {
+  await sweepTemp($, pictures, timeoutMs)
+}
 
 // The picture setting images() answers, auto when it throws, before or after it returns a promise.
 async function readImages(images: () => Promise<Images>): Promise<Images> {

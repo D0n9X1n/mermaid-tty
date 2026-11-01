@@ -327,3 +327,34 @@ test("every filled shape's border reads on its fill, so a cylinder's lid and a c
     }
   }
 })
+
+// A flowchart's nodes, each a series color in turn, its label and rim chosen for it: the picture shows many colors
+// where Mermaid's theme gives one. The rules are the plugin's own CSS, never the diagram's.
+const NODE_CSS = /^(?:[#.\w\s>:()+\-\[\]*="',]+\{(?:[a-z-]+:#[0-9A-Fa-f]{6}(?: !important)?;)+\})+$/
+
+test('a picture colors flowchart nodes in turn from the series, each label readable on its fill', () => {
+  for (const look of LOOKS) {
+    const t = pictureTheme(look)
+    const css = t.config.themeCSS
+    assert.equal(typeof css, 'string', look)
+    assert.match(css!, NODE_CSS, `${look}: only selectors and #rrggbb declarations`)
+    assert.doesNotMatch(css!, /url\(|@|\\|\/\*/, look)
+    for (let i = 1; i <= 8; i++) {
+      const rule = new RegExp(
+        `id\\*="-flowchart-"\\]:nth-child\\(8n\\+${i % 8}\\) [^{]*rect[^{]*\\{fill:(#\\w{6}) !important;stroke:(#\\w{6})`,
+      )
+      const m = rule.exec(css!)
+      assert.ok(m, `${look} slot ${i}`)
+      const label = new RegExp(`:nth-child\\(8n\\+${i % 8}\\) [^{]*nodeLabel[^{]*\\{color:(#\\w{6})`).exec(css!)
+      assert.ok(label, `${look} slot ${i} label`)
+      assert.ok(
+        t.pairs.some((p) => p.ink === label![1] && p.on === m![1]),
+        `${look} slot ${i} label pair`,
+      )
+      assert.ok(
+        t.pairs.some((p) => p.ink === m![2] && p.on === m![1]),
+        `${look} slot ${i} rim pair`,
+      )
+    }
+  }
+})
