@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { tested, untested } from '../lib/cc-versions.ts'
 const P = ['2.1.306', '2.1.307', '2.2.0-beta.1', '2.1.308', '2.1.309', '2.1.310']
-test('untested stable versions after the first tested one, oldest first; prereleases skipped; capped', () => {
-  assert.deepEqual(untested(P, ['2.1.306', '2.1.308']), ['2.1.307', '2.1.309', '2.1.310'])
+test('untested stable versions after the newest tested one, oldest first; prereleases skipped; capped', () => {
+  assert.deepEqual(untested(P, ['2.1.306', '2.1.308']), ['2.1.309', '2.1.310'])
   assert.deepEqual(untested(P, []), ['2.1.310'])
   assert.deepEqual(untested(P, ['2.1.306'], 2), ['2.1.307', '2.1.308'])
 })
@@ -17,8 +17,10 @@ test('a failing version is tested once and never stalls the rest; expired record
   const run1 = untested(pub, ['2.1.0'])
   assert.deepEqual([run1.length, run1[0], run1.at(-1)], [20, '2.1.1', '2.1.20'])
   assert.deepEqual(untested(pub, ['2.1.0', ...run1]), ['2.1.21'])
-  // The first runs' artifacts expired: what is left still starts after the oldest record, so nothing is retested.
+  // The first runs' artifacts expired: what is left still ends at the newest record, so nothing is retested.
   assert.deepEqual(untested(pub, run1.slice(10)), ['2.1.21'])
+  // A retry of an old version, its record long expired, adds an old artifact: the newest record still decides.
+  assert.deepEqual(untested(pub, ['2.1.0', '2.1.19', '2.1.20']), ['2.1.21'])
 })
 test('the CLI lists untested versions from artifact names, retries one, and refuses anything else', async () => {
   const { mkdtempSync, rmSync, writeFileSync } = await import('node:fs')
