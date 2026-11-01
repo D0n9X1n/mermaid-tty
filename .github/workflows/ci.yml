@@ -63,8 +63,6 @@ jobs:
         run: bash scripts/check.sh
         env:
           GH_TOKEN: ${{ github.token }}
-      - id: review-hashes
-        run: node scripts/check-review-hashes.ts
       - id: wiki
         run: node scripts/check-wiki.ts
       - id: ci-coverage

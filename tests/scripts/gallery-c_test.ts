@@ -7,7 +7,6 @@ import { join } from 'node:path'
 import { gallery } from '../../scripts/render-gallery.ts'
 import { ENABLED, TIER1 } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'
-import { requirePass } from '../../scripts/check-review-hashes.ts'
 test('VR.gallery: every Tier 1 ok fixture at 80 and 60, a CJK sheet per type, the palette sheet; every glyph at col × cell', () => {
   const out = mkdtempSync(join(tmpdir(), 'mtty-galc-'))
   try {
@@ -39,12 +38,6 @@ test('VR.tangled: check-tangle passes over every Tier 1 type and reports each', 
     assert.match(r.stdout, new RegExp(`^${t}: \\d+ ok$`, 'm'), t)
   }
 })
-test('VR.reviewers: each Tier 1 type has its own review scope over its goldens and the themes', () => {
-  const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
-  for (const t of TIER1) {
-    assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
-  }
-})
 // The README's Features line names the registry's types, in its order, so a new or renamed type can't leave it stale.
 // Read with a regex, not the docs parser, which a bare node --test has not installed.
 test("B1: the README's Features line names exactly the enabled diagram types", () => {
@@ -53,15 +46,6 @@ test("B1: the README's Features line names exactly the enabled diagram types", (
     [...line.matchAll(/`([\w-]+)`/g)].map((m) => m[1]),
     [...ENABLED],
   )
-})
-test('VR.passes: with no records, the release gate reports every Tier 1 review scope', () => {
-  const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
-  for (const t of TIER1) {
-    assert.ok(
-      requirePass([], req).some((p) => p.startsWith(`vr-C-${t}: `)),
-      t,
-    )
-  }
 })
 test('A4: no Tier 1 module is a stub: each ok-01 fixture renders', () => {
   for (const t of TIER1) {

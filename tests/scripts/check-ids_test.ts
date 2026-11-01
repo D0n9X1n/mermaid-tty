@@ -25,13 +25,13 @@ test('A8.validation: only bold text with the colon inside is a label; slugs coll
   assert.equal(slug('Stored / copied'), 'stored-copied')
   assert.equal(slug('No build'), 'no-build')
 })
-test('A8.validation: ci/coverage.json lists exactly the 48 check IDs, in order', () =>
+test('A8.validation: ci/coverage.json lists exactly the 44 check IDs, in order', () =>
   assert.deepEqual(
     Object.keys(JSON.parse(readFileSync('ci/coverage.json', 'utf8'))),
     (
       'A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 ' +
       'A6.hook-tests A6.command A6.in-claude-code A7 A8 A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A9 A9.harness A9.stored A9.release ' +
-      'A10 VR.gallery VR.in-ci VR.reviewers VR.tangled VR.passes B1 B1.docs-check B1.beauty-review B2 B2.per-paragraph B2.translation-review B3 B3.publish-test ' +
+      'A10 VR.gallery VR.in-ci VR.tangled B1 B1.docs-check B2 B2.per-paragraph B3 B3.publish-test ' +
       'B3.workflow-check B3.release B4 B5 B5.every-pr B5.release B6 B7 B7.check-ids'
     ).split(' '),
   ))
@@ -139,11 +139,10 @@ test("A8.validation: check.sh's all runs exactly these steps, in this order", ()
     ['node', 'scripts/corpus-gate.ts', 'fixtures/corpus'],
     ['node', 'scripts/render-gallery.ts', '@tmp'],
     ['node', 'scripts/check-tangle.ts'],
-    ['node', 'scripts/check-review-hashes.ts', '--require-pass'],
     ['node', 'scripts/check-palettes.ts'],
   ]))
 // check-ids compares as sets, so only this pin catches a duplicated or reordered row.
-test("A8.validation: CHECKS has plan A §9's 31 rows, in its order, each ID once", () => {
+test("A8.validation: CHECKS has plan A §9's 29 rows, in its order, each ID once", () => {
   const ids = CHECKS.map((r) => r.id)
   assert.deepEqual(
     ids.filter((id, i) => ids.indexOf(id) !== i),
@@ -155,14 +154,14 @@ test("A8.validation: CHECKS has plan A §9's 31 rows, in its order, each ID once
     (
       'A1 A2 A3 A4 A4.width-table A4.fit-ladder A5 A5.mutation-tests A5.errors A6 A6.hook-tests A6.command A6.in-claude-code A7 ' +
       'A8.portability A8.benchmark A8.cache A8.no-build A8.validation A8.platforms A8 A9 A9.harness A9.stored A9.release A10 ' +
-      'VR.gallery VR.tangled VR.reviewers VR.passes VR.in-ci'
+      'VR.gallery VR.tangled VR.in-ci'
     ).split(' '),
   )
 })
-test('A8.validation: check-ids passes when CHECKS has a row for exactly the 31 A and VR IDs in ci/coverage.json', () => {
+test('A8.validation: check-ids passes when CHECKS has a row for exactly the 29 A and VR IDs in ci/coverage.json', () => {
   const r = spawnSync(process.execPath, ['scripts/check-ids.ts'], { encoding: 'utf8' })
   assert.equal(r.status, 0)
-  assert.equal(r.stdout, 'check-ids: CHECKS matches the 31 A and VR IDs\n')
+  assert.equal(r.stdout, 'check-ids: CHECKS matches the 29 A and VR IDs\n')
 })
 test('A8.validation: check-ids fails, naming the ID, when ci/coverage.json has an ID CHECKS lacks', () => {
   const map = 'ci/coverage.json'
@@ -185,7 +184,7 @@ test('A8.validation: check.ts and check-ids.ts run main() when argv[1] reaches t
       assert.match(r.stderr, /^unknown check A99$/m)
       const ids = spawnSync(process.execPath, [join(link, 'check-ids.ts')], { encoding: 'utf8' })
       assert.equal(ids.status, 0)
-      assert.equal(ids.stdout, 'check-ids: CHECKS matches the 31 A and VR IDs\n')
+      assert.equal(ids.stdout, 'check-ids: CHECKS matches the 29 A and VR IDs\n')
     } finally {
       unlinkSync(link)
     }

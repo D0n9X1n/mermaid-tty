@@ -87,8 +87,8 @@ export const TIER1: readonly DiagramType[] = [
   'xychart',
   'quadrant',
 ]
-// The types C gates: each stays disabled until a vr-C-<type> pass record lists its fixtures and goldens, and one commit
-// then adds it to TIER2_PASSED. None has passed in v1.
+// The types not yet drawn: each stays disabled until its fixtures and goldens pass review in the PR that adds it to
+// TIER2_PASSED. None has passed in v1.
 export const TIER2: readonly DiagramType[] = [
   'requirement',
   'c4',

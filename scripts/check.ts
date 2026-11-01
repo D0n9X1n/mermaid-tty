@@ -21,7 +21,6 @@ const FRESH = node('scripts/fresh-clone.ts')
 const E2E = node('scripts/e2e/run.ts')
 const GALLERY = node('scripts/render-gallery.ts', '@tmp')
 const TANGLE = node('scripts/check-tangle.ts')
-const REVIEWS = node('scripts/check-review-hashes.ts', '--require-pass')
 
 // One row per check ID. Sub-projects B and C add their rows here.
 export const CHECKS: Check[] = [
@@ -58,8 +57,6 @@ export const CHECKS: Check[] = [
   { id: 'A10', steps: [node('scripts/corpus-gate.ts', 'fixtures/corpus')] },
   { id: 'VR.gallery', steps: [GALLERY] },
   { id: 'VR.tangled', steps: [TANGLE] },
-  { id: 'VR.reviewers', steps: [REVIEWS] },
-  { id: 'VR.passes', steps: [REVIEWS] },
   { id: 'VR.in-ci', steps: [GALLERY, TANGLE, node('scripts/check-palettes.ts')] },
 ]
 

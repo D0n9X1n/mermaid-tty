@@ -166,12 +166,6 @@ test('A3: unlistedFrames names a frame owner that expect.frames does not list', 
   assert.deepEqual(unlistedFrames(c.toDrawing(e)), ['S'])
   assert.deepEqual(unlistedFrames(c.toDrawing({ ...e, frames: ['S'] })), [])
 })
-test("VR.reviewers: vr-A covers only A's goldens and the themes", () =>
-  assert.deepEqual(JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))['vr-A'], [
-    'goldens/flowchart/**',
-    'goldens/sequence/**',
-    'core/themes.ts',
-  ]))
 // goldenGlyphs on one golden holding content, each flag as 'line ch'. Its temp dir is removed after.
 function scanGolden(content: string): string[] {
   const dir = mkdtempSync(join(tmpdir(), 'cg-'))

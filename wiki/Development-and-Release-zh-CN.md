@@ -18,7 +18,7 @@
 | `fixtures/` | 测试和脚本使用的 Mermaid 源码样例。 |
 | `scripts/` | 检查、生成器、端到端测试框架及文档工具。 |
 | `assets/` | `icon.svg` 和 README 图片。 |
-| `ci/` | `coverage.json` 把每个检查 ID 对应到 CI 步骤；`reviews/` 存放 golden 评审的结论记录。 |
+| `ci/` | `coverage.json` 把每个检查 ID 对应到 CI 步骤。评审记录在各自的 PR 中，不放进仓库。 |
 | `CLAUDE.md` | 给编程智能体的工作规则：工作流程、发布、文档、代码风格和测试。 |
 | `wiki/` | 本百科的源文件，也是唯一的文档。仓库中没有 `docs/` 目录，一旦出现，`check-docs` 会失败。 |
 | `.github/workflows/` | CI、百科发布和版本发布工作流。 |
@@ -47,7 +47,7 @@ node scripts/render-gallery.ts
 node scripts/check-ci-coverage.ts
 ```
 
-- `bash scripts/check.sh` 是必须通过的检查入口，使用 `set -euo pipefail`。依次运行 `claude plugin validate .`、`claude plugin test .`（mods kit 测试）及 `node scripts/check.ts all`：所有 `tests/**/*_test.ts`，再执行可移植性、性能上限、全新克隆、语料、图库、连线纠缠、评审结论和配色检查。它不发现 `scripts/tests/` 或文档测试；CI 会单独运行。
+- `bash scripts/check.sh` 是必须通过的检查入口，使用 `set -euo pipefail`。依次运行 `claude plugin validate .`、`claude plugin test .`（mods kit 测试）及 `node scripts/check.ts all`：所有 `tests/**/*_test.ts`，再执行可移植性、性能上限、全新克隆、语料、图库、连线纠缠、配色检查。它不发现 `scripts/tests/` 或文档测试；CI 会单独运行。
 - `npm ci --prefix scripts/e2e` 安装端到端框架的固定版本依赖。`node scripts/e2e/run.ts` 在伪终端中运行真实 Claude Code，连接模拟 Messages API，不需要账号或密钥。
 - `node scripts/render-gallery.ts` 将每种图表类型的所有非拒绝类样例（`fixtures/` 下除 `corpus` 外的每个目录）按 60、80 列及 `nord` 主题生成 SVG，并为每种类型生成 CJK 合辑，另有六主题合辑，供视觉评审。
 - `node scripts/check-ci-coverage.ts` 在验收检查没有对应 CI 步骤时失败。
@@ -58,7 +58,6 @@ node scripts/check-ci-coverage.ts
 |---|---|
 | `node --test` | 运行自动发现的全部 Node 测试，包括 `scripts/tests/*_test.ts`，无需安装依赖；文档测试使用单独命令。 |
 | `node scripts/typecheck.ts` | 使用固定版本 TypeScript 检查 `core/`；存在生成的 Claude Code 类型时也检查钩子。使用 npx 缓存，不是构建步骤。 |
-| `node scripts/check-review-hashes.ts` | 校验评审记录的哈希；加 `--require-pass` 要求通过评审的范围覆盖 `ci/reviews/required.json`。 |
 | `node --test 'scripts/tests/*.docs-spec.ts'` | 安装 `scripts/docs` 依赖后运行文档工具测试。 |
 | `node scripts/check.ts <ID>` | 运行一个验收检查的步骤，例如 `A4` 或 `A8.portability`。 |
 | `node scripts/explain.ts FILE COLS` | 查看 `FILE` 中图表按 `COLS` 列适配的步骤及结果，或回退原因。 |
@@ -105,7 +104,7 @@ Prettier（`.prettierrc.json`）使用单引号、不加分号、两个空格缩
 
 `.github/workflows/ci.yml` 在每次 push 和 pull request 时运行。`check` 和 `e2e` 使用 `ubuntu-latest`、`macos-latest`、`windows-latest`，配置 Node 24，并从 npm 安装 Claude Code 2.1.308。
 
-- **check** 在三个系统上运行：代码风格检查（`node scripts/style/run.ts`）、裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh`、评审哈希和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
+- **check** 在三个系统上运行：代码风格检查（`node scripts/style/run.ts`）、裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh` 和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
 - **e2e** 在三个系统上运行真实 Claude Code 框架，使用 `--scenario all`，覆盖源码视图、存储文本、包括 `mono` 的主题和 256 色输出。Windows 使用 ConPTY，macOS 和 Linux 使用 tmux。
 - **gallery** 仅在 Ubuntu 上运行：渲染 SVG 图库并上传为构建产物，供视觉评审。
 - **claude-code-versions** 每四小时运行一次：针对每个新发布的 Claude Code 版本运行 A9 端到端框架，新版本一旦破坏插件，几小时内即可发现。
@@ -174,7 +173,7 @@ flowchart LR
 
 ## 发布
 
-1. 确认 `main` 在三个系统上的 CI 均通过，`.claude-plugin/plugin.json` 的 `version` 与待发布版本一致，且 `bash scripts/check.sh` 通过。评审步骤要求 `ci/reviews/required.json` 的每个路径都有通过结论，所有已评审文件仍匹配记录的 SHA-256。文件变化后应重新评审；百科检查器不能替代翻译评审。
+1. 确认 `main` 在三个系统上的 CI 均通过，`.claude-plugin/plugin.json` 的 `version` 与待发布版本一致，且 `bash scripts/check.sh` 通过。
 2. 不要手写发布说明：标签工作流会自动生成。每项改动都通过 PR 合并，PR 标题要适合放进列表，提交正文为它解决的每个 issue 写上 `Fixes #N`。发布 PR 的标题为 `mermaid-tty v<version>`，只更新版本号，不会出现在说明中。可用 `python3 scripts/release-notes.py v<version>` 预览某个标签的说明（设置 `PREVIOUS_TAG` 可与另一个标签比较）。
 
 3. **先发布百科。** 等待待打标签的那个 `main` 提交完成 `publish-wiki`，并确认发布的页面。GitHub 只有在网页界面保存第一个百科页面后才创建百科仓库；若克隆失败，先保存一页，再重跑工作流。

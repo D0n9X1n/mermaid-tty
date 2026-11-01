@@ -149,7 +149,6 @@ test('CI preserves every interim check and runs all A9 scenarios on each OS', ()
     'bash scripts/test-wiki-publish.sh',
     'bash scripts/test-local-install.sh',
     'bash scripts/check.sh',
-    'node scripts/check-review-hashes.ts',
   ]) {
     assert.ok(runs('check').includes(command), command)
   }

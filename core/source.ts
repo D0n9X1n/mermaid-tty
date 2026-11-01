@@ -187,8 +187,8 @@ const ALLOW: Readonly<Record<string, (v: Scalar) => boolean>> = {
   'mindmap.colorBy': any,
   'timeline.disableMulticolor': any,
   // Mermaid's defaults, which these drawings show: branch names, commit labels. showDataLabel only toggles text over
-  // Mermaid's bars; xychart's value rows print what Mermaid encodes as bar heights and line points either way (PM
-  // ruling, vr-C-xychart), so any boolean draws.
+  // Mermaid's bars; xychart's value rows print what Mermaid encodes as bar heights and line points either way (the
+  // review of xychart's goldens settled it), so any boolean draws.
   'gitGraph.showBranches': (v) => v === true,
   'gitGraph.showCommitLabel': (v) => v === true,
   'xyChart.showDataLabel': bool,
