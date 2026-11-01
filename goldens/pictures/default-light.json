@@ -33,27 +33,27 @@
       "gitBranchLabel6": "#ffffff",
       "git7": "#006666",
       "gitBranchLabel7": "#ffffff",
-      "cScale0": "#5769f7",
+      "cScale0": "#5769F7",
       "cScaleLabel0": "#ffffff",
-      "cScale1": "#2c7a39",
+      "cScale1": "#2C7A39",
       "cScaleLabel1": "#ffffff",
-      "cScale2": "#966c1e",
+      "cScale2": "#966C1E",
       "cScaleLabel2": "#ffffff",
-      "cScale3": "#ab2b3f",
+      "cScale3": "#AB2B3F",
       "cScaleLabel3": "#ffffff",
-      "cScale4": "#8700ff",
+      "cScale4": "#8700FF",
       "cScaleLabel4": "#ffffff",
-      "cScale5": "#d77757",
-      "cScaleLabel5": "#ffffff",
-      "cScale6": "#4782c8",
-      "cScaleLabel6": "#ffffff",
+      "cScale5": "#D77757",
+      "cScaleLabel5": "#000000",
+      "cScale6": "#4782C8",
+      "cScaleLabel6": "#000000",
       "cScale7": "#006666",
       "cScaleLabel7": "#ffffff",
-      "cScale8": "#5769f7",
+      "cScale8": "#5769F7",
       "cScaleLabel8": "#ffffff",
-      "cScale9": "#2c7a39",
+      "cScale9": "#2C7A39",
       "cScaleLabel9": "#ffffff",
-      "cScale10": "#966c1e",
+      "cScale10": "#966C1E",
       "cScaleLabel10": "#ffffff",
       "cScale11": "#5769F7",
       "cScaleLabel11": "#000000",
@@ -169,37 +169,72 @@
     {
       "what": "section 0",
       "ink": "#ffffff",
-      "on": "#5769f7"
+      "on": "#5769F7"
+    },
+    {
+      "what": "event 0, brightened",
+      "ink": "#FFFFFF",
+      "on": "#687EFF"
     },
     {
       "what": "section 1",
       "ink": "#ffffff",
-      "on": "#2c7a39"
+      "on": "#2C7A39"
+    },
+    {
+      "what": "event 1, brightened",
+      "ink": "#FFFFFF",
+      "on": "#359244"
     },
     {
       "what": "section 2",
       "ink": "#ffffff",
-      "on": "#966c1e"
+      "on": "#966C1E"
+    },
+    {
+      "what": "event 2, brightened",
+      "ink": "#FFFFFF",
+      "on": "#B48224"
     },
     {
       "what": "section 3",
       "ink": "#ffffff",
-      "on": "#ab2b3f"
+      "on": "#AB2B3F"
+    },
+    {
+      "what": "event 3, brightened",
+      "ink": "#FFFFFF",
+      "on": "#CD344C"
     },
     {
       "what": "section 4",
       "ink": "#ffffff",
-      "on": "#8700ff"
+      "on": "#8700FF"
+    },
+    {
+      "what": "event 4, brightened",
+      "ink": "#FFFFFF",
+      "on": "#A200FF"
     },
     {
       "what": "section 5",
-      "ink": "#ffffff",
-      "on": "#d77757"
+      "ink": "#000000",
+      "on": "#D77757"
+    },
+    {
+      "what": "event 5, brightened",
+      "ink": "#000000",
+      "on": "#FF8F68"
     },
     {
       "what": "section 6",
-      "ink": "#ffffff",
-      "on": "#4782c8"
+      "ink": "#000000",
+      "on": "#4782C8"
+    },
+    {
+      "what": "event 6, brightened",
+      "ink": "#000000",
+      "on": "#559CF0"
     },
     {
       "what": "section 7",
@@ -207,29 +242,54 @@
       "on": "#006666"
     },
     {
+      "what": "event 7, brightened",
+      "ink": "#FFFFFF",
+      "on": "#007A7A"
+    },
+    {
       "what": "section 8",
       "ink": "#ffffff",
-      "on": "#5769f7"
+      "on": "#5769F7"
+    },
+    {
+      "what": "event 8, brightened",
+      "ink": "#FFFFFF",
+      "on": "#687EFF"
     },
     {
       "what": "section 9",
       "ink": "#ffffff",
-      "on": "#2c7a39"
+      "on": "#2C7A39"
+    },
+    {
+      "what": "event 9, brightened",
+      "ink": "#FFFFFF",
+      "on": "#359244"
     },
     {
       "what": "section 10",
       "ink": "#ffffff",
-      "on": "#966c1e"
+      "on": "#966C1E"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "event 10, brightened",
+      "ink": "#FFFFFF",
+      "on": "#B48224"
+    },
+    {
+      "what": "section 11",
       "ink": "#000000",
       "on": "#5769F7"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "section 11",
       "ink": "#000000",
       "on": "#ffffff"
+    },
+    {
+      "what": "event 11, brightened",
+      "ink": "#000000",
+      "on": "#687EFF"
     },
     {
       "what": "chart series 1",

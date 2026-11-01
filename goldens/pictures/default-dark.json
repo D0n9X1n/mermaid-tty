@@ -33,27 +33,27 @@
       "gitBranchLabel6": "#000000",
       "git7": "#48968c",
       "gitBranchLabel7": "#000000",
-      "cScale0": "#b1b9f9",
+      "cScale0": "#B1B9F9",
       "cScaleLabel0": "#000000",
-      "cScale1": "#4eba65",
+      "cScale1": "#4EBA65",
       "cScaleLabel1": "#000000",
-      "cScale2": "#ffc107",
+      "cScale2": "#FFC107",
       "cScaleLabel2": "#000000",
-      "cScale3": "#ff6b80",
+      "cScale3": "#FF6B80",
       "cScaleLabel3": "#000000",
-      "cScale4": "#af87ff",
+      "cScale4": "#AF87FF",
       "cScaleLabel4": "#000000",
-      "cScale5": "#d77757",
+      "cScale5": "#D77757",
       "cScaleLabel5": "#000000",
-      "cScale6": "#6a9bcc",
+      "cScale6": "#6A9BCC",
       "cScaleLabel6": "#000000",
-      "cScale7": "#48968c",
+      "cScale7": "#48968C",
       "cScaleLabel7": "#000000",
-      "cScale8": "#b1b9f9",
+      "cScale8": "#B1B9F9",
       "cScaleLabel8": "#000000",
-      "cScale9": "#4eba65",
+      "cScale9": "#4EBA65",
       "cScaleLabel9": "#000000",
-      "cScale10": "#ffc107",
+      "cScale10": "#FFC107",
       "cScaleLabel10": "#000000",
       "cScale11": "#41877E",
       "cScaleLabel11": "#ffffff",
@@ -169,72 +169,132 @@
     {
       "what": "section 0",
       "ink": "#000000",
-      "on": "#b1b9f9"
+      "on": "#B1B9F9"
+    },
+    {
+      "what": "event 0, brightened",
+      "ink": "#000000",
+      "on": "#D4DEFF"
     },
     {
       "what": "section 1",
       "ink": "#000000",
-      "on": "#4eba65"
+      "on": "#4EBA65"
+    },
+    {
+      "what": "event 1, brightened",
+      "ink": "#000000",
+      "on": "#5EDF79"
     },
     {
       "what": "section 2",
       "ink": "#000000",
-      "on": "#ffc107"
+      "on": "#FFC107"
+    },
+    {
+      "what": "event 2, brightened",
+      "ink": "#000000",
+      "on": "#FFE808"
     },
     {
       "what": "section 3",
       "ink": "#000000",
-      "on": "#ff6b80"
+      "on": "#FF6B80"
+    },
+    {
+      "what": "event 3, brightened",
+      "ink": "#000000",
+      "on": "#FF809A"
     },
     {
       "what": "section 4",
       "ink": "#000000",
-      "on": "#af87ff"
+      "on": "#AF87FF"
+    },
+    {
+      "what": "event 4, brightened",
+      "ink": "#000000",
+      "on": "#D2A2FF"
     },
     {
       "what": "section 5",
       "ink": "#000000",
-      "on": "#d77757"
+      "on": "#D77757"
+    },
+    {
+      "what": "event 5, brightened",
+      "ink": "#000000",
+      "on": "#FF8F68"
     },
     {
       "what": "section 6",
       "ink": "#000000",
-      "on": "#6a9bcc"
+      "on": "#6A9BCC"
+    },
+    {
+      "what": "event 6, brightened",
+      "ink": "#000000",
+      "on": "#7FBAF5"
     },
     {
       "what": "section 7",
       "ink": "#000000",
-      "on": "#48968c"
+      "on": "#48968C"
+    },
+    {
+      "what": "event 7, brightened",
+      "ink": "#000000",
+      "on": "#56B4A8"
     },
     {
       "what": "section 8",
       "ink": "#000000",
-      "on": "#b1b9f9"
+      "on": "#B1B9F9"
+    },
+    {
+      "what": "event 8, brightened",
+      "ink": "#000000",
+      "on": "#D4DEFF"
     },
     {
       "what": "section 9",
       "ink": "#000000",
-      "on": "#4eba65"
+      "on": "#4EBA65"
+    },
+    {
+      "what": "event 9, brightened",
+      "ink": "#000000",
+      "on": "#5EDF79"
     },
     {
       "what": "section 10",
       "ink": "#000000",
-      "on": "#ffc107"
+      "on": "#FFC107"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "event 10, brightened",
+      "ink": "#000000",
+      "on": "#FFE808"
+    },
+    {
+      "what": "section 11",
       "ink": "#ffffff",
       "on": "#41877E"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "section 11",
       "ink": "#ffffff",
       "on": "#000000"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "section 11",
       "ink": "#ffffff",
       "on": "#1e1e1e"
+    },
+    {
+      "what": "event 11, brightened",
+      "ink": "#FFFFFF",
+      "on": "#4EA297"
     },
     {
       "what": "chart series 1",

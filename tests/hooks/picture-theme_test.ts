@@ -202,12 +202,29 @@ test('the pairs follow every place Mermaid draws a color, not only the one its n
       assert.ok(has(v.taskTextDarkColor, on), `${look} active and done task text on ${on}`)
     }
 
-    for (let i = 0; i < 12; i++) {
-      assert.ok(has(v[`cScaleLabel${i}`], brighten(v[`cScale${i}`] as string, 1.2)), `${look} timeline event ${i}`)
-    }
-
     for (const k of ['labelBoxBorderColor', 'quadrantInternalBorderStrokeFill', 'clusterBorder', 'gridColor']) {
       assert.ok(has(v[k], surface) && has(v[k], t.background), `${look} ${k} on surface and canvas`)
+    }
+  }
+})
+
+// Timeline draws its event groups through brightness(120%), which brightens the label along with its section: each look
+// pairs every label, brightened, with its section brightened.
+test('every timeline label reads on its section and, brightened, on its brightened event, in every look', () => {
+  for (const look of LOOKS) {
+    const t = pictureTheme(look)
+    const v = t.config.themeVariables!
+    for (let i = 0; i < 12; i++) {
+      const label = v[`cScaleLabel${i}`] as string
+      const fill = v[`cScale${i}`] as string
+      assert.ok(
+        t.pairs.some((p) => p.ink === label && p.on === fill),
+        `${look} section ${i}`,
+      )
+      assert.ok(
+        t.pairs.some((p) => p.ink === brighten(label, 1.2) && p.on === brighten(fill, 1.2)),
+        `${look} event ${i}`,
+      )
     }
   }
 })

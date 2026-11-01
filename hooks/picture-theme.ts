@@ -98,20 +98,37 @@ function candidates(p: Palette): string[] {
 // series[i], cycling.
 const cycle = (series: readonly string[], i: number) => series[i % series.length]!
 
-// The color the last of twelve scale slots takes. Mermaid colors every timeline connector with that slot's label color,
-// on the canvas, and draws its events brightened, so one color must read on the slot, the slot brightened and the
-// canvas: the first series color, toned toward the canvas as little as it takes, where one of texts does.
-function lastSlot(series: readonly string[], texts: readonly string[], canvas: readonly string[]): string {
-  const reach = (fill: string) =>
-    Math.max(...texts.map((t) => worst(t, [fill, brighten(fill, EVENT_BRIGHTNESS), ...canvas])))
+// How well ink reads as a timeline label on fill, also over the canvas colors in extra: Mermaid draws the label on its
+// section and again in an event group through brightness(120%), which brightens the text with its fill; the lowest
+// contrast of them all.
+function eventReach(ink: string, fill: string, extra: readonly string[]): number {
+  const lit = (h: string) => brighten(h, EVENT_BRIGHTNESS)
+  return Math.min(worst(ink, [fill, ...extra]), contrast(lit(ink), lit(fill)))
+}
+
+// The timeline label for a slot of fill: prefer where it reads, else the text that reads best.
+function eventLabel(prefer: string, texts: readonly string[], fill: string, extra: readonly string[]): string {
+  if (eventReach(prefer, fill, extra) >= MIN) {
+    return prefer
+  }
+
+  return texts.reduce((a, b) => (eventReach(b, fill, extra) > eventReach(a, fill, extra) ? b : a), prefer)
+}
+
+// A slot's fill: color itself where one of texts reads on it as a timeline label (over extra too), else color toned
+// toward the canvas as little as it takes; for the last slot, whose label also draws every connector on the canvas, the
+// first series color that does so.
+function slotFill(colors: readonly string[], texts: readonly string[], canvas: string, extra: readonly string[]) {
   for (let t = 1; t > 0; t -= 0.05) {
-    const found = series.map((c) => mix(c, canvas[0]!, t)).find((c) => reach(c) >= MIN)
+    const found = colors
+      .map((c) => mix(c, canvas, t))
+      .find((c) => Math.max(...texts.map((x) => eventReach(x, c, extra))) >= MIN)
     if (found) {
       return found
     }
   }
 
-  return series[0]!
+  return colors[0]!
 }
 
 // a toned toward b: t of a and the rest of b, channel by channel, as '#rrggbb'.
@@ -149,9 +166,20 @@ export function brighten(h: string, f: number): string {
 // color brightened.
 const EVENT_BRIGHTNESS = 1.2
 
-// The twelve scale slots timeline and mindmap fill their sections with: the series in turn, the last one lastSlot's.
+// The twelve scale slots timeline and mindmap fill their sections with: the series in turn, each toned where its label
+// would not read, the last one any series color whose label also reads on the canvas.
 function scale(series: readonly string[], texts: readonly string[], canvas: readonly string[]): string[] {
-  return Array.from({ length: 12 }, (_, i) => (i === 11 ? lastSlot(series, texts, canvas) : cycle(series, i)))
+  return Array.from({ length: 12 }, (_, i) =>
+    i === 11 ? slotFill(series, texts, canvas[0]!, canvas) : slotFill([cycle(series, i)], texts, canvas[0]!, []),
+  )
+}
+
+// Records slot i's label pairs: on its section, brightened on its event, and for the last, on the canvas it draws the
+// connectors on; returns the label.
+function eventPairs(pairs: Pairs, i: number, label: string, fill: string, extra: readonly string[]): string {
+  pairs.on(`section ${i}`, label, fill, ...extra)
+  pairs.on(`event ${i}, brightened`, brighten(label, EVENT_BRIGHTNESS), brighten(fill, EVENT_BRIGHTNESS))
+  return label
 }
 
 // A curated palette's theme on Mermaid's base theme.
@@ -260,9 +288,9 @@ function curated(look: Curated): PictureTheme {
     v[`cScale${i}`] = c
     v[`cScaleInv${i}`] = bg
     v[`cScalePeer${i}`] = c
-    const event = brighten(c, EVENT_BRIGHTNESS)
-    v[`cScaleLabel${i}`] =
-      i === 11 ? text('timeline connectors and last section', fill, c, event, bg) : text(`section ${i}`, fill, c, event)
+    const extra = i === 11 ? [bg] : []
+    const label = eventLabel(fill, all, c, extra)
+    v[`cScaleLabel${i}`] = eventPairs(pairs, i, label, c, extra)
   })
 
   // Journey: Mermaid draws its task text in textColor, the canvas text color, which also writes its legend on the
@@ -378,8 +406,8 @@ function standard(look: 'default-dark' | 'default-light'): PictureTheme {
   const slots = scale(series, texts, cc.canvas)
   slots.forEach((c, i) => {
     v[`cScale${i}`] = c
-    v[`cScaleLabel${i}`] =
-      i === 11 ? text('timeline connectors and last section', c, ...cc.canvas) : text(`section ${i}`, c)
+    const extra = i === 11 ? cc.canvas : []
+    v[`cScaleLabel${i}`] = eventPairs(pairs, i, eventLabel(cc.inverse, texts, c, extra), c, extra)
   })
 
   // Journey keeps Mermaid's own section colors: its task text is the theme's canvas text color, which only Mermaid's

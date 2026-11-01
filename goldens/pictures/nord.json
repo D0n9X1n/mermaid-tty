@@ -155,9 +155,9 @@
       "cScaleInv10": "#2E3440",
       "cScalePeer10": "#EBCB8B",
       "cScaleLabel10": "#2E3440",
-      "cScale11": "#93535D",
+      "cScale11": "#B85F68",
       "cScaleInv11": "#2E3440",
-      "cScalePeer11": "#93535D",
+      "cScalePeer11": "#B85F68",
       "cScaleLabel11": "#D8DEE9",
       "fillType0": "#577381",
       "fillType1": "#637262",
@@ -521,8 +521,8 @@
       "on": "#88C0D0"
     },
     {
-      "what": "section 0",
-      "ink": "#2E3440",
+      "what": "event 0, brightened",
+      "ink": "#373E4D",
       "on": "#A3E6FA"
     },
     {
@@ -531,8 +531,8 @@
       "on": "#A3BE8C"
     },
     {
-      "what": "section 1",
-      "ink": "#2E3440",
+      "what": "event 1, brightened",
+      "ink": "#373E4D",
       "on": "#C4E4A8"
     },
     {
@@ -541,8 +541,8 @@
       "on": "#EBCB8B"
     },
     {
-      "what": "section 2",
-      "ink": "#2E3440",
+      "what": "event 2, brightened",
+      "ink": "#373E4D",
       "on": "#FFF4A7"
     },
     {
@@ -551,8 +551,8 @@
       "on": "#D08770"
     },
     {
-      "what": "section 3",
-      "ink": "#2E3440",
+      "what": "event 3, brightened",
+      "ink": "#373E4D",
       "on": "#FAA286"
     },
     {
@@ -561,8 +561,8 @@
       "on": "#B48EAD"
     },
     {
-      "what": "section 4",
-      "ink": "#2E3440",
+      "what": "event 4, brightened",
+      "ink": "#373E4D",
       "on": "#D8AAD0"
     },
     {
@@ -571,8 +571,8 @@
       "on": "#81A1C1"
     },
     {
-      "what": "section 5",
-      "ink": "#2E3440",
+      "what": "event 5, brightened",
+      "ink": "#373E4D",
       "on": "#9BC1E8"
     },
     {
@@ -581,8 +581,8 @@
       "on": "#BF616A"
     },
     {
-      "what": "section 6",
-      "ink": "#2E3440",
+      "what": "event 6, brightened",
+      "ink": "#373E4D",
       "on": "#E5747F"
     },
     {
@@ -591,8 +591,8 @@
       "on": "#5E81AC"
     },
     {
-      "what": "section 7",
-      "ink": "#2E3440",
+      "what": "event 7, brightened",
+      "ink": "#373E4D",
       "on": "#719BCE"
     },
     {
@@ -601,8 +601,8 @@
       "on": "#88C0D0"
     },
     {
-      "what": "section 8",
-      "ink": "#2E3440",
+      "what": "event 8, brightened",
+      "ink": "#373E4D",
       "on": "#A3E6FA"
     },
     {
@@ -611,8 +611,8 @@
       "on": "#A3BE8C"
     },
     {
-      "what": "section 9",
-      "ink": "#2E3440",
+      "what": "event 9, brightened",
+      "ink": "#373E4D",
       "on": "#C4E4A8"
     },
     {
@@ -621,24 +621,24 @@
       "on": "#EBCB8B"
     },
     {
-      "what": "section 10",
-      "ink": "#2E3440",
+      "what": "event 10, brightened",
+      "ink": "#373E4D",
       "on": "#FFF4A7"
     },
     {
-      "what": "timeline connectors and last section",
+      "what": "section 11",
       "ink": "#D8DEE9",
-      "on": "#93535D"
+      "on": "#B85F68"
     },
     {
-      "what": "timeline connectors and last section",
-      "ink": "#D8DEE9",
-      "on": "#B06470"
-    },
-    {
-      "what": "timeline connectors and last section",
+      "what": "section 11",
       "ink": "#D8DEE9",
       "on": "#2E3440"
+    },
+    {
+      "what": "event 11, brightened",
+      "ink": "#FFFFFF",
+      "on": "#DD727D"
     },
     {
       "what": "journey section 0",
