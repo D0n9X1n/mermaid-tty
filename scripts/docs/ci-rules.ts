@@ -239,7 +239,8 @@ export function versionsErrors(yml: string): string[] {
             (s) =>
               s.if === 'always()' &&
               action(s, 'upload-artifact') &&
-              s.with?.name === 'leg-${{ matrix.version }}-${{ matrix.os }}',
+              s.with?.name ===
+                "${{ github.event_name == 'schedule' && 'leg' || 'retry' }}-${{ matrix.version }}-${{ matrix.os }}",
           ),
       ],
     ]),

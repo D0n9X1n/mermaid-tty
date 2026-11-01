@@ -1,9 +1,10 @@
 // The scheduled Claude Code version job (B4): which versions to test. No dependencies, so the version job needs no docs
 // tooling; its workflow rule runs on the parsed YAML tree in docs/ci-rules.ts.
 const STABLE = /^\d+\.\d+\.\d+$/
-// The versions earlier runs tested: every leg of a run uploads an artifact named leg-<version>-<os>, pass or fail, so
-// the Actions API's artifact list is the record, and nothing is written back to the repo. A tested version is never
-// selected again (retry it with workflow_dispatch).
+// The versions earlier scheduled runs tested: every leg of one uploads an artifact named leg-<version>-<os>, pass or
+// fail, so the Actions API's artifact list is the record, and nothing is written back to the repo. A retry
+// (workflow_dispatch) names its legs retry-<version>-<os>, which are not the record: scheduled runs only move forward,
+// so the newest version's artifact is always the last to expire, and a retry can't move the selection back.
 export const tested = (names: string) => [
   ...new Set([...names.matchAll(/^leg-(\d+\.\d+\.\d+)-\S+$/gm)].map((m) => m[1]!)),
 ]

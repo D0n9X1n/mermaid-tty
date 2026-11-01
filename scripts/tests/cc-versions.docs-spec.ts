@@ -12,7 +12,7 @@ const VERS =
   '        version: ${{ fromJSON(needs.list.outputs.versions) }}\n    runs-on: ${{ matrix.os }}\n    steps:\n' +
   NODE +
   '      - run: npm install -g "@anthropic-ai/claude-code@${{ matrix.version }}"\n      - id: a9-version\n        run: node scripts/e2e/run.ts --claude-version "${{ matrix.version }}"\n' +
-  `      - if: always()\n        uses: actions/upload-artifact@${SHA} # v7.0.2\n        with:\n          name: leg-\${{ matrix.version }}-\${{ matrix.os }}\n`
+  `      - if: always()\n        uses: actions/upload-artifact@${SHA} # v7.0.2\n        with:\n          name: \${{ github.event_name == 'schedule' && 'leg' || 'retry' }}-\${{ matrix.version }}-\${{ matrix.os }}\n`
 test('the version workflow passes, and each clause is required', () => {
   assert.deepEqual(versionsErrors(VERS), [])
   for (const [from, to, want] of [

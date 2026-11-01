@@ -10,6 +10,9 @@ test('untested stable versions after the newest tested one, oldest first; prerel
 test('the tested versions are the leg-<version>-<os> artifacts, each once, pass or fail; other artifacts are not', () => {
   const names = 'leg-2.1.306-ubuntu-latest\nleg-2.1.306-macos-latest\nleg-2.1.308-windows-latest\ngallery\nleg-x-y\n'
   assert.deepEqual(tested(names), ['2.1.306', '2.1.308'])
+  // A retry's legs are retry-<version>-<os>: they are not the record, so a retry never moves the selection.
+  assert.deepEqual(tested('retry-2.1.0-ubuntu-latest\nleg-2.1.20-ubuntu-latest\n'), ['2.1.20'])
+  assert.deepEqual(tested('retry-2.1.0-ubuntu-latest\n'), [])
   assert.deepEqual(tested(''), [])
 })
 test('a failing version is tested once and never stalls the rest; expired records move the start up', () => {
@@ -21,6 +24,9 @@ test('a failing version is tested once and never stalls the rest; expired record
   assert.deepEqual(untested(pub, run1.slice(10)), ['2.1.21'])
   // A retry of an old version, its record long expired, adds an old artifact: the newest record still decides.
   assert.deepEqual(untested(pub, ['2.1.0', '2.1.19', '2.1.20']), ['2.1.21'])
+  // And a retry's legs aren't the record at all: with the scheduled legs of 2.1.19 and 2.1.20 expired after a retry of
+  // 2.1.0, only the latest is selected, never 2.1.1 to 2.1.20 again.
+  assert.deepEqual(untested(pub, tested('retry-2.1.0-ubuntu-latest\nretry-2.1.0-macos-latest\n')), ['2.1.21'])
 })
 test('the CLI lists untested versions from artifact names, retries one, and refuses anything else', async () => {
   const { mkdtempSync, rmSync, writeFileSync } = await import('node:fs')
