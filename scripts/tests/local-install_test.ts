@@ -9,7 +9,17 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  watch,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join, sep } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -87,9 +97,38 @@ const holds = (dir: string) =>
 const RECURSIVE = process.platform === 'darwin' || process.platform === 'win32'
 // How long a watch may take to report a change. macOS can also report writes made just before the watch began.
 const LAG = 200
+// Each entry under dir, at any depth, with its inode, size and modification time: what a real change alters.
+function stamps(dir: string): Map<string, string> {
+  const out = new Map<string, string>()
+  const walk = (d: string, rel: string) => {
+    for (const e of existsSync(d) ? readdirSync(d, { withFileTypes: true }) : []) {
+      const path = join(d, e.name)
+      const name = rel ? join(rel, e.name) : e.name
+      const st = lstatSync(path, { bigint: true })
+      out.set(name, `${st.ino} ${st.size} ${st.mtimeNs}`)
+      if (e.isDirectory()) {
+        walk(path, name)
+      }
+    }
+  }
+
+  walk(dir, '')
+  return out
+}
+
+// The changes that happened: a reported event stands unless its entry is there before and after, unchanged. macOS's
+// FSEvents can deliver the creation of a file made before the watch began after any wait, which would read as the run
+// rewriting it; an entry the run made, removed or rewrote differs in its stamps, so it still counts.
+export function realChanges(changes: string[], before: Map<string, string>, after: Map<string, string>): string[] {
+  return changes.filter((c) => {
+    const name = c.slice(c.indexOf(' ') + 1)
+    return c.startsWith('error ') || !before.has(name) || before.get(name) !== after.get(name)
+  })
+}
+
 // Calls run while watching dir. Returns run's result and the changes the watch reported up to LAG ms after run
 // returned, but none from before run: it waits until the watch has been quiet for LAG ms, at most 25 times, since macOS
-// can deliver the creation of dir's own files well after the watch starts.
+// can deliver the creation of dir's own files well after the watch starts, and then keeps only realChanges.
 async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
   const changes: string[] = []
   const watcher = watch(dir, { recursive: RECURSIVE }, (event, name) => changes.push(`${event} ${name}`))
@@ -101,9 +140,10 @@ async function watching<T>(dir: string, run: () => T): Promise<[T, string[]]> {
     }
 
     changes.length = 0
+    const before = stamps(dir)
     const result = run()
     await sleep(LAG)
-    return [result, changes]
+    return [result, realChanges(changes, before, stamps(dir))]
   } finally {
     watcher.close()
   }
@@ -261,4 +301,30 @@ test('local install: the script matches its pinned SHA-256', () => {
     createHash('sha256').update(text).digest('hex'),
     'b016f7fe14f8a3e783694708a20a43acda5217198d48f6c41341759ac48f3065',
   )
+})
+
+// The macOS flake: FSEvents reported the sentinel's own marker, written before the watch, as renamed during the run.
+test('a watched change counts only if its entry changed across the run', () => {
+  const before = new Map([['marker', '1 23 100']])
+  assert.deepEqual(realChanges(['rename marker'], before, new Map(before)), [])
+  assert.deepEqual(realChanges(['change marker'], before, new Map([['marker', '1 30 200']])), ['change marker'])
+  assert.deepEqual(realChanges(['rename marker'], before, new Map()), ['rename marker'])
+  assert.deepEqual(realChanges(['rename new'], before, new Map([...before, ['new', '2 0 300']])), ['rename new'])
+  assert.deepEqual(realChanges(['error boom'], before, before), ['error boom'])
+})
+
+// And the watch still catches the run's own writes: rewriting the marker, or making a file, is reported.
+test('the watch reports a file the run rewrites or makes', { skip: NO_BASH }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mtty-watch-'))
+  try {
+    writeFileSync(join(dir, 'marker'), 'before\n')
+    const [, changes] = await watching(dir, () => {
+      writeFileSync(join(dir, 'marker'), 'after, longer\n')
+      writeFileSync(join(dir, 'new'), 'x')
+    })
+    const names = new Set(changes.map((c) => c.slice(c.indexOf(' ') + 1)))
+    assert.ok(names.has('marker') && names.has('new'), changes.join(', '))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
