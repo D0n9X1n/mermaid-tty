@@ -9,6 +9,9 @@ export type Color = string // a CC ThemeKey ('suggestion') or '#rrggbb'
 export type Palette = {
   name: ThemeName
   background: Color | null // the palette's canvas; null = the terminal's (default, mono)
+  // The palette's second shade, as its editor theme shades panels: pictures fill subgraphs, state groups and gantt
+  // bands with it. Text drawings don't use it. null where background is.
+  surface: Color | null
   roles: Readonly<Record<Role, Color | null>> // null = no color (mono)
   onFill: Color | null // label text on a role-filled pill
   series: Readonly<Record<SeriesKey, Color | null>> // mono: all null
@@ -21,6 +24,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   default: {
     name: 'default',
     background: null,
+    surface: null,
     onFill: 'inverseText',
     fill: true,
     dim: [],
@@ -49,6 +53,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   nord: {
     name: 'nord',
     background: '#2E3440',
+    surface: '#3B4252',
     onFill: '#2E3440',
     fill: true,
     dim: [],
@@ -77,6 +82,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   dracula: {
     name: 'dracula',
     background: '#282A36',
+    surface: '#44475A',
     onFill: '#282A36',
     fill: true,
     dim: [],
@@ -105,6 +111,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   gruvbox: {
     name: 'gruvbox',
     background: '#282828',
+    surface: '#3C3836',
     onFill: '#282828',
     fill: true,
     dim: [],
@@ -133,6 +140,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   solarized: {
     name: 'solarized',
     background: '#002B36',
+    surface: '#073642',
     onFill: '#FDF6E3',
     fill: true,
     dim: [],
@@ -161,6 +169,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
   mono: {
     name: 'mono',
     background: null,
+    surface: null,
     onFill: null,
     fill: false,
     dim: [],

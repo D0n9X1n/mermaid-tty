@@ -3,18 +3,19 @@
 // undefined (the text drawing stands) and queues one render, at most one running at a time. Safety, in layers: a source
 // goes to mmdc only when hooks/safe.ts (layer B) finds no way in it to style, configure, fetch or load anything and
 // core parses it; Chromium under mmdc runs with no network, loopback included (puppeteerConfig); mmdc's Mermaid config
-// holds only securityLevel strict and the theme; and the authority, layer A (hooks/svg.ts), checks the SVG mmdc draws
-// for the source before a second run makes the PNG. Termination: each source, look and width is rendered at most once
-// per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
-// redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
+// holds only securityLevel strict and the look's theme and #rrggbb colors; and the authority, layer A (hooks/svg.ts),
+// checks the SVG mmdc draws for the source before a second run makes the PNG. Termination: each source, look and width
+// is rendered at most once per store, so a picture the bounded cache drops stays text rather than rendering again, and
+// a batch of renders redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
 import type { Images } from './mode.ts'
+import { mmdcTheme, pictureTheme, type Look } from './picture-theme.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
 import { svgUnsafe } from './svg.ts'
 
 export type Picture = { png: string; columns: number; rows: number }
-export type Look = 'dark' | 'default' // Mermaid's theme: dark, or its light default
+export type { Look }
 export type Limits = { entries: number; bytes: number; tried: number }
 export type Pictures = {
   limits: Limits
@@ -22,6 +23,15 @@ export type Pictures = {
   bytes: number
   tried: Set<string>
   inflight: Set<string>
+  // The temp dirs a render made and has not yet removed, so the session's end can remove them.
+  dirs: Set<string>
+  // Named into every temp dir this store makes, mermaid-tty.<token>.XXXXXX, so the session's end can sweep one it was
+  // still making.
+  token: string
+  // Temp dirs being made right now: the session's end waits for them before it sweeps.
+  making: Set<Promise<unknown>>
+  // Set when the session ends: no render starts after, and one that finds it set on its new dir removes the dir.
+  closed: boolean
   tail: Promise<void>
   fresh: boolean
   pixels?: Promise<boolean>
@@ -62,8 +72,9 @@ export const puppeteerConfig = (columns: number) => ({
   defaultViewport: { width: columns * PAGE, height: 600 },
 })
 
-// The Mermaid config mmdc gets with -c: securityLevel strict and the theme, nothing else.
-export const mermaidConfig = (look: Look) => ({ securityLevel: 'strict', theme: look })
+// The Mermaid config mmdc gets with -c: securityLevel strict, the look's theme and its colors, and the journey colors
+// Mermaid takes from diagram config (hooks/picture-theme.ts); nothing else.
+export const mermaidConfig = (look: Look) => pictureTheme(look).config
 
 // The arguments that differ by mmdc's major version: before 12, -w sizes the page; from 12, an SVG gets
 // --no-font-embed, and a PNG nothing more.
@@ -96,9 +107,9 @@ export function mmdcArgs(o: {
     '-e',
     o.format,
     '-b',
-    'transparent',
+    pictureTheme(o.look).background,
     '-t',
-    o.look,
+    mmdcTheme(o.look),
     '-c',
     o.config,
     '-p',
@@ -109,6 +120,10 @@ export function mmdcArgs(o: {
   ]
 }
 
+// A store's token: eight letters and digits, as a temp dir's name allows.
+const ALNUM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+const newToken = () => Array.from({ length: 8 }, () => ALNUM[Math.floor(Math.random() * ALNUM.length)]).join('')
+
 // A store of pictures: at most `entries` kept and `bytes` of base64 PNG, and at most `tried` keys ever rendered. idle()
 // resolves once no render is queued.
 export function createPictures(limits: Partial<Limits> = {}): Pictures {
@@ -118,6 +133,10 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
     bytes: 0,
     tried: new Set(),
     inflight: new Set(),
+    dirs: new Set(),
+    token: newToken(),
+    making: new Set(),
+    closed: false,
     tail: Promise.resolve(),
     fresh: false,
     idle: async () => {
@@ -132,8 +151,9 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
 }
 
 // The look a picture is drawn in, or null for none: images off or mono means none; under images auto the terminal must
-// show pixels (told once per store), while images on takes that on the person's word; and Claude Code's theme must say
-// dark or light, since the background is transparent and a guess could draw dark lines on a dark terminal.
+// show pixels (told once per store), while images on takes that on the person's word. A curated palette paints its own
+// background, so it is its own look; default draws on a transparent background, so Claude Code's theme must say dark or
+// light, since a guess could draw dark lines on a dark terminal.
 export async function pictureLook($: any, s: Pictures, theme: string, images: Images = 'auto'): Promise<Look | null> {
   if (images === 'off' || theme === 'mono') {
     return null
@@ -146,6 +166,10 @@ export async function pictureLook($: any, s: Pictures, theme: string, images: Im
     }
   }
 
+  if (theme === 'nord' || theme === 'dracula' || theme === 'gruvbox' || theme === 'solarized') {
+    return theme
+  }
+
   try {
     const v = (await $.config.list()).find((r: any) => r.key === 'theme')?.value
     if (typeof v !== 'string') {
@@ -153,10 +177,10 @@ export async function pictureLook($: any, s: Pictures, theme: string, images: Im
     }
 
     if (v.startsWith('dark')) {
-      return 'dark'
+      return 'default-dark'
     }
 
-    return v.startsWith('light') ? 'default' : null
+    return v.startsWith('light') ? 'default-light' : null
   } catch {
     return null
   }
@@ -184,6 +208,7 @@ export function pictureFor(
 
   const id = hash(key)
   if (
+    s.closed ||
     s.noMmdc ||
     s.tried.has(id) ||
     s.inflight.has(key) ||
@@ -228,11 +253,13 @@ async function job(
   s.mmdc ??= mmdcMajor($)
   const major = await s.mmdc
   let r: Picture | string | null
-  if (typeof major === 'string') {
+  if (s.closed) {
+    r = null
+  } else if (typeof major === 'string') {
     r = s.noMmdc ? null : `no usable mmdc (${major})`
     s.noMmdc = true
   } else {
-    r = await draw($, body, look, columns, major).catch((e: unknown) =>
+    r = await draw($, s, body, look, columns, major).catch((e: unknown) =>
       oneLine(e instanceof Error ? e.message : String(e)),
     )
   }
@@ -280,16 +307,66 @@ function keep(s: Pictures, key: string, p: Picture) {
 
 // The temp dir is made and removed by Node, which mmdc itself runs on, so it works where there is no mktemp or rm
 // (Windows). MAKE_TEMP prints the OS temp dir, resolved so it is spelled as the dir made in it is, and a fresh
-// mermaid-tty.XXXXXX dir in it as JSON, with / separators; REMOVE_TEMP removes the dir named by its argument, and only
-// a mermaid-tty.* one.
+// mermaid-tty.<token>.XXXXXX dir in it (its argument, a store's token), as JSON, with / separators; REMOVE_TEMP removes
+// the dir named by its argument, and only a mermaid-tty.* one.
 export const MAKE_TEMP =
-  "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/');" +
-  "const t=p.resolve(o.tmpdir());process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,'mermaid-tty.')))}))"
+  "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/'),k=process.argv[1];" +
+  "const ok=/^[A-Za-z0-9]{8}$/.test(k||''),t=p.resolve(o.tmpdir()),b='mermaid-tty.'+(ok?k+'.':'');" +
+  'const d=f.mkdtempSync(p.join(t,b));' +
+  "if(ok&&f.existsSync(p.join(t,'mermaid-tty.'+k+'.end'))){f.rmSync(d,{recursive:true,force:true});process.stdout.write('{}')}" +
+  'else process.stdout.write(JSON.stringify({tmp:u(t),dir:u(d)}))'
 export const REMOVE_TEMP =
   "const f=require('fs'),p=require('path'),d=process.argv[1];" +
   "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"
 
-// The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.XXXXXX dir directly inside the temp dir it named.
+// How old a mermaid-tty.* dir must be for a sweep to take it as left behind: far past the longest render (two mmdc runs
+// and the temp dir's own steps), so another session's render in progress is never one.
+export const STALE_S = 600
+
+// SWEEP_TEMP removes, from the OS temp dir only, each mermaid-tty.* picture dir older than its first argument in
+// seconds, each one named with its second, a store's token ('-' for none), and each one its other arguments name: what
+// a render cut short (the session ended, the process was killed, a removal failed) left behind. With --end it first
+// leaves the mark mermaid-tty.<token>.end, which MAKE_TEMP checks after it makes a dir for that token: a dir made after
+// the sweep looked removes itself, so whichever runs first, the session's end leaves none. A mark goes once stale.
+export const SWEEP_TEMP =
+  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),a=process.argv.slice(1);" +
+  "const end=a.includes('--end'),[age,tok,...named]=a.filter((x)=>x!=='--end'),own=/^[A-Za-z0-9]{8}$/.test(tok);" +
+  "if(end&&own)f.writeFileSync(p.join(t,'mermaid-tty.'+tok+'.end'),'');" +
+  'const ours=(d)=>p.dirname(p.resolve(d))===t&&/^mermaid-tty\\.(?:[A-Za-z0-9]{8}\\.)?[A-Za-z0-9]{6}$/.test(p.basename(d));' +
+  'const mark=(n)=>/^mermaid-tty\\.[A-Za-z0-9]{8}\\.end$/.test(n);' +
+  "const mine=(n)=>own&&n.startsWith('mermaid-tty.'+tok+'.');" +
+  'const rm=(d)=>{try{f.rmSync(d,{recursive:true,force:true})}catch{}};' +
+  'for(const n of f.readdirSync(t)){const d=p.join(t,n);try{const old=Date.now()-f.statSync(d).mtimeMs>Number(age)*1000;' +
+  'if((ours(d)&&(mine(n)||old))||(mark(n)&&old))rm(d)}catch{}}' +
+  'for(const d of named)if(ours(d))rm(p.resolve(d))'
+
+// Removes what pictures left in the temp dir: the dirs a render of store still holds, and any left long enough to be
+// stale. Run when a session starts, for what a crashed one left, and when it ends; quiet, as a failing sweep only
+// leaves what was there. At the end (ending), the store closes first, so no render starts after; the dirs being made
+// are waited for, within half of timeoutMs; and every dir named with the store's token goes too.
+export async function sweepTemp($: any, store?: Pictures, timeoutMs = SHORT_MS, ending = false): Promise<void> {
+  let left = timeoutMs
+  if (store && ending) {
+    store.closed = true
+    // The engine's clock, as the hooks have no timers of their own; a failing one waits no more.
+    const wait = Promise.resolve()
+      .then(() => $.clock.sleep(timeoutMs / 2))
+      .catch(() => {})
+    await Promise.race([Promise.allSettled([...store.making]), wait])
+    left = timeoutMs / 2
+  }
+
+  const token = store && ending ? store.token : '-'
+  try {
+    const end = store && ending ? ['--end'] : []
+    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), token, ...end, ...(store?.dirs ?? [])], {
+      timeoutMs: Math.max(100, left),
+    })
+  } catch {}
+}
+
+// The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.[<token>.]XXXXXX dir directly inside the temp dir it
+// named.
 export function madeTempDir(stdout: string): string | null {
   try {
     const { tmp, dir } = JSON.parse(stdout)
@@ -298,7 +375,7 @@ export function madeTempDir(stdout: string): string | null {
     }
 
     const base = tmp.replace(/\/+$/, '') + '/mermaid-tty.'
-    return dir.startsWith(base) && /^[A-Za-z0-9]{6}$/.test(dir.slice(base.length)) ? dir : null
+    return dir.startsWith(base) && /^(?:[A-Za-z0-9]{8}\.)?[A-Za-z0-9]{6}$/.test(dir.slice(base.length)) ? dir : null
   } catch {
     return null
   }
@@ -306,14 +383,28 @@ export function madeTempDir(stdout: string): string | null {
 
 // One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same
 // source, config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
-async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
-  const made = await $.process.run(['node', '-e', MAKE_TEMP], { timeoutMs: SHORT_MS })
+async function draw(
+  $: any,
+  s: Pictures,
+  body: string,
+  look: Look,
+  columns: number,
+  major: number,
+): Promise<Picture | string> {
+  const making = $.process.run(['node', '-e', MAKE_TEMP, s.token], { timeoutMs: SHORT_MS })
+  s.making.add(making)
+  const made = await making.finally(() => s.making.delete(making))
   const dir = made.exitCode === 0 ? madeTempDir(made.stdout) : null
   if (!dir) {
     return 'no temp dir'
   }
 
+  s.dirs.add(dir)
   try {
+    if (s.closed) {
+      return 'the session ended'
+    }
+
     const config = `${dir}/config.json`
     const puppeteer = `${dir}/puppeteer.json`
     const svg = `${dir}/out.svg`
@@ -363,7 +454,10 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
     return box ? { png: base64, ...box } : 'over 255 rows'
   } finally {
     try {
-      await $.process.run(['node', '-e', REMOVE_TEMP, dir], { timeoutMs: SHORT_MS })
+      const removed = await $.process.run(['node', '-e', REMOVE_TEMP, dir], { timeoutMs: SHORT_MS })
+      if (removed.exitCode === 0) {
+        s.dirs.delete(dir)
+      }
     } catch {}
   }
 }

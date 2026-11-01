@@ -7,7 +7,7 @@ reviewers: [PM, cross-family:gpt-6-astra]
 ## Files
 | path | sha256 |
 |---|---|
-| core/themes.ts | 8fbbedf7070b3ef947f7367b8642eb0a364f39ea37e77a89c6cc7a742be7f6c5 |
+| core/themes.ts | e47d91952041be69bb7c74837f0e93160662abbea680f00fbecbd363fe995067 |
 | goldens/timeline/timeline-ok-01.golden | fd21900f66fa40f5802537d097bf3fbef85d0670402808532a7a15b0d02f92d7 |
 | goldens/timeline/timeline-ok-02.golden | a60fb9399424ceb2ddd8ec4feb7307f8c90916f41d9564005f6079f4b6dcc4e7 |
 | goldens/timeline/timeline-ok-03.golden | 2b3bd6bbf546a6da11d78aaa2cae6dd00110598986ec0c86e48dc2db8a18ccd8 |
@@ -27,3 +27,4 @@ reviewers: [PM, cross-family:gpt-6-astra]
 - The cross-family reviewer (gpt-6-astra) read every timeline golden's text and role map against its source at 60, 80 and 120 columns, checking fidelity (elements, order, values, relations), readability and roles: pass.
 - 2026-10-31: core/themes.ts re-hashed after formatting-only changes (Prettier, braces, comment wrapping). The exported THEMES object is identical before and after, and every golden is byte-identical to the reviewed commit, so the verdict stands.
 - 2026-10-31: 6 golden(s) re-hashed after the title moved to the center of its drawing (timeline-ok-01, timeline-ok-03, timeline-ok-07, timeline-ok-08, timeline-ok-09, timeline-ok-13). Each changed only in its title row's leading spaces, checked line by line against the reviewed golden; every other row and every role row is byte-identical, so the verdict stands.
+- 2026-10-31: core/themes.ts re-hashed after each palette gained `surface`, a second shade only pictures use. No role, series or background changed, and every golden is byte-identical, so the verdict stands.

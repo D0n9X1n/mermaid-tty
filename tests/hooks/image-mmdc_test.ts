@@ -160,7 +160,7 @@ test(
     const s = createPictures()
     const body = 'flowchart TD\nA --> B'
     try {
-      assert.equal(pictureFor(w.$, s, body, 'dark', 80, w.log), undefined)
+      assert.equal(pictureFor(w.$, s, body, 'default-dark', 80, w.log), undefined)
       await s.idle()
       const [c, p] = w.calls()
       assert.equal(w.calls().length, 2)
@@ -172,7 +172,7 @@ test(
       }
 
       assert.deepEqual(c!.argv.slice(c!.argv.indexOf('-w'), c!.argv.indexOf('-w') + 2), ['-w', '960'])
-      assert.deepEqual(pictureFor(w.$, s, body, 'dark', 80, w.log), { png: PNG, columns: 20, rows: 20 })
+      assert.deepEqual(pictureFor(w.$, s, body, 'default-dark', 80, w.log), { png: PNG, columns: 20, rows: 20 })
       assert.deepEqual(w.redraws, ['ui.render'])
       assert.deepEqual(w.logs, [])
       assert.deepEqual(w.left(), [])
@@ -188,10 +188,10 @@ test('A6.hook-tests: a real mmdc 12 on PATH gets no -w', { skip: SKIP }, async (
   const w = world({ version: '12.0.0' })
   const s = createPictures()
   try {
-    pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log)
+    pictureFor(w.$, s, 'flowchart TD\nA --> B', 'default-dark', 80, w.log)
     await s.idle()
     assert.equal(w.calls()[0]!.argv.includes('-w'), false)
-    assert.ok(pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log))
+    assert.ok(pictureFor(w.$, s, 'flowchart TD\nA --> B', 'default-dark', 80, w.log))
     assert.deepEqual(w.left(), [])
   } finally {
     w.done()
@@ -202,12 +202,12 @@ test('A5.errors: a real mmdc that exits 1 logs its first stderr line; the temp d
   const w = world()
   const s = createPictures()
   try {
-    pictureFor(w.$, s, 'flowchart TD\nFAIL --> B', 'dark', 80, w.log)
+    pictureFor(w.$, s, 'flowchart TD\nFAIL --> B', 'default-dark', 80, w.log)
     await s.idle()
     assert.deepEqual(w.logs, ['image: mmdc exited 1: Error: Parse error on line 2:'])
     assert.deepEqual(w.redraws, [])
     assert.deepEqual(w.left(), [])
-    assert.equal(pictureFor(w.$, s, 'flowchart TD\nFAIL --> B', 'dark', 80, w.log), undefined)
+    assert.equal(pictureFor(w.$, s, 'flowchart TD\nFAIL --> B', 'default-dark', 80, w.log), undefined)
   } finally {
     w.done()
   }
@@ -220,7 +220,7 @@ test(
     const w = world({ capMs: 1500 })
     const s = createPictures()
     try {
-      pictureFor(w.$, s, 'flowchart TD\nSLEEP --> B', 'dark', 80, w.log)
+      pictureFor(w.$, s, 'flowchart TD\nSLEEP --> B', 'default-dark', 80, w.log)
       await s.idle()
       assert.equal(w.logs.length, 1)
       assert.match(w.logs[0]!, /^image: .*timed out/)
@@ -243,12 +243,12 @@ test(
     const repro =
       "---\nconfig:\n  themeCSS: '.nodeLabel::before {content: url(file:///tmp/private.svg)}'\n---\nflowchart TD\nA --> B"
     try {
-      assert.equal(pictureFor(w.$, s, repro, 'dark', 80, w.log), undefined)
+      assert.equal(pictureFor(w.$, s, repro, 'default-dark', 80, w.log), undefined)
       await s.idle()
       assert.deepEqual(w.spawned, [])
       assert.deepEqual(w.calls(), [])
       assert.deepEqual(w.logs, ['image: unsafe source (frontmatter)'])
-      assert.equal(pictureFor(w.$, s, repro, 'dark', 80, w.log), undefined)
+      assert.equal(pictureFor(w.$, s, repro, 'default-dark', 80, w.log), undefined)
       assert.deepEqual(w.left(), [])
     } finally {
       w.done()
@@ -264,13 +264,13 @@ test(
     const w = world({ svg: '<svg><a xlink:href="/asset.svg"><text>x</text></a></svg>' })
     const s = createPictures()
     try {
-      pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log)
+      pictureFor(w.$, s, 'flowchart TD\nA --> B', 'default-dark', 80, w.log)
       await s.idle()
       assert.equal(w.calls().length, 1)
       assert.deepEqual(w.logs, ['image: unsafe svg (element a)'])
       assert.deepEqual(w.redraws, [])
       assert.deepEqual(w.left(), [])
-      assert.equal(pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log), undefined)
+      assert.equal(pictureFor(w.$, s, 'flowchart TD\nA --> B', 'default-dark', 80, w.log), undefined)
     } finally {
       w.done()
     }
@@ -281,9 +281,9 @@ test('A5.errors: no mmdc on PATH logs once and runs nothing else', { skip: SKIP 
   const w = world({ mmdc: false })
   const s = createPictures()
   try {
-    pictureFor(w.$, s, 'flowchart TD\nA --> B', 'dark', 80, w.log)
+    pictureFor(w.$, s, 'flowchart TD\nA --> B', 'default-dark', 80, w.log)
     await s.idle()
-    pictureFor(w.$, s, 'flowchart TD\nC --> D', 'dark', 80, w.log)
+    pictureFor(w.$, s, 'flowchart TD\nC --> D', 'default-dark', 80, w.log)
     await s.idle()
     assert.equal(w.logs.length, 1)
     assert.match(w.logs[0]!, /^image: no usable mmdc/)

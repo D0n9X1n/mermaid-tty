@@ -1,0 +1,1050 @@
+{
+  "config": {
+    "securityLevel": "strict",
+    "theme": "base",
+    "themeVariables": {
+      "darkMode": true,
+      "background": "#282828",
+      "fontFamily": "\"trebuchet ms\", verdana, arial, sans-serif",
+      "dropShadow": "none",
+      "useGradient": false,
+      "nodeBkg": "#83A598",
+      "mainBkg": "#83A598",
+      "primaryColor": "#83A598",
+      "nodeBorder": "#434D4A",
+      "primaryBorderColor": "#434D4A",
+      "stateBorder": "#D3869B",
+      "edgeLabelBackground": "#83A598",
+      "primaryTextColor": "#282828",
+      "nodeTextColor": "#282828",
+      "secondaryColor": "#FABD2F",
+      "secondaryBorderColor": "#7C642B",
+      "secondaryTextColor": "#282828",
+      "tertiaryColor": "#3C3836",
+      "tertiaryTextColor": "#EBDBB2",
+      "defaultLinkColor": "#928374",
+      "lineColor": "#928374",
+      "arrowheadColor": "#FB4934",
+      "textColor": "#EBDBB2",
+      "titleColor": "#EBDBB2",
+      "altBackground": "#3C3836",
+      "compositeBackground": "#3C3836",
+      "clusterBkg": "#3C3836",
+      "flowContainerStroke": "#D3869B",
+      "tertiaryBorderColor": "#D3869B",
+      "border2": "#D3869B",
+      "clusterBorder": "#D3869B",
+      "compositeTitleBackground": "#83A598",
+      "noteBkgColor": "#FE8019",
+      "noteBorderColor": "#734723",
+      "noteTextColor": "#282828",
+      "actorBkg": "#83A598",
+      "actorBorder": "#434D4A",
+      "actorTextColor": "#282828",
+      "actorLineColor": "#928374",
+      "signalColor": "#928374",
+      "signalTextColor": "#B8BB26",
+      "activationBkgColor": "#FABD2F",
+      "activationBorderColor": "#7C642B",
+      "labelBoxBkgColor": "#3C3836",
+      "labelBoxBorderColor": "#D3869B",
+      "labelTextColor": "#D3869B",
+      "loopTextColor": "#B8BB26",
+      "sequenceNumberColor": "#282828",
+      "classText": "#282828",
+      "stateBkg": "#83A598",
+      "stateLabelColor": "#282828",
+      "transitionColor": "#928374",
+      "transitionLabelColor": "#282828",
+      "labelBackgroundColor": "#83A598",
+      "specialStateColor": "#928374",
+      "innerEndBackground": "#83A598",
+      "attributeBackgroundColorEven": "#83A598",
+      "attributeBackgroundColorOdd": "#83A598",
+      "rowEven": "#83A598",
+      "rowOdd": "#83A598",
+      "pie1": "#83A598",
+      "pie2": "#B8BB26",
+      "pie3": "#FABD2F",
+      "pie4": "#FE8019",
+      "pie5": "#FB4934",
+      "pie6": "#D3869B",
+      "pie7": "#458588",
+      "pie8": "#928374",
+      "pie9": "#83A598",
+      "pie10": "#B8BB26",
+      "pie11": "#FABD2F",
+      "pie12": "#FE8019",
+      "pieSectionTextColor": "#282828",
+      "pieTitleTextColor": "#EBDBB2",
+      "pieLegendTextColor": "#928374",
+      "pieStrokeColor": "#282828",
+      "pieOuterStrokeColor": "#928374",
+      "pieOpacity": "1",
+      "git0": "#83A598",
+      "gitBranchLabel0": "#282828",
+      "gitInv0": "#282828",
+      "git1": "#B8BB26",
+      "gitBranchLabel1": "#282828",
+      "gitInv1": "#282828",
+      "git2": "#FABD2F",
+      "gitBranchLabel2": "#282828",
+      "gitInv2": "#282828",
+      "git3": "#FE8019",
+      "gitBranchLabel3": "#282828",
+      "gitInv3": "#282828",
+      "git4": "#FB4934",
+      "gitBranchLabel4": "#282828",
+      "gitInv4": "#282828",
+      "git5": "#D3869B",
+      "gitBranchLabel5": "#282828",
+      "gitInv5": "#282828",
+      "git6": "#458588",
+      "gitBranchLabel6": "#282828",
+      "gitInv6": "#282828",
+      "git7": "#928374",
+      "gitBranchLabel7": "#282828",
+      "gitInv7": "#282828",
+      "commitLabelBackground": "#282828",
+      "commitLabelColor": "#928374",
+      "commitLineColor": "#928374",
+      "tagLabelBackground": "#FABD2F",
+      "tagLabelBorder": "#7C642B",
+      "tagLabelColor": "#282828",
+      "cScale0": "#83A598",
+      "cScaleInv0": "#282828",
+      "cScalePeer0": "#83A598",
+      "cScaleLabel0": "#282828",
+      "cScale1": "#B8BB26",
+      "cScaleInv1": "#282828",
+      "cScalePeer1": "#B8BB26",
+      "cScaleLabel1": "#282828",
+      "cScale2": "#FABD2F",
+      "cScaleInv2": "#282828",
+      "cScalePeer2": "#FABD2F",
+      "cScaleLabel2": "#282828",
+      "cScale3": "#FE8019",
+      "cScaleInv3": "#282828",
+      "cScalePeer3": "#FE8019",
+      "cScaleLabel3": "#282828",
+      "cScale4": "#FB4934",
+      "cScaleInv4": "#282828",
+      "cScalePeer4": "#FB4934",
+      "cScaleLabel4": "#282828",
+      "cScale5": "#D3869B",
+      "cScaleInv5": "#282828",
+      "cScalePeer5": "#D3869B",
+      "cScaleLabel5": "#282828",
+      "cScale6": "#458588",
+      "cScaleInv6": "#282828",
+      "cScalePeer6": "#458588",
+      "cScaleLabel6": "#282828",
+      "cScale7": "#928374",
+      "cScaleInv7": "#282828",
+      "cScalePeer7": "#928374",
+      "cScaleLabel7": "#282828",
+      "cScale8": "#83A598",
+      "cScaleInv8": "#282828",
+      "cScalePeer8": "#83A598",
+      "cScaleLabel8": "#282828",
+      "cScale9": "#B8BB26",
+      "cScaleInv9": "#282828",
+      "cScalePeer9": "#B8BB26",
+      "cScaleLabel9": "#282828",
+      "cScale10": "#FABD2F",
+      "cScaleInv10": "#282828",
+      "cScalePeer10": "#FABD2F",
+      "cScaleLabel10": "#282828",
+      "cScale11": "#448083",
+      "cScaleInv11": "#282828",
+      "cScalePeer11": "#448083",
+      "cScaleLabel11": "#EBDBB2",
+      "fillType0": "#566760",
+      "fillType1": "#707227",
+      "fillType2": "#91732C",
+      "fillType3": "#935421",
+      "fillType4": "#92392E",
+      "fillType5": "#7E5762",
+      "fillType6": "#375758",
+      "fillType7": "#5D564E",
+      "actor0": "#83A598",
+      "actor1": "#B8BB26",
+      "actor2": "#FABD2F",
+      "actor3": "#FE8019",
+      "actor4": "#FB4934",
+      "actor5": "#D3869B",
+      "faceColor": "#FABD2F",
+      "sectionBkgColor2": "#3C3836",
+      "sectionBkgColor": "#3C3836",
+      "altSectionBkgColor": "#282828",
+      "excludeBkgColor": "#3C3836",
+      "taskBkgColor": "#83A598",
+      "taskBorderColor": "#434D4A",
+      "critBkgColor": "#FB4934",
+      "critBorderColor": "#5D302B",
+      "taskTextLightColor": "#282828",
+      "taskTextColor": "#282828",
+      "activeTaskBorderColor": "#91732C",
+      "activeTaskBkgColor": "#91732C",
+      "doneTaskBorderColor": "#375758",
+      "doneTaskBkgColor": "#375758",
+      "taskTextDarkColor": "#EBDBB2",
+      "taskTextOutsideColor": "#928374",
+      "taskTextClickableColor": "#B8BB26",
+      "gridColor": "#928374",
+      "todayLineColor": "#FB4934",
+      "vertLineColor": "#D3869B",
+      "errorBkgColor": "#FB4934",
+      "errorTextColor": "#282828",
+      "quadrant1Fill": "#566760",
+      "quadrant1TextFill": "#EBDBB2",
+      "quadrant2Fill": "#707227",
+      "quadrant2TextFill": "#EBDBB2",
+      "quadrant3Fill": "#91732C",
+      "quadrant3TextFill": "#EBDBB2",
+      "quadrant4Fill": "#935421",
+      "quadrant4TextFill": "#EBDBB2",
+      "quadrantPointFill": "#EBDBB2",
+      "quadrantPointTextFill": "#EBDBB2",
+      "quadrantYAxisTextFill": "#928374",
+      "quadrantXAxisTextFill": "#928374",
+      "quadrantExternalBorderStrokeFill": "#EBDBB2",
+      "quadrantInternalBorderStrokeFill": "#EBDBB2",
+      "quadrantTitleFill": "#EBDBB2",
+      "xyChart": {
+        "backgroundColor": "#282828",
+        "titleColor": "#EBDBB2",
+        "dataLabelColor": "#928374",
+        "legendTextColor": "#928374",
+        "xAxisTitleColor": "#928374",
+        "xAxisLabelColor": "#928374",
+        "xAxisTickColor": "#928374",
+        "xAxisLineColor": "#928374",
+        "yAxisTitleColor": "#928374",
+        "yAxisLabelColor": "#928374",
+        "yAxisTickColor": "#928374",
+        "yAxisLineColor": "#928374",
+        "plotColorPalette": "#83A598,#B8BB26,#FABD2F,#FE8019,#FB4934,#D3869B,#458588,#928374"
+      }
+    },
+    "themeCSS": ".nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) ellipse{fill:#83A598 !important;stroke:#434D4A !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) ellipse{fill:#B8BB26 !important;stroke:#626327 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) ellipse{fill:#FABD2F !important;stroke:#7C642B !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) ellipse{fill:#FE8019 !important;stroke:#734723 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) ellipse{fill:#FB4934 !important;stroke:#5D302B !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) ellipse{fill:#D3869B !important;stroke:#5B444A !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) ellipse{fill:#458588 !important;stroke:#2B3132 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) tspan{color:#282828 !important;fill:#282828 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) ellipse{fill:#928374 !important;stroke:#3D3A37 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) tspan{color:#282828 !important;fill:#282828 !important;}",
+    "journey": {
+      "actorColours": [
+        "#83A598",
+        "#B8BB26",
+        "#FABD2F",
+        "#FE8019",
+        "#FB4934",
+        "#D3869B"
+      ]
+    }
+  },
+  "background": "#282828",
+  "pairs": [
+    {
+      "what": "node borders and inner lines",
+      "ink": "#434D4A",
+      "on": "#83A598"
+    },
+    {
+      "what": "state and composite state outlines",
+      "ink": "#D3869B",
+      "on": "#3C3836"
+    },
+    {
+      "what": "state and composite state outlines",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "node and edge label text",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "decision borders",
+      "ink": "#7C642B",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "secondary text",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "subgraph title",
+      "ink": "#EBDBB2",
+      "on": "#3C3836"
+    },
+    {
+      "what": "edges",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "arrowheads",
+      "ink": "#FB4934",
+      "on": "#282828"
+    },
+    {
+      "what": "text on the canvas",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "titles",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "titles",
+      "ink": "#EBDBB2",
+      "on": "#3C3836"
+    },
+    {
+      "what": "subgraph borders",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "subgraph borders",
+      "ink": "#D3869B",
+      "on": "#3C3836"
+    },
+    {
+      "what": "note borders",
+      "ink": "#734723",
+      "on": "#FE8019"
+    },
+    {
+      "what": "note text",
+      "ink": "#282828",
+      "on": "#FE8019"
+    },
+    {
+      "what": "actor borders",
+      "ink": "#434D4A",
+      "on": "#83A598"
+    },
+    {
+      "what": "actor text",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "lifelines",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "messages",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "message text",
+      "ink": "#B8BB26",
+      "on": "#282828"
+    },
+    {
+      "what": "activation borders",
+      "ink": "#7C642B",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "loop boxes",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "loop boxes",
+      "ink": "#D3869B",
+      "on": "#3C3836"
+    },
+    {
+      "what": "loop label",
+      "ink": "#D3869B",
+      "on": "#3C3836"
+    },
+    {
+      "what": "loop condition",
+      "ink": "#B8BB26",
+      "on": "#282828"
+    },
+    {
+      "what": "sequence number",
+      "ink": "#282828",
+      "on": "#928374"
+    },
+    {
+      "what": "class text",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "state text",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "transitions",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "transition label",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "start and end states",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#FE8019"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#D3869B"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#458588"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#282828",
+      "on": "#928374"
+    },
+    {
+      "what": "pie title",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "pie legend",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "pie outline",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 0",
+      "ink": "#83A598",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 0 label",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "branch 1",
+      "ink": "#B8BB26",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 1 label",
+      "ink": "#282828",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "branch 2",
+      "ink": "#FABD2F",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 2 label",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "branch 3",
+      "ink": "#FE8019",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 3 label",
+      "ink": "#282828",
+      "on": "#FE8019"
+    },
+    {
+      "what": "branch 4",
+      "ink": "#FB4934",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 4 label",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "branch 5",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 5 label",
+      "ink": "#282828",
+      "on": "#D3869B"
+    },
+    {
+      "what": "branch 6",
+      "ink": "#458588",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 6 label",
+      "ink": "#282828",
+      "on": "#458588"
+    },
+    {
+      "what": "branch 7",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "branch 7 label",
+      "ink": "#282828",
+      "on": "#928374"
+    },
+    {
+      "what": "commit labels",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "commit lines",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "tag borders",
+      "ink": "#7C642B",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "tag labels",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "section 0",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "event 0, brightened",
+      "ink": "#303030",
+      "on": "#9DC6B6"
+    },
+    {
+      "what": "section 1",
+      "ink": "#282828",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "event 1, brightened",
+      "ink": "#303030",
+      "on": "#DDE02E"
+    },
+    {
+      "what": "section 2",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "event 2, brightened",
+      "ink": "#303030",
+      "on": "#FFE338"
+    },
+    {
+      "what": "section 3",
+      "ink": "#282828",
+      "on": "#FE8019"
+    },
+    {
+      "what": "event 3, brightened",
+      "ink": "#303030",
+      "on": "#FF9A1E"
+    },
+    {
+      "what": "section 4",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "event 4, brightened",
+      "ink": "#303030",
+      "on": "#FF583E"
+    },
+    {
+      "what": "section 5",
+      "ink": "#282828",
+      "on": "#D3869B"
+    },
+    {
+      "what": "event 5, brightened",
+      "ink": "#303030",
+      "on": "#FDA1BA"
+    },
+    {
+      "what": "section 6",
+      "ink": "#282828",
+      "on": "#458588"
+    },
+    {
+      "what": "event 6, brightened",
+      "ink": "#303030",
+      "on": "#53A0A3"
+    },
+    {
+      "what": "section 7",
+      "ink": "#282828",
+      "on": "#928374"
+    },
+    {
+      "what": "event 7, brightened",
+      "ink": "#303030",
+      "on": "#AF9D8B"
+    },
+    {
+      "what": "section 8",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "event 8, brightened",
+      "ink": "#303030",
+      "on": "#9DC6B6"
+    },
+    {
+      "what": "section 9",
+      "ink": "#282828",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "event 9, brightened",
+      "ink": "#303030",
+      "on": "#DDE02E"
+    },
+    {
+      "what": "section 10",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "event 10, brightened",
+      "ink": "#303030",
+      "on": "#FFE338"
+    },
+    {
+      "what": "section 11",
+      "ink": "#EBDBB2",
+      "on": "#448083"
+    },
+    {
+      "what": "section 11",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "event 11, brightened",
+      "ink": "#FFFFD6",
+      "on": "#529A9D"
+    },
+    {
+      "what": "journey section 0",
+      "ink": "#EBDBB2",
+      "on": "#566760"
+    },
+    {
+      "what": "journey section 1",
+      "ink": "#EBDBB2",
+      "on": "#707227"
+    },
+    {
+      "what": "journey section 2",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "journey section 3",
+      "ink": "#EBDBB2",
+      "on": "#935421"
+    },
+    {
+      "what": "journey section 4",
+      "ink": "#EBDBB2",
+      "on": "#92392E"
+    },
+    {
+      "what": "journey section 5",
+      "ink": "#EBDBB2",
+      "on": "#7E5762"
+    },
+    {
+      "what": "journey section 6",
+      "ink": "#EBDBB2",
+      "on": "#375758"
+    },
+    {
+      "what": "journey section 7",
+      "ink": "#EBDBB2",
+      "on": "#5D564E"
+    },
+    {
+      "what": "task borders",
+      "ink": "#434D4A",
+      "on": "#83A598"
+    },
+    {
+      "what": "critical task borders",
+      "ink": "#5D302B",
+      "on": "#FB4934"
+    },
+    {
+      "what": "gantt task text",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "gantt task text",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#EBDBB2",
+      "on": "#375758"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#EBDBB2",
+      "on": "#3C3836"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt text beside a task",
+      "ink": "#928374",
+      "on": "#3C3836"
+    },
+    {
+      "what": "gantt text beside a task",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt clickable task",
+      "ink": "#B8BB26",
+      "on": "#3C3836"
+    },
+    {
+      "what": "gantt clickable task",
+      "ink": "#B8BB26",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt grid",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt grid",
+      "ink": "#928374",
+      "on": "#3C3836"
+    },
+    {
+      "what": "gantt today line",
+      "ink": "#FB4934",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt today line",
+      "ink": "#FB4934",
+      "on": "#3C3836"
+    },
+    {
+      "what": "gantt marker line",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "gantt marker line",
+      "ink": "#D3869B",
+      "on": "#3C3836"
+    },
+    {
+      "what": "error text",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "quadrant 1 text",
+      "ink": "#EBDBB2",
+      "on": "#566760"
+    },
+    {
+      "what": "quadrant 2 text",
+      "ink": "#EBDBB2",
+      "on": "#707227"
+    },
+    {
+      "what": "quadrant 3 text",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "quadrant 4 text",
+      "ink": "#EBDBB2",
+      "on": "#935421"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#EBDBB2",
+      "on": "#566760"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#EBDBB2",
+      "on": "#707227"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#EBDBB2",
+      "on": "#935421"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#EBDBB2",
+      "on": "#566760"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#EBDBB2",
+      "on": "#707227"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#EBDBB2",
+      "on": "#935421"
+    },
+    {
+      "what": "quadrant axes",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#3C3836"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#566760"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#707227"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#91732C"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#EBDBB2",
+      "on": "#935421"
+    },
+    {
+      "what": "quadrant title",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "chart axes",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "chart title",
+      "ink": "#EBDBB2",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 1",
+      "ink": "#83A598",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 2",
+      "ink": "#B8BB26",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 3",
+      "ink": "#FABD2F",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 4",
+      "ink": "#FE8019",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 5",
+      "ink": "#FB4934",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 6",
+      "ink": "#D3869B",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 7",
+      "ink": "#458588",
+      "on": "#282828"
+    },
+    {
+      "what": "chart series 8",
+      "ink": "#928374",
+      "on": "#282828"
+    },
+    {
+      "what": "flowchart node 1 rim",
+      "ink": "#434D4A",
+      "on": "#83A598"
+    },
+    {
+      "what": "flowchart node 1 label",
+      "ink": "#282828",
+      "on": "#83A598"
+    },
+    {
+      "what": "flowchart node 2 rim",
+      "ink": "#626327",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "flowchart node 2 label",
+      "ink": "#282828",
+      "on": "#B8BB26"
+    },
+    {
+      "what": "flowchart node 3 rim",
+      "ink": "#7C642B",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "flowchart node 3 label",
+      "ink": "#282828",
+      "on": "#FABD2F"
+    },
+    {
+      "what": "flowchart node 4 rim",
+      "ink": "#734723",
+      "on": "#FE8019"
+    },
+    {
+      "what": "flowchart node 4 label",
+      "ink": "#282828",
+      "on": "#FE8019"
+    },
+    {
+      "what": "flowchart node 5 rim",
+      "ink": "#5D302B",
+      "on": "#FB4934"
+    },
+    {
+      "what": "flowchart node 5 label",
+      "ink": "#282828",
+      "on": "#FB4934"
+    },
+    {
+      "what": "flowchart node 6 rim",
+      "ink": "#5B444A",
+      "on": "#D3869B"
+    },
+    {
+      "what": "flowchart node 6 label",
+      "ink": "#282828",
+      "on": "#D3869B"
+    },
+    {
+      "what": "flowchart node 7 rim",
+      "ink": "#2B3132",
+      "on": "#458588"
+    },
+    {
+      "what": "flowchart node 7 label",
+      "ink": "#282828",
+      "on": "#458588"
+    },
+    {
+      "what": "flowchart node 8 rim",
+      "ink": "#3D3A37",
+      "on": "#928374"
+    },
+    {
+      "what": "flowchart node 8 label",
+      "ink": "#282828",
+      "on": "#928374"
+    }
+  ]
+}

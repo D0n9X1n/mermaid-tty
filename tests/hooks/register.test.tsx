@@ -40,3 +40,38 @@ test('A5.errors: session.start with a failing store leaves images auto', async (
   expect(await start($, on, failing)).toEqual(['auto'])
   expect((await $.command.run({ command: 'mermaid-tty', args: 'images' })).text).toBe('mermaid-tty images: auto')
 })
+
+// Pictures render in mermaid-tty.* temp dirs; the session's start sweeps what a past one left, and its end every dir
+// this one still holds, so nothing stays on disk once it closes.
+const sweeps = (on: any) => {
+  const runs: string[][] = []
+  on('process.run', async (_$: any, e: any) => {
+    runs.push(e.argv)
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  return () => runs.filter((a) => a[0] === 'node' && String(a[2]).includes('mermaid-tty') && a[3] === '600')
+}
+test('the session sweeps picture temp dirs when it starts and when it ends', async ($, on) => {
+  const swept = sweeps(on)
+  on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
+  on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
+  on('session.end', async (_$: any, e: any) => ({ sessionId: e.sessionId }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await new Promise((done) => setTimeout(done, 50))
+  expect(swept()).toHaveLength(1)
+  await $.session.end({ reason: 'prompt_input_exit', sessionId: 's', resume: { id: 's' } } as any)
+  expect(swept()).toHaveLength(2)
+})
+test('a desktop or SDK session never sweeps: mermaid-tty draws only in the CLI terminal', async ($, on) => {
+  const swept = sweeps(on)
+  on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
+  on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
+  on('session.end', async (_$: any, e: any) => ({ sessionId: e.sessionId }))
+  for (const surface of ['desktop', null]) {
+    await $.session.start({ cwd: '/', surface, isInteractive: surface !== null } as any)
+    await $.session.end({ reason: 'other', sessionId: 's', resume: { id: 's' } } as any)
+  }
+
+  await new Promise((done) => setTimeout(done, 50))
+  expect(swept()).toHaveLength(0)
+})

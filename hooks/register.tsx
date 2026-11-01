@@ -1,7 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import { imagesReply, isImages, modeReply, parseModeArgs, type Images, type Mode } from './mode.ts'
-import { safePlan } from './plan.ts'
+import { safePlan, sweepPictures } from './plan.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that fails to draw (joined to the
 // prose around it), goes through next() unchanged, as does a reply with nothing drawn. A reply that opens on a diagram
@@ -57,6 +57,8 @@ async function loadImages($: any): Promise<Images> {
 
 export const register: Register = (on, options) => {
   const theme = String(options.theme ?? 'default')
+  // Whether this session started in the CLI's terminal, where mermaid-tty draws.
+  let inTerminal = false
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -65,6 +67,24 @@ export const register: Register = (on, options) => {
         'Show Mermaid diagrams as source, diagram or text, with or without pictures: /mermaid-tty [source|diagram|text|images [auto|on|off]]',
     })
     await loadImages($)
+    // mermaid-tty draws only in the CLI's terminal, so only a terminal session renders pictures or sweeps for them: a
+    // desktop or SDK session leaves the temp dir alone. A past session cut short may have left picture temp dirs; sweep
+    // them without holding the start up.
+    inTerminal = e.surface === 'terminal'
+    if (inTerminal) {
+      void sweepPictures($)
+    }
+
+    return next(e)
+  })
+
+  // Nothing of a picture stays on disk once a terminal session closes: its renders' temp dirs go, in flight or left
+  // behind, within the end's short bound.
+  on('session.end', async ($, e, next) => {
+    if (inTerminal) {
+      await sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)), true)
+    }
+
     return next(e)
   })
 

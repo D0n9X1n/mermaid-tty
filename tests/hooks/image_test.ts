@@ -1,5 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, sep } from 'node:path'
 import {
   createPictures,
   fit,
@@ -10,7 +14,11 @@ import {
   pngSize,
   puppeteerConfig,
   REMOVE_TEMP,
+  STALE_S,
+  SWEEP_TEMP,
+  sweepTemp,
 } from '../../hooks/image.ts'
+import { pictureTheme } from '../../hooks/picture-theme.ts'
 
 // The temp dir's two Node runs, named for what they do: make (MAKE_TEMP) and remove (REMOVE_TEMP).
 const D = '/tmp/mermaid-tty.Ab12Cd'
@@ -149,13 +157,13 @@ test('A6.hook-tests: a picture taller than 255 rows is no picture', () => {
   assert.equal(fit(160, 9000, 80), null)
 })
 
-test('A6.hook-tests: the look: dark or light from the Claude Code theme; none for mono, no pixels, or an unknown theme', async () => {
+test('A6.hook-tests: the look: default follows the Claude Code theme; none for mono, no pixels, or an unknown theme', async () => {
   for (const [theme, want] of [
-    ['dark', 'dark'],
-    ['dark-daltonized', 'dark'],
-    ['dark-ansi', 'dark'],
-    ['light', 'default'],
-    ['light-ansi', 'default'],
+    ['dark', 'default-dark'],
+    ['dark-daltonized', 'default-dark'],
+    ['dark-ansi', 'default-dark'],
+    ['light', 'default-light'],
+    ['light-ansi', 'default-light'],
     ['auto', null],
     [undefined, null],
     [3, null],
@@ -164,7 +172,6 @@ test('A6.hook-tests: the look: dark or light from the Claude Code theme; none fo
     assert.equal(await pictureLook(f.$, createPictures(), 'default'), want, String(theme))
   }
 
-  assert.equal(await pictureLook(fake().$, createPictures(), 'nord'), 'dark')
   assert.equal(await pictureLook(fake().$, createPictures(), 'mono'), null)
   assert.equal(
     await pictureLook(fake({ vars: { TERM: 'xterm-kitty', TMUX: '1' } }).$, createPictures(), 'default'),
@@ -184,10 +191,27 @@ test('A6.hook-tests: images off is no look; images on needs no detected terminal
   assert.equal(await pictureLook(fake().$, createPictures(), 'default', 'off'), null)
   assert.equal(await pictureLook(fake(bare).$, createPictures(), 'default', 'auto'), null)
   const f = fake(bare)
-  assert.equal(await pictureLook(f.$, createPictures(), 'default', 'on'), 'dark')
+  assert.equal(await pictureLook(f.$, createPictures(), 'default', 'on'), 'default-dark')
   assert.deepEqual(f.asked, [])
   assert.equal(await pictureLook(fake(bare).$, createPictures(), 'mono', 'on'), null)
   assert.equal(await pictureLook(fake({ ...bare, theme: 'auto' }).$, createPictures(), 'default', 'on'), null)
+})
+
+// A curated palette paints its own background, so its look is the palette whatever Claude Code's theme, unknown too.
+test('a curated palette is its own look, light or dark Claude Code theme alike', async () => {
+  for (const palette of ['nord', 'dracula', 'gruvbox', 'solarized']) {
+    for (const theme of ['dark', 'light', 'auto', null]) {
+      assert.equal(await pictureLook(fake({ theme }).$, createPictures(), palette), palette, `${palette} ${theme}`)
+    }
+  }
+
+  const f = fake()
+  f.$.config.list = async () => {
+    throw new Error('no')
+  }
+  assert.equal(await pictureLook(f.$, createPictures(), 'nord'), 'nord')
+  assert.equal(await pictureLook(fake().$, createPictures(), 'nord', 'off'), null)
+  assert.equal(await pictureLook(fake({ vars: { TERM: 'xterm-256color' } }).$, createPictures(), 'nord'), null)
 })
 
 test('A6.hook-tests: the terminal is told once per store', async () => {
@@ -221,7 +245,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
   const f = fake()
   const s = createPictures()
   const body = fc('A')
-  assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
+  assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.deepEqual(
     f.runs.map((r) => label(r.argv)),
@@ -276,14 +300,14 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
   assert.deepEqual(
     f.writes.map(([p, t]) => [p, JSON.parse(t)]),
     [
-      [`${D}/config.json`, { securityLevel: 'strict', theme: 'dark' }],
+      [`${D}/config.json`, pictureTheme('default-dark').config],
       [`${D}/puppeteer.json`, puppeteerConfig(80)],
     ],
   )
   assert.deepEqual(f.runs.filter((r) => isRemove(r.argv))[0]!.argv, ['node', '-e', REMOVE_TEMP, D])
   assert.equal(redraws(f), 1)
   assert.deepEqual(f.logs, [])
-  assert.deepEqual(pictureFor(f.$, s, body, 'dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
+  assert.deepEqual(pictureFor(f.$, s, body, 'default-dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
   assert.equal(f.runs.length, 5) // the hit runs nothing
 })
 
@@ -292,7 +316,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
 test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed', async () => {
   const f = fake({ version: '12.0.0' })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
   const [sv, m] = argvOf(f, 'mmdc')
   for (const r of [sv!, m!]) {
@@ -302,7 +326,7 @@ test('A6.hook-tests: mmdc 12 gets no -w, and its SVG pass gets --no-font-embed',
 
   assert.ok(sv!.argv.includes('--no-font-embed'))
   assert.equal(m!.argv.includes('--no-font-embed'), false)
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
   assert.deepEqual(f.logs, [])
 })
 
@@ -310,9 +334,9 @@ test('A5.errors: mmdc missing, or a version that is not one, logs once and rende
   for (const version of [new Error('spawn mmdc ENOENT'), 'hello']) {
     const f = fake({ version })
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
-    pictureFor(f.$, s, fc('B'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(probes(f), 1)
     assert.equal(renders(f), 0)
@@ -329,15 +353,15 @@ test('A5.errors: a source core does not parse, or one over 50000 characters, nev
   const f = fake()
   const s = createPictures()
   for (const body of ['flowchart TD\nA[fa:fa-car x]', 'flowchart TD\nA[open --> B', 'radar-beta\naxis A']) {
-    assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined, body)
+    assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined, body)
   }
 
   await s.idle()
   assert.deepEqual(f.runs, [])
   assert.deepEqual(f.logs, [])
   const big = `flowchart TD\nA["${'x'.repeat(50000)}"] --> B`
-  pictureFor(f.$, s, big, 'dark', 80, f.log)
-  pictureFor(f.$, s, big, 'dark', 80, f.log)
+  pictureFor(f.$, s, big, 'default-dark', 80, f.log)
+  pictureFor(f.$, s, big, 'default-dark', 80, f.log)
   await s.idle()
   assert.deepEqual(f.runs, [])
   assert.deepEqual(f.logs, ['image: source over 50000 characters'])
@@ -372,8 +396,8 @@ test('A5.errors: an unsafe source never reaches mmdc: the themeCSS repro, and on
     f.$.process.run = async (argv: string[]) => {
       assert.fail(`ran ${argv.join(' ')} for ${JSON.stringify(body)}`)
     }
-    assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
-    pictureFor(f.$, s, body, 'dark', 80, f.log)
+    assert.equal(pictureFor(f.$, s, body, 'default-dark', 80, f.log), undefined)
+    pictureFor(f.$, s, body, 'default-dark', 80, f.log)
     await s.idle()
     assert.deepEqual(f.logs, [`image: unsafe source (${reason})`], body)
   }
@@ -394,10 +418,10 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
   ] as const) {
     const f = fake({ svg })
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(renders(f), 0, svg)
-    assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+    assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
     assert.deepEqual(f.logs, [`image: unsafe svg (${reason})`], svg)
     assert.equal(f.runs.filter((r) => isRemove(r.argv)).length, 1)
     assert.equal(redraws(f), 0)
@@ -405,10 +429,10 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
 
   const f = fake({ svg: SVG })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
   assert.equal(renders(f), 1)
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
 })
 
 test('A6.hook-tests: requests for one diagram, theme and width share one render; another theme or width is its own', async () => {
@@ -416,11 +440,11 @@ test('A6.hook-tests: requests for one diagram, theme and width share one render;
   const s = createPictures()
   const body = fc('A')
   for (let i = 0; i < 3; i++) {
-    pictureFor(f.$, s, body, 'dark', 80, f.log)
+    pictureFor(f.$, s, body, 'default-dark', 80, f.log)
   }
 
-  pictureFor(f.$, s, body, 'default', 80, f.log)
-  pictureFor(f.$, s, body, 'dark', 60, f.log)
+  pictureFor(f.$, s, body, 'default-light', 80, f.log)
+  pictureFor(f.$, s, body, 'default-dark', 60, f.log)
   await s.idle()
   assert.equal(renders(f), 3)
   assert.equal(probes(f), 1)
@@ -440,7 +464,7 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
   })
   const s = createPictures()
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
   }
 
   await s.idle()
@@ -455,9 +479,13 @@ test('A6.hook-tests: renders run one at a time, and a batch redraws once', async
 test('A6.hook-tests: a picture inside 90% of the page is scaled into the columns', async () => {
   const f = fake({ w: 1700, h: 100 })
   const s = createPictures()
-  pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
   await s.idle()
-  assert.deepEqual(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), { png: png(1700, 100), columns: 80, rows: 2 })
+  assert.deepEqual(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), {
+    png: png(1700, 100),
+    columns: 80,
+    rows: 2,
+  })
   assert.deepEqual(f.logs, [])
 })
 
@@ -494,7 +522,7 @@ for (const [name, o, reason] of [
   test(`A5.errors: ${name} keeps the text drawing, logs why, and cleans up`, async () => {
     const f = fake(o)
     const s = createPictures()
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.equal(f.logs.length, 1)
     assert.match(f.logs[0]!, reason)
@@ -503,7 +531,7 @@ for (const [name, o, reason] of [
       [['node', '-e', REMOVE_TEMP, D]],
     )
     assert.equal(redraws(f), 0)
-    assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+    assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
     await s.idle()
     assert.equal(f.runs.filter((r) => isMake(r.argv)).length, 1)
   })
@@ -520,7 +548,7 @@ test('A5.errors: no temp dir, or a path the temp run should not have made, runs 
     const run = f.$.process.run
     f.$.process.run = async (argv: string[], init: any) =>
       isMake(argv) ? (f.runs.push({ argv, init }), made) : run(argv, init)
-    pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
     await s.idle()
     assert.deepEqual(
       f.runs.map((r) => label(r.argv)),
@@ -537,18 +565,18 @@ test('A5.errors: a failing log or redraw never escapes the background render', a
   f.$.ui.invalidate = () => {
     throw new Error('gone')
   }
-  pictureFor(f.$, s, fc('A'), 'dark', 80, () => {
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, () => {
     throw new Error('log down')
   })
   await s.idle()
-  assert.ok(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log))
   const g = fake({
     run: async () => {
       throw new Error('x')
     },
   })
   const t = createPictures()
-  pictureFor(g.$, t, fc('A'), 'dark', 80, () => {
+  pictureFor(g.$, t, fc('A'), 'default-dark', 80, () => {
     throw new Error('log down')
   })
   await t.idle()
@@ -561,12 +589,12 @@ test('A8.cache: the picture cache is bounded by entries; a dropped picture is no
   const f = fake()
   const s = createPictures({ entries: 2 })
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
-  assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
-  assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+  assert.ok(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log))
+  assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.equal(renders(f), 3)
 })
@@ -575,13 +603,13 @@ test('A8.cache: the picture cache is bounded by bytes of PNG', async () => {
   const f = fake()
   const s = createPictures({ bytes: 100 }) // each PNG here is 44 base64 characters
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
-  assert.ok(pictureFor(f.$, s, fc('B'), 'dark', 80, f.log))
-  assert.ok(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log))
-  assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
+  assert.ok(pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log))
+  assert.ok(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log))
+  assert.equal(pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log), undefined)
   await s.idle()
   assert.equal(renders(f), 3)
 })
@@ -590,12 +618,12 @@ test('A8.cache: at most 8 renders wait; a request past that is dropped, and aske
   const f = fake()
   const s = createPictures()
   for (let i = 0; i < 10; i++) {
-    pictureFor(f.$, s, fc(`D${i}`), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(`D${i}`), 'default-dark', 80, f.log)
   }
 
   await s.idle()
   assert.equal(renders(f), 8)
-  pictureFor(f.$, s, fc('D9'), 'dark', 80, f.log)
+  pictureFor(f.$, s, fc('D9'), 'default-dark', 80, f.log)
   await s.idle()
   assert.equal(renders(f), 9)
 })
@@ -604,12 +632,12 @@ test('A8.cache: the keys tried are bounded; past that, a new diagram stays text'
   const f = fake()
   const s = createPictures({ tried: 2 })
   for (const b of ['A', 'B', 'C']) {
-    pictureFor(f.$, s, fc(b), 'dark', 80, f.log)
+    pictureFor(f.$, s, fc(b), 'default-dark', 80, f.log)
     await s.idle()
   }
 
   assert.equal(renders(f), 2)
-  assert.equal(pictureFor(f.$, s, fc('C'), 'dark', 80, f.log), undefined)
+  assert.equal(pictureFor(f.$, s, fc('C'), 'default-dark', 80, f.log), undefined)
 })
 
 // The review's repro: 17 diagrams in one reply, a cache of 16, and every redraw asking for all 17 again. Each renders
@@ -620,7 +648,7 @@ test('A8.cache: 17 diagrams over a 16-picture cache render 17 times and stop', a
   const bodies = Array.from({ length: 17 }, (_, i) => fc(`N${i}`))
   let shown = 0
   const draw = () => {
-    shown = bodies.filter((b) => pictureFor(f.$, s, b, 'dark', 80, f.log)).length
+    shown = bodies.filter((b) => pictureFor(f.$, s, b, 'default-dark', 80, f.log)).length
   }
   f.$.ui.invalidate = () => {
     f.asked.push('invalidate')
@@ -654,4 +682,208 @@ test('A5.errors: only a fresh mermaid-tty dir directly in the named temp dir is 
   assert.equal(made(3, D), null)
   assert.equal(madeTempDir('/tmp/mermaid-tty.Ab12Cd\n'), null)
   assert.equal(madeTempDir(''), null)
+})
+
+// A curated look paints its palette's background behind both runs, and names a theme mmdc 11 accepts; the config's own
+// theme, base, is the one Mermaid draws with.
+test('a curated look renders on its background, with its own config', async () => {
+  const s = createPictures()
+  const f = fake({ run: async () => ({ exitCode: 0, stdout: '', stderr: '' }) })
+  pictureFor(f.$, s, fc('A'), 'nord', 80, f.log)
+  await s.idle()
+  const runs = argvOf(f, 'mmdc')
+  for (const r of runs) {
+    const argv = r!.argv
+    assert.equal(argv[argv.indexOf('-b') + 1], '#2E3440')
+    assert.equal(argv[argv.indexOf('-t') + 1], 'dark')
+  }
+
+  assert.deepEqual(JSON.parse(f.writes.find(([p]) => p.endsWith('config.json'))![1]), pictureTheme('nord').config)
+})
+
+// SWEEP_TEMP, run as the hook runs it, against a stand-in temp dir: TMPDIR on macOS and Linux, TMP and TEMP on Windows.
+function sweep(tmp: string, args: string[]) {
+  const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+  return spawnSync(process.execPath, ['-e', SWEEP_TEMP, ...args], { env, encoding: 'utf8' })
+}
+
+test('SWEEP_TEMP removes stale picture dirs and the ones it names, and nothing else', (t) => {
+  const tmp = mkdtempSync(join(tmpdir(), 'sweep-'))
+  t.after(() => rmSync(tmp, { recursive: true, force: true }))
+  const dir = (name: string, ageS: number) => {
+    const p = join(tmp, name)
+    mkdirSync(p)
+    writeFileSync(join(p, 'out.png'), 'x')
+    const at = new Date(Date.now() - ageS * 1000)
+    utimesSync(p, at, at)
+    return p
+  }
+
+  dir('mermaid-tty.Stale1', 3600)
+  dir('mermaid-tty.Fresh1', 5)
+  const named = dir('mermaid-tty.Named1', 5)
+  dir('mermaid-tty.Tok3n9Zq.Fresh2', 5)
+  dir('mermaid-tty.Other9Zq.Fresh3', 5)
+  dir('other.Stale2', 3600)
+  dir('mermaid-tty-not.Stale3', 3600)
+  const r = sweep(tmp, ['600', 'Tok3n9Zq', named.split(sep).join('/'), join(tmpdir(), 'mermaid-tty.Elsewh')])
+  assert.equal(r.status, 0, r.stderr)
+  assert.deepEqual(readdirSync(tmp).sort(), [
+    'mermaid-tty-not.Stale3',
+    'mermaid-tty.Fresh1',
+    'mermaid-tty.Other9Zq.Fresh3',
+    'other.Stale2',
+  ])
+})
+
+// The session ends: every dir a render of this store made and has not removed yet goes, with any stale one; at the
+// start, only the stale ones a past session left.
+test('sweepTemp names the dirs a render still holds, and asks for the stale ones', async () => {
+  const s = createPictures()
+  s.dirs.add('/tmp/mermaid-tty.Live01')
+  const f = fake()
+  await sweepTemp(f.$, s)
+  const run = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!
+  assert.deepEqual(run.argv.slice(3), [String(STALE_S), '-', '/tmp/mermaid-tty.Live01'])
+  const g = fake()
+  await sweepTemp(g.$)
+  assert.deepEqual(g.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3), [String(STALE_S), '-'])
+})
+
+test('a render holds its temp dir in the store while it runs and lets it go once removed', async () => {
+  const s = createPictures()
+  let held: string[] = []
+  const f = fake({
+    run: async (argv: string[]) => {
+      held = [...s.dirs]
+      return { exitCode: 1, stdout: '', stderr: 'boom' }
+    },
+  })
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await s.idle()
+  assert.deepEqual(held, [D])
+  assert.deepEqual([...s.dirs], [])
+})
+
+test('a failing sweep is quiet: it never throws', async () => {
+  const f = fake()
+  f.$.process.run = async () => {
+    throw new Error('no node')
+  }
+  await assert.doesNotReject(sweepTemp(f.$, createPictures()))
+})
+
+// The session ends while a render is making its temp dir: the end closes the store, so no render starts after it, waits
+// for the dir being made, and sweeps every dir named with this store's token, so nothing a render was about to make
+// survives the session.
+test('the end of a session closes the store, waits for a temp dir being made, and sweeps its token', async () => {
+  const s = createPictures()
+  let release!: () => void
+  const held = new Promise<void>((done) => (release = done))
+  const f = fake()
+  const order: string[] = []
+  const run = f.$.process.run
+  f.$.process.run = async (argv: string[], init: any) => {
+    if (isMake(argv)) {
+      await held
+      order.push('made')
+    } else if (argv[2] === SWEEP_TEMP) {
+      order.push('swept')
+    }
+
+    return run(argv, init)
+  }
+  // A clock whose wait never ends: only the dir being made can let the sweep go.
+  ;(f.$ as any).clock = { sleep: () => new Promise(() => {}) }
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await new Promise((done) => setTimeout(done, 10))
+  const ending = sweepTemp(f.$, s, 1000, true)
+  await new Promise((done) => setTimeout(done, 10))
+  assert.deepEqual(order, [], 'the sweep waits for the dir being made')
+  release()
+  await ending
+  await s.idle()
+  assert.deepEqual(order.slice(0, 2), ['made', 'swept'])
+  const sweepArgs = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3)
+  assert.deepEqual(sweepArgs.slice(1, 3), [s.token, '--end'])
+  assert.equal(
+    f.runs.some((r) => r.argv[0] === 'mmdc' && r.argv[1] === '-i'),
+    false,
+    'no render after the end',
+  )
+  assert.equal(pictureFor(f.$, s, fc('B'), 'default-dark', 80, f.log), undefined)
+})
+
+test("MAKE_TEMP names a dir with the store's token, which madeTempDir accepts", () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'make-'))
+  try {
+    const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+    const r = spawnSync(process.execPath, ['-e', MAKE_TEMP, 'Tok3n9Zq'], { env, encoding: 'utf8' })
+    const dir = madeTempDir(r.stdout)
+    assert.match(dir ?? '', /\/mermaid-tty\.Tok3n9Zq\.[A-Za-z0-9]{6}$/)
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+// The deadline path: the session's end sweeps before a render's temp dir is made. The sweep leaves a mark,
+// mermaid-tty.<token>.end, before it looks; a dir MAKE_TEMP makes for that token after it sees the mark and removes
+// itself, so whichever runs first, nothing of the store's is left. Another store's token is untouched, and the mark
+// itself goes once stale.
+test('a temp dir made after the final sweep removes itself, and the mark the sweep left is swept once stale', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'mark-'))
+  try {
+    const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+    const node = (...args: string[]) => spawnSync(process.execPath, ['-e', ...args], { env, encoding: 'utf8' })
+    assert.equal(node(SWEEP_TEMP, '600', 'Tok3n9Zq', '--end').status, 0)
+    assert.deepEqual(readdirSync(tmp), ['mermaid-tty.Tok3n9Zq.end'])
+    assert.equal(madeTempDir(node(MAKE_TEMP, 'Tok3n9Zq').stdout), null)
+    assert.deepEqual(readdirSync(tmp), ['mermaid-tty.Tok3n9Zq.end'])
+    assert.ok(madeTempDir(node(MAKE_TEMP, 'Other9Zq').stdout))
+    const old = new Date(Date.now() - 3600 * 1000)
+    utimesSync(join(tmp, 'mermaid-tty.Tok3n9Zq.end'), old, old)
+    assert.equal(node(SWEEP_TEMP, '600', '-').status, 0)
+    assert.deepEqual(
+      readdirSync(tmp).filter((n) => !n.startsWith('mermaid-tty.Other9Zq.')),
+      [],
+    )
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+// The clock wins: the end sweeps, with its mark, while the dir is still being made. That render then finds no dir
+// (MAKE_TEMP, seeing the mark, removed it and printed none) and draws nothing after the end.
+test('when the end cannot wait for a dir being made, it sweeps with its mark and the late render draws nothing', async () => {
+  const s = createPictures()
+  let release!: () => void
+  const held = new Promise<void>((done) => (release = done))
+  const f = fake()
+  const order: string[] = []
+  const run = f.$.process.run
+  f.$.process.run = async (argv: string[], init: any) => {
+    if (isMake(argv)) {
+      await held
+      order.push('made, saw the mark')
+      return { exitCode: 0, stdout: '{}', stderr: '' }
+    }
+
+    if (argv[2] === SWEEP_TEMP) {
+      order.push(`swept ${argv[5]}`)
+    }
+
+    return run(argv, init)
+  }
+  ;(f.$ as any).clock = { sleep: async () => {} }
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await new Promise((done) => setTimeout(done, 10))
+  await sweepTemp(f.$, s, 1000, true)
+  release()
+  await s.idle()
+  assert.deepEqual(order, ['swept --end', 'made, saw the mark'])
+  assert.equal(
+    f.runs.some((r) => r.argv[0] === 'mmdc' && r.argv[1] === '-i'),
+    false,
+  )
+  assert.deepEqual([...s.dirs], [])
 })

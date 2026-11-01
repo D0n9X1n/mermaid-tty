@@ -1,0 +1,421 @@
+{
+  "config": {
+    "securityLevel": "strict",
+    "theme": "default",
+    "themeVariables": {
+      "pie1": "#5769f7",
+      "pie2": "#2c7a39",
+      "pie3": "#966c1e",
+      "pie4": "#ab2b3f",
+      "pie5": "#8700ff",
+      "pie6": "#d77757",
+      "pie7": "#4782c8",
+      "pie8": "#006666",
+      "pie9": "#5769f7",
+      "pie10": "#2c7a39",
+      "pie11": "#966c1e",
+      "pie12": "#ab2b3f",
+      "pieSectionTextColor": "#ffffff",
+      "pieOpacity": "1",
+      "git0": "#5769f7",
+      "gitBranchLabel0": "#ffffff",
+      "git1": "#2c7a39",
+      "gitBranchLabel1": "#ffffff",
+      "git2": "#966c1e",
+      "gitBranchLabel2": "#ffffff",
+      "git3": "#ab2b3f",
+      "gitBranchLabel3": "#ffffff",
+      "git4": "#8700ff",
+      "gitBranchLabel4": "#ffffff",
+      "git5": "#d77757",
+      "gitBranchLabel5": "#ffffff",
+      "git6": "#4782c8",
+      "gitBranchLabel6": "#ffffff",
+      "git7": "#006666",
+      "gitBranchLabel7": "#ffffff",
+      "cScale0": "#5769F7",
+      "cScaleLabel0": "#ffffff",
+      "cScale1": "#2C7A39",
+      "cScaleLabel1": "#ffffff",
+      "cScale2": "#966C1E",
+      "cScaleLabel2": "#ffffff",
+      "cScale3": "#AB2B3F",
+      "cScaleLabel3": "#ffffff",
+      "cScale4": "#8700FF",
+      "cScaleLabel4": "#ffffff",
+      "cScale5": "#D77757",
+      "cScaleLabel5": "#000000",
+      "cScale6": "#4782C8",
+      "cScaleLabel6": "#000000",
+      "cScale7": "#006666",
+      "cScaleLabel7": "#ffffff",
+      "cScale8": "#5769F7",
+      "cScaleLabel8": "#ffffff",
+      "cScale9": "#2C7A39",
+      "cScaleLabel9": "#ffffff",
+      "cScale10": "#966C1E",
+      "cScaleLabel10": "#ffffff",
+      "cScale11": "#5769F7",
+      "cScaleLabel11": "#000000",
+      "xyChart": {
+        "backgroundColor": "#FFFFFF",
+        "titleColor": "#333333",
+        "dataLabelColor": "#333333",
+        "legendTextColor": "#333333",
+        "xAxisTitleColor": "#333333",
+        "xAxisLabelColor": "#333333",
+        "xAxisTickColor": "#333333",
+        "xAxisLineColor": "#333333",
+        "yAxisTitleColor": "#333333",
+        "yAxisLabelColor": "#333333",
+        "yAxisTickColor": "#333333",
+        "yAxisLineColor": "#333333",
+        "plotColorPalette": "#5769f7,#2c7a39,#966c1e,#ab2b3f,#8700ff,#d77757,#4782c8,#006666"
+      }
+    },
+    "themeCSS": ".nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) ellipse{fill:#5769f7 !important;stroke:#D5DAFD !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+1) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) ellipse{fill:#2c7a39 !important;stroke:#B5D0BA !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+2) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) ellipse{fill:#966c1e !important;stroke:#E0D3BC !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+3) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) ellipse{fill:#ab2b3f !important;stroke:#D9A0A9 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+4) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) ellipse{fill:#8700ff !important;stroke:#D5A6FF !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+5) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) ellipse{fill:#d77757 !important;stroke:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+6) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) ellipse{fill:#4782c8 !important;stroke:#DAE6F4 !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+7) tspan{color:#ffffff !important;fill:#ffffff !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) rect,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) polygon,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) path,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) circle,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) ellipse{fill:#006666 !important;stroke:#8CBABA !important;}.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) .nodeLabel,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) .nodeLabel *,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) span,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) text,.nodes > .node[id^=\"my-svg-flowchart-\"]:nth-child(8n+0) tspan{color:#ffffff !important;fill:#ffffff !important;}",
+    "journey": {
+      "actorColours": [
+        "#5769f7",
+        "#2c7a39",
+        "#966c1e",
+        "#ab2b3f",
+        "#8700ff",
+        "#d77757"
+      ]
+    }
+  },
+  "background": "transparent",
+  "pairs": [
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#5769f7"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#2c7a39"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#966c1e"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#ab2b3f"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#8700ff"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#d77757"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#4782c8"
+    },
+    {
+      "what": "pie labels",
+      "ink": "#ffffff",
+      "on": "#006666"
+    },
+    {
+      "what": "branch 0 label",
+      "ink": "#ffffff",
+      "on": "#5769f7"
+    },
+    {
+      "what": "branch 1 label",
+      "ink": "#ffffff",
+      "on": "#2c7a39"
+    },
+    {
+      "what": "branch 2 label",
+      "ink": "#ffffff",
+      "on": "#966c1e"
+    },
+    {
+      "what": "branch 3 label",
+      "ink": "#ffffff",
+      "on": "#ab2b3f"
+    },
+    {
+      "what": "branch 4 label",
+      "ink": "#ffffff",
+      "on": "#8700ff"
+    },
+    {
+      "what": "branch 5 label",
+      "ink": "#ffffff",
+      "on": "#d77757"
+    },
+    {
+      "what": "branch 6 label",
+      "ink": "#ffffff",
+      "on": "#4782c8"
+    },
+    {
+      "what": "branch 7 label",
+      "ink": "#ffffff",
+      "on": "#006666"
+    },
+    {
+      "what": "section 0",
+      "ink": "#ffffff",
+      "on": "#5769F7"
+    },
+    {
+      "what": "event 0, brightened",
+      "ink": "#FFFFFF",
+      "on": "#687EFF"
+    },
+    {
+      "what": "section 1",
+      "ink": "#ffffff",
+      "on": "#2C7A39"
+    },
+    {
+      "what": "event 1, brightened",
+      "ink": "#FFFFFF",
+      "on": "#359244"
+    },
+    {
+      "what": "section 2",
+      "ink": "#ffffff",
+      "on": "#966C1E"
+    },
+    {
+      "what": "event 2, brightened",
+      "ink": "#FFFFFF",
+      "on": "#B48224"
+    },
+    {
+      "what": "section 3",
+      "ink": "#ffffff",
+      "on": "#AB2B3F"
+    },
+    {
+      "what": "event 3, brightened",
+      "ink": "#FFFFFF",
+      "on": "#CD344C"
+    },
+    {
+      "what": "section 4",
+      "ink": "#ffffff",
+      "on": "#8700FF"
+    },
+    {
+      "what": "event 4, brightened",
+      "ink": "#FFFFFF",
+      "on": "#A200FF"
+    },
+    {
+      "what": "section 5",
+      "ink": "#000000",
+      "on": "#D77757"
+    },
+    {
+      "what": "event 5, brightened",
+      "ink": "#000000",
+      "on": "#FF8F68"
+    },
+    {
+      "what": "section 6",
+      "ink": "#000000",
+      "on": "#4782C8"
+    },
+    {
+      "what": "event 6, brightened",
+      "ink": "#000000",
+      "on": "#559CF0"
+    },
+    {
+      "what": "section 7",
+      "ink": "#ffffff",
+      "on": "#006666"
+    },
+    {
+      "what": "event 7, brightened",
+      "ink": "#FFFFFF",
+      "on": "#007A7A"
+    },
+    {
+      "what": "section 8",
+      "ink": "#ffffff",
+      "on": "#5769F7"
+    },
+    {
+      "what": "event 8, brightened",
+      "ink": "#FFFFFF",
+      "on": "#687EFF"
+    },
+    {
+      "what": "section 9",
+      "ink": "#ffffff",
+      "on": "#2C7A39"
+    },
+    {
+      "what": "event 9, brightened",
+      "ink": "#FFFFFF",
+      "on": "#359244"
+    },
+    {
+      "what": "section 10",
+      "ink": "#ffffff",
+      "on": "#966C1E"
+    },
+    {
+      "what": "event 10, brightened",
+      "ink": "#FFFFFF",
+      "on": "#B48224"
+    },
+    {
+      "what": "section 11",
+      "ink": "#000000",
+      "on": "#5769F7"
+    },
+    {
+      "what": "section 11",
+      "ink": "#000000",
+      "on": "#ffffff"
+    },
+    {
+      "what": "event 11, brightened",
+      "ink": "#000000",
+      "on": "#687EFF"
+    },
+    {
+      "what": "chart series 1",
+      "ink": "#5769f7",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 2",
+      "ink": "#2c7a39",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 3",
+      "ink": "#966c1e",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 4",
+      "ink": "#ab2b3f",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 5",
+      "ink": "#8700ff",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 6",
+      "ink": "#d77757",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 7",
+      "ink": "#4782c8",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 8",
+      "ink": "#006666",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart text",
+      "ink": "#333333",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "flowchart node 1 rim",
+      "ink": "#D5DAFD",
+      "on": "#5769f7"
+    },
+    {
+      "what": "flowchart node 1 label",
+      "ink": "#ffffff",
+      "on": "#5769f7"
+    },
+    {
+      "what": "flowchart node 2 rim",
+      "ink": "#B5D0BA",
+      "on": "#2c7a39"
+    },
+    {
+      "what": "flowchart node 2 label",
+      "ink": "#ffffff",
+      "on": "#2c7a39"
+    },
+    {
+      "what": "flowchart node 3 rim",
+      "ink": "#E0D3BC",
+      "on": "#966c1e"
+    },
+    {
+      "what": "flowchart node 3 label",
+      "ink": "#ffffff",
+      "on": "#966c1e"
+    },
+    {
+      "what": "flowchart node 4 rim",
+      "ink": "#D9A0A9",
+      "on": "#ab2b3f"
+    },
+    {
+      "what": "flowchart node 4 label",
+      "ink": "#ffffff",
+      "on": "#ab2b3f"
+    },
+    {
+      "what": "flowchart node 5 rim",
+      "ink": "#D5A6FF",
+      "on": "#8700ff"
+    },
+    {
+      "what": "flowchart node 5 label",
+      "ink": "#ffffff",
+      "on": "#8700ff"
+    },
+    {
+      "what": "flowchart node 6 rim",
+      "ink": "#ffffff",
+      "on": "#d77757"
+    },
+    {
+      "what": "flowchart node 6 label",
+      "ink": "#ffffff",
+      "on": "#d77757"
+    },
+    {
+      "what": "flowchart node 7 rim",
+      "ink": "#DAE6F4",
+      "on": "#4782c8"
+    },
+    {
+      "what": "flowchart node 7 label",
+      "ink": "#ffffff",
+      "on": "#4782c8"
+    },
+    {
+      "what": "flowchart node 8 rim",
+      "ink": "#8CBABA",
+      "on": "#006666"
+    },
+    {
+      "what": "flowchart node 8 label",
+      "ink": "#ffffff",
+      "on": "#006666"
+    }
+  ]
+}

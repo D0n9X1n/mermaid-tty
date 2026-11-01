@@ -36,6 +36,16 @@ test('VR.in-ci: color math and curated palettes', () => {
   assert.deepEqual(paletteProblems(), [])
 })
 
+// Each theme's second shade, which pictures fill subgraphs and bands with: the palette project's own.
+const SURFACE: Readonly<Record<ThemeName, string | null>> = {
+  default: null,
+  nord: '#3B4252',
+  dracula: '#44475A',
+  gruvbox: '#3C3836',
+  solarized: '#073642',
+  mono: null,
+}
+
 // The rest of each theme's keys: background onFill title value s1…s8 ('-' is null).
 const MORE = {
   default: '- inverseText text success suggestion success warning error merged claude permission planMode',
@@ -54,6 +64,7 @@ test("A7: every field of every palette matches plan A's table", () => {
       {
         name: t,
         background,
+        surface: SURFACE[t as ThemeName],
         onFill,
         fill: t !== 'mono',
         dim: [],
@@ -120,9 +131,16 @@ function broken(edits: Inks): typeof THEMES {
   const themes = structuredClone(THEMES)
   for (const [key, color] of Object.entries(edits)) {
     const [t = '', ink = ''] = key.split('.')
-    const p = themes[t as ThemeName] as { background: string | null; roles: Inks; series: Inks }
+    const p = themes[t as ThemeName] as {
+      background: string | null
+      surface: string | null
+      roles: Inks
+      series: Inks
+    }
     if (ink === 'background') {
       p.background = color
+    } else if (ink === 'surface') {
+      p.surface = color
     } else if (Object.hasOwn(p.roles, ink)) {
       p.roles[ink] = color
     } else if (Object.hasOwn(p.series, ink)) {
@@ -165,6 +183,13 @@ test('VR.in-ci: the limits are contrast 3 and OKLab distance 0.08, for roles and
     ],
   )
 })
+test('a curated surface is #rrggbb, set apart from the background but close to it, as the editor themes shade panels', () => {
+  assert.deepEqual(paletteProblems(broken({ 'nord.surface': '#2E3440', 'dracula.surface': '#F8F8F2' })), [
+    'nord.surface #2E3440: OKLab distance 0.0000 from the background, outside 0.03 to 0.2',
+    'dracula.surface #F8F8F2: OKLab distance 0.6899 from the background, outside 0.03 to 0.2',
+  ])
+})
+
 test('VR.in-ci: paletteProblems names each color that is not #rrggbb, and measures nothing else in that palette', () => {
   assert.deepEqual(
     paletteProblems(
