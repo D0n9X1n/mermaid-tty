@@ -196,17 +196,15 @@ export function releaseErrors(yml: string): string[] {
     ]),
   ]
 }
-// B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version, and records
-// every result.
+// B4: the scheduled job runs A9 on every newly published Claude Code version, one leg per OS and version. Each leg's
+// artifact, pass or fail, is the record of what was tested: the list job reads the artifact names, and no job writes to
+// the repo.
 export function versionsErrors(yml: string): string[] {
   const { errors, value } = readWorkflow('claude-code-versions.yml', yml)
   const w = value as any
   const list: Job = w?.jobs?.list ?? {}
   const a9: Job & { strategy?: { matrix?: { version?: unknown } } } = w?.jobs?.a9 ?? {}
-  const rec: Job & { if?: string } = w?.jobs?.record ?? {}
-  const writers = Object.entries<any>(w?.jobs ?? {}).filter(
-    ([name, j]) => name !== 'record' && j?.permissions?.contents === 'write',
-  )
+  const writers = Object.entries<any>(w?.jobs ?? {}).filter(([, j]) => j?.permissions?.contents === 'write')
   return [
     ...errors,
     ...need('claude-code-versions.yml', w, [
@@ -220,8 +218,10 @@ export function versionsErrors(yml: string): string[] {
         (w) =>
           w.permissions.contents === 'read' && Object.values(w.permissions).every((v) => v === 'read' || v === 'none'),
       ],
+      ['actions: read, to list past legs', (w) => w.permissions.actions === 'read'],
     ]),
     ...need('claude-code-versions.yml list job', list, [
+      ['tested versions from the artifact names', (j) => hasRun(j, /actions\/artifacts/)],
       ['untested-version list', (j) => hasRun(j, /^versions="\$\(node scripts\/cc-versions\.ts list /m)],
     ]),
     ...need('claude-code-versions.yml a9 job', a9, [
@@ -243,18 +243,10 @@ export function versionsErrors(yml: string): string[] {
           ),
       ],
     ]),
-    ...need('claude-code-versions.yml record job', rec, [
-      [
-        'record even when a version failed',
-        (j) => j.if === "${{ !cancelled() && needs.list.outputs.versions != '[]' }}",
-      ],
-      ['record job with contents: write', (j) => j.permissions.contents === 'write'],
-      ['every result recorded', (j) => hasRun(j, /^node scripts\/cc-versions\.ts record /m)],
-      ['tested-version record', (j) => hasRun(j, 'git push origin HEAD:claude-code-tested')],
-    ]),
     ...(w?.permissions?.contents === 'write' || writers.length
-      ? ['claude-code-versions.yml: contents: write outside the record job']
+      ? ['claude-code-versions.yml: contents: write; the version job writes nothing to the repo']
       : []),
+    ...(w?.jobs?.record ? ['claude-code-versions.yml: a record job; the leg artifacts are the record'] : []),
   ]
 }
 // Coverage must never silently accept IDs extracted from unreadable YAML or a shell script.
