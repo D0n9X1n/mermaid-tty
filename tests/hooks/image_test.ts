@@ -763,5 +763,5 @@ test('a failing sweep is quiet: it never throws', async () => {
   f.$.process.run = async () => {
     throw new Error('no node')
   }
-  await sweepTemp(f.$, createPictures())
+  await assert.doesNotReject(sweepTemp(f.$, createPictures()))
 })
