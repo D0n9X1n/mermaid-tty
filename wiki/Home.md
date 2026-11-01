@@ -76,3 +76,5 @@ Each page stands on its own. If you use mermaid-tty, read the quick start below,
 To update, run `claude plugin update mermaid-tty@mermaid-tty` and restart Claude Code. To remove mermaid-tty, see the Uninstall section of [Usage](Usage).
 
 If a diagram shows as its source, mermaid-tty fell back on purpose: it couldn't draw that diagram exactly. Start Claude Code with `claude --debug` to see the reason in the debug log, and see the Fallback section of [Usage](Usage).
+
+mermaid-tty is free software under the [MIT license](https://github.com/D0n9X1n/mermaid-tty/blob/main/LICENSE).
