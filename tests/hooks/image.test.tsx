@@ -92,3 +92,33 @@ test('A6.command: /mermaid-tty text draws diagrams as text in kitty; diagram bri
   await $.command.run({ command: 'mermaid-tty', args: 'diagram' })
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
 })
+
+// /mermaid-tty images takes effect in the open session: off turns a kitty Image back into text, auto brings it back,
+// and on draws an Image inside tmux, where detection says no. The store beneath answers nothing kept and takes each
+// set.
+const IMAGES = ($: any, setting: string) => $.command.run({ command: 'mermaid-tty', args: `images ${setting}` })
+const store = (on: any) => {
+  on('store.get', async () => ({ value: undefined }))
+  on('store.set', async () => ({ value: undefined }))
+}
+test('A6.command: images off and auto switch a kitty Image to text and back with no restart', async ($, on) => {
+  world(on, { TERM: 'xterm-kitty' })
+  store(on)
+  const ui = await mount($, 'flowchart TD\nI1 --> I2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+  await IMAGES($, 'off')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
+  await IMAGES($, 'auto')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+})
+test('A6.command: images on draws an Image where detection says no, and auto returns to text', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' })
+  store(on)
+  const ui = await mount($, 'flowchart TD\nJ1 --> J2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
+  expect(runs).toEqual([])
+  await IMAGES($, 'on')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+  await IMAGES($, 'auto')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
+})

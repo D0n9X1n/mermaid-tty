@@ -141,6 +141,44 @@ test('A6.command: text mode, mono, tmux and source never run mmdc', async () => 
   assert.deepEqual(runs, [])
 })
 
+// The images setting reaches the plan: off keeps a kitty terminal on text and runs no mmdc; on draws the picture in a
+// terminal detection does not know. A throwing setting read is auto.
+test('A6.command: images off never runs mmdc; images on pictures an undetected terminal', async () => {
+  const off = pix()
+  const s = createPictures()
+  const reply = `a\n${FC}b`
+  assert.deepEqual(shape(await safePlan(off.$, ev(reply), 'default', diagram, s, async () => 'off' as const)), [
+    'prose',
+    'rows',
+    'prose',
+  ])
+  await s.idle()
+  assert.deepEqual(off.runs, [])
+  const on = pix({ TERM: 'xterm-256color' })
+  const t = createPictures()
+  const images = async () => 'on' as const
+  await safePlan(on.$, ev(reply), 'default', diagram, t, images)
+  await t.idle()
+  assert.deepEqual(shape(await safePlan(on.$, ev(reply), 'default', diagram, t, images)), ['prose', 'picture', 'prose'])
+  const thrown = pix({ TERM: 'xterm-256color' })
+  const u = createPictures()
+  const broken = async (): Promise<'on'> => {
+    throw new Error('no')
+  }
+  assert.deepEqual(shape(await safePlan(thrown.$, ev(reply), 'default', diagram, u, broken)), [
+    'prose',
+    'rows',
+    'prose',
+  ])
+  await u.idle()
+  assert.deepEqual(thrown.runs, [])
+  // A reader that throws before returning a promise is auto too, not a failed plan.
+  const sync = (): Promise<'on'> => {
+    throw new Error('no')
+  }
+  assert.deepEqual(shape(await safePlan(thrown.$, ev(reply), 'default', diagram, u, sync)), ['prose', 'rows', 'prose'])
+})
+
 test('A5.errors: a throwing picture lookup still draws the text', async () => {
   const { $ } = pix()
   ;($ as any).config.list = () => {

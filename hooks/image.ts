@@ -8,6 +8,7 @@
 // per store, so a picture the bounded cache drops stays text rather than rendering again, and a batch of renders
 // redraws once. No JSX and no Node, so node --test can import it and the engine can load it.
 import { parseFail } from '../core/render.ts'
+import type { Images } from './mode.ts'
 import { showsPixels } from './pixels.ts'
 import { unsafeReason } from './safe.ts'
 import { svgUnsafe } from './svg.ts'
@@ -130,17 +131,19 @@ export function createPictures(limits: Partial<Limits> = {}): Pictures {
   return s
 }
 
-// The look a picture is drawn in, or null for none: mono means no colour; the terminal must show pixels (told once per
-// store); and Claude Code's theme must say dark or light, since the background is transparent and a guess could draw
-// dark lines on a dark terminal.
-export async function pictureLook($: any, s: Pictures, theme: string): Promise<Look | null> {
-  if (theme === 'mono') {
+// The look a picture is drawn in, or null for none: images off or mono means none; under images auto the terminal must
+// show pixels (told once per store), while images on takes that on the person's word; and Claude Code's theme must say
+// dark or light, since the background is transparent and a guess could draw dark lines on a dark terminal.
+export async function pictureLook($: any, s: Pictures, theme: string, images: Images = 'auto'): Promise<Look | null> {
+  if (images === 'off' || theme === 'mono') {
     return null
   }
 
-  s.pixels ??= showsPixels($)
-  if (!(await s.pixels)) {
-    return null
+  if (images === 'auto') {
+    s.pixels ??= showsPixels($)
+    if (!(await s.pixels)) {
+      return null
+    }
   }
 
   try {

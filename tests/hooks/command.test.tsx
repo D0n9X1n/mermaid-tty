@@ -28,7 +28,7 @@ test('A6.command: source passes replies through; diagram draws again; bare repor
 })
 
 // A hook beneath the plugin answers next() with the text it gets; reply() is the command's output line.
-const USAGE = 'usage: /mermaid-tty [source|diagram|text]'
+const USAGE = 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]'
 const echo = (on: any) =>
   on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)
@@ -148,4 +148,57 @@ test('A6.command: setting the mode asks for ui.render again', async ($, on) => {
   })
   await RUN($, 'source')
   expect(asked).toEqual(['ui.render'])
+})
+
+// A store beneath the plugin, standing for the file Claude Code keeps between sessions: get and set answer from `kept`.
+const keep = (on: any, kept: Record<string, unknown>) => {
+  on('store.get', async (_$: any, e: any) => ({ value: kept[e.key] }))
+  on('store.set', async (_$: any, e: any) => {
+    kept[e.key] = e.value
+    return { value: undefined }
+  })
+}
+
+// /mermaid-tty images sets the picture setting at once, with no restart: it redraws, and is kept in the store for the
+// next session. Unset, it is auto.
+test('A6.command: images sets the picture setting, redraws, and keeps it for the next session', async ($, on) => {
+  const kept: Record<string, unknown> = {}
+  const asked: string[] = []
+  keep(on, kept)
+  on('ui.invalidate', async (_$: any, e: any, next: any) => {
+    asked.push(e.event)
+    return next(e)
+  })
+  expect(await reply($, 'images')).toBe('mermaid-tty images: auto')
+  expect(await reply($, 'images off')).toBe('mermaid-tty: pictures off')
+  expect(asked).toEqual(['ui.render'])
+  expect(kept).toEqual({ images: 'off' })
+  expect(await reply($, 'images OFF')).toBe('mermaid-tty images: off')
+  expect(await reply($, 'images on')).toBe('mermaid-tty: pictures on, without terminal detection')
+  expect(await reply($, 'images')).toBe('mermaid-tty images: on')
+  expect(kept).toEqual({ images: 'on' })
+  expect(await reply($, '')).toBe('mermaid-tty mode: diagram')
+})
+
+// A new session reads the stored setting; an unknown stored value is auto.
+test('A6.command: a new session reads images from the store', async ($, on) => {
+  keep(on, { images: 'off' })
+  expect(await reply($, 'images')).toBe('mermaid-tty images: off')
+})
+test('A6.command: an unknown stored images value is auto', async ($, on) => {
+  keep(on, { images: 'sometimes' })
+  expect(await reply($, 'images')).toBe('mermaid-tty images: auto')
+})
+
+// A store that fails still sets the setting for this session, and says it was not kept.
+test('A5.errors: images still applies when the store fails, and says it was not kept', async ($, on) => {
+  on('store.get', async () => {
+    throw new Error('no store')
+  })
+  on('store.set', async () => {
+    throw new Error('no store')
+  })
+  expect(await reply($, 'images')).toBe('mermaid-tty images: auto')
+  expect(await reply($, 'images off')).toBe('mermaid-tty: pictures off (this session only: the setting was not saved)')
+  expect(await reply($, 'images')).toBe('mermaid-tty images: off')
 })

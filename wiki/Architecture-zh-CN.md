@@ -93,7 +93,7 @@ flowchart TD
 | `fences.ts` | `splitFences`：拆分回复正文和已闭合的 `mermaid` 代码块。 |
 | `mode.ts` | 决定何时原样传递回复，以及解析命令参数和生成反馈。 |
 
-`types/mermaid-tty.d.ts` 声明插件状态：布尔值 `mermaid-tty.source`。
+`types/mermaid-tty.d.ts` 声明插件状态：`mermaid-tty.source`，取值为 `true`、`'text'` 或未设置；以及 `mermaid-tty.images`，取值为 `'auto'`、`'on'` 或 `'off'`。
 
 ## 校验与回退
 
@@ -138,8 +138,8 @@ flowchart TD
 
 `hooks/hooks.json` 加载 `hooks/register.tsx`，后者注册三个钩子：
 
-- **`session.start`** 注册 `/mermaid-tty` 命令。
-- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。
+- **`session.start`** 注册 `/mermaid-tty` 命令，并将图片设置从 `$.store` 复制到 `$.state` 的 `mermaid-tty.images`；未设置、无法识别或读取失败时为 `auto`。
+- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。
 - **`ui.render`** 处理 `AssistantMessage`。视口未提供宽度、界面不是终端、处于源码模式或消息标记为展开时，回复原样传递。否则，钩子拆分回复，渲染每个 `mermaid` 块，将回退块拼回周围正文。若没有绘出任何图，整个回复原样交给 Claude Code；否则返回由正文与图表行组成的纵向布局，正文仍由 Claude Code 显示。回复以图表开头时，先交给 Claude Code 一个空块，以保留回复前的项目符号。
 
 主题在 `register` 执行时从插件选项中读取一次，因此修改主题后需要重启。
