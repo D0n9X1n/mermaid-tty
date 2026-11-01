@@ -28,6 +28,16 @@ export const IMAGES: Image[] = [
     reply: true,
     picture: 'assets/readme/src/preview.png',
   },
+  // A reply's picture in each curated palette, as the plugin draws it there: the palette's colors on its own
+  // background.
+  ...(['nord', 'dracula', 'gruvbox', 'solarized'] as const).map((theme) => ({
+    file: `assets/readme/picture-${theme}.svg`,
+    source: 'assets/readme/src/palette.md',
+    columns: 64,
+    theme,
+    reply: true,
+    picture: `assets/readme/src/picture-${theme}.png`,
+  })),
   { file: 'assets/readme/before.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default', raw: true },
   { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default' },
   { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'default' },

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   INSTALL,
-  LOCAL,
   TAGLINE,
   docsFolderErrors,
   iconErrors,
@@ -21,11 +20,13 @@ const README =
   `<p align="center"><img src="assets/icon.svg" alt="logo" width="120"></p>\n\n**${TAGLINE}**\n\n` +
   `[![CI](${R}/actions/workflows/ci.yml/badge.svg)](${R}/actions/workflows/ci.yml) [![Release](${S}/v/release/D0n9X1n/mermaid-tty)](${R}/releases) ` +
   `[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](${S}/stars/D0n9X1n/mermaid-tty)](${R}/stargazers)\n\n` +
-  `## Install\n\n\`\`\`sh\n${INSTALL.join('\n')}\n\`\`\`\n\n## Before and after\n\n![after](${IMG[0]})\n\n## Supported diagrams\n\n` +
-  '| Type | Header keywords |\n|---|---|\n| `flowchart` | `flowchart`, `graph` |\n\n## Themes\n\n## Configuration\n\n' +
-  '## FAQ\n\nIt falls back to the source when no layout fits the width; CJK labels count 2 columns. It runs in Windows Terminal, macOS Terminal, ' +
-  'iTerm2, Ghostty and Linux terminals; 256-color terminals get the nearest colors; pick a font with box drawing. Run `/mermaid-tty source` or `/mermaid-tty diagram`; `/copy` copies the source.\n\n' +
-  `## Development\n\n\`\`\`sh\n${LOCAL.join('\n')}\n\`\`\`\n\n[English](${R}/wiki) · [简体中文](${R}/wiki/Home-zh-CN)\n`
+  `## Previews\n\n![after](${IMG[0]})\n\n## Features\n\n- **13 diagram types:** \`flowchart\`.\n` +
+  '- It falls back to the source when no layout fits the width; CJK labels count 2 columns.\n' +
+  '- Pictures show in Ghostty, on macOS, Linux and Windows.\n\n' +
+  `## Quick start\n\n\`\`\`sh\n${INSTALL.join('\n')}\n\`\`\`\n\n` +
+  '| Command | What it does |\n|---|---|\n| `/mermaid-tty source` | Source |\n| `/mermaid-tty diagram` | Diagrams |\n' +
+  '| `/copy` | Copies the source |\n\n' +
+  `## Learn more\n\n[English](${R}/wiki) · [简体中文](${R}/wiki/Home-zh-CN)\n`
 const PIN = (a: string, v: string) => `      - uses: actions/${a}@${SHA} # ${v}\n`
 const WIKI =
   'on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\njobs:\n  publish:\n    runs-on: ubuntu-latest\n' +
@@ -49,10 +50,11 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [rm, README, TAGLINE, 'A renderer', 'tagline'],
   [rm, README, '[![Stars]', '[![Fans]', 'stars badge'],
   [rm, README, INSTALL[1]!, 'claude plugin install mermaid-tty', 'install'],
-  [rm, README, '## FAQ', '## Questions', '## FAQ'],
+  [rm, README, '## Features', '## Highlights', '## Features'],
+  [rm, README, '## Quick start', '## Install', '## Quick start'],
   [rm, README, 'CJK labels', 'Wide labels', 'CJK'],
   [rm, README, 'Ghostty', 'Kitty', 'Ghostty'],
-  [rm, README, '256-color', 'basic', '256'],
+  [rm, README, 'on macOS, Linux and Windows', 'everywhere', 'macOS'],
   [rm, README, '[简体中文]', '[Chinese]', '简体中文'],
   [rm, README, IMG[0]!, 'assets/rogue.svg', 'displays assets/rogue.svg, which is neither'],
   [
@@ -74,18 +76,12 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
     '- item\n\n      ![after](assets/readme/after.svg)',
     'not shown in README',
   ],
+  [rm, README, '## Previews\n\n', '## Previews\n\n``` `\n\n![x](assets/rogue.svg)\n\n', 'displays assets/rogue.svg'],
   [
     rm,
     README,
-    '## Before and after\n\n',
-    '## Before and after\n\n``` `\n\n![x](assets/rogue.svg)\n\n',
-    'displays assets/rogue.svg',
-  ],
-  [
-    rm,
-    README,
-    '| `flowchart` | `flowchart`, `graph` |',
-    '| `flowchart` | `flowchart`, `graph` | ![x](assets/rogue.svg) |',
+    '| `/copy` | Copies the source |',
+    '| `/copy` | Copies the source | ![x](assets/rogue.svg) |',
     'more cells than its header',
   ],
   [
@@ -102,11 +98,10 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
     LONG + '![after](assets/readme/after.svg)' + LONG,
     'backtick run longer than 3',
   ],
-  [rm, README, '| `flowchart` |', '| flowchart |', 'table'],
-  [rm, README, 'node scripts/e2e/run.ts', 'npm test', 'e2e/run.ts'],
-  [rm, README, '## Themes', '──► A\n\n## Themes', 'hand-drawn'],
-  [rm, README, '; `/copy` copies', '; it copies', '/copy'],
-  [rm, README, '## Themes', 'ctrl+o shows the source.\n\n## Themes', 'ctrl+o'],
+  [rm, README, '13 diagram types:** `flowchart`', '13 diagram types:** flowchart', 'diagram types'],
+  [rm, README, '## Quick start', '──► A\n\n## Quick start', 'hand-drawn'],
+  [rm, README, '| `/copy` | Copies the source |\n', '', '/copy'],
+  [rm, README, '## Quick start', 'ctrl+o shows the source.\n\n## Quick start', 'ctrl+o'],
   [publishWikiErrors, WIKI, '  workflow_dispatch:\n', '', 'workflow_dispatch'],
   [publishWikiErrors, WIKI, 'contents: write', 'contents: read', 'job-scoped'],
   [publishWikiErrors, WIKI, 'ubuntu-latest', 'windows-latest', 'ubuntu'],

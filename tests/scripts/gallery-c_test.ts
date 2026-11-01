@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gallery } from '../../scripts/render-gallery.ts'
-import { TIER1, supportTable } from '../../core/registry.ts'
+import { ENABLED, TIER1 } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'
 import { requirePass } from '../../scripts/check-review-hashes.ts'
 test('VR.gallery: every Tier 1 ok fixture at 80 and 60, a CJK sheet per type, the palette sheet; every glyph at col × cell', () => {
@@ -45,20 +45,15 @@ test('VR.reviewers: each Tier 1 type has its own review scope over its goldens a
     assert.deepEqual(req[`vr-C-${t}`], [`goldens/${t}/**`, 'core/themes.ts'], t)
   }
 })
-// The README's Supported diagrams table is the registry's, so a new or renamed type can't leave it stale.
-test("B1: the README's Supported diagrams table is exactly supportTable()", () =>
-  assert.equal(
-    readFileSync('README.md', 'utf8')
-      .split('## Supported diagrams')[1]!
-      .split('\n## ')[0]!
-      .split('\n')
-      .filter((l) => l.startsWith('| '))
-      .join('\n'),
-    supportTable()
-      .split('\n')
-      .filter((l) => !l.startsWith('|---'))
-      .join('\n'),
-  ))
+// The README's Features line names the registry's types, in its order, so a new or renamed type can't leave it stale.
+// Read with a regex, not the docs parser, which a bare node --test has not installed.
+test("B1: the README's Features line names exactly the enabled diagram types", () => {
+  const line = /^.*13 diagram types.*$/m.exec(readFileSync('README.md', 'utf8'))?.[0] ?? ''
+  assert.deepEqual(
+    [...line.matchAll(/`([\w-]+)`/g)].map((m) => m[1]),
+    [...ENABLED],
+  )
+})
 test('VR.passes: with no records, the release gate reports every Tier 1 review scope', () => {
   const req = JSON.parse(readFileSync('ci/reviews/required.json', 'utf8'))
   for (const t of TIER1) {

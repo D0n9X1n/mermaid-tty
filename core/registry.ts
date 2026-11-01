@@ -149,7 +149,7 @@ export function lookup(header: string): DiagramModule | Fail {
 }
 
 // The support table: two header rows, then one row per ENABLED type, in ENABLED's order, listing its header keywords in
-// KEYWORDS order. The README's Supported diagrams table is this table; a test keeps them equal.
+// KEYWORDS order.
 export function supportTable(): string {
   const keywords = (t: DiagramType) =>
     Object.keys(KEYWORDS)
