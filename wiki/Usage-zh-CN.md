@@ -94,8 +94,12 @@ Git 提交图使用竖直分支泳道：`LR` 和 `TB` 的时间向下，`BT` 的
 | `/mermaid-tty diagram` | 恢复图表显示；终端能显示图片时绘制为图片（见下文“图片”）。 |
 | `/mermaid-tty text` | 以文本绘制图表，即使终端能显示图片。 |
 | `/mermaid-tty` | 报告当前模式：`mermaid-tty mode: diagram`、`mermaid-tty mode: source` 或 `mermaid-tty mode: text`。 |
+| `/mermaid-tty images auto` | 在检测到能显示图片的终端中绘制图片（见下文“图片”）。这是默认设置。 |
+| `/mermaid-tty images on` | 不检查终端，直接绘制图片，适用于检测无法识别的终端。 |
+| `/mermaid-tty images off` | 从不绘制图片；图表模式以文本绘制。 |
+| `/mermaid-tty images` | 报告图片设置：`mermaid-tty images: auto`、`on` 或 `off`。 |
 
-参数只能是一个单词，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text]`。模式在会话之间保留。源码模式下，所有回复原样交给 Claude Code 显示。
+参数是一个单词，或 `images` 加一个设置，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]`。模式在本次会话内有效。图片设置立即生效，重绘屏幕上的回复，并在会话之间保留，因此两者都无需重启。源码模式下，所有回复原样交给 Claude Code 显示。
 
 无论处于哪种模式，`/copy` 都复制 Mermaid 源码。mermaid-tty 只改变显示方式，存储的回复保留完整源码。
 
@@ -121,7 +125,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 - Mermaid 为它绘制的 SVG 使用了 Mermaid 自身图表所用固定集合以外的元素或属性，或引用了自身以外的任何内容（mermaid-tty 先渲染 SVG 并检查，再生成图片）；
 - `mmdc` 缺失、失败、超过 30 秒，或生成的图片超过 2 MiB、高于 255 行，或在可用宽度下过宽而无法阅读。
 
-`claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。
+`claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在本次会话中保留文本绘制，运行 `/mermaid-tty images off` 可在所有会话中保留；`/mermaid-tty diagram` 和 `/mermaid-tty images auto` 重新启用图片。`/mermaid-tty images on` 跳过终端检查，适用于能显示 kitty 图形但不在上述列表中的终端；其他条件仍然适用，无法显示图片的终端会显示空白或替代文本。`/copy` 仍然复制源码。
 
 在 tmux 或 RMUX 中显示图片需要 `bin/claude-tmux.py`。Claude Code 在其中发送的 kitty 图像命令（`ESC _ G …`）未经包裹，会被多路复用器丢弃。该启动器在 pty 中运行 `claude`，在 Claude Code 自身的输出中把每条命令改写为 `ESC P tmux; … ESC \`（内部 ESC 加倍），因此按顺序写出。只有当 `$TMUX` 已设置、窗格实际生效的 `allow-passthrough`（`#{allow-passthrough}`）为 `on` 或 `all`、标准输入和输出都是终端、且底层终端为 kitty、Ghostty 或 SonicTerm（tmux 的 `#{client_termtype}`；RMUX 不保存该信息，则取会话的 `TERM_PROGRAM`，且仅当该会话自身的 `update-environment` 包含它时才采信）时才包裹。此时它设置 `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` 和 `MERMAID_TTY_TMUX_IMAGES=1`，后者是 mermaid-tty 在 tmux 中显示图片的唯一条件；否则原样运行 `claude`。安装方法：`set -g allow-passthrough on`（RMUX 还需 `set -ga update-environment TERM_PROGRAM`），以及 `alias claude='python3 ~/.claude/plugins/marketplaces/mermaid-tty/bin/claude-tmux.py'`。它只改写单独出现的 kitty 命令，不改写位于其他控制字符串内或已包裹的命令，超过 8 MiB 的命令原样传递。它把 SIGTERM、SIGHUP 和 SIGINT 转发给 Claude Code，在终端输入结束时向其发送挂断信号，随其挂起并在 `fg` 后恢复，还原终端设置，并以 Claude Code 的退出方式退出。同时连接多个客户端，或从另一个终端重新连接后，请重新启动 Claude Code：启动器在启动时做出判断。screen 和 Zellij 保留文本。
 

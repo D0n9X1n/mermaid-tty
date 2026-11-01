@@ -154,6 +154,19 @@ test('A6.hook-tests: the look: dark or light from the Claude Code theme; none fo
   assert.equal(await pictureLook(f.$, createPictures(), 'default'), null)
 })
 
+// The images setting: off is never a picture; on skips terminal detection, asking no env var, but mono and an unknown
+// Claude Code theme still mean none; auto is the detection above.
+test('A6.hook-tests: images off is no look; images on needs no detected terminal, yet keeps the other rules', async () => {
+  const bare = { vars: { TERM: 'xterm-256color' } }
+  assert.equal(await pictureLook(fake().$, createPictures(), 'default', 'off'), null)
+  assert.equal(await pictureLook(fake(bare).$, createPictures(), 'default', 'auto'), null)
+  const f = fake(bare)
+  assert.equal(await pictureLook(f.$, createPictures(), 'default', 'on'), 'dark')
+  assert.deepEqual(f.asked, [])
+  assert.equal(await pictureLook(fake(bare).$, createPictures(), 'mono', 'on'), null)
+  assert.equal(await pictureLook(fake({ ...bare, theme: 'auto' }).$, createPictures(), 'default', 'on'), null)
+})
+
 test('A6.hook-tests: the terminal is told once per store', async () => {
   const f = fake()
   const s = createPictures()

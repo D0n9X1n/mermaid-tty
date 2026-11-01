@@ -56,6 +56,7 @@ claude plugin uninstall mermaid-tty@mermaid-tty
 | `/mermaid-tty diagram` | Draws diagrams, as pictures where the terminal can show them (the default) |
 | `/mermaid-tty text` | Draws diagrams as text, even where pictures work |
 | `/mermaid-tty source` | Shows the Mermaid source, including replies already on screen |
+| `/mermaid-tty images auto\|on\|off` | Pictures where the terminal is detected (the default), always, or never. Takes effect at once and is kept across sessions; bare `images` reports it |
 | `/copy` | Copies a reply with its exact Mermaid source, in any mode |
 
 ## Before and after
@@ -153,7 +154,7 @@ echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --valu
 
 **How do I see the Mermaid source?** Run `/mermaid-tty source` to show diagrams as source, including replies already on screen. `/mermaid-tty diagram` draws them again; bare `/mermaid-tty` reports the current mode. `/copy` copies the exact Mermaid source in either mode.
 
-**Can diagrams show as images?** Yes, in kitty, Ghostty and SonicTerm, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on.
+**Can diagrams show as images?** Yes, in kitty, Ghostty and SonicTerm, if [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) 11 or 12 is installed (`npm i -g @mermaid-js/mermaid-cli`, which puts `mmdc` on PATH). For a diagram mermaid-tty can parse, it draws the text version first, renders Mermaid's own picture in the background with Chromium cut off from the network, then swaps it in. Anywhere else, inside tmux, screen or Zellij, with the `mono` theme, or if `mmdc` is missing or fails, you keep the text drawing. Run `/mermaid-tty text` to keep text even where images work; `/mermaid-tty diagram` turns images back on. `/mermaid-tty images off` keeps text in every session, and `/mermaid-tty images on` tries pictures in a terminal the detection does not know; both take effect at once, with no restart.
 
 **Can images show inside tmux or RMUX?** Yes, through `bin/claude-tmux.py`, a launcher that ships with the plugin. Inside a multiplexer Claude Code sends its kitty image commands unwrapped, and tmux and RMUX drop them. The launcher runs `claude` in a pty and rewraps those commands as tmux passthrough, which the multiplexer forwards. It needs Python 3.9 or later and passthrough turned on:
 
