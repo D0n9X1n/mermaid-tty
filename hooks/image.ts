@@ -278,13 +278,37 @@ function keep(s: Pictures, key: string, p: Picture) {
   }
 }
 
+// The temp dir is made and removed by Node, which mmdc itself runs on, so it works where there is no mktemp or rm
+// (Windows). MAKE_TEMP prints the OS temp dir and a fresh mermaid-tty.XXXXXX dir in it as JSON, with / separators;
+// REMOVE_TEMP removes the dir named by its argument, and only a mermaid-tty.* one.
+export const MAKE_TEMP =
+  "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/');" +
+  "const t=o.tmpdir();process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,'mermaid-tty.')))}))"
+export const REMOVE_TEMP =
+  "const f=require('fs'),p=require('path'),d=process.argv[1];" +
+  "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"
+
+// The dir MAKE_TEMP printed, or null unless it is a mermaid-tty.XXXXXX dir directly inside the temp dir it named.
+export function madeTempDir(stdout: string): string | null {
+  try {
+    const { tmp, dir } = JSON.parse(stdout)
+    if (typeof tmp !== 'string' || typeof dir !== 'string' || tmp === '') {
+      return null
+    }
+
+    const base = tmp.replace(/\/+$/, '') + '/mermaid-tty.'
+    return dir.startsWith(base) && /^[A-Za-z0-9]{6}$/.test(dir.slice(base.length)) ? dir : null
+  } catch {
+    return null
+  }
+}
+
 // One render in a fresh temp dir, removed after: the picture, or why there is none. Two runs of mmdc on the same
 // source, config and page (mmdcArgs): an SVG, checked by svgUnsafe (layer A), then only if it is clean the PNG.
 async function draw($: any, body: string, look: Look, columns: number, major: number): Promise<Picture | string> {
-  const base = ((await $.env.get('TMPDIR')) || '/tmp').replace(/\/+$/, '') + '/mermaid-tty.'
-  const made = await $.process.run(['mktemp', '-d', `${base}XXXXXX`], { timeoutMs: SHORT_MS })
-  const dir = made.stdout.trim()
-  if (made.exitCode !== 0 || !dir.startsWith(base) || !/^[A-Za-z0-9]+$/.test(dir.slice(base.length))) {
+  const made = await $.process.run(['node', '-e', MAKE_TEMP], { timeoutMs: SHORT_MS })
+  const dir = made.exitCode === 0 ? madeTempDir(made.stdout) : null
+  if (!dir) {
     return 'no temp dir'
   }
 
@@ -338,7 +362,7 @@ async function draw($: any, body: string, look: Look, columns: number, major: nu
     return box ? { png: base64, ...box } : 'over 255 rows'
   } finally {
     try {
-      await $.process.run(['rm', '-rf', dir], { timeoutMs: SHORT_MS })
+      await $.process.run(['node', '-e', REMOVE_TEMP, dir], { timeoutMs: SHORT_MS })
     } catch {}
   }
 }

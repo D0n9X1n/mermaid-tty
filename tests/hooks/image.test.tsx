@@ -18,8 +18,8 @@ const world = (on: any, vars: Record<string, string>) => {
     let stdout = ''
     if (e.argv[1] === '--version') {
       stdout = '11.17.1\n'
-    } else if (e.argv[0] === 'mktemp') {
-      stdout = '/tmp/mermaid-tty.Kt1\n'
+    } else if (e.argv[0] === 'node' && e.argv[2].includes('mkdtempSync')) {
+      stdout = JSON.stringify({ tmp: '/tmp', dir: '/tmp/mermaid-tty.Kt1Kt1' })
     }
 
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
@@ -50,13 +50,11 @@ test("A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc's 
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image')
   expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
-  expect(runs.map((r) => r.slice(0, 2).join(' '))).toEqual([
-    'mmdc --version',
-    'mktemp -d',
-    'mmdc -i',
-    'mmdc -i',
-    'rm -rf',
-  ])
+  expect(
+    runs.map((r) =>
+      r[0] === 'node' ? (r[2]!.includes('mkdtempSync') ? 'make temp' : 'remove temp') : r.slice(0, 2).join(' '),
+    ),
+  ).toEqual(['mmdc --version', 'make temp', 'mmdc -i', 'mmdc -i', 'remove temp'])
 })
 
 // The themeCSS repro now falls back in core too (config:themeCSS), so it shows as source; a source core still draws,
