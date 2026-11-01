@@ -1,11 +1,13 @@
 // node scripts/render-picture.ts: remakes each README picture's PNG (images.ts, `picture`) with mermaid-cli, as the
-// plugin's image mode would in kitty or Ghostty: its own mmdc flags, Mermaid's dark look, at the image's columns. Needs
-// mmdc 11 or 12 on PATH. Then run node scripts/render-svg.ts --readme to embed the new PNGs.
+// plugin's image mode would in kitty or Ghostty: its own mmdc flags, in the image's theme as a picture draws it (a
+// curated palette on its own background, default as Claude Code's dark theme), at the image's columns. Needs mmdc 11
+// or 12 on PATH. Then run node scripts/render-svg.ts --readme to embed the new PNGs.
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mermaidConfig, mmdcArgs, pngSize, puppeteerConfig } from '../hooks/image.ts'
+import type { Look } from '../hooks/picture-theme.ts'
 import { IMAGES } from './lib/images.ts'
 import { ROOT } from './lib/render-image.ts'
 
@@ -24,14 +26,15 @@ try {
       throw new Error(`${img.source}: no mermaid fence`)
     }
 
+    const look: Look = img.theme === 'default' || img.theme === 'mono' ? 'default-dark' : img.theme
     const config = join(dir, 'config.json')
     const puppeteer = join(dir, 'puppeteer.json')
-    writeFileSync(config, JSON.stringify(mermaidConfig('dark')))
+    writeFileSync(config, JSON.stringify(mermaidConfig(look)))
     writeFileSync(puppeteer, JSON.stringify(puppeteerConfig(img.columns)))
     const [cmd, ...args] = mmdcArgs({
       out: join(ROOT, img.picture!),
       format: 'png',
-      look: 'dark',
+      look,
       config,
       puppeteer,
       columns: img.columns,
