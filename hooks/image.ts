@@ -311,8 +311,10 @@ function keep(s: Pictures, key: string, p: Picture) {
 // the dir named by its argument, and only a mermaid-tty.* one.
 export const MAKE_TEMP =
   "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/'),k=process.argv[1];" +
-  "const t=p.resolve(o.tmpdir()),b='mermaid-tty.'+(/^[A-Za-z0-9]{8}$/.test(k||'')?k+'.':'');" +
-  'process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,b)))}))'
+  "const ok=/^[A-Za-z0-9]{8}$/.test(k||''),t=p.resolve(o.tmpdir()),b='mermaid-tty.'+(ok?k+'.':'');" +
+  'const d=f.mkdtempSync(p.join(t,b));' +
+  "if(ok&&f.existsSync(p.join(t,'mermaid-tty.'+k+'.end'))){f.rmSync(d,{recursive:true,force:true});process.stdout.write('{}')}" +
+  'else process.stdout.write(JSON.stringify({tmp:u(t),dir:u(d)}))'
 export const REMOVE_TEMP =
   "const f=require('fs'),p=require('path'),d=process.argv[1];" +
   "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"
@@ -323,14 +325,19 @@ export const STALE_S = 600
 
 // SWEEP_TEMP removes, from the OS temp dir only, each mermaid-tty.* picture dir older than its first argument in
 // seconds, each one named with its second, a store's token ('-' for none), and each one its other arguments name: what
-// a render cut short (the session ended, the process was killed, a removal failed) left behind.
+// a render cut short (the session ended, the process was killed, a removal failed) left behind. With --end it first
+// leaves the mark mermaid-tty.<token>.end, which MAKE_TEMP checks after it makes a dir for that token: a dir made after
+// the sweep looked removes itself, so whichever runs first, the session's end leaves none. A mark goes once stale.
 export const SWEEP_TEMP =
-  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),[age,tok,...named]=process.argv.slice(1);" +
+  "const f=require('fs'),o=require('os'),p=require('path'),t=p.resolve(o.tmpdir()),a=process.argv.slice(1);" +
+  "const end=a.includes('--end'),[age,tok,...named]=a.filter((x)=>x!=='--end'),own=/^[A-Za-z0-9]{8}$/.test(tok);" +
+  "if(end&&own)f.writeFileSync(p.join(t,'mermaid-tty.'+tok+'.end'),'');" +
   'const ours=(d)=>p.dirname(p.resolve(d))===t&&/^mermaid-tty\\.(?:[A-Za-z0-9]{8}\\.)?[A-Za-z0-9]{6}$/.test(p.basename(d));' +
-  "const mine=(n)=>/^[A-Za-z0-9]{8}$/.test(tok)&&n.startsWith('mermaid-tty.'+tok+'.');" +
+  'const mark=(n)=>/^mermaid-tty\\.[A-Za-z0-9]{8}\\.end$/.test(n);' +
+  "const mine=(n)=>own&&n.startsWith('mermaid-tty.'+tok+'.');" +
   'const rm=(d)=>{try{f.rmSync(d,{recursive:true,force:true})}catch{}};' +
-  'for(const n of f.readdirSync(t)){const d=p.join(t,n);' +
-  'try{if(ours(d)&&(mine(n)||Date.now()-f.statSync(d).mtimeMs>Number(age)*1000))rm(d)}catch{}}' +
+  'for(const n of f.readdirSync(t)){const d=p.join(t,n);try{const old=Date.now()-f.statSync(d).mtimeMs>Number(age)*1000;' +
+  'if((ours(d)&&(mine(n)||old))||(mark(n)&&old))rm(d)}catch{}}' +
   'for(const d of named)if(ours(d))rm(p.resolve(d))'
 
 // Removes what pictures left in the temp dir: the dirs a render of store still holds, and any left long enough to be
@@ -351,7 +358,8 @@ export async function sweepTemp($: any, store?: Pictures, timeoutMs = SHORT_MS, 
 
   const token = store && ending ? store.token : '-'
   try {
-    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), token, ...(store?.dirs ?? [])], {
+    const end = store && ending ? ['--end'] : []
+    await $.process.run(['node', '-e', SWEEP_TEMP, String(STALE_S), token, ...end, ...(store?.dirs ?? [])], {
       timeoutMs: Math.max(100, left),
     })
   } catch {}

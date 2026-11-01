@@ -805,7 +805,7 @@ test('the end of a session closes the store, waits for a temp dir being made, an
   await s.idle()
   assert.deepEqual(order.slice(0, 2), ['made', 'swept'])
   const sweepArgs = f.runs.find((r) => r.argv[2] === SWEEP_TEMP)!.argv.slice(3)
-  assert.equal(sweepArgs[1], s.token)
+  assert.deepEqual(sweepArgs.slice(1, 3), [s.token, '--end'])
   assert.equal(
     f.runs.some((r) => r.argv[0] === 'mmdc' && r.argv[1] === '-i'),
     false,
@@ -824,4 +824,66 @@ test("MAKE_TEMP names a dir with the store's token, which madeTempDir accepts", 
   } finally {
     rmSync(tmp, { recursive: true, force: true })
   }
+})
+
+// The deadline path: the session's end sweeps before a render's temp dir is made. The sweep leaves a mark,
+// mermaid-tty.<token>.end, before it looks; a dir MAKE_TEMP makes for that token after it sees the mark and removes
+// itself, so whichever runs first, nothing of the store's is left. Another store's token is untouched, and the mark
+// itself goes once stale.
+test('a temp dir made after the final sweep removes itself, and the mark the sweep left is swept once stale', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'mark-'))
+  try {
+    const env = { ...process.env, TMPDIR: tmp, TMP: tmp, TEMP: tmp }
+    const node = (...args: string[]) => spawnSync(process.execPath, ['-e', ...args], { env, encoding: 'utf8' })
+    assert.equal(node(SWEEP_TEMP, '600', 'Tok3n9Zq', '--end').status, 0)
+    assert.deepEqual(readdirSync(tmp), ['mermaid-tty.Tok3n9Zq.end'])
+    assert.equal(madeTempDir(node(MAKE_TEMP, 'Tok3n9Zq').stdout), null)
+    assert.deepEqual(readdirSync(tmp), ['mermaid-tty.Tok3n9Zq.end'])
+    assert.ok(madeTempDir(node(MAKE_TEMP, 'Other9Zq').stdout))
+    const old = new Date(Date.now() - 3600 * 1000)
+    utimesSync(join(tmp, 'mermaid-tty.Tok3n9Zq.end'), old, old)
+    assert.equal(node(SWEEP_TEMP, '600', '-').status, 0)
+    assert.deepEqual(
+      readdirSync(tmp).filter((n) => !n.startsWith('mermaid-tty.Other9Zq.')),
+      [],
+    )
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+// The clock wins: the end sweeps, with its mark, while the dir is still being made. That render then finds no dir
+// (MAKE_TEMP, seeing the mark, removed it and printed none) and draws nothing after the end.
+test('when the end cannot wait for a dir being made, it sweeps with its mark and the late render draws nothing', async () => {
+  const s = createPictures()
+  let release!: () => void
+  const held = new Promise<void>((done) => (release = done))
+  const f = fake()
+  const order: string[] = []
+  const run = f.$.process.run
+  f.$.process.run = async (argv: string[], init: any) => {
+    if (isMake(argv)) {
+      await held
+      order.push('made, saw the mark')
+      return { exitCode: 0, stdout: '{}', stderr: '' }
+    }
+
+    if (argv[2] === SWEEP_TEMP) {
+      order.push(`swept ${argv[5]}`)
+    }
+
+    return run(argv, init)
+  }
+  ;(f.$ as any).clock = { sleep: async () => {} }
+  pictureFor(f.$, s, fc('A'), 'default-dark', 80, f.log)
+  await new Promise((done) => setTimeout(done, 10))
+  await sweepTemp(f.$, s, 1000, true)
+  release()
+  await s.idle()
+  assert.deepEqual(order, ['swept --end', 'made, saw the mark'])
+  assert.equal(
+    f.runs.some((r) => r.argv[0] === 'mmdc' && r.argv[1] === '-i'),
+    false,
+  )
+  assert.deepEqual([...s.dirs], [])
 })
