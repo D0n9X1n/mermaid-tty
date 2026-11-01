@@ -279,11 +279,12 @@ function keep(s: Pictures, key: string, p: Picture) {
 }
 
 // The temp dir is made and removed by Node, which mmdc itself runs on, so it works where there is no mktemp or rm
-// (Windows). MAKE_TEMP prints the OS temp dir and a fresh mermaid-tty.XXXXXX dir in it as JSON, with / separators;
-// REMOVE_TEMP removes the dir named by its argument, and only a mermaid-tty.* one.
+// (Windows). MAKE_TEMP prints the OS temp dir, resolved so it is spelled as the dir made in it is, and a fresh
+// mermaid-tty.XXXXXX dir in it as JSON, with / separators; REMOVE_TEMP removes the dir named by its argument, and only
+// a mermaid-tty.* one.
 export const MAKE_TEMP =
   "const f=require('fs'),o=require('os'),p=require('path'),u=(s)=>s.split(p.sep).join('/');" +
-  "const t=o.tmpdir();process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,'mermaid-tty.')))}))"
+  "const t=p.resolve(o.tmpdir());process.stdout.write(JSON.stringify({tmp:u(t),dir:u(f.mkdtempSync(p.join(t,'mermaid-tty.')))}))"
 export const REMOVE_TEMP =
   "const f=require('fs'),p=require('path'),d=process.argv[1];" +
   "if(p.basename(d).startsWith('mermaid-tty.'))f.rmSync(d,{recursive:true,force:true})"

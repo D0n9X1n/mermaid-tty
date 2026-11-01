@@ -35,6 +35,14 @@ const world = (on: any, vars: Record<string, string>) => {
   })
   return runs
 }
+// What a run was: the temp dir's Node runs by what they do, any other by its first two words.
+const name = (argv: string[]) => {
+  if (argv[0] !== 'node') {
+    return argv.slice(0, 2).join(' ')
+  }
+
+  return argv[2]!.includes('mkdtempSync') ? 'make temp' : 'remove temp'
+}
 const mount = ($: any, body: string) =>
   $.ui.mount({
     plugin: 'mermaid-tty',
@@ -50,11 +58,7 @@ test("A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc's 
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image')
   expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
-  expect(
-    runs.map((r) =>
-      r[0] === 'node' ? (r[2]!.includes('mkdtempSync') ? 'make temp' : 'remove temp') : r.slice(0, 2).join(' '),
-    ),
-  ).toEqual(['mmdc --version', 'make temp', 'mmdc -i', 'mmdc -i', 'remove temp'])
+  expect(runs.map(name)).toEqual(['mmdc --version', 'make temp', 'mmdc -i', 'mmdc -i', 'remove temp'])
 })
 
 // The themeCSS repro now falls back in core too (config:themeCSS), so it shows as source; a source core still draws,

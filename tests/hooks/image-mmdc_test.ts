@@ -302,6 +302,16 @@ test('A6.hook-tests: the temp dir is made and removed by node, on every OS', () 
   const env = { ...process.env, TMPDIR: root, TEMP: root, TMP: root }
   const node = (...a: string[]) => spawnSync(process.execPath, a, { env, encoding: 'utf8' })
   try {
+    // A temp dir spelled with a trailing /. or a doubled separator is the same dir, and still accepted.
+    for (const spelled of [`${root}/.`, `${root}//`]) {
+      const odd = { ...env, TMPDIR: spelled, TEMP: spelled, TMP: spelled }
+      const run = spawnSync(process.execPath, ['-e', MAKE_TEMP], { env: odd, encoding: 'utf8' })
+      const at = madeTempDir(run.stdout)
+      assert.ok(at, `${spelled}: ${run.stdout}`)
+      assert.equal(spawnSync(process.execPath, ['-e', REMOVE_TEMP, at!], { env, encoding: 'utf8' }).status, 0)
+    }
+
+    assert.deepEqual(readdirSync(root), [])
     const made = node('-e', MAKE_TEMP)
     assert.equal(made.status, 0, made.stderr)
     const dir = madeTempDir(made.stdout)

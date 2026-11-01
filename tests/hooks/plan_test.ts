@@ -58,6 +58,18 @@ const PNG = Buffer.concat([
   Buffer.from('IHDR'),
   Buffer.from([0, 0, 1, 64, 0, 0, 2, 128, 8, 6, 0, 0, 0]),
 ]).toString('base64')
+// What a run was: the version probe, the temp dir's Node runs, or the command itself.
+const name = (argv: string[]) => {
+  if (argv[1] === '--version') {
+    return 'probe'
+  }
+
+  if (argv[0] === 'node') {
+    return argv[2] === MAKE_TEMP ? 'make temp' : 'remove temp'
+  }
+
+  return argv[0]!
+}
 const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
   const runs: string[] = []
   const $ = {
@@ -66,15 +78,7 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
     config: { list: async () => [{ key: 'theme', value: 'dark' }] },
     process: {
       run: async (argv: string[]) => {
-        runs.push(
-          argv[1] === '--version'
-            ? 'probe'
-            : argv[0] === 'node'
-              ? argv[2] === MAKE_TEMP
-                ? 'make temp'
-                : 'remove temp'
-              : argv[0]!,
-        )
+        runs.push(name(argv))
         let stdout = ''
         if (argv[1] === '--version') {
           stdout = '11.17.1\n'

@@ -17,8 +17,13 @@ const D = '/tmp/mermaid-tty.Ab12Cd'
 const MADE = JSON.stringify({ tmp: '/tmp', dir: D })
 const isMake = (argv: string[]) => argv[0] === 'node' && argv[2] === MAKE_TEMP
 const isRemove = (argv: string[]) => argv[0] === 'node' && argv[2] === REMOVE_TEMP
-const label = (argv: string[]) =>
-  isMake(argv) ? 'make temp' : isRemove(argv) ? 'remove temp' : argv.slice(0, 2).join(' ')
+const label = (argv: string[]) => {
+  if (isMake(argv)) {
+    return 'make temp'
+  }
+
+  return isRemove(argv) ? 'remove temp' : argv.slice(0, 2).join(' ')
+}
 
 // A PNG's first 33 bytes: signature, then the IHDR chunk with the width and height.
 const png = (w: number, h: number) => {
