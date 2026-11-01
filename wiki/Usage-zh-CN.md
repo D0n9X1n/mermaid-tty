@@ -123,7 +123,7 @@ ctrl+o 不负责将图表切换成源码。要查看源码，请运行 `/mermaid
 
 `claude --debug` 会记录未使用图片的原因。运行 `/mermaid-tty text` 可在所有地方保留文本绘制；`/mermaid-tty diagram` 重新启用图片。`/copy` 仍然复制源码。
 
-在 tmux 或 RMUX 中保留文本绘制。只有当 kitty 图像包裹在它们的透传序列中、且配置里有 `set -g allow-passthrough on` 时，二者才会转发该图像；但 Claude Code 2.1.309 在其中发送的图像上传未经包裹，因此会被多路复用器丢弃。即使设置 `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1`，图片的单元格仍会到达但显示为空白，所以 mermaid-tty 在 tmux、screen 和 Zellij 中保留文本。要看到图片，请在多路复用器之外启动 Claude Code。
+在 tmux 或 RMUX 中显示图片需要 `bin/claude-tmux.py`。Claude Code 在其中发送的 kitty 图像命令（`ESC _ G …`）未经包裹，会被多路复用器丢弃。该启动器在 pty 中运行 `claude`，在 Claude Code 自身的输出中把每条命令改写为 `ESC P tmux; … ESC \`（内部 ESC 加倍），因此按顺序写出。只有当 `$TMUX` 已设置、窗格实际生效的 `allow-passthrough`（`#{allow-passthrough}`）为 `on` 或 `all`、标准输入和输出都是终端、且底层终端为 kitty、Ghostty 或 SonicTerm（tmux 的 `#{client_termtype}`；RMUX 不保存该信息，则取会话的 `TERM_PROGRAM`，且仅当该会话自身的 `update-environment` 包含它时才采信）时才包裹。此时它设置 `CLAUDE_CODE_FORCE_TERMINAL_IMAGES=1` 和 `MERMAID_TTY_TMUX_IMAGES=1`，后者是 mermaid-tty 在 tmux 中显示图片的唯一条件；否则原样运行 `claude`。安装方法：`set -g allow-passthrough on`（RMUX 还需 `set -ga update-environment TERM_PROGRAM`），以及 `alias claude='python3 ~/.claude/plugins/marketplaces/mermaid-tty/bin/claude-tmux.py'`。它只改写单独出现的 kitty 命令，不改写位于其他控制字符串内或已包裹的命令，超过 8 MiB 的命令原样传递。它把 SIGTERM、SIGHUP 和 SIGINT 转发给 Claude Code，在终端输入结束时向其发送挂断信号，随其挂起并在 `fg` 后恢复，还原终端设置，并以 Claude Code 的退出方式退出。同时连接多个客户端，或从另一个终端重新连接后，请重新启动 Claude Code：启动器在启动时做出判断。screen 和 Zellij 保留文本。
 
 ## 回退
 

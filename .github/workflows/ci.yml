@@ -49,9 +49,9 @@ jobs:
         shell: bash
         run: bash scripts/test-local-install.sh
       - id: release-notes-test
-        name: Release notes from issues and PRs, against real Git histories and a fake gh
+        name: Python tests (release notes against real Git histories and a fake gh; the tmux launcher)
         if: runner.os == 'Linux'
-        run: python3 -m unittest scripts/release-issues_tests.py scripts/release-notes_tests.py
+        run: python3 -m unittest scripts/release-issues_tests.py scripts/release-notes_tests.py bin/claude-tmux_tests.py
       - id: style-tooling
         run: npm ci --prefix scripts/style
       - id: style

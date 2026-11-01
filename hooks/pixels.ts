@@ -4,12 +4,18 @@
 // xterm-256color, since it ships no terminfo of its own, but a terminal started inside it can keep both (VTE and
 // QTermWidget do), so that pair only asks the process table who holds this session's terminal: on macOS and Linux the
 // nearest ancestor on another tty, on Windows the nearest ancestor hosting a console. A TERM_PROGRAM naming another
-// terminal means one started inside them, which inherited TERM. tmux, screen and Zellij pass no pixels through, and on
-// Windows only SonicTerm shows them. A failing env read or process listing is a no.
+// terminal means one started inside them, which inherited TERM. screen and Zellij pass no pixels through, and on
+// Windows only SonicTerm shows them. Inside tmux or RMUX, Claude Code's kitty commands reach the terminal only through
+// bin/claude-tmux.py, which wraps them for passthrough after checking the pane can show them, and says so with
+// MERMAID_TTY_TMUX_IMAGES=1. A failing env read or process listing is a no.
 export async function showsPixels($: any): Promise<boolean> {
   try {
-    if ((await $.env.get('TMUX')) || (await $.env.get('STY')) || (await $.env.get('ZELLIJ'))) {
+    if ((await $.env.get('STY')) || (await $.env.get('ZELLIJ'))) {
       return false
+    }
+
+    if (await $.env.get('TMUX')) {
+      return (await $.env.get('MERMAID_TTY_TMUX_IMAGES')) === '1'
     }
 
     const program = ((await $.env.get('TERM_PROGRAM')) ?? '').toLowerCase()
