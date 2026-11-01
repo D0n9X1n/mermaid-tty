@@ -52,12 +52,24 @@ test('A5.errors: a throwing or rejecting debug log still draws the diagram; the 
 })
 
 // Pictures: a fake $ in kitty with a dark Claude Code theme, whose mmdc writes a 320 x 640 PNG.
-import { createPictures } from '../../hooks/image.ts'
+import { createPictures, MAKE_TEMP } from '../../hooks/image.ts'
 const PNG = Buffer.concat([
   Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]),
   Buffer.from('IHDR'),
   Buffer.from([0, 0, 1, 64, 0, 0, 2, 128, 8, 6, 0, 0, 0]),
 ]).toString('base64')
+// What a run was: the version probe, the temp dir's Node runs, or the command itself.
+const name = (argv: string[]) => {
+  if (argv[1] === '--version') {
+    return 'probe'
+  }
+
+  if (argv[0] === 'node') {
+    return argv[2] === MAKE_TEMP ? 'make temp' : 'remove temp'
+  }
+
+  return argv[0]!
+}
 const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
   const runs: string[] = []
   const $ = {
@@ -66,12 +78,12 @@ const pix = (vars: Record<string, string> = { TERM: 'xterm-kitty' }) => {
     config: { list: async () => [{ key: 'theme', value: 'dark' }] },
     process: {
       run: async (argv: string[]) => {
-        runs.push(argv[1] === '--version' ? 'probe' : argv[0]!)
+        runs.push(name(argv))
         let stdout = ''
         if (argv[1] === '--version') {
           stdout = '11.17.1\n'
-        } else if (argv[0] === 'mktemp') {
-          stdout = '/tmp/mermaid-tty.X1\n'
+        } else if (argv[0] === 'node' && argv[2] === MAKE_TEMP) {
+          stdout = JSON.stringify({ tmp: '/tmp', dir: '/tmp/mermaid-tty.X1y2Z3' })
         }
 
         return { exitCode: 0, stdout, stderr: '' }
@@ -106,7 +118,7 @@ test('A6.hook-tests: where pixels show, a fence draws as text first, then as its
   const reply = `a\n${FC}m\n${BAD}b`
   assert.deepEqual(shape(await safePlan($, ev(reply), 'default', diagram, s)), ['prose', 'rows', 'prose'])
   await s.idle()
-  assert.deepEqual(runs, ['probe', 'mktemp', 'mmdc', 'mmdc', 'rm'])
+  assert.deepEqual(runs, ['probe', 'make temp', 'mmdc', 'mmdc', 'remove temp'])
   const p = await safePlan($, ev(reply), 'default', diagram, s)
   assert.deepEqual(shape(p), ['prose', 'picture', 'prose'])
   assert.deepEqual((p!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 })

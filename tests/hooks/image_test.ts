@@ -1,6 +1,29 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createPictures, fit, pictureFor, pictureLook, pngSize, puppeteerConfig } from '../../hooks/image.ts'
+import {
+  createPictures,
+  fit,
+  madeTempDir,
+  MAKE_TEMP,
+  pictureFor,
+  pictureLook,
+  pngSize,
+  puppeteerConfig,
+  REMOVE_TEMP,
+} from '../../hooks/image.ts'
+
+// The temp dir's two Node runs, named for what they do: make (MAKE_TEMP) and remove (REMOVE_TEMP).
+const D = '/tmp/mermaid-tty.Ab12Cd'
+const MADE = JSON.stringify({ tmp: '/tmp', dir: D })
+const isMake = (argv: string[]) => argv[0] === 'node' && argv[2] === MAKE_TEMP
+const isRemove = (argv: string[]) => argv[0] === 'node' && argv[2] === REMOVE_TEMP
+const label = (argv: string[]) => {
+  if (isMake(argv)) {
+    return 'make temp'
+  }
+
+  return isRemove(argv) ? 'remove temp' : argv.slice(0, 2).join(' ')
+}
 
 // A PNG's first 33 bytes: signature, then the IHDR chunk with the width and height.
 const png = (w: number, h: number) => {
@@ -63,11 +86,11 @@ const fake = (
           return { exitCode: 0, stdout: `${o.version ?? '11.17.1'}\n`, stderr: '' }
         }
 
-        if (argv[0] === 'mktemp') {
-          return { exitCode: 0, stdout: '/tmp/mermaid-tty.Ab12Cd\n', stderr: '' }
+        if (isMake(argv)) {
+          return { exitCode: 0, stdout: MADE, stderr: '' }
         }
 
-        if (argv[0] === 'rm') {
+        if (isRemove(argv)) {
           return { exitCode: 0, stdout: '', stderr: '' }
         }
 
@@ -201,11 +224,9 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
   assert.equal(pictureFor(f.$, s, body, 'dark', 80, f.log), undefined)
   await s.idle()
   assert.deepEqual(
-    f.runs.map((r) => r.argv.slice(0, 2).join(' ')),
-    ['mmdc --version', 'mktemp -d', 'mmdc -i', 'mmdc -i', 'rm -rf'],
+    f.runs.map((r) => label(r.argv)),
+    ['mmdc --version', 'make temp', 'mmdc -i', 'mmdc -i', 'remove temp'],
   )
-  assert.deepEqual(argvOf(f, 'mktemp')[0]!.argv, ['mktemp', '-d', '/tmp/mermaid-tty.XXXXXX'])
-  const D = '/tmp/mermaid-tty.Ab12Cd'
   const [sv, m] = argvOf(f, 'mmdc')
   assert.deepEqual(sv!.argv, [
     'mmdc',
@@ -259,7 +280,7 @@ test('A6.hook-tests: a miss draws nothing now, runs mmdc (11) in the background,
       [`${D}/puppeteer.json`, puppeteerConfig(80)],
     ],
   )
-  assert.deepEqual(argvOf(f, 'rm')[0]!.argv, ['rm', '-rf', D])
+  assert.deepEqual(f.runs.filter((r) => isRemove(r.argv))[0]!.argv, ['node', '-e', REMOVE_TEMP, D])
   assert.equal(redraws(f), 1)
   assert.deepEqual(f.logs, [])
   assert.deepEqual(pictureFor(f.$, s, body, 'dark', 80, f.log), { png: png(320, 640), columns: 20, rows: 20 })
@@ -295,7 +316,7 @@ test('A5.errors: mmdc missing, or a version that is not one, logs once and rende
     await s.idle()
     assert.equal(probes(f), 1)
     assert.equal(renders(f), 0)
-    assert.equal(argvOf(f, 'mktemp').length, 0)
+    assert.equal(f.runs.filter((r) => isMake(r.argv)).length, 0)
     assert.equal(f.logs.length, 1, String(version))
     assert.match(f.logs[0]!, /^image: no usable mmdc/)
     assert.equal(redraws(f), 0)
@@ -378,7 +399,7 @@ test('A5.errors: an SVG with a forbidden pattern gets no PNG pass and no picture
     assert.equal(renders(f), 0, svg)
     assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
     assert.deepEqual(f.logs, [`image: unsafe svg (${reason})`], svg)
-    assert.equal(argvOf(f, 'rm').length, 1)
+    assert.equal(f.runs.filter((r) => isRemove(r.argv)).length, 1)
     assert.equal(redraws(f), 0)
   }
 
@@ -478,32 +499,32 @@ for (const [name, o, reason] of [
     assert.equal(f.logs.length, 1)
     assert.match(f.logs[0]!, reason)
     assert.deepEqual(
-      argvOf(f, 'rm').map((r) => r.argv),
-      [['rm', '-rf', '/tmp/mermaid-tty.Ab12Cd']],
+      f.runs.filter((r) => isRemove(r.argv)).map((r) => r.argv),
+      [['node', '-e', REMOVE_TEMP, D]],
     )
     assert.equal(redraws(f), 0)
     assert.equal(pictureFor(f.$, s, fc('A'), 'dark', 80, f.log), undefined)
     await s.idle()
-    assert.equal(argvOf(f, 'mktemp').length, 1)
+    assert.equal(f.runs.filter((r) => isMake(r.argv)).length, 1)
   })
 }
 
-test('A5.errors: no temp dir, or a path mktemp should not have made, runs no mmdc and removes nothing', async () => {
+test('A5.errors: no temp dir, or a path the temp run should not have made, runs no mmdc and removes nothing', async () => {
   for (const made of [
-    { exitCode: 1, stdout: '', stderr: 'no' },
+    { exitCode: 1, stdout: MADE, stderr: 'no' },
     { exitCode: 0, stdout: '/\n', stderr: '' },
-    { exitCode: 0, stdout: '/etc/mermaid-tty.Ab12Cd\n', stderr: '' },
+    { exitCode: 0, stdout: JSON.stringify({ tmp: '/tmp', dir: '/etc/mermaid-tty.Ab12Cd' }), stderr: '' },
   ]) {
     const f = fake()
     const s = createPictures()
     const run = f.$.process.run
     f.$.process.run = async (argv: string[], init: any) =>
-      argv[0] === 'mktemp' ? (f.runs.push({ argv, init }), made) : run(argv, init)
+      isMake(argv) ? (f.runs.push({ argv, init }), made) : run(argv, init)
     pictureFor(f.$, s, fc('A'), 'dark', 80, f.log)
     await s.idle()
     assert.deepEqual(
-      f.runs.map((r) => r.argv.slice(0, 2).join(' ')),
-      ['mmdc --version', 'mktemp -d'],
+      f.runs.map((r) => label(r.argv)),
+      ['mmdc --version', 'make temp'],
       JSON.stringify(made),
     )
     assert.deepEqual(f.logs, ['image: no temp dir'])
@@ -612,4 +633,25 @@ test('A8.cache: 17 diagrams over a 16-picture cache render 17 times and stop', a
   assert.equal(renders(f), 17)
   assert.equal(redraws(f), 3)
   assert.equal(shown, 16)
+})
+
+// MAKE_TEMP's output is trusted only as a mermaid-tty.XXXXXX dir directly inside the temp dir it names; on Windows both
+// arrive with / separators.
+test('A5.errors: only a fresh mermaid-tty dir directly in the named temp dir is accepted', () => {
+  const made = (tmp: unknown, dir: unknown) => madeTempDir(JSON.stringify({ tmp, dir }))
+  assert.equal(made('/tmp', D), D)
+  assert.equal(made('/tmp/', D), D)
+  assert.equal(
+    made('C:/Users/me/AppData/Local/Temp', 'C:/Users/me/AppData/Local/Temp/mermaid-tty.x9Y8z7'),
+    'C:/Users/me/AppData/Local/Temp/mermaid-tty.x9Y8z7',
+  )
+  assert.equal(made('/tmp', '/etc/mermaid-tty.Ab12Cd'), null)
+  assert.equal(made('/tmp', '/tmp/a/mermaid-tty.Ab12Cd'), null)
+  assert.equal(made('/tmp', '/tmp/mermaid-tty.'), null)
+  assert.equal(made('/tmp', '/tmp/mermaid-tty.Ab12C/'), null)
+  assert.equal(made('/tmp', '/tmp/mermaid-tty.Ab12Cd/..'), null)
+  assert.equal(made('', '/mermaid-tty.Ab12Cd'), null)
+  assert.equal(made(3, D), null)
+  assert.equal(madeTempDir('/tmp/mermaid-tty.Ab12Cd\n'), null)
+  assert.equal(madeTempDir(''), null)
 })

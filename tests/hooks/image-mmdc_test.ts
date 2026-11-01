@@ -1,7 +1,8 @@
 // The image path against a real executable: a fake mmdc on PATH, run through a $ backed by node:child_process and
 // node:fs (tests are not bound by the hooks' portability rules). It covers the lookup on PATH, the version probe, the
-// source on stdin, the output file, a nonzero exit, a timeout and the temp dir's removal. POSIX only: images are off on
-// Windows, and the image path runs mktemp and rm.
+// source on stdin, the output file, a nonzero exit, a timeout and the temp dir's removal. The fake mmdc is a node
+// script run by its #! line, so those tests are POSIX only; the temp dir's own Node runs are tested on every OS,
+// Windows too.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -18,9 +19,10 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createPictures, pictureFor } from '../../hooks/image.ts'
+import { spawnSync } from 'node:child_process'
+import { createPictures, madeTempDir, MAKE_TEMP, pictureFor, REMOVE_TEMP } from '../../hooks/image.ts'
 
-const SKIP = process.platform === 'win32' && 'images are off on Windows, and the image path runs mktemp and rm'
+const SKIP = process.platform === 'win32' && 'the fake mmdc runs by its #! line, which Windows does not read'
 const PNG =
   'iVBORw0KGgoAAAANSUhEUgAAAUAAAAKAAQAAAADF65wuAAAAMElEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4NGaAAAE2fUvuAAAAAElFTkSuQmCC'
 
@@ -78,6 +80,7 @@ function world(o: { version?: string; mmdc?: boolean; capMs?: number; svg?: stri
           const c = spawn(argv[0]!, argv.slice(1), {
             env: {
               PATH,
+              TMPDIR: tmp,
               FAKE_MMDC_VERSION: o.version ?? '11.17.1',
               FAKE_MMDC_LOG: log,
               ...(o.svg !== undefined ? { FAKE_MMDC_SVG: svgFile } : {}),
@@ -232,7 +235,7 @@ test(
 // The reviewer's exact repro: a frontmatter themeCSS that drew /tmp/private.svg into the PNG on mmdc 11.17 and 12.0
 // with every isolation flag on. Core parses it; the gate in hooks/safe.ts keeps it from running anything at all.
 test(
-  "A5.errors: the reviewer's themeCSS repro runs nothing: no mmdc, no version probe, no mktemp",
+  "A5.errors: the reviewer's themeCSS repro runs nothing: no mmdc, no version probe, no temp dir",
   { skip: SKIP },
   async () => {
     const w = world()
@@ -288,5 +291,40 @@ test('A5.errors: no mmdc on PATH logs once and runs nothing else', { skip: SKIP 
     assert.deepEqual(w.left(), [])
   } finally {
     w.done()
+  }
+})
+
+// The temp dir's two Node runs, as draw() makes them, against the real file system on every OS: MAKE_TEMP makes a fresh
+// mermaid-tty dir in the OS temp dir (TMPDIR, or TEMP and TMP on Windows) that madeTempDir accepts; REMOVE_TEMP removes
+// it with its contents, and leaves alone a dir not named mermaid-tty.*.
+test('A6.hook-tests: the temp dir is made and removed by node, on every OS', () => {
+  const root = mkdtempSync(join(tmpdir(), 'mtty-temp-'))
+  const env = { ...process.env, TMPDIR: root, TEMP: root, TMP: root }
+  const node = (...a: string[]) => spawnSync(process.execPath, a, { env, encoding: 'utf8' })
+  try {
+    // A temp dir spelled with a trailing /. or a doubled separator is the same dir, and still accepted.
+    for (const spelled of [`${root}/.`, `${root}//`]) {
+      const odd = { ...env, TMPDIR: spelled, TEMP: spelled, TMP: spelled }
+      const run = spawnSync(process.execPath, ['-e', MAKE_TEMP], { env: odd, encoding: 'utf8' })
+      const at = madeTempDir(run.stdout)
+      assert.ok(at, `${spelled}: ${run.stdout}`)
+      assert.equal(spawnSync(process.execPath, ['-e', REMOVE_TEMP, at!], { env, encoding: 'utf8' }).status, 0)
+    }
+
+    assert.deepEqual(readdirSync(root), [])
+    const made = node('-e', MAKE_TEMP)
+    assert.equal(made.status, 0, made.stderr)
+    const dir = madeTempDir(made.stdout)
+    assert.ok(dir, made.stdout)
+    assert.deepEqual(readdirSync(root), [dir!.slice(dir!.lastIndexOf('/') + 1)])
+    writeFileSync(join(dir!, 'out.png'), 'x')
+    assert.equal(node('-e', REMOVE_TEMP, dir!).status, 0)
+    assert.deepEqual(readdirSync(root), [])
+    const other = join(root, 'keep')
+    mkdirSync(other)
+    assert.equal(node('-e', REMOVE_TEMP, other).status, 0)
+    assert.deepEqual(readdirSync(root), ['keep'])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })
