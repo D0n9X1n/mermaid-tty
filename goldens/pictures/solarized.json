@@ -8,6 +8,7 @@
       "fontFamily": "\"trebuchet ms\", verdana, arial, sans-serif",
       "dropShadow": "none",
       "useGradient": false,
+      "stateBorder": "#268BD2",
       "nodeBorder": "#268BD2",
       "primaryBorderColor": "#268BD2",
       "nodeBkg": "#268BD2",
@@ -16,6 +17,7 @@
       "edgeLabelBackground": "#268BD2",
       "primaryTextColor": "#FDF6E3",
       "nodeTextColor": "#FDF6E3",
+      "secondaryBorderColor": "#B58900",
       "secondaryColor": "#B58900",
       "secondaryTextColor": "#002B36",
       "tertiaryColor": "#073642",
@@ -28,9 +30,11 @@
       "altBackground": "#073642",
       "compositeBackground": "#073642",
       "clusterBkg": "#073642",
-      "border2": "#D33682",
-      "clusterBorder": "#D33682",
-      "compositeTitleBackground": "#073642",
+      "flowContainerStroke": "#FDF6E3",
+      "tertiaryBorderColor": "#FDF6E3",
+      "border2": "#FDF6E3",
+      "clusterBorder": "#FDF6E3",
+      "compositeTitleBackground": "#268BD2",
       "noteBorderColor": "#2AA198",
       "noteBkgColor": "#2AA198",
       "noteTextColor": "#002B36",
@@ -43,7 +47,7 @@
       "activationBorderColor": "#B58900",
       "activationBkgColor": "#B58900",
       "labelBoxBkgColor": "#073642",
-      "labelBoxBorderColor": "#D33682",
+      "labelBoxBorderColor": "#FDF6E3",
       "labelTextColor": "#FDF6E3",
       "loopTextColor": "#EEE8D5",
       "sequenceNumberColor": "#002B36",
@@ -101,46 +105,59 @@
       "git7": "#2AA198",
       "gitBranchLabel7": "#002B36",
       "gitInv7": "#002B36",
-      "commitLabelBackground": "#073642",
+      "commitLabelBackground": "#002B36",
       "commitLabelColor": "#93A1A1",
+      "commitLineColor": "#93A1A1",
       "tagLabelBorder": "#B58900",
       "tagLabelBackground": "#B58900",
       "tagLabelColor": "#002B36",
       "cScale0": "#268BD2",
       "cScaleInv0": "#002B36",
-      "cScaleLabel0": "#FDF6E3",
+      "cScalePeer0": "#268BD2",
+      "cScaleLabel0": "#002B36",
       "cScale1": "#859900",
       "cScaleInv1": "#002B36",
+      "cScalePeer1": "#859900",
       "cScaleLabel1": "#002B36",
       "cScale2": "#B58900",
       "cScaleInv2": "#002B36",
+      "cScalePeer2": "#B58900",
       "cScaleLabel2": "#002B36",
       "cScale3": "#CB4B16",
       "cScaleInv3": "#002B36",
+      "cScalePeer3": "#CB4B16",
       "cScaleLabel3": "#FDF6E3",
       "cScale4": "#93A1A1",
       "cScaleInv4": "#002B36",
+      "cScalePeer4": "#93A1A1",
       "cScaleLabel4": "#002B36",
       "cScale5": "#D33682",
       "cScaleInv5": "#002B36",
+      "cScalePeer5": "#D33682",
       "cScaleLabel5": "#FDF6E3",
       "cScale6": "#6C71C4",
       "cScaleInv6": "#002B36",
-      "cScaleLabel6": "#FDF6E3",
+      "cScalePeer6": "#6C71C4",
+      "cScaleLabel6": "#002B36",
       "cScale7": "#2AA198",
       "cScaleInv7": "#002B36",
+      "cScalePeer7": "#2AA198",
       "cScaleLabel7": "#002B36",
       "cScale8": "#268BD2",
       "cScaleInv8": "#002B36",
-      "cScaleLabel8": "#FDF6E3",
+      "cScalePeer8": "#268BD2",
+      "cScaleLabel8": "#002B36",
       "cScale9": "#859900",
       "cScaleInv9": "#002B36",
+      "cScalePeer9": "#859900",
       "cScaleLabel9": "#002B36",
       "cScale10": "#B58900",
       "cScaleInv10": "#002B36",
+      "cScalePeer10": "#B58900",
       "cScaleLabel10": "#002B36",
-      "cScale11": "#268BD2",
+      "cScale11": "#CB4B16",
       "cScaleInv11": "#002B36",
+      "cScalePeer11": "#CB4B16",
       "cScaleLabel11": "#FDF6E3",
       "fillType0": "#207DBB",
       "fillType1": "#718808",
@@ -163,34 +180,36 @@
       "excludeBkgColor": "#073642",
       "taskBorderColor": "#268BD2",
       "taskBkgColor": "#268BD2",
-      "activeTaskBorderColor": "#B58900",
-      "activeTaskBkgColor": "#B58900",
-      "doneTaskBorderColor": "#859900",
-      "doneTaskBkgColor": "#859900",
       "critBorderColor": "#CB4B16",
       "critBkgColor": "#CB4B16",
       "taskTextLightColor": "#FDF6E3",
       "taskTextColor": "#FDF6E3",
-      "taskTextDarkColor": "#002B36",
+      "activeTaskBorderColor": "#AC8403",
+      "activeTaskBkgColor": "#AC8403",
+      "doneTaskBorderColor": "#7E9403",
+      "doneTaskBkgColor": "#7E9403",
+      "taskTextDarkColor": "#FDF6E3",
       "taskTextOutsideColor": "#93A1A1",
       "taskTextClickableColor": "#EEE8D5",
       "gridColor": "#93A1A1",
-      "todayLineColor": "#CB4B16",
-      "vertLineColor": "#D33682",
-      "quadrant4Fill": "#073642",
-      "quadrant1Fill": "#073642",
-      "quadrant3Fill": "#002B36",
-      "quadrant2Fill": "#002B36",
-      "quadrant1TextFill": "#93A1A1",
-      "quadrant2TextFill": "#93A1A1",
-      "quadrant3TextFill": "#93A1A1",
-      "quadrant4TextFill": "#93A1A1",
+      "todayLineColor": "#FDF6E3",
+      "vertLineColor": "#FDF6E3",
+      "errorBkgColor": "#CB4B16",
+      "errorTextColor": "#FDF6E3",
+      "quadrant1Fill": "#2486CA",
+      "quadrant1TextFill": "#FDF6E3",
+      "quadrant2Fill": "#7E9403",
+      "quadrant2TextFill": "#FDF6E3",
+      "quadrant3Fill": "#AC8403",
+      "quadrant3TextFill": "#FDF6E3",
+      "quadrant4Fill": "#C14918",
+      "quadrant4TextFill": "#FDF6E3",
       "quadrantPointFill": "#FDF6E3",
-      "quadrantPointTextFill": "#EEE8D5",
+      "quadrantPointTextFill": "#FDF6E3",
       "quadrantYAxisTextFill": "#93A1A1",
       "quadrantXAxisTextFill": "#93A1A1",
-      "quadrantExternalBorderStrokeFill": "#D33682",
-      "quadrantInternalBorderStrokeFill": "#D33682",
+      "quadrantExternalBorderStrokeFill": "#FDF6E3",
+      "quadrantInternalBorderStrokeFill": "#FDF6E3",
       "quadrantTitleFill": "#6C71C4",
       "xyChart": {
         "backgroundColor": "#002B36",
@@ -262,6 +281,16 @@
       "on": "#073642"
     },
     {
+      "what": "subgraph borders",
+      "ink": "#FDF6E3",
+      "on": "#002B36"
+    },
+    {
+      "what": "subgraph borders",
+      "ink": "#FDF6E3",
+      "on": "#073642"
+    },
+    {
       "what": "note text",
       "ink": "#002B36",
       "on": "#2AA198"
@@ -288,8 +317,13 @@
     },
     {
       "what": "loop boxes",
-      "ink": "#D33682",
+      "ink": "#FDF6E3",
       "on": "#002B36"
+    },
+    {
+      "what": "loop boxes",
+      "ink": "#FDF6E3",
+      "on": "#073642"
     },
     {
       "what": "loop label",
@@ -469,7 +503,12 @@
     {
       "what": "commit labels",
       "ink": "#93A1A1",
-      "on": "#073642"
+      "on": "#002B36"
+    },
+    {
+      "what": "commit lines",
+      "ink": "#93A1A1",
+      "on": "#002B36"
     },
     {
       "what": "tag labels",
@@ -478,8 +517,13 @@
     },
     {
       "what": "section 0",
-      "ink": "#FDF6E3",
+      "ink": "#002B36",
       "on": "#268BD2"
+    },
+    {
+      "what": "section 0",
+      "ink": "#002B36",
+      "on": "#2EA7FC"
     },
     {
       "what": "section 1",
@@ -487,9 +531,19 @@
       "on": "#859900"
     },
     {
+      "what": "section 1",
+      "ink": "#002B36",
+      "on": "#A0B800"
+    },
+    {
       "what": "section 2",
       "ink": "#002B36",
       "on": "#B58900"
+    },
+    {
+      "what": "section 2",
+      "ink": "#002B36",
+      "on": "#D9A400"
     },
     {
       "what": "section 3",
@@ -497,9 +551,19 @@
       "on": "#CB4B16"
     },
     {
+      "what": "section 3",
+      "ink": "#FDF6E3",
+      "on": "#F45A1A"
+    },
+    {
       "what": "section 4",
       "ink": "#002B36",
       "on": "#93A1A1"
+    },
+    {
+      "what": "section 4",
+      "ink": "#002B36",
+      "on": "#B0C1C1"
     },
     {
       "what": "section 5",
@@ -507,9 +571,19 @@
       "on": "#D33682"
     },
     {
-      "what": "section 6",
+      "what": "section 5",
       "ink": "#FDF6E3",
+      "on": "#FD419C"
+    },
+    {
+      "what": "section 6",
+      "ink": "#002B36",
       "on": "#6C71C4"
+    },
+    {
+      "what": "section 6",
+      "ink": "#002B36",
+      "on": "#8288EB"
     },
     {
       "what": "section 7",
@@ -517,9 +591,19 @@
       "on": "#2AA198"
     },
     {
+      "what": "section 7",
+      "ink": "#002B36",
+      "on": "#32C1B6"
+    },
+    {
       "what": "section 8",
-      "ink": "#FDF6E3",
+      "ink": "#002B36",
       "on": "#268BD2"
+    },
+    {
+      "what": "section 8",
+      "ink": "#002B36",
+      "on": "#2EA7FC"
     },
     {
       "what": "section 9",
@@ -527,14 +611,29 @@
       "on": "#859900"
     },
     {
+      "what": "section 9",
+      "ink": "#002B36",
+      "on": "#A0B800"
+    },
+    {
       "what": "section 10",
       "ink": "#002B36",
       "on": "#B58900"
     },
     {
+      "what": "section 10",
+      "ink": "#002B36",
+      "on": "#D9A400"
+    },
+    {
       "what": "timeline connectors and last section",
       "ink": "#FDF6E3",
-      "on": "#268BD2"
+      "on": "#CB4B16"
+    },
+    {
+      "what": "timeline connectors and last section",
+      "ink": "#FDF6E3",
+      "on": "#F45A1A"
     },
     {
       "what": "timeline connectors and last section",
@@ -593,13 +692,23 @@
     },
     {
       "what": "gantt active and done task text",
-      "ink": "#002B36",
-      "on": "#B58900"
+      "ink": "#FDF6E3",
+      "on": "#AC8403"
     },
     {
       "what": "gantt active and done task text",
-      "ink": "#002B36",
-      "on": "#859900"
+      "ink": "#FDF6E3",
+      "on": "#7E9403"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#FDF6E3",
+      "on": "#073642"
+    },
+    {
+      "what": "gantt active and done task text",
+      "ink": "#FDF6E3",
+      "on": "#002B36"
     },
     {
       "what": "gantt text beside a task",
@@ -627,54 +736,94 @@
       "on": "#002B36"
     },
     {
+      "what": "gantt grid",
+      "ink": "#93A1A1",
+      "on": "#073642"
+    },
+    {
       "what": "gantt today line",
-      "ink": "#CB4B16",
+      "ink": "#FDF6E3",
+      "on": "#002B36"
+    },
+    {
+      "what": "gantt today line",
+      "ink": "#FDF6E3",
+      "on": "#073642"
+    },
+    {
+      "what": "gantt marker line",
+      "ink": "#FDF6E3",
       "on": "#002B36"
     },
     {
       "what": "gantt marker line",
-      "ink": "#D33682",
-      "on": "#002B36"
+      "ink": "#FDF6E3",
+      "on": "#073642"
+    },
+    {
+      "what": "error text",
+      "ink": "#FDF6E3",
+      "on": "#CB4B16"
     },
     {
       "what": "quadrant 1 text",
-      "ink": "#93A1A1",
-      "on": "#073642"
+      "ink": "#FDF6E3",
+      "on": "#2486CA"
     },
     {
       "what": "quadrant 2 text",
-      "ink": "#93A1A1",
-      "on": "#002B36"
+      "ink": "#FDF6E3",
+      "on": "#7E9403"
     },
     {
       "what": "quadrant 3 text",
-      "ink": "#93A1A1",
-      "on": "#002B36"
+      "ink": "#FDF6E3",
+      "on": "#AC8403"
     },
     {
       "what": "quadrant 4 text",
-      "ink": "#93A1A1",
-      "on": "#073642"
+      "ink": "#FDF6E3",
+      "on": "#C14918"
     },
     {
       "what": "quadrant points",
       "ink": "#FDF6E3",
-      "on": "#073642"
+      "on": "#2486CA"
     },
     {
       "what": "quadrant points",
       "ink": "#FDF6E3",
-      "on": "#002B36"
+      "on": "#7E9403"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#FDF6E3",
+      "on": "#AC8403"
+    },
+    {
+      "what": "quadrant points",
+      "ink": "#FDF6E3",
+      "on": "#C14918"
     },
     {
       "what": "quadrant point text",
-      "ink": "#EEE8D5",
-      "on": "#073642"
+      "ink": "#FDF6E3",
+      "on": "#2486CA"
     },
     {
       "what": "quadrant point text",
-      "ink": "#EEE8D5",
-      "on": "#002B36"
+      "ink": "#FDF6E3",
+      "on": "#7E9403"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#FDF6E3",
+      "on": "#AC8403"
+    },
+    {
+      "what": "quadrant point text",
+      "ink": "#FDF6E3",
+      "on": "#C14918"
     },
     {
       "what": "quadrant axes",
@@ -683,8 +832,33 @@
     },
     {
       "what": "quadrant borders",
-      "ink": "#D33682",
+      "ink": "#FDF6E3",
       "on": "#002B36"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#FDF6E3",
+      "on": "#073642"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#FDF6E3",
+      "on": "#2486CA"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#FDF6E3",
+      "on": "#7E9403"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#FDF6E3",
+      "on": "#AC8403"
+    },
+    {
+      "what": "quadrant borders",
+      "ink": "#FDF6E3",
+      "on": "#C14918"
     },
     {
       "what": "quadrant title",

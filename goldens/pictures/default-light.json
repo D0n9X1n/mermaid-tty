@@ -55,8 +55,23 @@
       "cScaleLabel9": "#ffffff",
       "cScale10": "#966c1e",
       "cScaleLabel10": "#ffffff",
-      "cScale11": "#5769f7",
-      "cScaleLabel11": "#000000"
+      "cScale11": "#5769F7",
+      "cScaleLabel11": "#000000",
+      "xyChart": {
+        "backgroundColor": "#FFFFFF",
+        "titleColor": "#333333",
+        "dataLabelColor": "#333333",
+        "legendTextColor": "#333333",
+        "xAxisTitleColor": "#333333",
+        "xAxisLabelColor": "#333333",
+        "xAxisTickColor": "#333333",
+        "xAxisLineColor": "#333333",
+        "yAxisTitleColor": "#333333",
+        "yAxisLabelColor": "#333333",
+        "yAxisTickColor": "#333333",
+        "yAxisLineColor": "#333333",
+        "plotColorPalette": "#5769f7,#2c7a39,#966c1e,#ab2b3f,#8700ff,#d77757,#4782c8,#006666"
+      }
     },
     "journey": {
       "actorColours": [
@@ -209,12 +224,57 @@
     {
       "what": "timeline connectors and last section",
       "ink": "#000000",
-      "on": "#5769f7"
+      "on": "#5769F7"
     },
     {
       "what": "timeline connectors and last section",
       "ink": "#000000",
       "on": "#ffffff"
+    },
+    {
+      "what": "chart series 1",
+      "ink": "#5769f7",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 2",
+      "ink": "#2c7a39",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 3",
+      "ink": "#966c1e",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 4",
+      "ink": "#ab2b3f",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 5",
+      "ink": "#8700ff",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 6",
+      "ink": "#d77757",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 7",
+      "ink": "#4782c8",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart series 8",
+      "ink": "#006666",
+      "on": "#FFFFFF"
+    },
+    {
+      "what": "chart text",
+      "ink": "#333333",
+      "on": "#FFFFFF"
     }
   ]
 }

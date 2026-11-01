@@ -55,8 +55,23 @@
       "cScaleLabel9": "#000000",
       "cScale10": "#ffc107",
       "cScaleLabel10": "#000000",
-      "cScale11": "#d77757",
-      "cScaleLabel11": "#ffffff"
+      "cScale11": "#41877E",
+      "cScaleLabel11": "#ffffff",
+      "xyChart": {
+        "backgroundColor": "#333333",
+        "titleColor": "#CCCCCC",
+        "dataLabelColor": "#CCCCCC",
+        "legendTextColor": "#CCCCCC",
+        "xAxisTitleColor": "#CCCCCC",
+        "xAxisLabelColor": "#CCCCCC",
+        "xAxisTickColor": "#CCCCCC",
+        "xAxisLineColor": "#CCCCCC",
+        "yAxisTitleColor": "#CCCCCC",
+        "yAxisLabelColor": "#CCCCCC",
+        "yAxisTickColor": "#CCCCCC",
+        "yAxisLineColor": "#CCCCCC",
+        "plotColorPalette": "#b1b9f9,#4eba65,#ffc107,#ff6b80,#af87ff,#d77757,#6a9bcc,#48968c"
+      }
     },
     "journey": {
       "actorColours": [
@@ -209,7 +224,7 @@
     {
       "what": "timeline connectors and last section",
       "ink": "#ffffff",
-      "on": "#d77757"
+      "on": "#41877E"
     },
     {
       "what": "timeline connectors and last section",
@@ -220,6 +235,51 @@
       "what": "timeline connectors and last section",
       "ink": "#ffffff",
       "on": "#1e1e1e"
+    },
+    {
+      "what": "chart series 1",
+      "ink": "#b1b9f9",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 2",
+      "ink": "#4eba65",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 3",
+      "ink": "#ffc107",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 4",
+      "ink": "#ff6b80",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 5",
+      "ink": "#af87ff",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 6",
+      "ink": "#d77757",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 7",
+      "ink": "#6a9bcc",
+      "on": "#333333"
+    },
+    {
+      "what": "chart series 8",
+      "ink": "#48968c",
+      "on": "#333333"
+    },
+    {
+      "what": "chart text",
+      "ink": "#CCCCCC",
+      "on": "#333333"
     }
   ]
 }

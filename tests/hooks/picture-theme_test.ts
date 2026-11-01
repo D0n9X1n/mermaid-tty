@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import test from 'node:test'
 import { contrast } from '../../core/color.ts'
 import { THEMES } from '../../core/themes.ts'
-import { LOOKS, pictureTheme, type Look } from '../../hooks/picture-theme.ts'
+import { brighten, LOOKS, pictureTheme, type Look } from '../../hooks/picture-theme.ts'
 import { CC_DARK } from '../../scripts/lib/palette.ts'
 
 const CURATED = ['nord', 'dracula', 'gruvbox', 'solarized'] as const
@@ -167,7 +167,8 @@ test('a curated look uses its palette: node fills, edges, titles, series, and it
     assert.equal(v.lineColor, p.roles.edge)
     assert.equal(v.noteBkgColor, p.roles.note)
     assert.equal(v.clusterBkg, p.surface)
-    assert.equal(v.clusterBorder, p.roles.frame)
+    // A border keeps the frame color where it reads on both canvas and surface; solarized's falls back.
+    assert.equal(v.clusterBorder, look === 'solarized' ? p.onFill : p.roles.frame)
     assert.equal(v.edgeLabelBackground, p.roles.node)
     assert.equal(v.pie1, p.series.s1)
     assert.equal(v.git0, p.series.s1)
@@ -184,5 +185,99 @@ test('each look matches its reviewed config in goldens/pictures', () => {
     }
 
     assert.equal(got, readFileSync(path, 'utf8'), path)
+  }
+})
+
+// Where Mermaid draws one color on more than the fill it was named for: a state's label on a composite state's title
+// bar, an active or done task's label beside its bar, a timeline label on its section brightened 120%, a loop box's and
+// a quadrant's borders across the surface.
+test('the pairs follow every place Mermaid draws a color, not only the one its name suggests', () => {
+  for (const look of CURATED) {
+    const t = pictureTheme(look)
+    const v = t.config.themeVariables!
+    const has = (ink: unknown, on: unknown) => t.pairs.some((p) => p.ink === ink && p.on === on)
+    const surface = THEMES[look].surface
+    assert.ok(has(v.stateLabelColor, v.compositeTitleBackground), `${look} composite title`)
+    for (const on of [v.activeTaskBkgColor, v.doneTaskBkgColor, surface, t.background]) {
+      assert.ok(has(v.taskTextDarkColor, on), `${look} active and done task text on ${on}`)
+    }
+
+    for (let i = 0; i < 12; i++) {
+      assert.ok(has(v[`cScaleLabel${i}`], brighten(v[`cScale${i}`] as string, 1.2)), `${look} timeline event ${i}`)
+    }
+
+    for (const k of ['labelBoxBorderColor', 'quadrantInternalBorderStrokeFill', 'clusterBorder', 'gridColor']) {
+      assert.ok(has(v[k], surface) && has(v[k], t.background), `${look} ${k} on surface and canvas`)
+    }
+  }
+})
+
+test("default's chart lines take Claude Code's series colors too, each readable on Mermaid's own plot", () => {
+  for (const look of ['default-dark', 'default-light'] as const) {
+    const t = pictureTheme(look)
+    const xy = t.config.themeVariables!.xyChart as Record<string, string>
+    assert.equal(Object.keys(xy).length, 13, look)
+    for (const c of xy.plotColorPalette!.split(',')) {
+      assert.ok(
+        t.pairs.some((p) => p.ink === c && p.on === xy.backgroundColor),
+        `${look} ${c}`,
+      )
+    }
+  }
+})
+
+// The approved scope of the surface: subgraph and composite-state bodies, gantt section bands and the loop label tab.
+test('a curated look fills with its surface only where the spec says', () => {
+  const allowed = new Set([
+    'tertiaryColor',
+    'clusterBkg',
+    'compositeBackground',
+    'altBackground',
+    'labelBoxBkgColor',
+    'sectionBkgColor',
+    'sectionBkgColor2',
+    'excludeBkgColor',
+  ])
+  for (const look of CURATED) {
+    const v = pictureTheme(look).config.themeVariables!
+    const used = Object.entries(v).filter(([k, c]) => c === THEMES[look].surface && !/Text|Color$|Label/.test(k))
+    assert.deepEqual(
+      used.map(([k]) => k).filter((k) => !allowed.has(k)),
+      [],
+      look,
+    )
+  }
+})
+
+// Every theme variable the styles of the 13 drawn types read in Mermaid 11.17 and 12.2, and the families base derives
+// from them: a curated look sets each, so nothing is left for base to derive.
+const READ = [
+  'activationBkgColor activationBorderColor activeTaskBkgColor activeTaskBorderColor actorBkg actorBorder',
+  'actorLineColor actorTextColor altBackground altSectionBkgColor arrowheadColor background border2 classText',
+  'clusterBkg clusterBorder commitLabelBackground commitLabelColor commitLineColor compositeBackground',
+  'compositeTitleBackground critBkgColor critBorderColor doneTaskBkgColor doneTaskBorderColor edgeLabelBackground',
+  'errorBkgColor errorTextColor excludeBkgColor faceColor gridColor innerEndBackground labelBackgroundColor',
+  'labelBoxBkgColor labelBoxBorderColor labelTextColor lineColor loopTextColor mainBkg nodeBorder nodeTextColor',
+  'noteBkgColor noteBorderColor noteTextColor pieLegendTextColor pieOuterStrokeColor pieSectionTextColor',
+  'pieStrokeColor pieTitleTextColor primaryColor sectionBkgColor sectionBkgColor2 sequenceNumberColor signalColor',
+  'signalTextColor specialStateColor stateBkg stateBorder stateLabelColor tagLabelBackground tagLabelBorder',
+  'tagLabelColor taskBkgColor taskBorderColor taskTextClickableColor taskTextColor taskTextDarkColor',
+  'taskTextOutsideColor tertiaryColor tertiaryTextColor textColor titleColor todayLineColor transitionColor',
+  'transitionLabelColor vertLineColor secondaryBorderColor tertiaryBorderColor flowContainerStroke',
+]
+  .join(' ')
+  .split(' ')
+
+test('a curated look sets every theme variable the drawn types read', () => {
+  for (const look of CURATED) {
+    const v = pictureTheme(look).config.themeVariables!
+    assert.deepEqual(
+      READ.filter((k) => v[k] === undefined),
+      [],
+      look,
+    )
+    for (let i = 0; i < 12; i++) {
+      assert.ok(v[`cScalePeer${i}`], `${look} cScalePeer${i}`)
+    }
   }
 })

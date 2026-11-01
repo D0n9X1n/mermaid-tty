@@ -41,12 +41,15 @@ const CC = {
     inverse: '#000000',
     // The terminal's canvas, which a transparent picture shows: black, or the near-black most dark themes use.
     canvas: ['#000000', '#1e1e1e'],
+    // Mermaid's own xychart plot and its text in this theme.
+    plot: { background: '#333333', text: '#CCCCCC' },
   },
   'default-light': {
     series: ['#5769f7', '#2c7a39', '#966c1e', '#ab2b3f', '#8700ff', '#d77757', '#4782c8', '#006666'],
     text: '#000000',
     inverse: '#ffffff',
     canvas: ['#ffffff'],
+    plot: { background: '#FFFFFF', text: '#333333' },
   },
 } as const
 
@@ -95,12 +98,20 @@ function candidates(p: Palette): string[] {
 // series[i], cycling.
 const cycle = (series: readonly string[], i: number) => series[i % series.length]!
 
-// The series color the last of twelve scale slots takes. Mermaid colors every timeline connector with that slot's label
-// color, on the canvas, so the slot's fill must leave one color readable on both: the first series color that does,
-// else the one that comes closest.
+// The color the last of twelve scale slots takes. Mermaid colors every timeline connector with that slot's label color,
+// on the canvas, and draws its events brightened, so one color must read on the slot, the slot brightened and the
+// canvas: the first series color, toned toward the canvas as little as it takes, where one of texts does.
 function lastSlot(series: readonly string[], texts: readonly string[], canvas: readonly string[]): string {
-  const reach = (fill: string) => Math.max(...texts.map((t) => worst(t, [fill, ...canvas])))
-  return series.find((s) => reach(s) >= MIN) ?? series.reduce((a, b) => (reach(b) > reach(a) ? b : a))
+  const reach = (fill: string) =>
+    Math.max(...texts.map((t) => worst(t, [fill, brighten(fill, EVENT_BRIGHTNESS), ...canvas])))
+  for (let t = 1; t > 0; t -= 0.05) {
+    const found = series.map((c) => mix(c, canvas[0]!, t)).find((c) => reach(c) >= MIN)
+    if (found) {
+      return found
+    }
+  }
+
+  return series[0]!
 }
 
 // a toned toward b: t of a and the rest of b, channel by channel, as '#rrggbb'.
@@ -124,6 +135,19 @@ function toneFor(series: readonly string[], canvas: string, ink: string): number
 
   return 0
 }
+
+// h as CSS's brightness(f) filter draws it: each channel scaled, and clipped at full.
+export function brighten(h: string, f: number): string {
+  const hex = (i: number) =>
+    Math.min(255, Math.round(parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16) * f))
+      .toString(16)
+      .padStart(2, '0')
+  return `#${hex(0)}${hex(1)}${hex(2)}`.toUpperCase()
+}
+
+// Timeline draws its event groups through brightness(120%), so a section's label sits on its slot's color and on that
+// color brightened.
+const EVENT_BRIGHTNESS = 1.2
 
 // The twelve scale slots timeline and mindmap fill their sections with: the series in turn, the last one lastSlot's.
 function scale(series: readonly string[], texts: readonly string[], canvas: readonly string[]): string[] {
@@ -154,10 +178,10 @@ function curated(look: Curated): PictureTheme {
 
   // Nodes, and the edge labels Mermaid draws in the same text color: a label chip is filled like a node, so one color
   // reads on both.
-  v.primaryColor = v.mainBkg = v.nodeBkg = v.primaryBorderColor = v.nodeBorder = r.node
+  v.primaryColor = v.mainBkg = v.nodeBkg = v.primaryBorderColor = v.nodeBorder = v.stateBorder = r.node
   v.edgeLabelBackground = r.node
   v.nodeTextColor = v.primaryTextColor = text('node and edge label text', fill, r.node)
-  v.secondaryColor = r.decision
+  v.secondaryColor = v.secondaryBorderColor = r.decision
   v.secondaryTextColor = text('secondary text', fill, r.decision)
   v.tertiaryColor = surface
   v.tertiaryTextColor = text('subgraph title', r.title, surface)
@@ -168,8 +192,14 @@ function curated(look: Curated): PictureTheme {
   v.titleColor = text('titles', r.title, bg, surface)
   // Subgraphs, state groups and the like: the surface, framed.
   v.clusterBkg = v.compositeBackground = v.altBackground = surface
-  v.clusterBorder = v.border2 = r.frame
-  v.compositeTitleBackground = surface
+  // Mermaid 12 strokes a subgraph in flowContainerStroke, or secondaryBorderColor; both take the frame color here.
+  v.clusterBorder =
+    v.border2 =
+    v.tertiaryBorderColor =
+    v.flowContainerStroke =
+      line('subgraph borders', r.frame, bg, surface)
+  // A composite state's title bar: node-colored, so the state label color reads on it as on a state.
+  v.compositeTitleBackground = r.node
   // Notes.
   v.noteBkgColor = v.noteBorderColor = r.note
   v.noteTextColor = text('note text', fill, r.note)
@@ -183,7 +213,7 @@ function curated(look: Curated): PictureTheme {
   v.signalTextColor = text('message text', r.label, bg)
   v.activationBkgColor = v.activationBorderColor = r.decision
   v.labelBoxBkgColor = surface
-  v.labelBoxBorderColor = line('loop boxes', r.frame, bg)
+  v.labelBoxBorderColor = line('loop boxes', r.frame, bg, surface)
   v.labelTextColor = text('loop label', r.frame, surface)
   v.loopTextColor = text('loop condition', r.label, bg)
   v.sequenceNumberColor = text('sequence number', bg, r.edge)
@@ -191,7 +221,7 @@ function curated(look: Curated): PictureTheme {
   // Class, state and ER.
   v.classText = text('class text', fill, r.node)
   v.stateBkg = r.node
-  v.stateLabelColor = text('state text', fill, r.node)
+  v.stateLabelColor = text('state text', fill, r.node, v.compositeTitleBackground as string)
   v.transitionColor = line('transitions', r.edge, bg)
   v.transitionLabelColor = text('transition label', fill, r.node)
   v.labelBackgroundColor = r.node
@@ -218,8 +248,9 @@ function curated(look: Curated): PictureTheme {
     v[`gitInv${i}`] = bg
   }
 
-  v.commitLabelBackground = surface
-  v.commitLabelColor = text('commit labels', r.edge, surface)
+  v.commitLabelBackground = bg
+  v.commitLabelColor = text('commit labels', r.edge, bg)
+  v.commitLineColor = line('commit lines', r.edge, bg)
   v.tagLabelBackground = v.tagLabelBorder = r.decision
   v.tagLabelColor = text('tag labels', fill, r.decision)
 
@@ -228,8 +259,10 @@ function curated(look: Curated): PictureTheme {
   slots.forEach((c, i) => {
     v[`cScale${i}`] = c
     v[`cScaleInv${i}`] = bg
+    v[`cScalePeer${i}`] = c
+    const event = brighten(c, EVENT_BRIGHTNESS)
     v[`cScaleLabel${i}`] =
-      i === 11 ? text('timeline connectors and last section', fill, c, bg) : text(`section ${i}`, fill, c)
+      i === 11 ? text('timeline connectors and last section', fill, c, event, bg) : text(`section ${i}`, fill, c, event)
   })
 
   // Journey: Mermaid draws its task text in textColor, the canvas text color, which also writes its legend on the
@@ -249,28 +282,48 @@ function curated(look: Curated): PictureTheme {
   v.altSectionBkgColor = bg
   v.excludeBkgColor = surface
   v.taskBkgColor = v.taskBorderColor = r.node
-  v.activeTaskBkgColor = v.activeTaskBorderColor = r.decision
-  v.doneTaskBkgColor = v.doneTaskBorderColor = r.value
   v.critBkgColor = v.critBorderColor = r.arrow
   v.taskTextColor = v.taskTextLightColor = text('gantt task text', fill, r.node, r.arrow)
-  v.taskTextDarkColor = text('gantt active and done task text', fill, r.decision, r.value)
+  // Mermaid writes an active or done task's label in one color inside its bar and beside it, on a section band: so the
+  // canvas text color, with the active and done fills toned toward the canvas until it reads on them.
+  const dark = v.textColor as string
+  const done = toneFor([r.decision, r.value], bg, dark)
+  v.activeTaskBkgColor = v.activeTaskBorderColor = mix(r.decision, bg, done)
+  v.doneTaskBkgColor = v.doneTaskBorderColor = mix(r.value, bg, done)
+  v.taskTextDarkColor = pairs.on(
+    'gantt active and done task text',
+    dark,
+    v.activeTaskBkgColor as string,
+    v.doneTaskBkgColor as string,
+    surface,
+    bg,
+  )
   v.taskTextOutsideColor = text('gantt text beside a task', r.edge, surface, bg)
   v.taskTextClickableColor = text('gantt clickable task', r.label, surface, bg)
-  v.gridColor = line('gantt grid', r.edge, bg)
-  v.todayLineColor = line('gantt today line', r.arrow, bg)
-  v.vertLineColor = line('gantt marker line', r.frame, bg)
+  v.gridColor = line('gantt grid', r.edge, bg, surface)
+  v.todayLineColor = line('gantt today line', r.arrow, bg, surface)
+  v.vertLineColor = line('gantt marker line', r.frame, bg, surface)
+  // Errors: Mermaid's error picture, in the arrow color.
+  v.errorBkgColor = r.arrow
+  v.errorTextColor = text('error text', fill, r.arrow)
 
-  // Quadrant: the four quadrants in surface and canvas, points and text readable on both.
-  v.quadrant1Fill = v.quadrant4Fill = surface
-  v.quadrant2Fill = v.quadrant3Fill = bg
-  for (let i = 1; i <= 4; i++) {
-    v[`quadrant${i}TextFill`] = text(`quadrant ${i} text`, r.edge, i === 1 || i === 4 ? surface : bg)
-  }
-
-  v.quadrantPointFill = line('quadrant points', r.arrow, surface, bg)
-  v.quadrantPointTextFill = text('quadrant point text', r.label, surface, bg)
+  // Quadrant: four series colors toned toward the canvas, as journey's sections, so the canvas text reads on each and
+  // the points and borders on all of them.
+  const quadrants = [0, 1, 2, 3].map((i) => mix(series[i]!, bg, toneFor(series.slice(0, 4), bg, dark)))
+  quadrants.forEach((q, i) => {
+    v[`quadrant${i + 1}Fill`] = q
+    v[`quadrant${i + 1}TextFill`] = pairs.on(`quadrant ${i + 1} text`, dark, q)
+  })
+  v.quadrantPointFill = line('quadrant points', r.arrow, ...quadrants)
+  v.quadrantPointTextFill = text('quadrant point text', r.label, ...quadrants)
   v.quadrantXAxisTextFill = v.quadrantYAxisTextFill = text('quadrant axes', r.edge, bg)
-  v.quadrantInternalBorderStrokeFill = v.quadrantExternalBorderStrokeFill = line('quadrant borders', r.frame, bg)
+  v.quadrantInternalBorderStrokeFill = v.quadrantExternalBorderStrokeFill = line(
+    'quadrant borders',
+    r.frame,
+    bg,
+    surface,
+    ...quadrants,
+  )
   v.quadrantTitleFill = text('quadrant title', r.title, bg)
 
   // xychart: the plot on the canvas, every series line readable on it. Mermaid 11 replaces a partial object whole.
@@ -331,6 +384,27 @@ function standard(look: 'default-dark' | 'default-light'): PictureTheme {
 
   // Journey keeps Mermaid's own section colors: its task text is the theme's canvas text color, which only Mermaid's
   // own fills were chosen for.
+
+  // xychart: Mermaid's own plot and axes (Mermaid 11 replaces a partial object whole, so they are spelled out), and the
+  // series colors that read on its plot.
+  const plot = cc.plot
+  const lines = series.filter((c) => contrast(c, plot.background) >= MIN)
+  v.xyChart = {
+    backgroundColor: plot.background,
+    titleColor: plot.text,
+    dataLabelColor: plot.text,
+    legendTextColor: plot.text,
+    xAxisTitleColor: plot.text,
+    xAxisLabelColor: plot.text,
+    xAxisTickColor: plot.text,
+    xAxisLineColor: plot.text,
+    yAxisTitleColor: plot.text,
+    yAxisLabelColor: plot.text,
+    yAxisTickColor: plot.text,
+    yAxisLineColor: plot.text,
+    plotColorPalette: lines.map((c, i) => pairs.on(`chart series ${i + 1}`, c, plot.background)).join(','),
+  }
+  pairs.on('chart text', plot.text, plot.background)
 
   return {
     config: {
