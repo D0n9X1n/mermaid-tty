@@ -13,7 +13,7 @@
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/D0n9X1n/mermaid-tty/blob/main/package.json)
 [![Platforms](https://img.shields.io/badge/platform-macOS_%7C_Linux_%7C_Windows-informational)](https://github.com/D0n9X1n/mermaid-tty/blob/main/.github/workflows/ci.yml)
 
-Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-tty is a Claude Code plugin that draws every closed Mermaid fence as a colored diagram sized to your window, or as Mermaid's own picture where the terminal can show one.
+Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-tty is a Claude Code plugin that draws every closed Mermaid fence as a colored diagram sized to your window, or as Mermaid's own picture where the terminal can show one. It draws in nord out of the box, and asks Claude for left-to-right flowcharts, which fit a wide terminal.
 
 ![A Claude Code reply with its mermaid fence drawn by mermaid-tty](assets/readme/preview.svg)
 
@@ -45,13 +45,13 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 | ![A gantt chart drawn by mermaid-tty](assets/readme/gantt.svg) | ![A class diagram drawn by mermaid-tty](assets/readme/class.svg) |
 | ![A pie chart drawn by mermaid-tty](assets/readme/pie.svg) | ![A flowchart with Chinese labels drawn by mermaid-tty](assets/readme/cjk.svg) |
 
-**Six themes**: follow your Claude Code theme, pick a curated palette, or go `mono`:
+**Six themes**: nord by default, three more curated palettes, your Claude Code theme, or `mono`. Switch any time with `/mermaid-tty theme <name>`:
 
-| default | nord | dracula |
+| nord (default) | dracula | gruvbox |
 |---|---|---|
-| ![default](assets/readme/theme-default.svg) | ![nord](assets/readme/theme-nord.svg) | ![dracula](assets/readme/theme-dracula.svg) |
-| **gruvbox** | **solarized** | **mono** |
-| ![gruvbox](assets/readme/theme-gruvbox.svg) | ![solarized](assets/readme/theme-solarized.svg) | ![mono](assets/readme/theme-mono.svg) |
+| ![nord](assets/readme/theme-nord.svg) | ![dracula](assets/readme/theme-dracula.svg) | ![gruvbox](assets/readme/theme-gruvbox.svg) |
+| **solarized** | **default** | **mono** |
+| ![solarized](assets/readme/theme-solarized.svg) | ![default](assets/readme/theme-default.svg) | ![mono](assets/readme/theme-mono.svg) |
 
 ## Features
 
@@ -60,7 +60,8 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Fits your terminal.** No row is wider than your window's columns: gaps tighten, labels wrap, and wide graphs turn vertical.
 - **Exact CJK widths.** Chinese, Japanese and Korean labels take two columns each, so every line meets.
 - **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme.
-- **Six themes.** `default` follows your Claude Code theme; `nord`, `dracula`, `gruvbox` and `solarized` use their official colors; `mono` draws without color.
+- **Six themes, switched live.** `nord`, the default, `dracula`, `gruvbox` and `solarized` use their official colors; `default` follows your Claude Code theme; `mono` draws without color. `/mermaid-tty theme <name>` redraws at once and keeps the choice.
+- **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. A diagram always draws in the direction its source gives.
 - **The source stays yours.** The transcript keeps the Mermaid text, `/copy` copies it exactly, and one command shows it again.
 - **Nothing else to install, nothing left behind.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies, and no picture files once a session closes.
 - **Made for the CLI.** It works in Claude Code's terminal; the desktop app and SDK keep their own drawing.
@@ -69,7 +70,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 
 ```sh
 claude plugin marketplace add D0n9X1n/mermaid-tty
-claude plugin install mermaid-tty@mermaid-tty --config theme=default
+claude plugin install mermaid-tty@mermaid-tty --config theme=nord
 ```
 
 Start a new Claude Code session (2.1.287 or later) and ask for a diagram. For pictures in kitty, Ghostty or SonicTerm, also install [mermaid-cli](https://github.com/mermaid-js/mermaid-cli): `npm i -g @mermaid-js/mermaid-cli`.
@@ -80,13 +81,9 @@ Start a new Claude Code session (2.1.287 or later) and ask for a diagram. For pi
 | `/mermaid-tty text` | Draws diagrams as text, even where pictures work |
 | `/mermaid-tty source` | Shows the Mermaid source, including replies already on screen |
 | `/mermaid-tty images auto\|on\|off` | Pictures where detected, always, or never; kept across sessions |
+| `/mermaid-tty theme <name>` | Switches the theme at once: `nord`, `dracula`, `gruvbox`, `solarized`, `default` or `mono`; kept across sessions |
+| `/mermaid-tty direction LR\|TB\|off` | The flowchart direction Claude is asked to write; kept across sessions |
 | `/copy` | Copies a reply with its exact Mermaid source |
-
-Pick a theme any time:
-
-```sh
-echo '{"theme":"nord"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin
-```
 
 ## Learn more
 

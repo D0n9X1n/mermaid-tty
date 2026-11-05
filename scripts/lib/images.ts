@@ -14,7 +14,7 @@ export const IMAGES: Image[] = [
   {
     file: 'assets/readme/preview.svg',
     source: 'assets/readme/src/preview.md',
-    columns: 72,
+    columns: 90,
     theme: 'nord',
     reply: true,
   },
@@ -38,16 +38,16 @@ export const IMAGES: Image[] = [
     reply: true,
     picture: `assets/readme/src/picture-${theme}.png`,
   })),
-  { file: 'assets/readme/before.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default', raw: true },
-  { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'default' },
-  { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'default' },
-  { file: 'assets/readme/cjk.svg', source: 'assets/readme/src/cjk.mmd', columns: 60, theme: 'default' },
+  { file: 'assets/readme/before.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'nord', raw: true },
+  { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'nord' },
+  { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'nord' },
+  { file: 'assets/readme/cjk.svg', source: 'assets/readme/src/cjk.mmd', columns: 60, theme: 'nord' },
   // A showcase of the other types, one each, drawn by core like the rest.
   ...['mindmap', 'gitgraph', 'gantt', 'class', 'pie'].map((t) => ({
     file: `assets/readme/${t}.svg`,
     source: `assets/readme/src/${t}.mmd`,
     columns: 60,
-    theme: 'default' as const,
+    theme: 'nord' as const,
   })),
   ...THEMES.map((theme) => ({
     file: `assets/readme/theme-${theme}.svg`,

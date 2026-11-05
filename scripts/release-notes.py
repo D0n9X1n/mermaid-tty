@@ -22,7 +22,7 @@ RELEASE_PR = re.compile(rf"mermaid-tty {TAG.pattern}")
 
 # The install block check-release.ts requires in every release's notes (scripts/lib/workflow.ts, INSTALL).
 INSTALL = ("claude plugin marketplace add D0n9X1n/mermaid-tty\n"
-           "claude plugin install mermaid-tty@mermaid-tty --config theme=default")
+           "claude plugin install mermaid-tty@mermaid-tty --config theme=nord")
 
 
 def markdown_line(value):

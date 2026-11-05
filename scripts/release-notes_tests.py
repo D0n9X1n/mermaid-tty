@@ -34,7 +34,7 @@ sys.exit(module.main(sys.argv[3:], api=api))
 '''
 
 INSTALL = ("claude plugin marketplace add D0n9X1n/mermaid-tty\n"
-           "claude plugin install mermaid-tty@mermaid-tty --config theme=default")
+           "claude plugin install mermaid-tty@mermaid-tty --config theme=nord")
 
 
 class ReleaseNotesTests(unittest.TestCase):
