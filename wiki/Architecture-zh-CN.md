@@ -139,7 +139,7 @@ flowchart TD
 `hooks/hooks.json` 加载 `hooks/register.tsx`，后者注册以下钩子：
 
 - **`session.start`** 注册 `/mermaid-tty` 命令，并将图片设置从 `$.store` 复制到 `$.state` 的 `mermaid-tty.images`；未设置、无法识别或读取失败时为 `auto`。它还将 `mermaid-tty.theme` 设为配置的主题、`mermaid-tty.direction` 设为配置的方向，使每次加载都从已保存的选项开始。若会话中的某次加载发现已设置了另一个方向（例如在 `/config` 中修改后），会用 `$.session.append` 为模型追加一条说明。
-- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。`theme <name>` 写入 `mermaid-tty.theme`，使 `ui.render` 失效，并通过 `$.config.set` 将名称保存到插件自己的 `theme` 行；保存被拒绝或失败时仍在本次会话中生效，并在回复中说明。`direction <LR|TB|off>` 以同样方式处理 `mermaid-tty.direction` 和 `direction` 行，并追加一条用户消息告知模型，因为对话的系统提示词保持首次发送时的内容。对保存被拒绝的主题或方向再次发出同一请求时，会重试保存。
+- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。`theme <name>` 写入 `mermaid-tty.theme`，使 `ui.render` 失效，并通过 `$.config.set` 将名称保存到插件自己的 `theme` 行；保存被拒绝或失败时仍在本次会话中生效，并在回复中说明。`direction <LR|TB|off>` 以同样方式处理 `mermaid-tty.direction` 和 `direction` 行，并追加一条用户消息告知模型，因为对话的系统提示词保持首次发送时的内容。对保存被拒绝的主题或方向再次发出同一请求时，会重试保存；对说明被拒绝的方向，会重试说明。
 - **`prompt.compose`** 在引擎各节之后、缓存边界的会话一侧添加 `mermaid-tty:flowchart-direction` 一节，要求 Claude 编写的流程图以 `flowchart LR` 或 `flowchart TB` 开头。方向为 `off` 或会话不在终端绘图时不添加；出错时原样返回引擎的各节。
 - **`ui.render`** 处理 `AssistantMessage`。视口未提供宽度、界面不是终端、处于源码模式或消息标记为展开时，回复原样传递。否则，钩子拆分回复，渲染每个 `mermaid` 块，将回退块拼回周围正文。若没有绘出任何图，整个回复原样交给 Claude Code；否则返回由正文与图表行组成的纵向布局，正文仍由 Claude Code 显示。回复以图表开头时，先交给 Claude Code 一个空块，以保留回复前的项目符号。
 

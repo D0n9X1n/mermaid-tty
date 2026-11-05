@@ -46,9 +46,9 @@ mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` �
 | `TB` | 每个流程图以 `flowchart TB` 开头，从上到下。 |
 | `off` | 不作要求，由 Claude 自行选择方向。 |
 
-该选项只影响 Claude 编写的内容。mermaid-tty 总是按源码给出的方向绘制图表，因此你写的图表或你要求的方向都会保留。设为 `LR` 或 `TB` 时，mermaid-tty 会在终端绘图的会话中向系统提示词添加一节 `mermaid-tty:flowchart-direction`；设为 `off` 时不添加。
+该选项只影响 Claude 编写的内容，不改变图表的绘制方式。你写的图表或你要求的方向都会保留。与任何 `LR` 源码一样，从左到右的流程图在窗口放不下时，mermaid-tty 仍会从上到下绘制（见“使用”）。设为 `LR` 或 `TB` 时，mermaid-tty 会在终端绘图的会话中向系统提示词添加一节 `mermaid-tty:flowchart-direction`；设为 `off` 时不添加。
 
-设置方式与 `theme` 相同，例如 `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty direction LR|TB|off`，它会像 `/mermaid-tty theme` 一样保存该选项。`/mermaid-tty direction` 报告当前设置。对话的系统提示词保持首次发送时的内容，因此在对话中修改时还会添加一条供 Claude 阅读的简短说明；新对话会使用新的一节。
+设置方式与 `theme` 相同，例如 `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty direction LR|TB|off`，它会像 `/mermaid-tty theme` 一样保存该选项。`/mermaid-tty direction` 报告当前设置。对话的系统提示词保持首次发送时的内容，因此在对话中修改时还会添加一条供 Claude 阅读的简短说明；新对话会使用新的一节。若该说明被拒绝，回复会说明 Claude 未被告知，再次运行同一命令会重试。
 
 ## 配色
 

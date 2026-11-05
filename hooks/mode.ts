@@ -17,7 +17,7 @@ export const isImages = (v: unknown): v is Images => v === 'auto' || v === 'on' 
 export const isTheme = (v: unknown): v is ThemeName => typeof v === 'string' && Object.hasOwn(THEMES, v)
 
 // The flowchart direction mermaid-tty asks Claude to write: LR, as a terminal is wider than it is tall; TB; or off,
-// which asks for nothing. It shapes only what Claude writes: a drawing always keeps the direction its source gives.
+// which asks for nothing. It shapes only what Claude writes, never how a diagram is drawn.
 export type Direction = 'LR' | 'TB' | 'off'
 
 export const isDirection = (v: unknown): v is Direction => v === 'LR' || v === 'TB' || v === 'off'
@@ -106,15 +106,19 @@ export const themeReply = (t: ThemeName, changed: boolean, saved: boolean) => {
 }
 
 // The direction command's reply: what Claude is now asked for, or the setting in force when nothing changed; a
-// direction that could not be saved says it lasts only this session.
+// direction that could not be saved says it lasts only this session, and one this conversation was not told of says so.
 const DIRECTION_CHANGED: Record<Direction, string> = {
   LR: 'mermaid-tty: asking Claude for left-to-right flowcharts',
   TB: 'mermaid-tty: asking Claude for top-to-bottom flowcharts',
   off: 'mermaid-tty: leaving flowchart direction to Claude',
 }
-export const directionReply = (d: Direction, changed: boolean, saved: boolean) => {
+export const directionReply = (d: Direction, changed: boolean, saved: boolean, told = true) => {
+  const notes = [
+    ...(saved ? [] : ['this session only: the setting was not saved']),
+    ...(told ? [] : ['Claude was not told in this conversation; new conversations get it']),
+  ]
   const said = changed ? DIRECTION_CHANGED[d] : `mermaid-tty direction: ${d}`
-  return saved ? said : `${said} (this session only: the setting was not saved)`
+  return notes.length === 0 ? said : `${said} (${notes.join('; ')})`
 }
 
 const DIRECTION_NAMES: Record<'LR' | 'TB', string> = { LR: 'left to right', TB: 'top to bottom' }

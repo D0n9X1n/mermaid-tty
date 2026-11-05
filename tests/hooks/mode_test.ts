@@ -144,6 +144,11 @@ test('A6.command: direction parses LR, TB or off; bare direction reports; anythi
 test('A6.command: a direction reply names the setting, says whether it changed, and whether it was saved', () => {
   assert.equal(directionReply('LR', false, true), 'mermaid-tty direction: LR')
   assert.equal(
+    directionReply('TB', true, true, false),
+    'mermaid-tty: asking Claude for top-to-bottom flowcharts ' +
+      '(Claude was not told in this conversation; new conversations get it)',
+  )
+  assert.equal(
     directionReply('TB', false, false),
     'mermaid-tty direction: TB (this session only: the setting was not saved)',
   )

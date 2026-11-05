@@ -46,9 +46,9 @@ To switch while Claude Code runs, use `/mermaid-tty theme <name>`. The replies o
 | `TB` | Open each flowchart with `flowchart TB`, top to bottom. |
 | `off` | Nothing: Claude picks the direction. |
 
-The option only shapes what Claude writes. mermaid-tty draws every diagram in the direction its source gives, so a diagram you write, or a direction you ask for, is kept. With `LR` or `TB`, mermaid-tty adds a section to the system prompt, `mermaid-tty:flowchart-direction`, in sessions that draw in a terminal. `off` adds nothing.
+The option only shapes what Claude writes: it never changes how a diagram is drawn. A diagram you write, or a direction you ask for, is kept. mermaid-tty still draws a left-to-right flowchart top to bottom when it is too wide for the window, as for any `LR` source (see Usage). With `LR` or `TB`, mermaid-tty adds a section to the system prompt, `mermaid-tty:flowchart-direction`, in sessions that draw in a terminal. `off` adds nothing.
 
-Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty direction LR|TB|off`, which saves the option the same way `/mermaid-tty theme` does. `/mermaid-tty direction` reports the setting in force. A conversation's system prompt stays as it was first sent, so a change made during a conversation also adds a short note that Claude reads; a new conversation gets the new section.
+Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty direction LR|TB|off`, which saves the option the same way `/mermaid-tty theme` does. `/mermaid-tty direction` reports the setting in force. A conversation's system prompt stays as it was first sent, so a change made during a conversation also adds a short note that Claude reads; a new conversation gets the new section. If that note is refused, the reply says Claude was not told, and running the same command again retries it.
 
 ## Palettes
 

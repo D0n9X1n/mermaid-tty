@@ -106,12 +106,14 @@ async function saveOption($: any, field: 'theme' | 'direction', value: string): 
 }
 
 // Tells the running thread the direction changed: its system prompt stays as sent, so the change goes in a user row the
-// model reads. A refused or failed note leaves the setting changed; a new thread gets the new section anyway.
-async function noteDirection($: any, d: Direction): Promise<void> {
+// model reads. True once the row is stored; false when a hook refuses it or the call fails, which leaves the setting
+// changed but this thread untold.
+async function noteDirection($: any, d: Direction): Promise<boolean> {
   try {
-    await $.session.append({ message: { type: 'user', content: [{ type: 'text', text: directionNote(d) }] } })
+    const r = await $.session.append({ message: { type: 'user', content: [{ type: 'text', text: directionNote(d) }] } })
+    return r?.deny === undefined
   } catch {
-    // The setting stands without the note.
+    return false
   }
 }
 
@@ -146,6 +148,9 @@ export const register: Register = (on, options) => {
   // the save. A load starts from the saved options, so it starts saved.
   let isThemeUnsaved = false
   let isDirectionUnsaved = false
+  // Whether this thread has not been told the direction in force, because the note was refused, so asking for it again
+  // retries the note.
+  let isDirectionUntold = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
 
@@ -167,11 +172,9 @@ export const register: Register = (on, options) => {
     // told in a row of its own.
     const was = (await $.state.get(DIRECTION)).value
     await $.state.set(DIRECTION, configuredDirection)
-    if (isDirection(was) && was !== configuredDirection) {
-      await noteDirection($, configuredDirection)
-    }
-
     isDirectionUnsaved = false
+    isDirectionUntold =
+      isDirection(was) && was !== configuredDirection && !(await noteDirection($, configuredDirection))
     // mermaid-tty draws only in the CLI's terminal, so only a terminal session renders pictures or sweeps for them: a
     // desktop or SDK session leaves the temp dir alone. A past session cut short may have left picture temp dirs; sweep
     // them without holding the start up.
@@ -225,19 +228,26 @@ export const register: Register = (on, options) => {
 
     if ('direction' in a) {
       const was = await direction($, configuredDirection)
-      if (a.direction === 'report' || (a.direction === was && !isDirectionUnsaved)) {
-        return { text: directionReply(was, false, !isDirectionUnsaved) }
+      if (a.direction === 'report' || (a.direction === was && !isDirectionUnsaved && !isDirectionUntold)) {
+        return { text: directionReply(was, false, !isDirectionUnsaved, !isDirectionUntold) }
       }
 
-      // As for the theme: the direction in force, asked for again after its save was refused, tries the save again.
+      // As for the theme: the direction in force, asked for again after its save or its note was refused, tries what
+      // failed again.
       const changed = a.direction !== was
       if (changed) {
         await $.state.set(DIRECTION, a.direction)
-        await noteDirection($, a.direction)
       }
 
-      isDirectionUnsaved = !(await saveOption($, 'direction', a.direction))
-      return { text: directionReply(a.direction, changed, !isDirectionUnsaved) }
+      if (changed || isDirectionUntold) {
+        isDirectionUntold = !(await noteDirection($, a.direction))
+      }
+
+      if (changed || isDirectionUnsaved) {
+        isDirectionUnsaved = !(await saveOption($, 'direction', a.direction))
+      }
+
+      return { text: directionReply(a.direction, changed, !isDirectionUnsaved, !isDirectionUntold) }
     }
 
     if ('images' in a) {

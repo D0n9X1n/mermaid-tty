@@ -122,12 +122,31 @@ test('A5.errors: asking again for a direction whose save was refused retries the
   expect(notes(session)).toHaveLength(1)
 })
 
-test('A5.errors: a refused note still switches the direction', async ($, on) => {
+// A refused note leaves the setting changed and says this conversation was not told; asking again retries the note.
+test('A5.errors: a refused note says so, and asking again retries it', async ($, on) => {
   engine(on)
   config(on)
-  on('session.append', async () => ({ deny: 'no notes' }))
-  expect((await RUN($, 'direction TB')).text).toBe('mermaid-tty: asking Claude for top-to-bottom flowcharts')
+  let refusals = 1
+  const told: string[] = []
+  on('session.append', async (_$: any, e: any, next: any) => {
+    if (refusals > 0) {
+      refusals--
+      return { deny: 'no notes' }
+    }
+
+    told.push(e.message.content[0].text)
+    return next(e)
+  })
+  expect((await RUN($, 'direction TB')).text).toBe(
+    'mermaid-tty: asking Claude for top-to-bottom flowcharts ' +
+      '(Claude was not told in this conversation; new conversations get it)',
+  )
   expect((await ours($))?.text).toContain('`flowchart TB`')
+  expect((await RUN($, 'direction TB')).text).toBe('mermaid-tty direction: TB')
+  expect(told).toHaveLength(1)
+  expect(told[0]).toContain('`flowchart TB`')
+  expect((await RUN($, 'direction TB')).text).toBe('mermaid-tty direction: TB')
+  expect(told).toHaveLength(1)
 })
 
 // A /config change reloads the module and runs session.start again within the session: the thread's prompt still holds

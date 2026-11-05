@@ -24,7 +24,7 @@
     "direction": {
       "type": "string",
       "title": "Flowchart direction",
-      "description": "The direction Claude is asked to write flowcharts in: LR (left to right) suits a terminal, which is wider than it is tall; TB is top to bottom; off asks for nothing. Diagrams always draw as their source says. /mermaid-tty direction switches at runtime.",
+      "description": "The direction Claude is asked to write flowcharts in: LR (left to right) suits a terminal, which is wider than it is tall; TB is top to bottom; off asks for nothing. It never changes how a diagram is drawn. /mermaid-tty direction switches at runtime.",
       "default": "LR",
       "options": [
         "LR",
