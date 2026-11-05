@@ -5,6 +5,8 @@ declare module 'claude-code' {
       images: 'auto' | 'on' | 'off' // the picture setting, mirrored from $.store; unset: not yet read
       // the theme drawn in; unset: the configured one
       theme: 'default' | 'nord' | 'dracula' | 'gruvbox' | 'solarized' | 'mono'
+      // the flowchart direction the prompt asks for; unset: the configured one
+      direction: 'LR' | 'TB' | 'off'
     }
   }
 }

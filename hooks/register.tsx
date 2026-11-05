@@ -1,7 +1,21 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
-import { imagesReply, isImages, isTheme, modeReply, parseModeArgs, themeReply, type Images, type Mode } from './mode.ts'
+import {
+  directionNote,
+  directionReply,
+  directionSection,
+  imagesReply,
+  isDirection,
+  isImages,
+  isTheme,
+  modeReply,
+  parseModeArgs,
+  themeReply,
+  type Direction,
+  type Images,
+  type Mode,
+} from './mode.ts'
 import { safePlan, sweepPictures } from './plan.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that fails to draw (joined to the
@@ -12,9 +26,13 @@ import { safePlan, sweepPictures } from './plan.ts'
 // /mermaid-tty images auto|on|off sets whether it tries: kept in $.store across sessions and mirrored into $.state,
 // which a drawing reads, so a change redraws at once with no restart. /mermaid-tty theme sets the theme the same way:
 // in $.state for this session, and saved as the plugin's theme setting through $.config.set for later ones.
+// /mermaid-tty direction LR|TB|off sets, the same way, the flowchart direction a system-prompt section asks Claude to
+// write; it never changes how a diagram is drawn.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
 const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
+const DIRECTION = { plugin: 'mermaid-tty', key: 'direction' } as const
+const SECTION_ID = 'mermaid-tty:flowchart-direction'
 // The value each mode keeps in $.state, as mode() reads it back.
 const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
 
@@ -47,6 +65,17 @@ async function theme($: StateDollar, configured: ThemeName): Promise<ThemeName> 
   }
 }
 
+// The direction the prompt asks for: this session's, set by /mermaid-tty direction, else the configured one; a failing
+// read is the configured one.
+async function direction($: StateDollar, configured: Direction): Promise<Direction> {
+  try {
+    const v = (await $.state.get(DIRECTION)).value
+    return isDirection(v) ? v : configured
+  } catch {
+    return configured
+  }
+}
+
 // Whether a /config row's owner is this plugin: mermaid-tty, or mermaid-tty@<marketplace> as installed. A plugin whose
 // name only starts the same, such as mermaid-tty-extra, is another plugin.
 const isOurs = (name: unknown) => name === 'mermaid-tty' || String(name).startsWith('mermaid-tty@')
@@ -54,7 +83,7 @@ const isOurs = (name: unknown) => name === 'mermaid-tty' || String(name).startsW
 // Saves one of the plugin's own /config rows, as if the person picked the value there: true once written, false when no
 // row is found, a hook or a trusted source refuses it, or the call fails. The row is <plugin>.<field>; the plugin's
 // name may carry a marketplace suffix, so the row is found by owner and field, not by a fixed key.
-async function saveOption($: any, field: 'theme', value: string): Promise<boolean> {
+async function saveOption($: any, field: 'theme' | 'direction', value: string): Promise<boolean> {
   try {
     const rows = await $.config.list()
     const suffix = `.${field}`
@@ -73,6 +102,16 @@ async function saveOption($: any, field: 'theme', value: string): Promise<boolea
     return done.deny === undefined
   } catch {
     return false
+  }
+}
+
+// Tells the running thread the direction changed: its system prompt stays as sent, so the change goes in a user row the
+// model reads. A refused or failed note leaves the setting changed; a new thread gets the new section anyway.
+async function noteDirection($: any, d: Direction): Promise<void> {
+  try {
+    await $.session.append({ message: { type: 'user', content: [{ type: 'text', text: directionNote(d) }] } })
+  } catch {
+    // The setting stands without the note.
   }
 }
 
@@ -101,9 +140,12 @@ async function loadImages($: any): Promise<Images> {
 export const register: Register = (on, options) => {
   // nord unless the setting names another theme: an unset or unknown value draws in nord, the manifest's default.
   const configured: ThemeName = isTheme(options.theme) ? options.theme : 'nord'
-  // Whether the theme in force was set by the command but not saved, so asking for it again retries the save. A load
-  // starts from the saved option, so it starts saved.
+  // LR unless the setting says TB or off: a terminal is wider than it is tall.
+  const configuredDirection: Direction = isDirection(options.direction) ? options.direction : 'LR'
+  // Whether the theme, or the direction, in force was set by the command but not saved, so asking for it again retries
+  // the save. A load starts from the saved options, so it starts saved.
   let isThemeUnsaved = false
+  let isDirectionUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
 
@@ -111,13 +153,25 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'mermaid-tty',
       description:
-        'Show Mermaid diagrams as source, diagram or text, with or without pictures: /mermaid-tty [source|diagram|text|images [auto|on|off]]',
+        'Show Mermaid diagrams as source, diagram or text, in a theme, ' +
+        'and set the flowchart direction Claude writes: ' +
+        '/mermaid-tty [source|diagram|text|images [auto|on|off]|theme <name>|direction [LR|TB|off]]',
     })
     await loadImages($)
     // Each load starts from the configured theme, so a change in /config, which reloads the module, is never hidden by
     // a theme the command set earlier.
     await $.state.set(THEME, configured)
     isThemeUnsaved = false
+    // The same for the direction. A load within a session that already held another one is a /config change, or a
+    // command whose save the reload now undoes: the thread's system prompt still has the old section, so the model is
+    // told in a row of its own.
+    const was = (await $.state.get(DIRECTION)).value
+    await $.state.set(DIRECTION, configuredDirection)
+    if (isDirection(was) && was !== configuredDirection) {
+      await noteDirection($, configuredDirection)
+    }
+
+    isDirectionUnsaved = false
     // mermaid-tty draws only in the CLI's terminal, so only a terminal session renders pictures or sweeps for them: a
     // desktop or SDK session leaves the temp dir alone. A past session cut short may have left picture temp dirs; sweep
     // them without holding the start up.
@@ -169,6 +223,23 @@ export const register: Register = (on, options) => {
       return { text: themeReply(a.theme, changed, !isThemeUnsaved) }
     }
 
+    if ('direction' in a) {
+      const was = await direction($, configuredDirection)
+      if (a.direction === 'report' || (a.direction === was && !isDirectionUnsaved)) {
+        return { text: directionReply(was, false, !isDirectionUnsaved) }
+      }
+
+      // As for the theme: the direction in force, asked for again after its save was refused, tries the save again.
+      const changed = a.direction !== was
+      if (changed) {
+        await $.state.set(DIRECTION, a.direction)
+        await noteDirection($, a.direction)
+      }
+
+      isDirectionUnsaved = !(await saveOption($, 'direction', a.direction))
+      return { text: directionReply(a.direction, changed, !isDirectionUnsaved) }
+    }
+
     if ('images' in a) {
       const was = await loadImages($)
       if (a.images === 'report') {
@@ -188,6 +259,19 @@ export const register: Register = (on, options) => {
     await $.state.set(SOURCE, STORED[a.set])
     $.ui.invalidate('ui.render')
     return { text: modeReply(a.set, a.set !== cur) }
+  })
+
+  // A section after the engine's own, on the session side of the cache boundary, asks Claude for the configured
+  // flowchart direction; off, or a session that draws in no terminal, adds nothing. A failure sends the engine's
+  // sections unchanged.
+  on('prompt.compose', async ($, e, next) => {
+    const r = await next(e)
+    try {
+      const text = e.surfaces.includes('terminal') ? directionSection(await direction($, configuredDirection)) : null
+      return text === null ? r : { sections: [...r.sections, { id: SECTION_ID, text, scope: 'session' as const }] }
+    } catch {
+      return r
+    }
   })
 
   // Fail closed: any error in the plugin's own work (mode, splitting, rendering, the debug log, resolving the UI) sends

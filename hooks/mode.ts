@@ -16,17 +16,29 @@ export const isImages = (v: unknown): v is Images => v === 'auto' || v === 'on' 
 // A theme name core draws, matched exactly: Object.hasOwn keeps out inherited names such as toString.
 export const isTheme = (v: unknown): v is ThemeName => typeof v === 'string' && Object.hasOwn(THEMES, v)
 
+// The flowchart direction mermaid-tty asks Claude to write: LR, as a terminal is wider than it is tall; TB; or off,
+// which asks for nothing. It shapes only what Claude writes: a drawing always keeps the direction its source gives.
+export type Direction = 'LR' | 'TB' | 'off'
+
+export const isDirection = (v: unknown): v is Direction => v === 'LR' || v === 'TB' || v === 'off'
+
+// The command's words for each direction, lower-cased as the argument is.
+const DIRECTION_WORDS: Readonly<Record<string, Direction>> = { lr: 'LR', tb: 'TB', off: 'off' }
+
 // The /mermaid-tty argument, trimmed and matched in any case. Left out or blank, it reports the mode. One mode word
 // sets the mode; images reports the picture setting, and images followed by one setting word sets it; theme reports the
-// theme, and theme followed by a theme name sets it. Another word, an extra one, or anything but a string is a usage
-// error: never ignored, never coerced (String(['source']) would be 'source').
+// theme, and theme followed by a theme name sets it; direction likewise, with LR, TB or off. Another word, an extra
+// one, or anything but a string is a usage error: never ignored, never coerced (String(['source']) would be 'source').
 export type ModeArgs =
   | { set: Mode }
   | { report: true }
   | { images: Images | 'report' }
   | { theme: ThemeName | 'report' }
+  | { direction: Direction | 'report' }
   | { error: string }
-const USAGE = `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [${Object.keys(THEMES).join('|')}]]`
+const USAGE =
+  `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [${Object.keys(THEMES).join('|')}]` +
+  '|direction [LR|TB|off]]'
 
 export const parseModeArgs = (a: unknown): ModeArgs => {
   if (a === undefined) {
@@ -58,6 +70,15 @@ export const parseModeArgs = (a: unknown): ModeArgs => {
     return isTheme(setting) ? { theme: setting } : { error: USAGE }
   }
 
+  if (w === 'direction' && rest.length === 0) {
+    if (setting === undefined) {
+      return { direction: 'report' }
+    }
+
+    const d = Object.hasOwn(DIRECTION_WORDS, setting) ? DIRECTION_WORDS[setting] : undefined
+    return d === undefined ? { error: USAGE } : { direction: d }
+  }
+
   return setting === undefined && (w === 'source' || w === 'diagram' || w === 'text') ? { set: w } : { error: USAGE }
 }
 
@@ -83,3 +104,38 @@ export const themeReply = (t: ThemeName, changed: boolean, saved: boolean) => {
   const said = changed ? `mermaid-tty: drawing in ${t}` : `mermaid-tty theme: ${t}`
   return saved ? said : `${said} (this session only: the setting was not saved)`
 }
+
+// The direction command's reply: what Claude is now asked for, or the setting in force when nothing changed; a
+// direction that could not be saved says it lasts only this session.
+const DIRECTION_CHANGED: Record<Direction, string> = {
+  LR: 'mermaid-tty: asking Claude for left-to-right flowcharts',
+  TB: 'mermaid-tty: asking Claude for top-to-bottom flowcharts',
+  off: 'mermaid-tty: leaving flowchart direction to Claude',
+}
+export const directionReply = (d: Direction, changed: boolean, saved: boolean) => {
+  const said = changed ? DIRECTION_CHANGED[d] : `mermaid-tty direction: ${d}`
+  return saved ? said : `${said} (this session only: the setting was not saved)`
+}
+
+const DIRECTION_NAMES: Record<'LR' | 'TB', string> = { LR: 'left to right', TB: 'top to bottom' }
+
+// The system-prompt section for a direction, or null for off. A diagram the person wrote, or a direction they ask for,
+// is theirs: the section only sets what Claude picks when nobody said.
+export const directionSection = (d: Direction): string | null => {
+  if (d === 'off') {
+    return null
+  }
+
+  return (
+    `Mermaid flowcharts are drawn in a terminal here. Open each flowchart you write with \`flowchart ${d}\`, so it ` +
+    `runs ${DIRECTION_NAMES[d]}, unless the person asks for another direction or the diagram is one they wrote.`
+  )
+}
+
+// The note a running thread gets when the direction changes: its system prompt was sent with the old section and stays
+// as sent, so the change reaches the model as a row of its own.
+export const directionNote = (d: Direction): string =>
+  d === 'off'
+    ? 'mermaid-tty: the flowchart direction setting is now off. You are no longer asked to use a set flowchart direction.'
+    : `mermaid-tty: the flowchart direction setting changed. From now on, open each Mermaid flowchart you write with ` +
+      `\`flowchart ${d}\`, unless the person asks for another direction or the diagram is one they wrote.`

@@ -1,6 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { imagesReply, modeReply, parseModeArgs, passThrough, themeReply } from '../../hooks/mode.ts'
+import {
+  directionNote,
+  directionReply,
+  directionSection,
+  imagesReply,
+  modeReply,
+  parseModeArgs,
+  passThrough,
+  themeReply,
+} from '../../hooks/mode.ts'
 
 test('A6.hook-tests: pass-through rules', () => {
   assert.equal(passThrough('desktop', {}, 'diagram'), true)
@@ -21,7 +30,7 @@ test('A6.command: arguments and replies', () => {
 test('A6.command: arguments are trimmed and case-blind; a second word is an error', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
   }
   assert.deepEqual(parseModeArgs('diagram'), { set: 'diagram' })
   assert.deepEqual(parseModeArgs('  '), { report: true })
@@ -43,7 +52,7 @@ test('A6.command: a reply for each mode, changed or not', () => {
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
   }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
   for (const a of [['source'], { toString: null }, 42, null]) {
@@ -59,7 +68,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
   assert.equal(modeReply('text', false), 'mermaid-tty mode: text')
   assert.deepEqual(parseModeArgs('svg'), {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
   })
 })
 
@@ -68,7 +77,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
 test('A6.command: images parses its setting; bare images reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
   }
   assert.deepEqual(parseModeArgs('images'), { images: 'report' })
   assert.deepEqual(parseModeArgs(' IMAGES  Off '), { images: 'off' })
@@ -91,7 +100,7 @@ test('A6.command: a reply for each images setting, changed or not', () => {
 test('A6.command: theme parses a theme name; bare theme reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
   }
   assert.deepEqual(parseModeArgs('theme'), { theme: 'report' })
   assert.deepEqual(parseModeArgs(' THEME  Dracula '), { theme: 'dracula' })
@@ -114,4 +123,45 @@ test('A6.command: a theme reply names the theme, says whether it changed, and wh
     themeReply('dracula', false, false),
     'mermaid-tty theme: dracula (this session only: the setting was not saved)',
   )
+})
+
+// direction takes one optional word after it: left out it reports; LR, TB or off set it, matched in any case and
+// written back in its own case; any other word, or a third one, is the usage.
+test('A6.command: direction parses LR, TB or off; bare direction reports; anything else is the usage', () => {
+  const usage = {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+  }
+  assert.deepEqual(parseModeArgs('direction'), { direction: 'report' })
+  assert.deepEqual(parseModeArgs(' DIRECTION lr '), { direction: 'LR' })
+  assert.deepEqual(parseModeArgs('direction TB'), { direction: 'TB' })
+  assert.deepEqual(parseModeArgs('direction Off'), { direction: 'off' })
+  assert.deepEqual(parseModeArgs('direction RL'), usage)
+  assert.deepEqual(parseModeArgs('direction LR TB'), usage)
+  assert.deepEqual(parseModeArgs('LR'), usage)
+})
+
+test('A6.command: a direction reply names the setting, says whether it changed, and whether it was saved', () => {
+  assert.equal(directionReply('LR', false, true), 'mermaid-tty direction: LR')
+  assert.equal(
+    directionReply('TB', false, false),
+    'mermaid-tty direction: TB (this session only: the setting was not saved)',
+  )
+  assert.equal(directionReply('TB', true, true), 'mermaid-tty: asking Claude for top-to-bottom flowcharts')
+  assert.equal(directionReply('LR', true, true), 'mermaid-tty: asking Claude for left-to-right flowcharts')
+  assert.equal(directionReply('off', true, true), 'mermaid-tty: leaving flowchart direction to Claude')
+  assert.equal(
+    directionReply('off', true, false),
+    'mermaid-tty: leaving flowchart direction to Claude (this session only: the setting was not saved)',
+  )
+})
+
+// The section names the header Claude should write, and leaves a direction the person chose alone; off has none.
+test('A6.direction: the system-prompt section asks for the configured header, and off asks for nothing', () => {
+  assert.match(directionSection('LR') ?? '', /`flowchart LR`/)
+  assert.match(directionSection('TB') ?? '', /`flowchart TB`/)
+  assert.match(directionSection('LR') ?? '', /asks for another direction/)
+  assert.equal(directionSection('off'), null)
+  assert.match(directionNote('TB'), /`flowchart TB`/)
+  assert.match(directionNote('off'), /no longer/)
 })

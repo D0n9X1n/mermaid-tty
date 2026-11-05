@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Configuration-and-Themes-zh-CN)
 
-mermaid-tty has one option, `theme`, which picks the colors of every diagram. This page lists its values, shows each palette's colors, and explains the roles a theme colors.
+mermaid-tty has two options: `theme`, which picks the colors of every diagram, and `direction`, which sets the flowchart direction Claude is asked to write. This page lists their values, shows each palette's colors, and explains the roles a theme colors.
 
 ## The theme option
 
@@ -35,6 +35,20 @@ claude plugin configure mermaid-tty@mermaid-tty --json
 mermaid-tty reads the option when it loads, so restart Claude Code after a change made with `claude plugin configure`. An unset or unknown value draws with `nord`.
 
 To switch while Claude Code runs, use `/mermaid-tty theme <name>`. The replies on screen are drawn again at once, and the new value is saved as the `theme` option, as if you had picked it in `/config`, so later sessions keep it. If the option can't be saved, for example because a managed setting owns it, the switch lasts for this session and the reply says so. `/mermaid-tty theme` reports the theme in force. Each time mermaid-tty loads, it starts from the saved option.
+
+## The direction option
+
+`userConfig.direction` sets the direction Claude is asked to write flowcharts in. A terminal is wider than it is tall, so a flowchart that runs left to right uses the screen better than one that runs down it.
+
+| Value | What Claude is asked |
+|---|---|
+| `LR` | Open each flowchart with `flowchart LR`, left to right. This is the default. |
+| `TB` | Open each flowchart with `flowchart TB`, top to bottom. |
+| `off` | Nothing: Claude picks the direction. |
+
+The option only shapes what Claude writes. mermaid-tty draws every diagram in the direction its source gives, so a diagram you write, or a direction you ask for, is kept. With `LR` or `TB`, mermaid-tty adds a section to the system prompt, `mermaid-tty:flowchart-direction`, in sessions that draw in a terminal. `off` adds nothing.
+
+Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty direction LR|TB|off`, which saves the option the same way `/mermaid-tty theme` does. `/mermaid-tty direction` reports the setting in force. A conversation's system prompt stays as it was first sent, so a change made during a conversation also adds a short note that Claude reads; a new conversation gets the new section.
 
 ## Palettes
 

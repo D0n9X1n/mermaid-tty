@@ -2,7 +2,7 @@
 
 [英文版](Configuration-and-Themes)
 
-mermaid-tty 只有一个选项 `theme`，用于选择所有图表的颜色。本页列出可选值、各配色的颜色，以及主题着色的角色。
+mermaid-tty 有两个选项：`theme` 用于选择所有图表的颜色，`direction` 设置要求 Claude 编写流程图时使用的方向。本页列出可选值、各配色的颜色，以及主题着色的角色。
 
 ## theme 选项
 
@@ -35,6 +35,20 @@ claude plugin configure mermaid-tty@mermaid-tty --json
 mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` 修改后需要重启 Claude Code。未设置或未知的值都使用 `nord`。
 
 要在 Claude Code 运行时切换，使用 `/mermaid-tty theme <name>`。屏幕上的回复会立即重绘，新值会保存为 `theme` 选项，效果与在 `/config` 中选择相同，之后的会话也会沿用。如果选项无法保存（例如由托管设置控制），切换只在本次会话中有效，回复中会说明。`/mermaid-tty theme` 报告当前主题。mermaid-tty 每次加载都从已保存的选项开始。
+
+## direction 选项
+
+`userConfig.direction` 设置要求 Claude 编写流程图时使用的方向。终端宽度大于高度，因此从左到右的流程图比从上到下的更能利用屏幕。
+
+| 值 | 对 Claude 的要求 |
+|---|---|
+| `LR` | 每个流程图以 `flowchart LR` 开头，从左到右。这是默认值。 |
+| `TB` | 每个流程图以 `flowchart TB` 开头，从上到下。 |
+| `off` | 不作要求，由 Claude 自行选择方向。 |
+
+该选项只影响 Claude 编写的内容。mermaid-tty 总是按源码给出的方向绘制图表，因此你写的图表或你要求的方向都会保留。设为 `LR` 或 `TB` 时，mermaid-tty 会在终端绘图的会话中向系统提示词添加一节 `mermaid-tty:flowchart-direction`；设为 `off` 时不添加。
+
+设置方式与 `theme` 相同，例如 `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty direction LR|TB|off`，它会像 `/mermaid-tty theme` 一样保存该选项。`/mermaid-tty direction` 报告当前设置。对话的系统提示词保持首次发送时的内容，因此在对话中修改时还会添加一条供 Claude 阅读的简短说明；新对话会使用新的一节。
 
 ## 配色
 
