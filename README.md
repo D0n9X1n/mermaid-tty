@@ -61,7 +61,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Exact CJK widths.** Chinese, Japanese and Korean labels take two columns each, so every line meets.
 - **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme.
 - **Six themes, switched live.** `nord`, the default, `dracula`, `gruvbox` and `solarized` use their official colors; `default` follows your Claude Code theme; `mono` draws without color. `/mermaid-tty theme <name>` redraws at once and keeps the choice.
-- **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. A diagram always draws in the direction its source gives.
+- **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. This changes only what Claude writes: a left-to-right chart too wide for your window still draws top to bottom.
 - **The source stays yours.** The transcript keeps the Mermaid text, `/copy` copies it exactly, and one command shows it again.
 - **Nothing else to install, nothing left behind.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies, and no picture files once a session closes.
 - **Made for the CLI.** It works in Claude Code's terminal; the desktop app and SDK keep their own drawing.
