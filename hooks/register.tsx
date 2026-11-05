@@ -32,6 +32,9 @@ const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
 const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
 const DIRECTION = { plugin: 'mermaid-tty', key: 'direction' } as const
+// Whether this conversation has not been told the direction in force, its note refused. Kept in $.state, not in the
+// module, since a reload (a /config change) starts the module over within the same conversation.
+const UNTOLD = { plugin: 'mermaid-tty', key: 'untold' } as const
 const SECTION_ID = 'mermaid-tty:flowchart-direction'
 // The value each mode keeps in $.state, as mode() reads it back.
 const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
@@ -105,6 +108,15 @@ async function saveOption($: any, field: 'theme' | 'direction', value: string): 
   }
 }
 
+// Whether the conversation is still owed a direction note; a failing read is not owed, as nothing was refused.
+async function isUntold($: StateDollar): Promise<boolean> {
+  try {
+    return (await $.state.get(UNTOLD)).value === true
+  } catch {
+    return false
+  }
+}
+
 // Tells the running thread the direction changed: its system prompt stays as sent, so the change goes in a user row the
 // model reads. True once the row is stored; false when a hook refuses it or the call fails, which leaves the setting
 // changed but this thread untold.
@@ -148,9 +160,6 @@ export const register: Register = (on, options) => {
   // the save. A load starts from the saved options, so it starts saved.
   let isThemeUnsaved = false
   let isDirectionUnsaved = false
-  // Whether this thread has not been told the direction in force, because the note was refused, so asking for it again
-  // retries the note.
-  let isDirectionUntold = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
 
@@ -173,8 +182,13 @@ export const register: Register = (on, options) => {
     const was = (await $.state.get(DIRECTION)).value
     await $.state.set(DIRECTION, configuredDirection)
     isDirectionUnsaved = false
-    isDirectionUntold =
-      isDirection(was) && was !== configuredDirection && !(await noteDirection($, configuredDirection))
+    // A changed direction is told now; an unchanged one keeps whatever note the conversation is still owed.
+    const owed = await isUntold($)
+    const untold =
+      isDirection(was) && was !== configuredDirection ? !(await noteDirection($, configuredDirection)) : owed
+    if (untold !== owed) {
+      await $.state.set(UNTOLD, untold)
+    }
     // mermaid-tty draws only in the CLI's terminal, so only a terminal session renders pictures or sweeps for them: a
     // desktop or SDK session leaves the temp dir alone. A past session cut short may have left picture temp dirs; sweep
     // them without holding the start up.
@@ -228,8 +242,9 @@ export const register: Register = (on, options) => {
 
     if ('direction' in a) {
       const was = await direction($, configuredDirection)
-      if (a.direction === 'report' || (a.direction === was && !isDirectionUnsaved && !isDirectionUntold)) {
-        return { text: directionReply(was, false, !isDirectionUnsaved, !isDirectionUntold) }
+      let untold = await isUntold($)
+      if (a.direction === 'report' || (a.direction === was && !isDirectionUnsaved && !untold)) {
+        return { text: directionReply(was, false, !isDirectionUnsaved, !untold) }
       }
 
       // As for the theme: the direction in force, asked for again after its save or its note was refused, tries what
@@ -239,15 +254,16 @@ export const register: Register = (on, options) => {
         await $.state.set(DIRECTION, a.direction)
       }
 
-      if (changed || isDirectionUntold) {
-        isDirectionUntold = !(await noteDirection($, a.direction))
+      if (changed || untold) {
+        untold = !(await noteDirection($, a.direction))
+        await $.state.set(UNTOLD, untold)
       }
 
       if (changed || isDirectionUnsaved) {
         isDirectionUnsaved = !(await saveOption($, 'direction', a.direction))
       }
 
-      return { text: directionReply(a.direction, changed, !isDirectionUnsaved, !isDirectionUntold) }
+      return { text: directionReply(a.direction, changed, !isDirectionUnsaved, !untold) }
     }
 
     if ('images' in a) {

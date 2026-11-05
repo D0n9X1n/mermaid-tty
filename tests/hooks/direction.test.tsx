@@ -169,3 +169,31 @@ test(
     expect(notes(session)).toHaveLength(2)
   },
 )
+
+// The owed note lives in $.state, so a module started over by a reload still owes it: a hook beneath answers the state
+// a reload would find, and the first request for the direction in force retries the note.
+test('A5.errors: a note still owed after a reload is retried', { options: { direction: 'TB' } }, async ($, on) => {
+  engine(on)
+  config(on)
+  const session = mock.session(on)
+  let owed = true
+  on('state.get', async (_$: any, e: any, next: any) =>
+    e.key === 'untold' ? { value: { value: owed, version: 1 } } : next(e),
+  )
+  on('state.set', async (_$: any, e: any, next: any) => {
+    if (e.key === 'untold') {
+      owed = e.value
+    }
+
+    return next(e)
+  })
+  on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
+  on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  expect((await RUN($, 'direction')).text).toBe(
+    'mermaid-tty direction: TB (Claude was not told in this conversation; new conversations get it)',
+  )
+  expect((await RUN($, 'direction TB')).text).toBe('mermaid-tty direction: TB')
+  expect(notes(session)).toHaveLength(1)
+  expect(owed).toBe(false)
+})

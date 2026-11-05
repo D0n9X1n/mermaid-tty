@@ -7,6 +7,7 @@ declare module 'claude-code' {
       theme: 'default' | 'nord' | 'dracula' | 'gruvbox' | 'solarized' | 'mono'
       // the flowchart direction the prompt asks for; unset: the configured one
       direction: 'LR' | 'TB' | 'off'
+      untold: boolean // true while this conversation is owed a direction note that was refused
     }
   }
 }
