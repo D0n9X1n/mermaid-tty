@@ -16,7 +16,7 @@ claude --version
 
 ```sh
 claude plugin marketplace add D0n9X1n/mermaid-tty
-claude plugin install mermaid-tty@mermaid-tty
+claude plugin install mermaid-tty@mermaid-tty --config theme=nord
 ```
 
 启动新的 Claude Code 会话即可使用。插件没有运行时依赖，也不需要构建；会话开始时会注册 `/mermaid-tty` 命令。

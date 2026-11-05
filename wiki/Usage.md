@@ -16,7 +16,7 @@ Add the marketplace, then install the plugin:
 
 ```sh
 claude plugin marketplace add D0n9X1n/mermaid-tty
-claude plugin install mermaid-tty@mermaid-tty
+claude plugin install mermaid-tty@mermaid-tty --config theme=nord
 ```
 
 Start a new Claude Code session, and you're done. The plugin has no runtime dependencies and no build step, and it registers the `/mermaid-tty` command when the session starts.
