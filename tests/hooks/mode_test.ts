@@ -110,4 +110,8 @@ test('A6.command: a theme reply names the theme, says whether it changed, and wh
     themeReply('dracula', true, false),
     'mermaid-tty: drawing in dracula (this session only: the setting was not saved)',
   )
+  assert.equal(
+    themeReply('dracula', false, false),
+    'mermaid-tty theme: dracula (this session only: the setting was not saved)',
+  )
 })

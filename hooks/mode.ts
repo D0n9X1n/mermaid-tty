@@ -77,13 +77,9 @@ const IMAGES_CHANGED: Record<Images, string> = {
 }
 export const imagesReply = (i: Images, changed: boolean) => (!changed ? `mermaid-tty images: ${i}` : IMAGES_CHANGED[i])
 
-// The theme command's reply: the theme now drawn in, or the one in force when nothing changed; a switch that could not
+// The theme command's reply: the theme now drawn in, or the one in force when nothing changed; a theme that could not
 // be saved says it lasts only this session.
 export const themeReply = (t: ThemeName, changed: boolean, saved: boolean) => {
-  if (!changed) {
-    return `mermaid-tty theme: ${t}`
-  }
-
-  const said = `mermaid-tty: drawing in ${t}`
+  const said = changed ? `mermaid-tty: drawing in ${t}` : `mermaid-tty theme: ${t}`
   return saved ? said : `${said} (this session only: the setting was not saved)`
 }

@@ -113,6 +113,28 @@ test('A6.command: images off and auto switch a kitty Image to text and back with
   await IMAGES($, 'auto')
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
 })
+// mmdc's -b argument is the background a picture paints: a curated palette's own color, transparent for default.
+const backgrounds = (runs: string[][]) =>
+  runs.filter((a) => a[0] === 'mmdc' && a[1] === '-i').map((a) => a[a.indexOf('-b') + 1])
+
+test('A7: with no theme configured, a picture draws in nord', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty' })
+  const ui = await mount($, 'flowchart TD\nN1 --> N2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+  expect(backgrounds(runs)).toContain('#2E3440')
+  expect(backgrounds(runs)).not.toContain('transparent')
+})
+
+test('A6.command: /mermaid-tty theme draws a picture on screen again in the new theme', async ($, on) => {
+  const runs = world(on, { TERM: 'xterm-kitty' })
+  const ui = await mount($, 'flowchart TD\nW1 --> W2')
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+  runs.length = 0
+  await $.command.run({ command: 'mermaid-tty', args: 'theme dracula' })
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Image')
+  expect(backgrounds(runs)).toContain('#282A36')
+})
+
 test('A6.command: images on draws an Image where detection says no, and auto returns to text', async ($, on) => {
   const runs = world(on, { TERM: 'xterm-kitty', TMUX: '/tmp/t,1,0' })
   store(on)
