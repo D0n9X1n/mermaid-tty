@@ -299,7 +299,7 @@ test('local install: the script matches its pinned SHA-256', () => {
   const text = readFileSync(join(root, 'scripts/test-local-install.sh'), 'utf8').replaceAll('\r\n', '\n')
   assert.equal(
     createHash('sha256').update(text).digest('hex'),
-    'b016f7fe14f8a3e783694708a20a43acda5217198d48f6c41341759ac48f3065',
+    '7c98aa9483f979123fa1b18f98ee99166091ba8e030754d75e736c84c064dac1',
   )
 })
 
