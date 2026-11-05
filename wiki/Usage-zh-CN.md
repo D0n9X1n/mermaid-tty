@@ -98,8 +98,10 @@ Git 提交图使用竖直分支泳道：`LR` 和 `TB` 的时间向下，`BT` 的
 | `/mermaid-tty images on` | 不检查终端，直接绘制图片，适用于检测无法识别的终端。 |
 | `/mermaid-tty images off` | 从不绘制图片；图表模式以文本绘制。 |
 | `/mermaid-tty images` | 报告图片设置：`mermaid-tty images: auto`、`on` 或 `off`。 |
+| `/mermaid-tty theme <name>` | 立即改用该主题绘制，并保存为 `theme` 选项：`default`、`nord`、`dracula`、`gruvbox`、`solarized` 或 `mono`。见[配置与主题](Configuration-and-Themes-zh-CN)。 |
+| `/mermaid-tty theme` | 报告当前主题，例如 `mermaid-tty theme: nord`。 |
 
-参数是一个单词，或 `images` 加一个设置，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]`。模式在本次会话内有效。图片设置立即生效，重绘屏幕上的回复，并在会话之间保留，因此两者都无需重启。源码模式下，所有回复原样交给 Claude Code 显示。
+参数是一个单词，或 `images`、`theme` 加一个设置，不区分大小写。其他输入会返回 `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]`。模式在本次会话内有效。图片设置和主题立即生效，重绘屏幕上的回复，并在会话之间保留，因此都无需重启。源码模式下，所有回复原样交给 Claude Code 显示。
 
 无论处于哪种模式，`/copy` 都复制 Mermaid 源码。mermaid-tty 只改变显示方式，存储的回复保留完整源码。
 

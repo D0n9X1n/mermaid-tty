@@ -98,8 +98,10 @@ The `/mermaid-tty` command switches how replies show their diagrams:
 | `/mermaid-tty images on` | Draws pictures without checking the terminal, for one the detection does not know. |
 | `/mermaid-tty images off` | Never draws pictures; diagram mode draws text. |
 | `/mermaid-tty images` | Reports the picture setting: `mermaid-tty images: auto`, `on` or `off`. |
+| `/mermaid-tty theme <name>` | Draws in that theme at once and saves it as the `theme` option: `default`, `nord`, `dracula`, `gruvbox`, `solarized` or `mono`. See [Configuration and Themes](Configuration-and-Themes). |
+| `/mermaid-tty theme` | Reports the theme in force: `mermaid-tty theme: nord`, for example. |
 
-The argument is one word, or `images` and one setting, in any case. Anything else replies `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]`. The mode lasts for the session. The picture setting takes effect at once, redrawing the replies on screen, and is kept between sessions, so neither needs a restart. In source mode, every reply goes to Claude Code's own drawing untouched.
+The argument is one word, or `images` or `theme` and one setting, in any case. Anything else replies `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]`. The mode lasts for the session. The picture setting and the theme take effect at once, redrawing the replies on screen, and are kept between sessions, so none of them needs a restart. In source mode, every reply goes to Claude Code's own drawing untouched.
 
 `/copy` copies the Mermaid source in either mode. mermaid-tty changes only how a reply is drawn, and the stored reply keeps the exact source.
 

@@ -10,8 +10,8 @@ The option is `userConfig.theme` in `.claude-plugin/plugin.json`. Its values:
 
 | Value | Colors |
 |---|---|
-| `default` | Follows your Claude Code theme: each role maps to a Claude Code theme key. This is the default. |
-| `nord` | The Nord palette. |
+| `default` | Follows your Claude Code theme: each role maps to a Claude Code theme key. |
+| `nord` | The Nord palette. This is the default. |
 | `dracula` | The Dracula palette. |
 | `gruvbox` | The Gruvbox palette. |
 | `solarized` | The Solarized palette. |
@@ -32,7 +32,9 @@ claude plugin configure mermaid-tty@mermaid-tty
 claude plugin configure mermaid-tty@mermaid-tty --json
 ```
 
-mermaid-tty reads the option once, when it loads, so restart Claude Code after a change. An unset or unknown value draws with `default`.
+mermaid-tty reads the option when it loads, so restart Claude Code after a change made with `claude plugin configure`. An unset or unknown value draws with `nord`.
+
+To switch while Claude Code runs, use `/mermaid-tty theme <name>`. The replies on screen are drawn again at once, and the new value is saved as the `theme` option, as if you had picked it in `/config`, so later sessions keep it. If the option can't be saved, for example because a managed setting owns it, the switch lasts for this session and the reply says so. `/mermaid-tty theme` reports the theme in force. Each time mermaid-tty loads, it starts from the saved option.
 
 ## Palettes
 

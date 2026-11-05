@@ -1,6 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
-import { imagesReply, isImages, modeReply, parseModeArgs, type Images, type Mode } from './mode.ts'
+import type { ThemeName } from '../core/themes.ts'
+import { imagesReply, isImages, isTheme, modeReply, parseModeArgs, themeReply, type Images, type Mode } from './mode.ts'
 import { safePlan, sweepPictures } from './plan.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that fails to draw (joined to the
@@ -9,9 +10,11 @@ import { safePlan, sweepPictures } from './plan.ts'
 // kept in $.state; in source mode every reply goes through next() untouched. Where the terminal shows pixels, diagram
 // mode draws a fence as an Image of mermaid-cli's PNG once it is rendered (hooks/image.ts); text mode never does.
 // /mermaid-tty images auto|on|off sets whether it tries: kept in $.store across sessions and mirrored into $.state,
-// which a drawing reads, so a change redraws at once with no restart.
+// which a drawing reads, so a change redraws at once with no restart. /mermaid-tty theme sets the theme the same way:
+// in $.state for this session, and saved as the plugin's theme setting through $.config.set for later ones.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
+const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
 // The value each mode keeps in $.state, as mode() reads it back.
 const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
 
@@ -31,6 +34,46 @@ async function mode($: StateDollar): Promise<Mode> {
 async function images($: StateDollar): Promise<Images> {
   const v = (await $.state.get(IMAGES)).value
   return isImages(v) ? v : 'auto'
+}
+
+// The theme a drawing is in: this session's, set by /mermaid-tty theme, else the configured one. A read while drawing
+// subscribes the drawing; a failing read is the configured theme.
+async function theme($: StateDollar, configured: ThemeName): Promise<ThemeName> {
+  try {
+    const v = (await $.state.get(THEME)).value
+    return isTheme(v) ? v : configured
+  } catch {
+    return configured
+  }
+}
+
+// Whether a /config row's owner is this plugin: mermaid-tty, or mermaid-tty@<marketplace> as installed. A plugin whose
+// name only starts the same, such as mermaid-tty-extra, is another plugin.
+const isOurs = (name: unknown) => name === 'mermaid-tty' || String(name).startsWith('mermaid-tty@')
+
+// Saves one of the plugin's own /config rows, as if the person picked the value there: true once written, false when no
+// row is found, a hook or a trusted source refuses it, or the call fails. The row is <plugin>.<field>; the plugin's
+// name may carry a marketplace suffix, so the row is found by owner and field, not by a fixed key.
+async function saveOption($: any, field: 'theme', value: string): Promise<boolean> {
+  try {
+    const rows = await $.config.list()
+    const suffix = `.${field}`
+    const row = rows.find(
+      (r: any) =>
+        isOurs(r.provider?.plugin) &&
+        typeof r.key === 'string' &&
+        r.key.endsWith(suffix) &&
+        isOurs(r.key.slice(0, -suffix.length)),
+    )
+    if (!row) {
+      return false
+    }
+
+    const done = await $.config.set({ key: row.key, value })
+    return done.deny === undefined
+  } catch {
+    return false
+  }
 }
 
 // The picture setting kept between sessions, auto when unset, unknown or unreadable.
@@ -56,7 +99,11 @@ async function loadImages($: any): Promise<Images> {
 }
 
 export const register: Register = (on, options) => {
-  const theme = String(options.theme ?? 'default')
+  // nord unless the setting names another theme: an unset or unknown value draws in nord, the manifest's default.
+  const configured: ThemeName = isTheme(options.theme) ? options.theme : 'nord'
+  // Whether the theme in force was set by the command but not saved, so asking for it again retries the save. A load
+  // starts from the saved option, so it starts saved.
+  let isThemeUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
 
@@ -67,6 +114,10 @@ export const register: Register = (on, options) => {
         'Show Mermaid diagrams as source, diagram or text, with or without pictures: /mermaid-tty [source|diagram|text|images [auto|on|off]]',
     })
     await loadImages($)
+    // Each load starts from the configured theme, so a change in /config, which reloads the module, is never hidden by
+    // a theme the command set earlier.
+    await $.state.set(THEME, configured)
+    isThemeUnsaved = false
     // mermaid-tty draws only in the CLI's terminal, so only a terminal session renders pictures or sweeps for them: a
     // desktop or SDK session leaves the temp dir alone. A past session cut short may have left picture temp dirs; sweep
     // them without holding the start up.
@@ -101,6 +152,23 @@ export const register: Register = (on, options) => {
       return { text: modeReply(cur, false) }
     }
 
+    if ('theme' in a) {
+      const was = await theme($, configured)
+      if (a.theme === 'report' || (a.theme === was && !isThemeUnsaved)) {
+        return { text: themeReply(was, false, !isThemeUnsaved) }
+      }
+
+      // The theme in force, asked for again after its save was refused, tries the save again; it is already drawn.
+      const changed = a.theme !== was
+      if (changed) {
+        await $.state.set(THEME, a.theme)
+        $.ui.invalidate('ui.render')
+      }
+
+      isThemeUnsaved = !(await saveOption($, 'theme', a.theme))
+      return { text: themeReply(a.theme, changed, !isThemeUnsaved) }
+    }
+
     if ('images' in a) {
       const was = await loadImages($)
       if (a.images === 'report') {
@@ -128,7 +196,7 @@ export const register: Register = (on, options) => {
     const plan = await safePlan(
       $,
       e,
-      theme,
+      await theme($, configured),
       () => mode($),
       undefined,
       () => images($),

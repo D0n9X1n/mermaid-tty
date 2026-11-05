@@ -138,11 +138,11 @@ flowchart TD
 
 `hooks/hooks.json` 加载 `hooks/register.tsx`，后者注册三个钩子：
 
-- **`session.start`** 注册 `/mermaid-tty` 命令，并将图片设置从 `$.store` 复制到 `$.state` 的 `mermaid-tty.images`；未设置、无法识别或读取失败时为 `auto`。
-- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。
+- **`session.start`** 注册 `/mermaid-tty` 命令，并将图片设置从 `$.store` 复制到 `$.state` 的 `mermaid-tty.images`；未设置、无法识别或读取失败时为 `auto`。它还将 `mermaid-tty.theme` 设为配置的主题，使每次加载都从已保存的选项开始。
+- **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。`theme <name>` 写入 `mermaid-tty.theme`，使 `ui.render` 失效，并通过 `$.config.set` 将名称保存到插件自己的 `theme` 行；保存被拒绝或失败时仍在本次会话中生效，并在回复中说明。
 - **`ui.render`** 处理 `AssistantMessage`。视口未提供宽度、界面不是终端、处于源码模式或消息标记为展开时，回复原样传递。否则，钩子拆分回复，渲染每个 `mermaid` 块，将回退块拼回周围正文。若没有绘出任何图，整个回复原样交给 Claude Code；否则返回由正文与图表行组成的纵向布局，正文仍由 Claude Code 显示。回复以图表开头时，先交给 Claude Code 一个空块，以保留回复前的项目符号。
 
-主题在 `register` 执行时从插件选项中读取一次，因此修改主题后需要重启。
+绘图使用的主题是 `mermaid-tty.theme`，在绘制时读取，因此修改后立即重绘。未设置时使用插件的 `theme` 选项；该选项未设置或无法识别时使用 `nord`。
 
 **缓存。** 钩子创建一个带 64 条容量 LRU 缓存的渲染器，以代码块正文、终端列数和主题为键：
 
