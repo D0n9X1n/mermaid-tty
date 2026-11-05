@@ -10,8 +10,8 @@ mermaid-tty 只有一个选项 `theme`，用于选择所有图表的颜色。本
 
 | 值 | 配色 |
 |---|---|
-| `default` | 跟随 Claude Code 主题：每个角色映射到一个 Claude Code 主题键。这是默认值。 |
-| `nord` | 使用 Nord 配色。 |
+| `default` | 跟随 Claude Code 主题：每个角色映射到一个 Claude Code 主题键。 |
+| `nord` | 使用 Nord 配色。这是默认值。 |
 | `dracula` | 使用 Dracula 配色。 |
 | `gruvbox` | 使用 Gruvbox 配色。 |
 | `solarized` | 使用 Solarized 配色。 |
@@ -32,7 +32,9 @@ claude plugin configure mermaid-tty@mermaid-tty
 claude plugin configure mermaid-tty@mermaid-tty --json
 ```
 
-mermaid-tty 只在加载时读取一次配置，因此修改后需要重启 Claude Code。未设置或未知的值都使用 `default`。
+mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` 修改后需要重启 Claude Code。未设置或未知的值都使用 `nord`。
+
+要在 Claude Code 运行时切换，使用 `/mermaid-tty theme <name>`。屏幕上的回复会立即重绘，新值会保存为 `theme` 选项，效果与在 `/config` 中选择相同，之后的会话也会沿用。如果选项无法保存（例如由托管设置控制），切换只在本次会话中有效，回复中会说明。`/mermaid-tty theme` 报告当前主题。mermaid-tty 每次加载都从已保存的选项开始。
 
 ## 配色
 

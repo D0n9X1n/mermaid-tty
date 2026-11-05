@@ -138,11 +138,11 @@ So a row the validator accepts is as wide on screen as it measured, in a termina
 
 `hooks/hooks.json` loads `hooks/register.tsx`, which registers three hooks:
 
-- **`session.start`** registers the `/mermaid-tty` command and copies the picture setting from `$.store` into `$.state` as `mermaid-tty.images`, `auto` when unset, unknown or unreadable.
-- **`command.run`** parses the command's argument, keeps the mode in `$.state` as `mermaid-tty.source`, and invalidates `ui.render`, so the replies on screen are drawn again in the new mode. `images auto|on|off` writes the setting to `$.state` and `$.store`, so it holds for later sessions too, and invalidates `ui.render` the same way; a failing store still sets it for the session and says so.
+- **`session.start`** registers the `/mermaid-tty` command and copies the picture setting from `$.store` into `$.state` as `mermaid-tty.images`, `auto` when unset, unknown or unreadable. It also sets `mermaid-tty.theme` to the configured theme, so each load starts from the saved option.
+- **`command.run`** parses the command's argument, keeps the mode in `$.state` as `mermaid-tty.source`, and invalidates `ui.render`, so the replies on screen are drawn again in the new mode. `images auto|on|off` writes the setting to `$.state` and `$.store`, so it holds for later sessions too, and invalidates `ui.render` the same way; a failing store still sets it for the session and says so. `theme <name>` writes `mermaid-tty.theme`, invalidates `ui.render`, and saves the name through `$.config.set` on the plugin's own `theme` row; a refused or failed save still sets it for the session and says so.
 - **`ui.render`**, on `AssistantMessage`, draws a reply. The reply passes through untouched when the viewport has no width, on any surface but the terminal, in source mode, or when the message is marked expanded. Otherwise the hook splits the reply, renders each `mermaid` block, and joins each block that falls back to the prose around it. If nothing was drawn, the reply goes to Claude Code untouched. Otherwise the hook returns a column of prose, which Claude Code draws, and diagram rows. When a reply opens on a diagram, the hook first sends Claude Code an empty block, which draws the reply's bullet.
 
-The theme comes from the plugin's options, read once when `register` runs. That is why a theme change needs a restart.
+The theme a drawing uses is `mermaid-tty.theme`, read while drawing, so a change redraws at once. When it is unset, the drawing uses the plugin's `theme` option, and `nord` when that is unset or unknown.
 
 **The cache.** The hook builds one renderer, with an LRU cache of 64 entries, keyed by the block's body, the terminal's columns and the theme:
 

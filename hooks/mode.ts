@@ -1,3 +1,5 @@
+import { THEMES, type ThemeName } from '../core/themes.ts'
+
 // Whether a reply's render goes straight to next(): on any surface but the terminal, in source mode, or when the
 // message is expanded. text mode draws as diagram mode does, but never as a picture.
 export type Mode = 'diagram' | 'source' | 'text'
@@ -11,12 +13,20 @@ export type Images = 'auto' | 'on' | 'off'
 
 export const isImages = (v: unknown): v is Images => v === 'auto' || v === 'on' || v === 'off'
 
+// A theme name core draws, matched exactly: Object.hasOwn keeps out inherited names such as toString.
+export const isTheme = (v: unknown): v is ThemeName => typeof v === 'string' && Object.hasOwn(THEMES, v)
+
 // The /mermaid-tty argument, trimmed and matched in any case. Left out or blank, it reports the mode. One mode word
-// sets the mode; images reports the picture setting, and images followed by one setting word sets it. Another word, an
-// extra one, or anything but a string is a usage error: never ignored, never coerced (String(['source']) would be
-// 'source').
-export type ModeArgs = { set: Mode } | { report: true } | { images: Images | 'report' } | { error: string }
-const USAGE = 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]'
+// sets the mode; images reports the picture setting, and images followed by one setting word sets it; theme reports the
+// theme, and theme followed by a theme name sets it. Another word, an extra one, or anything but a string is a usage
+// error: never ignored, never coerced (String(['source']) would be 'source').
+export type ModeArgs =
+  | { set: Mode }
+  | { report: true }
+  | { images: Images | 'report' }
+  | { theme: ThemeName | 'report' }
+  | { error: string }
+const USAGE = `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [${Object.keys(THEMES).join('|')}]]`
 
 export const parseModeArgs = (a: unknown): ModeArgs => {
   if (a === undefined) {
@@ -40,6 +50,14 @@ export const parseModeArgs = (a: unknown): ModeArgs => {
     return isImages(setting) ? { images: setting } : { error: USAGE }
   }
 
+  if (w === 'theme' && rest.length === 0) {
+    if (setting === undefined) {
+      return { theme: 'report' }
+    }
+
+    return isTheme(setting) ? { theme: setting } : { error: USAGE }
+  }
+
   return setting === undefined && (w === 'source' || w === 'diagram' || w === 'text') ? { set: w } : { error: USAGE }
 }
 
@@ -58,3 +76,14 @@ const IMAGES_CHANGED: Record<Images, string> = {
   off: 'mermaid-tty: pictures off',
 }
 export const imagesReply = (i: Images, changed: boolean) => (!changed ? `mermaid-tty images: ${i}` : IMAGES_CHANGED[i])
+
+// The theme command's reply: the theme now drawn in, or the one in force when nothing changed; a switch that could not
+// be saved says it lasts only this session.
+export const themeReply = (t: ThemeName, changed: boolean, saved: boolean) => {
+  if (!changed) {
+    return `mermaid-tty theme: ${t}`
+  }
+
+  const said = `mermaid-tty: drawing in ${t}`
+  return saved ? said : `${said} (this session only: the setting was not saved)`
+}

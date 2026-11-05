@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { imagesReply, modeReply, parseModeArgs, passThrough } from '../../hooks/mode.ts'
+import { imagesReply, modeReply, parseModeArgs, passThrough, themeReply } from '../../hooks/mode.ts'
 
 test('A6.hook-tests: pass-through rules', () => {
   assert.equal(passThrough('desktop', {}, 'diagram'), true)
@@ -19,7 +19,10 @@ test('A6.command: arguments and replies', () => {
 
 // One word, trimmed and matched in any case; a second word is a usage error, not ignored.
 test('A6.command: arguments are trimmed and case-blind; a second word is an error', () => {
-  const usage = { error: 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]' }
+  const usage = {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+  }
   assert.deepEqual(parseModeArgs('diagram'), { set: 'diagram' })
   assert.deepEqual(parseModeArgs('  '), { report: true })
   assert.deepEqual(parseModeArgs('SOURCE'), { set: 'source' })
@@ -38,7 +41,10 @@ test('A6.command: a reply for each mode, changed or not', () => {
 // $.command.run passes args through as given. Only a string is parsed, and left out (undefined) it reports; anything
 // else is a usage error, never coerced: String(['source']) is 'source'.
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
-  const usage = { error: 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]' }
+  const usage = {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+  }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
   for (const a of [['source'], { toString: null }, 42, null]) {
     assert.deepEqual(parseModeArgs(a), usage)
@@ -51,13 +57,19 @@ test('A6.command: text mode parses, replies, and still draws', () => {
   assert.equal(passThrough('terminal', {}, 'text'), false)
   assert.equal(modeReply('text', true), 'mermaid-tty: drawing diagrams as text')
   assert.equal(modeReply('text', false), 'mermaid-tty mode: text')
-  assert.deepEqual(parseModeArgs('svg'), { error: 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]' })
+  assert.deepEqual(parseModeArgs('svg'), {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+  })
 })
 
 // images takes one optional word after it: left out it reports, auto/on/off set it, matched in any case; anything else,
 // or a third word, is the usage.
 test('A6.command: images parses its setting; bare images reports; anything else is the usage', () => {
-  const usage = { error: 'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]]' }
+  const usage = {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+  }
   assert.deepEqual(parseModeArgs('images'), { images: 'report' })
   assert.deepEqual(parseModeArgs(' IMAGES  Off '), { images: 'off' })
   assert.deepEqual(parseModeArgs('images on'), { images: 'on' })
@@ -72,4 +84,30 @@ test('A6.command: a reply for each images setting, changed or not', () => {
   assert.equal(imagesReply('on', true), 'mermaid-tty: pictures on, without terminal detection')
   assert.equal(imagesReply('off', true), 'mermaid-tty: pictures off')
   assert.equal(imagesReply('off', false), 'mermaid-tty images: off')
+})
+
+// theme takes one optional word after it: left out it reports, a theme name sets it, matched in any case; any other
+// word, or a third one, is the usage.
+test('A6.command: theme parses a theme name; bare theme reports; anything else is the usage', () => {
+  const usage = {
+    error:
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]]',
+  }
+  assert.deepEqual(parseModeArgs('theme'), { theme: 'report' })
+  assert.deepEqual(parseModeArgs(' THEME  Dracula '), { theme: 'dracula' })
+  assert.deepEqual(parseModeArgs('theme mono'), { theme: 'mono' })
+  assert.deepEqual(parseModeArgs('theme default'), { theme: 'default' })
+  assert.deepEqual(parseModeArgs('theme neon'), usage)
+  assert.deepEqual(parseModeArgs('theme nord mono'), usage)
+  assert.deepEqual(parseModeArgs('theme toString'), usage)
+  assert.deepEqual(parseModeArgs('nord'), usage)
+})
+
+test('A6.command: a theme reply names the theme, says whether it changed, and whether it was saved', () => {
+  assert.equal(themeReply('nord', false, true), 'mermaid-tty theme: nord')
+  assert.equal(themeReply('dracula', true, true), 'mermaid-tty: drawing in dracula')
+  assert.equal(
+    themeReply('dracula', true, false),
+    'mermaid-tty: drawing in dracula (this session only: the setting was not saved)',
+  )
 })
