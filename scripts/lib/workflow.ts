@@ -2,5 +2,5 @@
 // on the parsed YAML tree in docs/workflow-tree.ts.
 export const INSTALL = [
   'claude plugin marketplace add D0n9X1n/mermaid-tty',
-  'claude plugin install mermaid-tty@mermaid-tty --config theme=default',
+  'claude plugin install mermaid-tty@mermaid-tty --config theme=nord',
 ]
