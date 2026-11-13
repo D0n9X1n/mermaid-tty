@@ -13,13 +13,15 @@ const engine = (on: any, ...replies: unknown[]) => {
   const closes: string[] = []
   const builtin: string[] = []
   const placed = { value: { isPlaced: true } as object }
+  // Each open answers the next of these in turn, a promise held to order it, then placed; one that rejects throws.
+  const openings: unknown[] = []
   on('model.fork', async (_$: any, e: any) => {
     prompts.push(e.prompt)
     return { value: await replies.shift() }
   })
   on('ui.open', async (_$: any, e: any) => {
     opens.push(e)
-    return placed
+    return openings.length ? { value: await openings.shift() } : placed
   })
   on('ui.close', async (_$: any, e: any) => {
     closes.push(e.id)
@@ -31,7 +33,7 @@ const engine = (on: any, ...replies: unknown[]) => {
   })
   on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
   on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
-  return { prompts, opens, closes, builtin, placed }
+  return { prompts, opens, closes, builtin, placed, openings }
 }
 const pane = ($: any, surface = 'terminal') =>
   $.ui.mount({
@@ -42,6 +44,17 @@ const pane = ($: any, surface = 'terminal') =>
     props: { title: 'btw', isFocused: true, bodyColumns: 80, placement: 'inline' },
     viewport: { columns: 82, rows: 40 },
   })
+// A promise and the function that settles it, to hold a fork or an open until a test lets it go.
+const held = () => {
+  let settle: (v: unknown) => void = () => {}
+  let fail: (e: unknown) => void = () => {}
+  const promise = new Promise((resolve, reject) => {
+    settle = resolve
+    fail = reject
+  })
+  return { promise, settle, fail }
+}
+const tick = () => new Promise((resolve) => setTimeout(resolve, 20))
 const start = ($: any, surface: string | null = 'terminal') =>
   $.session.start({ cwd: '/', surface, isInteractive: surface === 'terminal' })
 
@@ -177,4 +190,137 @@ test('A6.command: an answer whose pane is not placed closes it and hands /btw to
   expect(r).toEqual({ text: 'the built-in /btw' })
   expect(e.builtin).toEqual(['unseen'])
   expect(e.closes).toEqual(['btw'])
+})
+
+const LATE = {
+  'fails with an API error': { isAnswered: false, reason: 'api-error', status: 500, error: 'server_error', usage },
+  'comes back empty': { isAnswered: false, reason: 'empty-reply', usage },
+  throws: 'throws',
+}
+for (const [what, late] of Object.entries(LATE)) {
+  test(`A6.command: a /btw overtaken by a newer one ends with nothing when its fork ${what}`, async ($, on) => {
+    const older = held()
+    const e = engine(on, older.promise, answered('the newer answer'))
+    await start($)
+
+    const running = BTW($, 'older')
+    await tick()
+    await BTW($, 'newer')
+    if (late === 'throws') {
+      older.fail(new Error('fork failed'))
+    } else {
+      older.settle(late)
+    }
+
+    expect(await running).toEqual({})
+    expect(e.builtin).toEqual([])
+    expect(e.closes).toEqual([])
+  })
+}
+
+test('A6.command: an overtaken /btw whose pane is not placed leaves the newer pane open', async ($, on) => {
+  const opening = held()
+  const e = engine(on, answered('the older answer'), answered('the newer answer'))
+  e.openings.push(opening.promise)
+  await start($)
+
+  const running = BTW($, 'older')
+  await tick()
+  const newer = await BTW($, 'newer')
+  opening.settle({ isPlaced: false, reason: 'narrow' })
+  const late = await running
+
+  expect([newer, late]).toEqual([{}, {}])
+  expect(e.closes).toEqual([])
+  expect(e.builtin).toEqual([])
+})
+
+test('A6.command: a fork that throws, as where the engine cannot fork, hands /btw to Claude Code', async ($, on) => {
+  const failing = held()
+  const e = engine(on, failing.promise)
+  await start($)
+  failing.fail(new Error('no implementation for model.fork'))
+
+  const r = await BTW($, 'can you fork?')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.builtin).toEqual(['can you fork?'])
+  expect(e.opens).toEqual([])
+})
+
+test('A6.command: an open that throws closes the pane and hands /btw to Claude Code', async ($, on) => {
+  const e = engine(on, answered(ANSWER))
+  const refused = held()
+  e.openings.push(refused.promise)
+  await start($)
+  refused.fail(new Error('no surface'))
+
+  const r = await BTW($, 'where?')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.builtin).toEqual(['where?'])
+  expect(e.closes).toEqual(['btw'])
+})
+
+test('A6.command: an answer that cannot be stored opens no pane and hands /btw to Claude Code', async ($, on) => {
+  const e = engine(on, answered(ANSWER))
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if (ev.ref?.key === 'btw' || ev.key === 'btw') {
+      return { deny: 'full' }
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const r = await BTW($, 'kept?')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.opens).toEqual([])
+  expect(e.closes).toEqual(['btw'])
+})
+
+test('A6.hook-tests: the pane draws at its body width, every row fitting it', async ($, on) => {
+  const fan =
+    '```mermaid\nflowchart TD\nA[start] --> B[one]\nA --> C[two]\nA --> D[three]\nA --> E[four]\nA --> F[five]\n```\n'
+  engine(on, answered(fan))
+  on('ui.log', async () => ({ value: undefined }))
+  await start($)
+  await BTW($, 'fan')
+
+  const mountAt = (bodyColumns: number) =>
+    $.ui.mount({
+      plugin: 'mermaid-tty',
+      surface: 'terminal',
+      component: 'Pane',
+      requestId: 'btw',
+      props: { title: 'btw', isFocused: true, bodyColumns, placement: 'dock' },
+      viewport: { columns: 200, rows: 40 },
+    })
+  const wide = await mountAt(80)
+  const drawnWide = await wide.find({ key: 'mermaid-0' })
+  await wide.unmount()
+  const narrow = await mountAt(40)
+
+  expect(drawnWide).toBeDefined()
+  expect(await narrow.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await narrow.find({ type: 'Markdown', text: fan })).toBeDefined()
+})
+
+test('A6.hook-tests: a terminal btw pane with no answer stored goes to next(e)', async ($, on) => {
+  engine(on)
+  on('ui.render', { component: 'Pane' }, async ($: any, e: any) => {
+    const { Box, Text } = $.ui.resolve(e)
+    return (
+      <Box key="beneath">
+        <Text>beneath</Text>
+      </Box>
+    )
+  })
+  await start($)
+
+  const ui = await pane($)
+
+  expect(await ui.find({ key: 'beneath' })).toBeDefined()
+  expect(await ui.find({ key: 'btw-question' })).toBeUndefined()
 })

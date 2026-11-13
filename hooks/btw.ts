@@ -1,7 +1,7 @@
-// /btw, the side question, answered where mermaid-tty can draw its fences. Claude Code's own /btw draws its answer in
-// a panel of its own, through a markdown component no plugin hooks, so a fence there shows as source. mermaid-tty
-// answers it instead in a terminal session: a fork of the session's own transcript, tools denied, as the built-in
-// asks, shown in a pane. No JSX, so node --test can import it.
+// /btw, the side question, answered where mermaid-tty can draw its fences. Claude Code's own /btw draws its answer in a
+// panel of its own, through a markdown component no plugin hooks, so a fence there shows as source. mermaid-tty answers
+// it instead in a terminal session: a fork of the session's own transcript, tools denied, as the built-in asks, shown
+// in a pane. No JSX, so node --test can import it.
 import type { Mode } from './mode.ts'
 
 // What the fork is told before the question: Claude Code's own side-question framing, shortened. The fork shares the
@@ -17,8 +17,8 @@ export const SIDE_QUESTION =
 export const forkPrompt = (question: string) => SIDE_QUESTION + question
 
 // Whether mermaid-tty answers this /btw, rather than Claude Code: only in a terminal session, outside source mode, for
-// a question that is not blank. Anything else is the built-in's, which says how to use it, draws in its own surface,
-// or shows the source as source mode asks.
+// a question that is not blank. Anything else is the built-in's, which says how to use it, draws in its own surface, or
+// shows the source as source mode asks.
 export const takesBtw = (args: unknown, inTerminal: boolean, mode: Mode) =>
   inTerminal && mode !== 'source' && typeof args === 'string' && args.trim() !== ''
 

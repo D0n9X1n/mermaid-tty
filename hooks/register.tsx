@@ -196,7 +196,7 @@ export const register: Register = (on, options) => {
   let isDirectionUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
-  // How many /btw questions mermaid-tty has taken; a fork that ends after a newer one started is dropped.
+  // How many /btw questions mermaid-tty has taken: a /btw overtaken by a newer one is dropped.
   let asked = 0
 
   on('session.start', async ($, e, next) => {
@@ -379,24 +379,45 @@ export const register: Register = (on, options) => {
   // running meanwhile, and the prompt stays free. The pane opens from this hook, which answers the person's command, so
   // it is placed at any width wherever the surface places panes.
   on('command.run', { command: 'btw' }, async ($, e, next) => {
-    const mine = ++asked
-    let answer: string
+    let takes: boolean
     try {
-      if (!takesBtw(e.args, inTerminal, await mode($))) {
-        return next(e)
+      takes = takesBtw(e.args, inTerminal, await mode($))
+    } catch {
+      takes = false
+    }
+
+    if (!takes) {
+      return next(e)
+    }
+
+    // Only the newest /btw may still act once it has waited: an older one, overtaken while its fork or its open ran,
+    // ends with nothing, so it neither hands an obsolete question to Claude Code nor closes the newer answer's pane.
+    const mine = ++asked
+    const isStale = () => mine !== asked
+    const giveUp = async (closePane: boolean) => {
+      if (isStale()) {
+        return {}
       }
 
+      if (closePane) {
+        await $.ui.close({ id: BTW_PANE }).catch(() => {})
+      }
+
+      return isStale() ? {} : next(e)
+    }
+    let answer: string
+    try {
       const r = await $.model.fork({ prompt: forkPrompt(e.args) })
       if (!r.isAnswered) {
-        return r.reason === 'aborted' ? {} : next(e)
+        return r.reason === 'aborted' ? {} : giveUp(false)
       }
 
       answer = r.text
     } catch {
-      return next(e)
+      return giveUp(false)
     }
 
-    if (mine !== asked) {
+    if (isStale()) {
       return {}
     }
 
@@ -410,8 +431,7 @@ export const register: Register = (on, options) => {
       }
     } catch {}
 
-    await $.ui.close({ id: BTW_PANE }).catch(() => {})
-    return next(e)
+    return giveUp(true)
   })
 
   // The btw pane: the question, dim, and under it the answer, drawn as a reply is: each fence that draws as a diagram
