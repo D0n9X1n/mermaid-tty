@@ -218,21 +218,91 @@ for (const [what, late] of Object.entries(LATE)) {
   })
 }
 
-test('A6.command: an overtaken /btw whose pane is not placed leaves the newer pane open', async ($, on) => {
+// The answers are shown one /btw at a time, so the newer one waits for the older one's open to settle; the older one,
+// overtaken by then, neither closes the pane nor hands its question to Claude Code.
+test('A6.command: an overtaken /btw whose pane is not placed leaves the newer answer shown', async ($, on) => {
   const opening = held()
   const e = engine(on, answered('the older answer'), answered('the newer answer'))
   e.openings.push(opening.promise)
   await start($)
 
-  const running = BTW($, 'older')
+  const older = BTW($, 'older')
   await tick()
-  const newer = await BTW($, 'newer')
+  const newer = BTW($, 'newer')
+  await tick()
   opening.settle({ isPlaced: false, reason: 'narrow' })
-  const late = await running
+  const results = await Promise.all([older, newer])
+  const ui = await pane($)
 
-  expect([newer, late]).toEqual([{}, {}])
+  expect(results).toEqual([{}, {}])
   expect(e.closes).toEqual([])
   expect(e.builtin).toEqual([])
+  expect(await ui.find({ type: 'Markdown', text: 'the newer answer' })).toBeDefined()
+})
+
+// A store held until a newer /btw has arrived: the older answer never reaches the pane, nor reopens it.
+test('A6.command: a /btw overtaken while its answer is stored never shows it', async ($, on) => {
+  const storing = held()
+  let holdNext = true
+  const e = engine(on, answered('the older answer'), answered('the newer answer'))
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if (holdNext && JSON.stringify(ev).includes('the older answer')) {
+      holdNext = false
+      await storing.promise
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const older = BTW($, 'older')
+  await tick()
+  const newer = BTW($, 'newer')
+  await tick()
+  storing.settle(undefined)
+  const results = await Promise.all([older, newer])
+  const ui = await pane($)
+
+  expect(results).toEqual([{}, {}])
+  expect(e.opens).toHaveLength(1)
+  expect(e.builtin).toEqual([])
+  expect(await ui.find({ type: 'Markdown', text: 'the newer answer' })).toBeDefined()
+})
+
+// A newer /btw that Claude Code answers, as in source mode, overtakes an older fork too.
+test('A6.command: a /btw overtaken by one Claude Code answers ends with nothing', async ($, on) => {
+  const older = held()
+  const e = engine(on, older.promise)
+  await start($)
+
+  const running = BTW($, 'older')
+  await tick()
+  await BTW($, '   ')
+  older.settle(answered('the older answer'))
+
+  expect(await running).toEqual({})
+  expect(e.builtin).toEqual(['   '])
+  expect(e.opens).toEqual([])
+})
+
+// The mode is read before the fork; a read that fails hands /btw to Claude Code without forking.
+test('A6.command: a mode read that fails hands /btw to Claude Code without forking', async ($, on) => {
+  const e = engine(on, answered(ANSWER))
+  on('state.get', async (_$: any, ev: any, next: any) => {
+    if (JSON.stringify(ev).includes('"source"')) {
+      return { deny: 'state unavailable' }
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const r = await BTW($, 'mode?')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.builtin).toEqual(['mode?'])
+  expect(e.prompts).toEqual([])
+  expect(e.opens).toEqual([])
 })
 
 test('A6.command: a fork that throws, as where the engine cannot fork, hands /btw to Claude Code', async ($, on) => {
@@ -323,4 +393,68 @@ test('A6.hook-tests: a terminal btw pane with no answer stored goes to next(e)',
 
   expect(await ui.find({ key: 'beneath' })).toBeDefined()
   expect(await ui.find({ key: 'btw-question' })).toBeUndefined()
+})
+
+// A mode read that fails while the pane draws fails the plan, so the whole answer shows as it came.
+test('A6.hook-tests: a pane whose drawing fails shows the whole answer as markdown', async ($, on) => {
+  engine(on, answered(ANSWER))
+  let failReads = false
+  on('state.get', async (_$: any, ev: any, next: any) => {
+    if (failReads && JSON.stringify(ev).includes('"source"')) {
+      return { deny: 'state unavailable' }
+    }
+
+    return next(ev)
+  })
+  await start($)
+  await BTW($, 'flow?')
+  failReads = true
+
+  const ui = await pane($)
+
+  expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await ui.find({ type: 'Markdown', text: ANSWER })).toBeDefined()
+})
+
+// Beneath the plugins: kitty outside tmux and an mmdc that writes a 320 x 640 PNG, as tests/hooks/image.test.tsx sets
+// up, so the pane's fence is drawn as text first, then as the picture once it is rendered.
+const PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAUAAAAKAAQAAAADF65wuAAAAMElEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4NGaAAAE2fUvuAAAAAElFTkSuQmCC'
+const kitty = (on: any) => {
+  mock.env(on, { TERM: 'xterm-kitty' })
+  on('config.list', async () => ({
+    value: [
+      { key: 'theme', label: 'Theme', kind: 'choice', value: 'dark', provider: { kind: 'engine' }, isLocked: false },
+    ],
+  }))
+  on('process.run', async (_$: any, e: any) => {
+    let stdout = ''
+    if (e.argv[1] === '--version') {
+      stdout = '11.17.1\n'
+    } else if (e.argv[0] === 'node' && e.argv[2].includes('mkdtempSync')) {
+      stdout = JSON.stringify({ tmp: '/tmp', dir: '/tmp/mermaid-tty.Bt1Bt1' })
+    }
+
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('fs.write', async () => ({ value: undefined }))
+  on('fs.stat', async () => ({ value: { kind: 'file', size: 100, mtimeMs: 0, isLink: false } }))
+  on('fs.read', async (_$: any, e: any) => ({
+    value: e.path.endsWith('.svg') ? '<svg><path marker-end="url(#a)"/></svg>' : { base64: PNG },
+  }))
+}
+
+test('A6.hook-tests: in kitty the pane draws a fence as a picture, and as text in text mode', async ($, on) => {
+  kitty(on)
+  engine(on, answered('```mermaid\nflowchart TD\nP1 --> P2\n```\n'))
+  await start($)
+  await BTW($, 'picture?')
+
+  const ui = await pane($)
+  const picture = await ui.find({ key: 'mermaid-0' })
+  await $.command.run({ command: 'mermaid-tty', args: 'text' })
+
+  expect(picture?.type).toBe('Image')
+  expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
+  expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
 })

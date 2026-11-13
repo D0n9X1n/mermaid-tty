@@ -157,6 +157,38 @@ async function loadImages($: any): Promise<Images> {
   return kept
 }
 
+// Shows a /btw answer in the btw pane; true once the pane is placed. With no answer, a refused store, an open that
+// fails or a pane the surface does not place, the pane closes and the answer before it is put back, so the person sees
+// the newest answer that showed, or none. Once isStale says a newer /btw arrived, each step left is skipped. A function
+// declaration: the engine's loader follows $ only into one.
+async function showBtw($: any, isStale: () => boolean, question: string, answer: string | undefined) {
+  if (isStale() || answer === undefined) {
+    return false
+  }
+
+  let before: unknown
+  try {
+    before = (await $.state.get(BTW)).value
+    await $.state.set(BTW, { question, text: answer })
+    if (!isStale()) {
+      const opened = await $.ui.open({ id: BTW_PANE, title: 'btw', focus: true, closeOnEscape: true })
+      if (opened.isPlaced) {
+        return true
+      }
+    }
+  } catch {}
+
+  if (!isStale()) {
+    await $.ui.close({ id: BTW_PANE }).catch(() => {})
+  }
+
+  if (isBtw(before)) {
+    await $.state.set(BTW, before).catch(() => {})
+  }
+
+  return false
+}
+
 // One drawn fence as an element: a picture where one is rendered, else its rows, each row one truncated line.
 function fenceElement(p: { rows: Rows } | { picture: Picture }, key: string, ui: any): RenderElement {
   const { Box, Text, Image } = ui
@@ -196,8 +228,15 @@ export const register: Register = (on, options) => {
   let isDirectionUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
-  // How many /btw questions mermaid-tty has taken: a /btw overtaken by a newer one is dropped.
+  // How many /btw questions have arrived: a /btw overtaken by a newer one is dropped.
   let asked = 0
+  // The /btw answers shown so far, one after another: each step waits for the one before it to settle.
+  let turns: Promise<unknown> = Promise.resolve()
+  const inTurn = <T,>(step: () => Promise<T>): Promise<T> => {
+    const run = turns.then(step, step)
+    turns = run.catch(() => {})
+    return run
+  }
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -379,6 +418,11 @@ export const register: Register = (on, options) => {
   // running meanwhile, and the prompt stays free. The pane opens from this hook, which answers the person's command, so
   // it is placed at any width wherever the surface places panes.
   on('command.run', { command: 'btw' }, async ($, e, next) => {
+    // Every /btw is numbered as it arrives, before anything is awaited, the ones Claude Code answers too. Only the
+    // newest may still act once it has waited: an older one ends with nothing, so it neither hands an obsolete question
+    // to Claude Code nor shows, or takes away, the newer one's answer.
+    const mine = ++asked
+    const isStale = () => mine !== asked
     let takes: boolean
     try {
       takes = takesBtw(e.args, inTerminal, await mode($))
@@ -386,52 +430,34 @@ export const register: Register = (on, options) => {
       takes = false
     }
 
-    if (!takes) {
-      return next(e)
-    }
-
-    // Only the newest /btw may still act once it has waited: an older one, overtaken while its fork or its open ran,
-    // ends with nothing, so it neither hands an obsolete question to Claude Code nor closes the newer answer's pane.
-    const mine = ++asked
-    const isStale = () => mine !== asked
-    const giveUp = async (closePane: boolean) => {
-      if (isStale()) {
-        return {}
-      }
-
-      if (closePane) {
-        await $.ui.close({ id: BTW_PANE }).catch(() => {})
-      }
-
-      return isStale() ? {} : next(e)
-    }
-    let answer: string
-    try {
-      const r = await $.model.fork({ prompt: forkPrompt(e.args) })
-      if (!r.isAnswered) {
-        return r.reason === 'aborted' ? {} : giveUp(false)
-      }
-
-      answer = r.text
-    } catch {
-      return giveUp(false)
-    }
-
     if (isStale()) {
       return {}
     }
 
-    // An answer nobody would see is no answer: a pane the surface does not place, or an open that fails, closes the
-    // pane again and hands /btw to Claude Code.
+    if (!takes) {
+      return next(e)
+    }
+
+    let answer: string | undefined
     try {
-      await $.state.set(BTW, { question: e.args.trim(), text: answer })
-      const opened = await $.ui.open({ id: BTW_PANE, title: 'btw', focus: true, closeOnEscape: true })
-      if (opened.isPlaced) {
+      const r = await $.model.fork({ prompt: forkPrompt(e.args) })
+      if (!r.isAnswered && r.reason === 'aborted') {
         return {}
       }
-    } catch {}
 
-    return giveUp(true)
+      answer = r.isAnswered ? r.text : undefined
+    } catch {
+      answer = undefined
+    }
+
+    // The answer is shown, or the pane closed, one /btw at a time, each step taken only while this one is the newest:
+    // an older one still storing, opening or closing finishes before a newer one starts, and then does nothing more.
+    const shown = await inTurn(() => showBtw($, isStale, e.args.trim(), answer))
+    if (isStale()) {
+      return {}
+    }
+
+    return shown ? {} : next(e)
   })
 
   // The btw pane: the question, dim, and under it the answer, drawn as a reply is: each fence that draws as a diagram
