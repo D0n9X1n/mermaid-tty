@@ -27,7 +27,7 @@ flowchart TD
 
 | 页面 | 内容 |
 |---|---|
-| [用法](Usage-zh-CN) | 安装、平台与终端、绘图、源码视图、回退、宽度与 CJK，以及卸载。 |
+| [用法](Usage-zh-CN) | 安装、平台与终端、绘图、源码视图、`/btw` 旁支提问、回退、宽度与 CJK，以及卸载。 |
 | [配置与主题](Configuration-and-Themes-zh-CN) | `theme` 选项、六种配色，以及主题着色的角色。 |
 | [架构](Architecture-zh-CN) | 渲染流水线、模块、校验器、宽度函数，以及钩子和缓存。 |
 | [开发与发布](Development-and-Release-zh-CN) | 仓库结构、本地检查、持续集成、README 图片与图标、百科及发布步骤。 |

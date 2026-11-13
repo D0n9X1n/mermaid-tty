@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Usage-zh-CN)
 
-How to install mermaid-tty, where it draws, which diagrams it draws, how to see their source, why a diagram falls back, how width is measured, and how to remove it.
+How to install mermaid-tty, where it draws, which diagrams it draws, how to see their source, how `/btw` answers draw, why a diagram falls back, how width is measured, and how to remove it.
 
 ## Install
 
@@ -108,6 +108,17 @@ The argument is one word, or `images`, `theme` or `direction` and one setting, i
 `/copy` copies the Mermaid source in either mode. mermaid-tty changes only how a reply is drawn, and the stored reply keeps the exact source.
 
 ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid-tty source`.
+
+## Side questions
+
+`/btw <question>` asks a side question without interrupting Claude. Claude Code draws its own `/btw` answer in a panel no plugin can draw into, so a diagram there would show as source. In a terminal session, mermaid-tty answers `/btw` instead:
+
+- It asks the question the way Claude Code's `/btw` does: over the session's own conversation, with no tools, as a one-off answer. While Claude works, it answers from the conversation as of Claude's last finished request. The prompt stays free while it answers.
+- The answer opens in a `btw` pane above the prompt, or beside the transcript in fullscreen: the question, dimmed, then the answer, with its diagrams drawn as in a reply and its other text as Markdown. A diagram that can't be drawn shows its source, as in a reply.
+- Nothing is added to the conversation: Claude never sees the question or the answer.
+- Esc closes the pane, as does its close mark. A new `/btw` replaces the answer in it; an answer that comes back after a newer `/btw` was asked is dropped.
+
+Claude Code's own `/btw` runs instead, as if mermaid-tty weren't installed, in source mode, outside the terminal, with no question, before Claude's first reply has finished, when the answer fails or comes back empty, and when the pane can't be shown. Pressing Esc while it answers cancels the question. The pane shows only the latest answer: it has none of the built-in panel's history, copy or fork keys.
 
 ## Pictures
 

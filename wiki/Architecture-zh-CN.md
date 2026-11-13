@@ -89,11 +89,12 @@ flowchart TD
 | 文件 | 职责 |
 |---|---|
 | `hooks.json` | 加载 `register.tsx`。 |
-| `register.tsx` | 注册 `/mermaid-tty` 命令和 `ui.render` 钩子，将模式保存在 `$.state` 中。 |
+| `register.tsx` | 注册 `/mermaid-tty` 命令、接管 `/btw` 的钩子和 `ui.render` 钩子，将模式保存在 `$.state` 中。 |
 | `fences.ts` | `splitFences`：拆分回复正文和已闭合的 `mermaid` 代码块。 |
 | `mode.ts` | 决定何时原样传递回复，以及解析命令参数和生成反馈。 |
+| `btw.ts` | 决定 mermaid-tty 何时回答 `/btw`（`takesBtw`）、分叉收到的旁支提问提示（`forkPrompt`），以及所存回答的结构。 |
 
-`types/mermaid-tty.d.ts` 声明插件状态：`mermaid-tty.source`，取值为 `true`、`'text'` 或未设置；以及 `mermaid-tty.images`，取值为 `'auto'`、`'on'` 或 `'off'`。
+`types/mermaid-tty.d.ts` 声明插件状态：`mermaid-tty.source`，取值为 `true`、`'text'` 或未设置；`mermaid-tty.images`，取值为 `'auto'`、`'on'` 或 `'off'`；以及其他状态，例如 `mermaid-tty.btw`，即最新的 `/btw` 问题和回答。
 
 ## 校验与回退
 
@@ -140,6 +141,8 @@ flowchart TD
 
 - **`session.start`** 注册 `/mermaid-tty` 命令，并将图片设置从 `$.store` 复制到 `$.state` 的 `mermaid-tty.images`；未设置、无法识别或读取失败时为 `auto`。它还将 `mermaid-tty.theme` 设为配置的主题、`mermaid-tty.direction` 设为配置的方向，使每次加载都从已保存的选项开始。若会话中的某次加载发现已设置了另一个方向（例如在 `/config` 中修改后），会用 `$.session.append` 为模型追加一条说明。
 - **`command.run`** 解析命令参数，将模式存为 `$.state` 中的 `mermaid-tty.source`，并使 `ui.render` 失效，让已显示的回复按新模式重绘。`images auto|on|off` 将设置写入 `$.state` 和 `$.store`，使其在之后的会话中同样有效，并以同样方式使 `ui.render` 失效；存储失败时仍在本次会话中生效，并在回复中说明。`theme <name>` 写入 `mermaid-tty.theme`，使 `ui.render` 失效，并通过 `$.config.set` 将名称保存到插件自己的 `theme` 行；保存被拒绝或失败时仍在本次会话中生效，并在回复中说明。`direction <LR|TB|off>` 以同样方式处理 `mermaid-tty.direction` 和 `direction` 行，并追加一条用户消息告知模型，因为对话的系统提示词保持首次发送时的内容。对保存被拒绝的主题或方向再次发出同一请求时，会重试保存；对说明被拒绝的方向，会重试说明。
+- **`command.run`** 处理 `btw`：在终端会话中、非源码模式下回答旁支问题。它以问题加一段简短的旁支提问前言（`hooks/btw.ts`）等待 `$.model.fork`，分叉基于本会话自己的对话运行，所有工具都被拒绝。有回答时，将 `{ question, text }` 保存为 `mermaid-tty.btw`，用 `$.ui.open` 打开 `btw` 窗格（获得焦点，按 Esc 关闭），并返回 `{}`，因此不会有输出行或上下文进入对话。模块内的计数器会丢弃在更新的 `/btw` 之后才到达的回答。其他情况都通过 `next(e)` 把命令交给 Claude Code：没有问题、源码模式、不在终端、分叉抛错或没有回答，以及窗格未被放置（窗格会再次关闭）。被取消的分叉返回 `{}`。
+- **`ui.render`** 处理请求 id 为 `btw` 的 `Pane`，在终端上绘制所存的回答：先是变暗的问题，再以窗格正文宽度像回复一样规划回答（`safePlan`），绘出的代码块显示为行或图片，正文显示为 `Markdown`。没有绘出任何图、规划失败或处于源码模式时，整个回答作为一个 `Markdown` 显示。在其他界面或没有所存回答时，调用 `next(e)`。
 - **`prompt.compose`** 在引擎各节之后、缓存边界的会话一侧添加 `mermaid-tty:flowchart-direction` 一节，要求 Claude 编写的流程图以 `flowchart LR` 或 `flowchart TB` 开头。方向为 `off` 或会话不在终端绘图时不添加；出错时原样返回引擎的各节。
 - **`ui.render`** 处理 `AssistantMessage`。视口未提供宽度、界面不是终端、处于源码模式或消息标记为展开时，回复原样传递。否则，钩子拆分回复，渲染每个 `mermaid` 块，将回退块拼回周围正文。若没有绘出任何图，整个回复原样交给 Claude Code；否则返回由正文与图表行组成的纵向布局，正文仍由 Claude Code 显示。回复以图表开头时，先交给 Claude Code 一个空块，以保留回复前的项目符号。
 

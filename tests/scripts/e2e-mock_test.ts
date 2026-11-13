@@ -6,8 +6,8 @@ import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { connect } from 'node:net'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { chunks, startMock } from '../../scripts/e2e/mock.ts'
-import { REPLY, REPLY_LEAD } from '../../scripts/e2e/reply.ts'
+import { chunks, replyFor, startMock } from '../../scripts/e2e/mock.ts'
+import { REPLY, REPLY_BTW, REPLY_LEAD } from '../../scripts/e2e/reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 
 // Every "text" field of an SSE body, in order, joined: a stream's deltas, reassembled.
@@ -479,4 +479,20 @@ test('A9.harness: the mock refuses CONNECT, closing the connection without a byt
     c.destroy()
     await m.stop()
   }
+})
+
+test('A9.harness: a side question, as /btw asks one, gets REPLY_BTW whatever else it says; lead gets REPLY_LEAD', () => {
+  const side = [
+    { type: 'text', text: 'This is a side question from the user.' },
+    { type: 'text', text: 'lead?' },
+  ]
+
+  assert.equal(replyFor([{ role: 'user', content: side }]), REPLY_BTW)
+  assert.equal(replyFor([{ role: 'user', content: 'lead' }]), REPLY_LEAD)
+  assert.equal(replyFor([{ role: 'user', content: 'hello' }]), REPLY)
+  assert.equal(replyFor('not messages'), REPLY)
+  assert.deepEqual(
+    splitFences(REPLY_BTW).map((s) => s.kind),
+    ['prose', 'mermaid', 'prose'],
+  )
 })

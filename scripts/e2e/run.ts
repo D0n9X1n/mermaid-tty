@@ -1,6 +1,6 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
 //   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario
-//   harness|source-view|stored|lead|all] [--keep]
+//   harness|source-view|stored|lead|btw|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with
 // --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
@@ -30,7 +30,7 @@ import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCh
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
 import { startMock } from './mock.ts'
-import { REPLY, REPLY_LEAD } from './reply.ts'
+import { REPLY, REPLY_BTW, REPLY_LEAD } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
@@ -39,7 +39,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
 const win = process.platform === 'win32'
 const THEME_NAMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const
-const SCENARIOS = ['harness', 'source-view', 'stored', 'lead'] as const
+const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw'] as const
 type Scenario = (typeof SCENARIOS)[number]
 type Run = { theme: ThemeName; color: Color }
 
@@ -315,6 +315,44 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
   return problems
 }
 
+// btw: a /btw side question asked after a reply is answered in mermaid-tty's pane, its diagram drawn, not its source,
+// and nothing of it reaches the stored transcript. Escape closes the pane.
+async function btw({ s, run, config }: Ctx): Promise<string[]> {
+  const since = Date.now() - 1000
+  // A short reply first, so the session has a transcript to fork and the pane has room on screen.
+  await submit(s, 'lead')
+  await s.waitFor(/After the diagram\./, 30000)
+  await submit(s, '/btw what does it do?')
+  await s.waitFor(/Side done\./, 30000)
+  await sleep(500)
+  const text = await s.text()
+  // The pane's rows inside its frame: each row between a │ in the first column and one in the last.
+  const inside = (await s.cells()).map((row) => (row[0]?.ch === '│' && row.at(-1)?.ch === '│' ? row.slice(1, -1) : row))
+  const problems = checkDiagramScreen(inside, {
+    labels: { 侧问: 'node', 回答: 'node' },
+    prose: ['Side answer:', 'Side done.'],
+    diagrams: drawnDiagrams(REPLY_BTW, DRAW_COLUMNS, run.theme),
+    color: colorOf(run),
+    hex: hexOf(run),
+  })
+  problems.push(...sourceShown(text, fenceBody(REPLY_BTW).split('\n')))
+  if (!text.includes('/btw what does it do?')) {
+    problems.push('btw: the pane does not show the question')
+  }
+
+  const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
+  const stored = files().map((f) => readFileSync(f, 'utf8'))
+  for (const word of ['Side answer:', 'what does it do?']) {
+    if (stored.some((t) => t.includes(word))) {
+      problems.push(`btw: the stored transcript holds ${JSON.stringify(word)}`)
+    }
+  }
+
+  await s.key('escape')
+  await s.waitFor(/^(?![\s\S]*Side done\.)/, 10000).catch(() => problems.push('btw: escape left the pane open'))
+  return problems
+}
+
 // The *.jsonl files under dir, at any depth; none when it does not exist.
 function jsonlFiles(dir: string): string[] {
   if (!existsSync(dir)) {
@@ -425,6 +463,7 @@ const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = {
   'source-view': sourceView,
   stored,
   lead,
+  btw,
 }
 
 async function main(): Promise<number> {
