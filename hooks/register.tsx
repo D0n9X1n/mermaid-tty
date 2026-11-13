@@ -1,6 +1,8 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
+import { forkPrompt, isBtw, takesBtw } from './btw.ts'
+import type { Picture } from './image.ts'
 import {
   directionNote,
   directionReply,
@@ -27,7 +29,8 @@ import { safePlan, sweepPictures } from './plan.ts'
 // which a drawing reads, so a change redraws at once with no restart. /mermaid-tty theme sets the theme the same way:
 // in $.state for this session, and saved as the plugin's theme setting through $.config.set for later ones.
 // /mermaid-tty direction LR|TB|off sets, the same way, the flowchart direction a system-prompt section asks Claude to
-// write; it never changes how a diagram is drawn.
+// write; it never changes how a diagram is drawn. In a terminal session /btw, the side question, is answered here
+// (hooks/btw.ts) and shown in a pane that draws its fences as a reply does.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
 const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
@@ -35,6 +38,9 @@ const DIRECTION = { plugin: 'mermaid-tty', key: 'direction' } as const
 // Whether this conversation has not been told the direction in force, its note refused. Kept in $.state, not in the
 // module, since a reload (a /config change) starts the module over within the same conversation.
 const UNTOLD = { plugin: 'mermaid-tty', key: 'untold' } as const
+// The latest /btw answered, which the btw pane shows.
+const BTW = { plugin: 'mermaid-tty', key: 'btw' } as const
+const BTW_PANE = 'btw'
 const SECTION_ID = 'mermaid-tty:flowchart-direction'
 // The value each mode keeps in $.state, as mode() reads it back.
 const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
@@ -151,6 +157,34 @@ async function loadImages($: any): Promise<Images> {
   return kept
 }
 
+// One drawn fence as an element: a picture where one is rendered, else its rows, each row one truncated line.
+function fenceElement(p: { rows: Rows } | { picture: Picture }, key: string, ui: any): RenderElement {
+  const { Box, Text, Image } = ui
+  if ('picture' in p) {
+    return (
+      <Image
+        key={key}
+        source={{ png: p.picture.png }}
+        columns={p.picture.columns}
+        rows={p.picture.rows}
+        alt="mermaid diagram"
+      />
+    )
+  }
+
+  return (
+    <Box key={key} flexDirection="column">
+      {p.rows.map((row) => (
+        <Text wrap="truncate-end">
+          {row.map(({ text, role: _r, ...style }) => (
+            <Text {...style}>{text}</Text>
+          ))}
+        </Text>
+      ))}
+    </Box>
+  )
+}
+
 export const register: Register = (on, options) => {
   // nord unless the setting names another theme: an unset or unknown value draws in nord, the manifest's default.
   const configured: ThemeName = isTheme(options.theme) ? options.theme : 'nord'
@@ -162,6 +196,8 @@ export const register: Register = (on, options) => {
   let isDirectionUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
+  // How many /btw questions mermaid-tty has taken; a fork that ends after a newer one started is dropped.
+  let asked = 0
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -315,7 +351,7 @@ export const register: Register = (on, options) => {
       return next(e)
     }
 
-    const { parts, Box, Text, Image } = plan
+    const { parts, Box } = plan
     const kids: RenderElement[] = []
     let first = e.props.isFirstOfReply
     let n = 0
@@ -324,35 +360,95 @@ export const register: Register = (on, options) => {
         kids.push(await next({ ...e, props: { ...e.props, text: '', isFirstOfReply: true } }))
       } // an empty prose part first keeps the reply's bullet, which Claude Code draws before its first part
 
-      if ('picture' in p) {
-        kids.push(
-          <Image
-            key={`mermaid-${n++}`}
-            source={{ png: p.picture.png }}
-            columns={p.picture.columns}
-            rows={p.picture.rows}
-            alt="mermaid diagram"
-          />,
-        )
-      } else if ('rows' in p) {
-        kids.push(
-          <Box key={`mermaid-${n++}`} flexDirection="column">
-            {p.rows.map((row) => (
-              <Text wrap="truncate-end">
-                {row.map(({ text, role: _r, ...style }) => (
-                  <Text {...style}>{text}</Text>
-                ))}
-              </Text>
-            ))}
-          </Box>,
-        )
-      } else {
+      if ('prose' in p) {
         kids.push(await next({ ...e, props: { ...e.props, text: p.prose, isFirstOfReply: first } }))
+      } else {
+        kids.push(fenceElement(p, `mermaid-${n++}`, plan))
       }
 
       first = false
     }
 
     return <Box flexDirection="column">{kids}</Box>
+  })
+
+  // /btw in a terminal session, outside source mode: the question goes to a fork of this session's transcript, as
+  // Claude Code's own /btw sends it, and the answer to the btw pane. The answer adds nothing to the conversation: no
+  // output row, no context. The fork is awaited here, so whatever comes back but an answer hands /btw to Claude Code,
+  // which runs it as if mermaid-tty were not installed; a cancelled one shows nothing. Claude Code shows the command as
+  // running meanwhile, and the prompt stays free. The pane opens from this hook, which answers the person's command, so
+  // it is placed at any width wherever the surface places panes.
+  on('command.run', { command: 'btw' }, async ($, e, next) => {
+    const mine = ++asked
+    let answer: string
+    try {
+      if (!takesBtw(e.args, inTerminal, await mode($))) {
+        return next(e)
+      }
+
+      const r = await $.model.fork({ prompt: forkPrompt(e.args) })
+      if (!r.isAnswered) {
+        return r.reason === 'aborted' ? {} : next(e)
+      }
+
+      answer = r.text
+    } catch {
+      return next(e)
+    }
+
+    if (mine !== asked) {
+      return {}
+    }
+
+    // An answer nobody would see is no answer: a pane the surface does not place, or an open that fails, closes the
+    // pane again and hands /btw to Claude Code.
+    try {
+      await $.state.set(BTW, { question: e.args.trim(), text: answer })
+      const opened = await $.ui.open({ id: BTW_PANE, title: 'btw', focus: true, closeOnEscape: true })
+      if (opened.isPlaced) {
+        return {}
+      }
+    } catch {}
+
+    await $.ui.close({ id: BTW_PANE }).catch(() => {})
+    return next(e)
+  })
+
+  // The btw pane: the question, dim, and under it the answer, drawn as a reply is: each fence that draws as a diagram
+  // or a picture, the prose between as markdown. In source mode, or when nothing draws or the drawing fails, the whole
+  // answer is one markdown block. The answer is read while drawing, so a newer one redraws the pane.
+  on('ui.render', { component: 'Pane', requestId: BTW_PANE }, async ($, e, next) => {
+    const v = e.surface === 'terminal' ? (await $.state.get(BTW)).value : undefined
+    if (!isBtw(v)) {
+      return next(e)
+    }
+
+    // The answer is drawn as a reply at the pane's body width: the plan reads the reply's surface, text and columns.
+    const reply = {
+      ...e,
+      viewport: { ...e.viewport, columns: e.props.bodyColumns },
+      props: { ...e.props, text: v.text },
+    }
+    const plan = await safePlan(
+      $,
+      reply,
+      await theme($, configured),
+      () => mode($),
+      undefined,
+      () => images($),
+    )
+    const { Box, Text, Markdown } = $.ui.resolve(e)
+    const parts = plan ? plan.parts : [{ prose: v.text }]
+    let n = 0
+    return (
+      <Box flexDirection="column">
+        <Box key="btw-question">
+          <Text dimColor>{`/btw ${v.question}`}</Text>
+        </Box>
+        {parts.map((p, i) =>
+          'prose' in p ? <Markdown key={`prose-${i}`} text={p.prose} /> : fenceElement(p, `mermaid-${n++}`, plan!),
+        )}
+      </Box>
+    )
   })
 }

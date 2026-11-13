@@ -1,11 +1,11 @@
 // A stand-in for the Anthropic Messages API on 127.0.0.1, for the e2e harness's real Claude Code. startMock() answers
-// every POST /v1/messages, whatever its query string, with REPLY, or REPLY_LEAD when the last user message contains
-// lead: as SSE when the request has stream: true, else as one JSON message. Any other method or path gets an empty 404,
-// CONNECT is refused, and stop() closes every connection. Node built-ins only, so the main suite needs nothing
-// installed.
+// every POST /v1/messages, whatever its query string, with REPLY; REPLY_BTW when the last user message is a side
+// question, as /btw asks one; or REPLY_LEAD when it contains lead: as SSE when the request has stream: true, else as
+// one JSON message. Any other method or path gets an empty 404, CONNECT is refused, and stop() closes every connection.
+// Node built-ins only, so the main suite needs nothing installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { REPLY, REPLY_LEAD } from './reply.ts'
+import { REPLY, REPLY_BTW, REPLY_LEAD } from './reply.ts'
 
 // text in runs of at most 64 code points, one per text delta. A string iterates by code point, so no run splits a
 // surrogate pair.
@@ -35,20 +35,29 @@ function parse(raw: string): Body {
   }
 }
 
-// Whether the last user message contains lead. Its content is a string or an array of blocks, of which a text block has
+// Whether the last user message contains word. Its content is a string or an array of blocks, of which a text block has
 // text; any other block, a malformed message and a malformed block are skipped.
-function wantsLead(messages: unknown): boolean {
+function lastAsks(messages: unknown, word: string): boolean {
   if (!Array.isArray(messages)) {
     return false
   }
 
   const content = messages.findLast((m) => m?.role === 'user')?.content
   if (typeof content === 'string') {
-    return content.includes('lead')
+    return content.includes(word)
   }
 
   const texts = Array.isArray(content) ? content.map((b) => b?.text) : []
-  return texts.some((t) => typeof t === 'string' && t.includes('lead'))
+  return texts.some((t) => typeof t === 'string' && t.includes(word))
+}
+
+// The reply for a request's messages: a side question first, since its prompt may hold any word.
+export function replyFor(messages: unknown): string {
+  if (lastAsks(messages, 'side question')) {
+    return REPLY_BTW
+  }
+
+  return lastAsks(messages, 'lead') ? REPLY_LEAD : REPLY
 }
 
 export async function startMock(): Promise<{ url: string; stop(): Promise<void> }> {
@@ -71,7 +80,7 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
     }
 
     const body = parse(Buffer.concat(parts).toString('utf8'))
-    const text = wantsLead(body.messages) ? REPLY_LEAD : REPLY
+    const text = replyFor(body.messages)
     const pieces = chunks(text)
     const message = {
       id: `msg_mock_${++n}`,

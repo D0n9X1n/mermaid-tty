@@ -27,7 +27,7 @@ flowchart TD
 
 | Page | What it covers |
 |---|---|
-| [Usage](Usage) | Install, platforms and terminals, drawing diagrams, the source view, fallback, width and CJK, and uninstall. |
+| [Usage](Usage) | Install, platforms and terminals, drawing diagrams, the source view, `/btw` side questions, fallback, width and CJK, and uninstall. |
 | [Configuration and Themes](Configuration-and-Themes) | The `theme` option, the six palettes, and the roles a theme colors. |
 | [Architecture](Architecture) | The render pipeline, the modules, the validator, the width function, and the hook and its cache. |
 | [Development and Release](Development-and-Release) | The repository, local checks, CI, the README images and the icon, this wiki, and the release steps. |

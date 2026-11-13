@@ -33,6 +33,18 @@ export const REPLY = [
   'A --> B',
 ].join('\n')
 
+// REPLY_BTW: the answer to a /btw side question, a diagram between two lines of prose.
+export const REPLY_BTW = [
+  'Side answer:',
+  '',
+  '```mermaid',
+  'flowchart LR',
+  'Q[侧问] --> R[回答]',
+  '```',
+  '',
+  'Side done.',
+].join('\n')
+
 // REPLY_LEAD: a reply that opens with its diagram, prose after it.
 export const REPLY_LEAD = ['```mermaid', 'flowchart TD', 'S[开始] --> E[结束]', '```', '', 'After the diagram.'].join(
   '\n',
