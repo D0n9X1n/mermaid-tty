@@ -238,8 +238,9 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
       const len = 3 + int(3)
       const at = reply.length
       const isMermaid = rand() < 0.5
+      const indent = int(4)
       line(
-        ' '.repeat(int(4)) +
+        ' '.repeat(indent) +
           ch.repeat(len) +
           (isMermaid ? pick(MERMAID) : pick(ch === '`' ? OTHER : [...OTHER, 'a`b'])),
       )
@@ -248,7 +249,12 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
         line(pick([...BODY, other.repeat(3 + int(3)), ...(len > 3 ? [ch.repeat(len - 1)] : [])]))
       }
 
-      const body = reply.length > bodyAt ? reply.slice(bodyAt, reply.length - last.length) : ''
+      // Each body line loses the opener's indentation where it starts with that many spaces; no generated line starts
+      // with fewer spaces or a tab, which would make the fence prose.
+      const raw = reply.length > bodyAt ? reply.slice(bodyAt, reply.length - last.length) : ''
+      const body = (raw.match(/[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$/g) ?? [])
+        .map((l) => (l.startsWith(' '.repeat(indent)) ? l.slice(indent) : l))
+        .join('')
       if (b === blocks - 1 && rand() < 0.2) {
         continue
       } // the last fence may stay open: prose to the end
@@ -281,5 +287,53 @@ test('A6.hook-tests: 600 seeded random replies (prose, fences, LF/CRLF/CR, U+202
     const got = splitFences(reply)
     assert.equal(got.map((x) => x.text).join(''), reply, JSON.stringify(reply))
     assert.deepEqual(got, want, JSON.stringify(reply))
+  }
+})
+
+test('a fence opened on a list item is read to its closer, so the diagram after it still draws', () => {
+  const D = '```mermaid\nflowchart LR\nC --> D\n```'
+  const d = mermaid(D, 'flowchart LR\nC --> D')
+  for (const item of [
+    '- ```mermaid\n  flowchart LR\n  A --> B\n  ```\n\n',
+    '* ```js\n  x\n  ```\n\n',
+    '1. ```mermaid\n   A --> B\n   ```\n\n',
+    '  10) ~~~mermaid\n      A --> B\n      ~~~\n\n',
+  ]) {
+    assert.deepEqual(splitFences(item + D), [prose(item), d], JSON.stringify(item))
+  }
+})
+
+test('a list item fence ends with its item, at the first line indented less than the item', () => {
+  const r = '- ```js\nfoo\n```mermaid\nA\n```\n'
+  assert.deepEqual(splitFences(r), [prose('- ```js\nfoo\n'), mermaid('```mermaid\nA\n```\n', 'A')])
+})
+
+test('an indented fence loses the opener indentation from each body line, as CommonMark reads it', () => {
+  for (const [r, body] of [
+    ['  ```mermaid\n  mindmap\n  root\n     child\n  ```\n', 'mindmap\nroot\n   child'],
+    ['   ```mermaid\n   mindmap\nroot\n      child\n```\n', 'mindmap\nroot\n   child'],
+    ['  ```mermaid\r\n  A\r\n\r\n  B\r\n  ```\r\n', 'A\r\n\r\nB'],
+  ] as const) {
+    assert.deepEqual(splitFences(r), [mermaid(r, body)], JSON.stringify(r))
+  }
+})
+
+test('an indented fence whose body Markdown renderers would read differently stays prose', () => {
+  for (const r of [
+    '  ```mermaid\n  mindmap\nroot\n   child\n \tgrandchild\n  ```', // a tab where the indentation comes off
+    '  ```mermaid\n  mindmap\n  root\n child\n  ```\n', // a line indented less than the opener
+    '   ```mermaid\n\tA\n   ```\n',
+  ]) {
+    assert.deepEqual(splitFences(r), [prose(r)], JSON.stringify(r))
+  }
+})
+
+test('the info string mermaid matches in any letter case', () => {
+  for (const r of ['```Mermaid\nA\n```\n', '~~~MERMAID\nA\n~~~\n', '``` mErMaId\nA\n```\n']) {
+    assert.deepEqual(splitFences(r), [mermaid(r, 'A')], JSON.stringify(r))
+  }
+
+  for (const r of ['```mermaıd\nA\n```\n', '```MERMAİD\nA\n```\n']) {
+    assert.deepEqual(splitFences(r), [prose(r)], JSON.stringify(r))
   }
 })
