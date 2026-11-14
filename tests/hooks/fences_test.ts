@@ -379,3 +379,37 @@ test('a whitespace-only body line of an indented fence loses its spaces', () => 
   const r = '  ```mermaid\n  A\n \n  B\n  ```\n'
   assert.deepEqual(splitFences(r), [mermaid(r, 'A\n\nB')])
 })
+
+test('a reply whose Markdown the scanner cannot follow exactly draws no later diagram, as review found', () => {
+  for (const r of [
+    '- - ```js\n    ```\n  ```\n  ~~~mermaid\n  flowchart LR\n  A --> B\n  ~~~\n', // an item that starts an item
+    '- \t```js\n  ```\n```mermaid\nflowchart LR\nA --> B\n```\n', // a tab after the marker
+    'heading\n===\n2. ```js\n   ```mermaid\n   flowchart LR\n   A --> B\n   ```\n', // a setext heading
+    '> quote\n2. ```js\n   ```mermaid\n   flowchart LR\n   A --> B\n   ```\n', // a list after a quote
+    '- \u2028\nlazy\n  ```mermaid\nflowchart LR\nA --> B\n```\n', // U+2028 is text, not blank
+    '<pre>\n```mermaid\nA\n```\n</pre>\n', // an HTML block that can run past blank lines
+  ]) {
+    assert.deepEqual(
+      splitFences(r).filter((x) => x.kind === 'mermaid'),
+      [],
+      JSON.stringify(r),
+    )
+  }
+})
+
+test('a diagram after a block quote, a table or a heading still draws when the Markdown is plain', () => {
+  const D = '```mermaid\nA\n```\n'
+  for (const before of ['> note\n\n', '| a | b |\n| - | - |\n| 1 | 2 |\n\n', '# Title\n', 'Title\n===\n', '> note\n']) {
+    assert.deepEqual(splitFences(before + D).filter((x) => x.kind === 'mermaid').length, 1, JSON.stringify(before))
+  }
+})
+
+test('a diagram after a block-level HTML tag and a blank line draws; inside the HTML block, a fence is raw HTML', () => {
+  const D = '```mermaid\nA\n```\n'
+  assert.equal(
+    splitFences('<details>\n<summary>x</summary>\n\n' + D + '\n</details>\n').filter((x) => x.kind === 'mermaid')
+      .length,
+    1,
+  )
+  assert.equal(splitFences('<div>\n' + D + '</div>\n').filter((x) => x.kind === 'mermaid').length, 0)
+})

@@ -1,65 +1,154 @@
 // Splits a reply at its closed mermaid fences. The segments' texts join back to exactly `reply`; an unclosed fence, or
 // one nested in a longer fence, stays prose. A diagram's body drops only its last line end. As in CommonMark, a line
 // ends at LF, CRLF or a lone CR and nowhere else. U+2028, U+2029 and U+0085 are plain characters: no pattern here uses
-// `.`, and an info string is trimmed of spaces and tabs only.
+// `.`, an info string is trimmed of spaces and tabs only, and only spaces and tabs make a line blank.
 //
-// List items are followed as CommonMark reads them, so a fence inside one ends where the item ends, and the item's
-// lines are never taken for top-level ones: each item has a content column, a line indented less than it ends the item
-// unless it continues the item's paragraph lazily, and a fence never continues lazily. Block quotes are not followed; a
-// fence inside one stays prose.
+// A fence is drawn only when it is certainly a mermaid code block as CommonMark reads the reply, so the Markdown around
+// it is followed: list items by their content columns, with lazy continuation and the rule for which items may
+// interrupt a paragraph; block quotes at the top level; setext headings; and the paragraph or table a line goes on.
+// Where a reply goes beyond that, such as an HTML block, a block quote inside a list item, a quote's lazy line or a
+// line that may or may not be a table's, no later diagram is drawn: the rest of the reply stays prose, as written.
 export type Segment = { kind: 'prose'; text: string } | { kind: 'mermaid'; text: string; body: string }
 
 const LINE_END = /(?:\r\n|\r|\n)$/
 const LINES = /[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$/g
 
-// After a line's indentation: a fence opener, its run and its info string.
+// The patterns below read a line after its indentation. A fence opener: its run and its info string.
 const FENCE = /^(`{3,}|~{3,})([^\r\n]*)$/
-// After a line's indentation: a fence closer.
+// A fence closer.
 const CLOSER = /^(`{3,}|~{3,})[ \t]*$/
-// After a line's indentation: a list marker, a bullet or a number with . or ), then the spaces and the item's first
-// line, or nothing.
-const MARKER = /^([-+*]|\d{1,9}[.)])(?:( +)([^\r\n]*))?$/
-// After a line's indentation: a thematic break, three or more -, * or _ with spaces or tabs between. It is not a list
-// item, though `- - -` looks like one.
+// A list marker, a bullet or a number with . or ), then its padding and the item's first line, or nothing.
+const MARKER = /^([-+*]|\d{1,9}[.)])(?:([ \t]+)([^\r\n]*))?$/
+// A thematic break: three or more -, * or _, spaces or tabs between. Not a list item, though `- - -` looks like one.
 const BREAK = /^([-*_])(?:[ \t]*\1){2,}[ \t]*$/
 const HEADING = /^#{1,6}(?:[ \t]|$)/
+// A setext underline, which makes the paragraph above it a heading.
+const UNDERLINE = /^(?:=+|-+)[ \t]*$/
+// The start of an HTML block. One that opens with a block-level tag, such as <details> or <div>, ends at the next blank
+// line, and is followed: its lines are raw HTML, never fences. Any other kind, such as <pre> or a comment, can run
+// across blank lines to its own end marker, and is not followed.
+const HTML = /^<[A-Za-z/!?]/
+// The tags that open such a block, as CommonMark lists them.
+const BLOCK_TAGS = [
+  'address',
+  'article',
+  'aside',
+  'base',
+  'basefont',
+  'blockquote',
+  'body',
+  'caption',
+  'center',
+  'col',
+  'colgroup',
+  'dd',
+  'details',
+  'dialog',
+  'dir',
+  'div',
+  'dl',
+  'dt',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'frame',
+  'frameset',
+  'h[1-6]',
+  'head',
+  'header',
+  'hr',
+  'html',
+  'iframe',
+  'legend',
+  'li',
+  'link',
+  'main',
+  'menu',
+  'menuitem',
+  'nav',
+  'noframes',
+  'ol',
+  'optgroup',
+  'option',
+  'p',
+  'param',
+  'search',
+  'section',
+  'summary',
+  'table',
+  'tbody',
+  'td',
+  'tfoot',
+  'th',
+  'thead',
+  'title',
+  'tr',
+  'track',
+  'ul',
+]
+const BLOCK_TAG = new RegExp(`^</?(?:${BLOCK_TAGS.join('|')})(?:[ \t>]|/>|$)`, 'i')
+// A line that may be a table's delimiter row: cells of dashes, with a pipe or colon.
+const DELIMITER = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/
+const isDelimiter = (s: string) => DELIMITER.test(s) && /[|:]/.test(s)
 
-// The columns of t's leading spaces and tabs, a tab reaching the next multiple of four, as CommonMark counts them.
-function indentColumns(t: string): number {
-  let col = 0
-  for (const ch of /^[ \t]*/.exec(t)![0]) {
+// Blank as CommonMark reads it: spaces and tabs only.
+const isBlank = (s: string) => !/[^ \t]/.test(s)
+
+// The column after whitespace ws that starts at column from, a tab reaching the next multiple of four.
+function advance(ws: string, from = 0): number {
+  let col = from
+  for (const ch of ws) {
     col = ch === '\t' ? col + 4 - (col % 4) : col + 1
   }
 
   return col
 }
 
+// The columns of t's leading spaces and tabs.
+const indentColumns = (t: string) => advance(/^[ \t]*/.exec(t)![0])
+
+// line without its first n columns of leading whitespace; a tab that straddles column n leaves spaces for the columns
+// past it, as CommonMark does.
+function stripColumns(line: string, n: number): string {
+  let col = 0
+  let i = 0
+  while (col < n && (line[i] === ' ' || line[i] === '\t')) {
+    const end = advance(line[i]!, col)
+    if (end > n) {
+      return ' '.repeat(end - n) + line.slice(i + 1)
+    }
+
+    col = end
+    i++
+  }
+
+  return line.slice(i)
+}
+
 // Whether a fence's info string names mermaid. The letter case doesn't matter, as for Markdown renderers' language
 // names; without the u flag, `i` folds only to ASCII letters, so `ı` or `İ` never stand in for `i`.
 const isMermaid = (info: string) => /^[ \t]*mermaid[ \t]*$/i.test(info)
 
-// A backtick fence's info string may not hold a backtick; a tilde fence's may.
-const opens = (ch: string, info: string) => !(ch === '`' && info.includes('`'))
-
-// Whether content, indented rel columns into its container, starts a block, so it cannot continue a paragraph lazily.
-// Four or more columns is indented code, which cannot interrupt a paragraph.
-function startsBlock(content: string, rel: number): boolean {
+// A fence opener, or null: a backtick fence's info string may not hold a backtick; a tilde fence's may.
+function fenceAt(content: string): RegExpExecArray | null {
   const f = FENCE.exec(content)
-  return (
-    rel <= 3 &&
-    ((f !== null && opens(f[1]![0]!, f[2]!)) ||
-      content.startsWith('>') ||
-      HEADING.test(content) ||
-      BREAK.test(content) ||
-      MARKER.test(content))
-  )
+  return f && !(f[1]![0] === '`' && f[2]!.includes('`')) ? f : null
 }
 
-// A diagram's body as CommonMark gives it to Mermaid: each line loses up to `indent` of its leading spaces, the
-// indentation of the opening fence. null when Markdown renderers disagree on that body: a line that starts with some
-// spaces but fewer than `indent`, or with a tab inside them, comes out differently under CommonMark, which removes what
-// is there, and marked, which removes nothing. Drawing either reading could show a diagram Mermaid doesn't. A line with
-// no indentation reads the same in both, and a blank line loses its spaces either way.
+// Whether a list marker may interrupt a paragraph: CommonMark lets an item start one only with a bullet or the number
+// 1, and only when its first line is not blank. Otherwise the marker is the paragraph's text.
+function interrupts(marker: RegExpExecArray): boolean {
+  const bullet = /^[-+*]$/.test(marker[1]!)
+  return !isBlank(marker[3] ?? '') && (bullet || Number(marker[1]!.slice(0, -1)) === 1)
+}
+
+// A diagram's body as CommonMark gives it to Mermaid: each line loses up to `indent` columns of its leading spaces, the
+// indentation of the opening fence and its item. null when Markdown renderers disagree on that body: a line that starts
+// with some spaces but fewer than `indent`, or with a tab inside them, comes out differently under CommonMark, which
+// removes what is there, and marked, which removes nothing. Drawing either reading could show a diagram Mermaid
+// doesn't. A line with no indentation reads the same in both, and a blank line loses its spaces either way.
 function dedent(body: string, indent: number): string | null {
   if (indent === 0) {
     return body
@@ -67,14 +156,12 @@ function dedent(body: string, indent: number): string | null {
 
   let out = ''
   for (const line of body.match(LINES) ?? []) {
-    const lead = /^[ \t]*/.exec(line)![0]
-    const blank = /^[ \t]*(?:\r\n|\r|\n)?$/.test(line)
     if (line.startsWith(' '.repeat(indent))) {
       out += line.slice(indent)
-    } else if (lead === '') {
+    } else if (!/^[ \t]/.test(line)) {
       out += line
-    } else if (blank) {
-      out += line.slice(Math.min(indent, /^ */.exec(line)![0].length))
+    } else if (isBlank(line.replace(LINE_END, ''))) {
+      out += stripColumns(line, indent)
     } else {
       return null
     }
@@ -104,17 +191,24 @@ export function splitFences(reply: string): Segment[] {
   // The content column of each open list item, innermost last.
   const items: number[] = []
   const base = () => items.at(-1) ?? 0
-  // Whether the last line was paragraph text in the innermost container, which a lazy line may continue and an ordered
-  // item numbered other than 1 may not interrupt.
+  // The innermost container's last line was paragraph text, which a lazy line may go on and an ordered item numbered
+  // other than 1 may not interrupt.
   let para = false
+  // The innermost container's last lines may be a table, or a paragraph if they are not one.
+  let table = false
+  // The last line was in a block quote at the top level.
+  let quote = false
+  // The last line was in an HTML block at the top level that ends at a blank line.
+  let html = false
   let from = 0
   let pos = 0
   let open: Open | null = null
-  for (let i = 0; i < lines.length; ) {
+  let stop = false
+  for (let i = 0; i < lines.length && !stop; ) {
     const line = lines[i]!
     const t = line.replace(LINE_END, '')
     const next = pos + line.length
-    const blank = !/[^ \t]/.test(t)
+    const blank = isBlank(t)
     const col = indentColumns(t)
     const content = t.replace(/^[ \t]*/, '')
     if (open) {
@@ -122,6 +216,7 @@ export function splitFences(reply: string): Segment[] {
         // A fence never continues lazily, so this line ends its item and the fence, unclosed; it is read again.
         open = null
         para = false
+        table = false
         continue
       }
 
@@ -146,9 +241,47 @@ export function splitFences(reply: string): Segment[] {
       continue
     }
 
+    if (html) {
+      // Raw HTML to the next blank line: no fence opens inside it.
+      html = !blank
+      para = false
+      pos = next
+      i++
+      continue
+    }
+
+    if (quote) {
+      const top = col <= 3
+      if (blank || (top && content.startsWith('>'))) {
+        quote = !blank
+        pos = next
+        i++
+        continue
+      }
+
+      // A line without `>` ends the quote when it starts a block; otherwise it may go on the quote's paragraph.
+      if (!(top && (fenceAt(content) || HEADING.test(content) || BREAK.test(content) || MARKER.test(content)))) {
+        break
+      }
+
+      quote = false
+      para = false
+    }
+
     if (!blank && col < base()) {
-      const parent = items.findLast((b) => b <= col) ?? 0
-      if (para && !startsBlock(content, col - parent)) {
+      const rel = col - (items.findLast((b) => b <= col) ?? 0)
+      const starts =
+        rel <= 3 &&
+        (fenceAt(content) !== null ||
+          content.startsWith('>') ||
+          HEADING.test(content) ||
+          BREAK.test(content) ||
+          MARKER.test(content))
+      if (table || (rel <= 3 && HTML.test(content)) || (para && (UNDERLINE.test(content) || isDelimiter(content)))) {
+        break
+      }
+
+      if (para && !starts) {
         // A lazy line: it goes on with the item's paragraph.
         pos = next
         i++
@@ -165,13 +298,14 @@ export function splitFences(reply: string): Segment[] {
     }
 
     const rel = col - base()
-    const fence = FENCE.exec(content)
+    const fence = rel <= 3 ? fenceAt(content) : null
     const marker = MARKER.exec(content)
     if (blank) {
       para = false
+      table = false
     } else if (rel >= 4) {
-      // Indented code, or a paragraph's continuation: neither opens a fence or an item.
-    } else if (fence && opens(fence[1]![0]!, fence[2]!)) {
+      // Indented code, or a line that goes on a paragraph or table: neither opens a fence or an item.
+    } else if (fence) {
       const spaces = /^ */.exec(t)![0].length === col
       open = {
         ch: fence[1]![0]!,
@@ -183,23 +317,60 @@ export function splitFences(reply: string): Segment[] {
         base: base(),
       }
       para = false
-    } else if (BREAK.test(content)) {
-      para = false
-    } else if (marker && !(para && !interrupts(marker))) {
-      const first = marker[3] ?? ''
-      const gap = marker[2]?.length ?? 0
-      const wide = first.trim() === '' || gap > 4
-      const item = wide ? col + marker[1]!.length + 1 : col + marker[1]!.length + gap
-      items.push(item)
-      const own = wide ? null : FENCE.exec(first)
-      if (own && opens(own[1]![0]!, own[2]!)) {
-        open = { ch: own[1]![0]!, len: own[1]!.length, at: pos, bodyAt: next, mermaid: false, indent: 0, base: item }
-        para = false
-      } else {
-        para = !wide && !HEADING.test(first)
+      table = false
+    } else if (table) {
+      // A table and a paragraph agree that a heading or break ends them; for anything else they may not.
+      if (HEADING.test(content) || BREAK.test(content)) {
+        table = false
+      } else if (content.startsWith('>') || HTML.test(content) || marker || UNDERLINE.test(content)) {
+        break
       }
+    } else if (content.startsWith('>')) {
+      if (items.length > 0) {
+        break
+      }
+
+      quote = true
+      para = false
+    } else if (HTML.test(content)) {
+      if (items.length > 0 || !BLOCK_TAG.test(content)) {
+        break
+      }
+
+      html = true
+      para = false
+    } else if ((para && UNDERLINE.test(content)) || BREAK.test(content) || HEADING.test(content)) {
+      para = false
+    } else if (marker && (!para || interrupts(marker))) {
+      // An item, and any item its first line starts, as `- - x` starts two.
+      let m: RegExpExecArray | null = marker
+      let at = col
+      let first = ''
+      let wide = false
+      while (m) {
+        first = m[3] ?? ''
+        const start = at + m[1]!.length
+        const gap = advance(m[2] ?? '', start) - start
+        wide = isBlank(first) || gap > 4
+        at = wide ? start + 1 : start + gap
+        items.push(at)
+        m = wide || BREAK.test(first) ? null : MARKER.exec(first)
+      }
+
+      const own = wide ? null : fenceAt(first)
+      if (own) {
+        open = { ch: own[1]![0]!, len: own[1]!.length, at: pos, bodyAt: next, mermaid: false, indent: 0, base: at }
+        para = false
+      } else if (!wide && (first.startsWith('>') || HTML.test(first))) {
+        break
+      } else {
+        para = !wide && !HEADING.test(first) && !BREAK.test(first)
+      }
+    } else if (para && isDelimiter(content)) {
+      table = true
+      para = false
     } else {
-      para = !HEADING.test(content)
+      para = true
     }
 
     pos = next
@@ -211,12 +382,4 @@ export function splitFences(reply: string): Segment[] {
   }
 
   return out
-}
-
-// Whether a list marker may interrupt a paragraph: CommonMark lets an item start one only with a bullet or the number
-// 1, and only when its first line is not blank. Otherwise the marker is the paragraph's text.
-function interrupts(marker: RegExpExecArray): boolean {
-  const first = marker[3] ?? ''
-  const bullet = /^[-+*]$/.test(marker[1]!)
-  return first.trim() !== '' && (bullet || Number(marker[1]!.slice(0, -1)) === 1)
 }
