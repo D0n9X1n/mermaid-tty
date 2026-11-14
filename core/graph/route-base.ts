@@ -36,11 +36,20 @@ export const inside = (c: Point, b: Box) => c.r >= b.row && c.r < b.row + b.rows
 export const keyOf = (c: Point) => `${c.r},${c.c}`
 export const middle = (size: number) => (size - 1) >> 1
 export function routeObstacles(p: Placed, e: GEdge): Box[] {
-  return [...p.boxes]
+  const boxes = [...p.boxes]
     .filter(([id]) => !id.startsWith(`${e.id}#`) && id !== `${e.id}:label`)
     .map(([id, b]) =>
       id === e.from || id === e.to ? b : { row: b.row - 1, col: b.col - 1, rows: b.rows + 2, cols: b.cols + 2 },
     )
+  // A side note sits 3 columns from its pill, joined to it by ' ┄┄' on its first row (layered places it, draw draws
+  // it). Its text and that link are drawn after routing, so a route through them would be overwritten and fail: each
+  // note is an obstacle over its own cells and its link's, so no route takes them. A route that never touched them is
+  // unchanged.
+  const notes = [...(p.notes ?? new Map<string, Box>()).values()].map((n) => {
+    const left = [...p.boxes.values()].some((b) => b.row === n.row && b.col === n.col + n.cols + 3)
+    return left ? { ...n, cols: n.cols + 3 } : { ...n, col: n.col - 3, cols: n.cols + 3 }
+  })
+  return [...boxes, ...notes]
 }
 // Disjoint complete bipartite nets: joining any two lines in a net implies only declared edges.
 export function mergeGroups(p: Placed): Map<string, string> {
