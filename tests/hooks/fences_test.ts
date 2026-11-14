@@ -433,3 +433,14 @@ test('an autolink or an inline tag in a paragraph starts no HTML block, so a dia
     assert.equal(splitFences(before + D).filter((x) => x.kind === 'mermaid').length, 1, JSON.stringify(before))
   }
 })
+
+test('a line of inline HTML read as an HTML block never hides the fence that follows it', () => {
+  for (const tag of ['<span class="x">text</span>', '<x invalid=>', '<b title="x">inline</b>']) {
+    const r = tag + '\n~~~js\n\n```mermaid\nflowchart LR\nA --> B\n```\n~~~\n'
+    assert.deepEqual(
+      splitFences(r).filter((x) => x.kind === 'mermaid'),
+      [],
+      JSON.stringify(r),
+    )
+  }
+})

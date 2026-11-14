@@ -24,6 +24,10 @@ const HTML = [
   '<x-y a="1">',
   '<!DOCTYPE html>',
   '<b>x</b> text',
+  '<span class="x">t</span>',
+  '<x invalid=>',
+  '<b title="x">i</b>',
+  '~~~js',
 ]
 const BODY3 = ['| - | - |', '\u2028', '\u2029', 'lazy', '  - x']
 

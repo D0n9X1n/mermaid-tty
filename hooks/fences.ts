@@ -269,7 +269,22 @@ export function splitFences(reply: string): Segment[] {
     }
 
     if (html) {
-      // Raw HTML to the next blank line: no fence opens inside it.
+      // Raw HTML to the next blank line: no fence opens inside it. Its first line may have been read as a block's start
+      // when CommonMark reads it as a paragraph with inline HTML, where a fence, list, quote, heading or break would
+      // start a block; such a line ends what this scanner can be sure of.
+      if (
+        !blank &&
+        col <= 3 &&
+        (fenceAt(content) ||
+          MARKER.test(content) ||
+          content.startsWith('>') ||
+          HEADING.test(content) ||
+          BREAK.test(content) ||
+          RAW_HTML.test(content))
+      ) {
+        break
+      }
+
       html = !blank
       para = false
       pos = next
