@@ -421,3 +421,15 @@ test('an empty list item ends at the blank line after it, so a fence below it is
     [],
   )
 })
+
+test('an autolink or an inline tag in a paragraph starts no HTML block, so a diagram after it draws', () => {
+  const D = '```mermaid\nA\n```\n'
+  for (const before of [
+    '<https://example.com>\n\n',
+    '<me@example.com>\n\n',
+    '- <https://example.com>\n\n',
+    'Text\n<span>\n\n',
+  ]) {
+    assert.equal(splitFences(before + D).filter((x) => x.kind === 'mermaid').length, 1, JSON.stringify(before))
+  }
+})

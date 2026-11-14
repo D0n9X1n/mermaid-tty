@@ -24,11 +24,13 @@ const BREAK = /^([-*_])(?:[ \t]*\1){2,}[ \t]*$/
 const HEADING = /^#{1,6}(?:[ \t]|$)/
 // A setext underline, which makes the paragraph above it a heading.
 const UNDERLINE = /^(?:=+|-+)[ \t]*$/
-// The start of an HTML block. One that opens with a block-level tag, such as <details> or <div>, ends at the next blank
-// line, and is followed: its lines are raw HTML, never fences. Any other kind, such as <pre> or a comment, can run
-// across blank lines to its own end marker, and is not followed.
-const HTML = /^<[A-Za-z/!?]/
-// The tags that open such a block, as CommonMark lists them.
+// HTML blocks, by CommonMark's start conditions. Raw HTML that runs to its own end marker across blank lines (types 1
+// to 5: <pre>, <script>, <style>, <textarea>, a comment, a processing instruction, a declaration or CDATA) is not
+// followed. A block-level tag (type 6, such as <details> or <div>) or any other tag alone on its line (type 7, which
+// cannot interrupt a paragraph) ends at the next blank line, and is followed: its lines are raw HTML, never fences. An
+// autolink such as <https://example.com> starts no block. Type 7 is matched loosely, a tag name at the start and > at
+// the end: a line read as HTML here at worst draws no diagram.
+const RAW_HTML = /^(?:<(?:pre|script|style|textarea)(?:[ \t>]|$)|<!--|<\?|<![A-Za-z]|<!\[CDATA\[)/i
 const BLOCK_TAGS = [
   'address',
   'article',
@@ -89,6 +91,17 @@ const BLOCK_TAGS = [
   'ul',
 ]
 const BLOCK_TAG = new RegExp(`^</?(?:${BLOCK_TAGS.join('|')})(?:[ \t>]|/>|$)`, 'i')
+const OTHER_TAG = /^<\/?[A-Za-z][A-Za-z0-9-]*(?:[ \t/][^\r\n]*)?>[ \t]*$/
+
+// The HTML block a line starts, or null: 'raw' for one this scanner does not follow, 'line' for one that ends at a
+// blank line. Type 7 cannot interrupt a paragraph, so in one its tag is paragraph text.
+function htmlStart(content: string, para: boolean): 'raw' | 'line' | null {
+  if (RAW_HTML.test(content)) {
+    return 'raw'
+  }
+
+  return BLOCK_TAG.test(content) || (!para && OTHER_TAG.test(content)) ? 'line' : null
+}
 // A line that may be a table's delimiter row: cells of dashes, with a pipe or colon.
 const DELIMITER = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/
 const isDelimiter = (s: string) => DELIMITER.test(s) && /[|:]/.test(s)
@@ -291,7 +304,11 @@ export function splitFences(reply: string): Segment[] {
           HEADING.test(content) ||
           BREAK.test(content) ||
           MARKER.test(content))
-      if (table || (rel <= 3 && HTML.test(content)) || (para && (UNDERLINE.test(content) || isDelimiter(content)))) {
+      if (
+        table ||
+        (rel <= 3 && htmlStart(content, para) !== null) ||
+        (para && (UNDERLINE.test(content) || isDelimiter(content)))
+      ) {
         break
       }
 
@@ -336,7 +353,7 @@ export function splitFences(reply: string): Segment[] {
       // A table and a paragraph agree that a heading or break ends them; for anything else they may not.
       if (HEADING.test(content) || BREAK.test(content)) {
         table = false
-      } else if (content.startsWith('>') || HTML.test(content) || marker || UNDERLINE.test(content)) {
+      } else if (content.startsWith('>') || /^</.test(content) || marker || UNDERLINE.test(content)) {
         break
       }
     } else if (content.startsWith('>')) {
@@ -346,8 +363,8 @@ export function splitFences(reply: string): Segment[] {
 
       quote = true
       para = false
-    } else if (HTML.test(content)) {
-      if (items.length > 0 || !BLOCK_TAG.test(content)) {
+    } else if (htmlStart(content, para) !== null) {
+      if (items.length > 0 || htmlStart(content, para) === 'raw') {
         break
       }
 
@@ -376,7 +393,7 @@ export function splitFences(reply: string): Segment[] {
       if (own) {
         open = { ch: own[1]![0]!, len: own[1]!.length, at: pos, bodyAt: next, mermaid: false, indent: 0, base: at }
         para = false
-      } else if (!wide && (first.startsWith('>') || HTML.test(first))) {
+      } else if (!wide && (first.startsWith('>') || htmlStart(first, false) !== null)) {
         break
       } else {
         para = !wide && !HEADING.test(first) && !BREAK.test(first)

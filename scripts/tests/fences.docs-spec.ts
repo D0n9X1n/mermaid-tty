@@ -11,7 +11,20 @@ const PREFIX = ['', '', '', ' ', '  ', '   ', '    ', '\t', '- ', '* ', '1. ', '
 const PREFIX2 = ['> ', '>', '  > ', '  - ', '1.  ', '| ', '-', '1.']
 const BODY = ['```mermaid', '~~~mermaid', '```Mermaid', '```js', '```', '~~~', '````', 'flowchart LR', 'A --> B']
 const BODY2 = ['text', '', '===', '---', '--', '- - -', '# h', 'mindmap', ' root', '   child', '\tx', '<div>', 'a | b']
-const HTML = ['<details>', '</details>', '<pre>', '<!-- c', '<b>x</b>', '<summary>s</summary>']
+const HTML = [
+  '<details>',
+  '</details>',
+  '<pre>',
+  '<!-- c',
+  '<b>x</b>',
+  '<summary>s</summary>',
+  '<https://x.io>',
+  '<a@b.io>',
+  '<span>',
+  '<x-y a="1">',
+  '<!DOCTYPE html>',
+  '<b>x</b> text',
+]
 const BODY3 = ['| - | - |', '\u2028', '\u2029', 'lazy', '  - x']
 
 test('every diagram splitFences draws is a mermaid code block CommonMark reads at that line, with that content', () => {
