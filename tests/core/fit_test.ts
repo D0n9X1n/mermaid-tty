@@ -11,6 +11,7 @@ import { validate } from '../../core/validate.ts'
 import { flowchart } from '../../core/diagrams/flowchart/layout.ts'
 import { sequence } from '../../core/diagrams/sequence/layout.ts'
 import { readSource, type Source } from '../../core/source.ts'
+import { explain } from '../../core/render.ts'
 const fake = {
   type: 'flowchart',
   parse: (s: unknown) => s,
@@ -81,7 +82,7 @@ function fit(rungs: readonly Rung[], columns: number, calls: [Step, number][] = 
   return fitLadder(mod, rungs, columns)
 }
 
-test('A4.fit-ladder: a drawing the validator rejects, a conflict included, is skipped; the last rejection is returned', () => {
+test('A4.fit-ladder: a drawing the validator rejects, a conflict included, is skipped; a rejection for anything but width outranks a width one', () => {
   assert.deepEqual(
     fit(
       [
@@ -100,7 +101,7 @@ test('A4.fit-ladder: a drawing the validator rejects, a conflict included, is sk
       ],
       10,
     ),
-    { reason: 'row-too-wide' },
+    { reason: 'overwrite' },
   )
   assert.deepEqual(
     fit(
@@ -113,7 +114,7 @@ test('A4.fit-ladder: a drawing the validator rejects, a conflict included, is sk
     { reason: 'overwrite' },
   )
 })
-test('A4.fit-ladder: a layout that returns a Fail is skipped; its reason is returned when it is the last rejection', () => {
+test('A4.fit-ladder: a layout that returns a Fail is skipped; its reason is returned unless only width failed elsewhere', () => {
   assert.deepEqual(
     fit(
       [
@@ -142,7 +143,7 @@ test('A4.fit-ladder: a layout that returns a Fail is skipped; its reason is retu
       ],
       10,
     ),
-    { reason: 'row-too-wide' },
+    { reason: 'no-route' },
   )
 })
 test('A4.fit-ladder: a drawing whose columns differ from the budget is skipped, though validate accepts it; columns-mismatch when last', () => {
@@ -330,4 +331,46 @@ test('A1: an empty header, a keyword in the wrong case and an Object.prototype n
     headers.map((h) => lookup(h)),
     headers.map(() => ({ reason: 'unknown-type' })),
   )
+})
+
+test('A4.fit-ladder: the reason is the first rejection that is not about width; a width reason only when width is all that failed', () => {
+  const wide = [fail('too-wide'), fail('word-too-wide')] as const
+  for (const w of wide) {
+    assert.deepEqual(
+      fit(
+        [
+          ['natural', fail('label-missing')],
+          ['tight', 11],
+          ['wrap', w],
+        ],
+        10,
+      ),
+      { reason: 'label-missing' },
+    )
+  }
+
+  assert.deepEqual(
+    fit(
+      [
+        ['natural', 11],
+        ['tight', fail('too-wide')],
+        ['wrap', fail('word-too-wide')],
+      ],
+      10,
+    ),
+    { reason: 'word-too-wide' },
+  )
+})
+
+test('A4.fit-ladder: a five-entity ER logs why its fitting drawing was rejected, not word-too-wide', () => {
+  const src = [
+    'erDiagram',
+    'CUSTOMER ||--o{ ORDER : places',
+    'CUSTOMER ||--o{ ADDRESS : has',
+    'ORDER ||--|{ LINE_ITEM : contains',
+    'PRODUCT ||--o{ LINE_ITEM : "ordered in"',
+    'ORDER }o--|| ADDRESS : "ships to"',
+  ].join('\n')
+  const r = explain(src, { columns: 200 })
+  assert.ok('reason' in r && !['too-wide', 'row-too-wide', 'word-too-wide'].includes(r.reason), JSON.stringify(r))
 })
