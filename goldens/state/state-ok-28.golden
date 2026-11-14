@@ -1,0 +1,216 @@
+@60
+                  ●
+                  └───────────┐
+                              │
+                              ▼
+holds stock for 30 min ┄┄( Pending )
+          ┌────────────────┬──┘
+          │                │
+  payment received      timeout
+          │                │
+         ┌┼────────────────┼──────────────┐
+         ││                │              │
+    ┌────┘▼                ▼              │
+    └─►( Paid )      ( Cancelled )        │
+      ┌───┘                │              │
+      │                    │           reship
+      │                    │              │
+  dispatch                 │              │
+      │                    └─┐            │
+      │                      │            │
+      ▼                      │            │
+ ( Shipped )                 │            │
+      ├───────────────┐      │            │
+      │               │      └──┐         │
+      │               │         │         │
+   signed          refused      │         │
+      │               │         └──┐      │
+      │               │            │      │
+      │               │      ┌─────┼─┐    │
+      ▼               ▼      │     │ │    │
+( Delivered )    ( Returned )┘     │ └────┘
+      │                            │
+      └─────────────┬──────────────┘
+                    │
+                    ▼
+                    ◉
+@60 roles
+                  n
+                  eeeeeeeeeeeee
+                              e
+                              a
+OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
+          eeeeeeeeeeeeeeeeeeeee
+          e                e
+  LLLLLLLLLLLLLLLL      LLLLLLL
+          e                e
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+         ee                e              e
+    eeeeeea                a              e
+    eeannNNNNnn      nnNNNNNNNNNnn        e
+      eeeee                e              e
+      e                    e           LLLLLL
+      e                    e              e
+  LLLLLLLL                 e              e
+      e                    eee            e
+      e                      e            e
+      a                      e            e
+ nnNNNNNNNnn                 e            e
+      eeeeeeeeeeeeeeeee      e            e
+      e               e      eeee         e
+      e               e         e         e
+   LLLLLL          LLLLLLL      e         e
+      e               e         eeee      e
+      e               e            e      e
+      e               e      eeeeeeeee    e
+      a               a      e     e e    e
+nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
+      e                            e
+      eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                    e
+                    a
+                    n
+@80
+                  ●
+                  └───────────┐
+                              │
+                              ▼
+holds stock for 30 min ┄┄( Pending )
+          ┌────────────────┬──┘
+          │                │
+  payment received      timeout
+          │                │
+         ┌┼────────────────┼──────────────┐
+         ││                │              │
+    ┌────┘▼                ▼              │
+    └─►( Paid )      ( Cancelled )        │
+      ┌───┘                │              │
+      │                    │           reship
+      │                    │              │
+  dispatch                 │              │
+      │                    └─┐            │
+      │                      │            │
+      ▼                      │            │
+ ( Shipped )                 │            │
+      ├───────────────┐      │            │
+      │               │      └──┐         │
+      │               │         │         │
+   signed          refused      │         │
+      │               │         └──┐      │
+      │               │            │      │
+      │               │      ┌─────┼─┐    │
+      ▼               ▼      │     │ │    │
+( Delivered )    ( Returned )┘     │ └────┘
+      │                            │
+      └─────────────┬──────────────┘
+                    │
+                    ▼
+                    ◉
+@80 roles
+                  n
+                  eeeeeeeeeeeee
+                              e
+                              a
+OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
+          eeeeeeeeeeeeeeeeeeeee
+          e                e
+  LLLLLLLLLLLLLLLL      LLLLLLL
+          e                e
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+         ee                e              e
+    eeeeeea                a              e
+    eeannNNNNnn      nnNNNNNNNNNnn        e
+      eeeee                e              e
+      e                    e           LLLLLL
+      e                    e              e
+  LLLLLLLL                 e              e
+      e                    eee            e
+      e                      e            e
+      a                      e            e
+ nnNNNNNNNnn                 e            e
+      eeeeeeeeeeeeeeeee      e            e
+      e               e      eeee         e
+      e               e         e         e
+   LLLLLL          LLLLLLL      e         e
+      e               e         eeee      e
+      e               e            e      e
+      e               e      eeeeeeeee    e
+      a               a      e     e e    e
+nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
+      e                            e
+      eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                    e
+                    a
+                    n
+@120
+                  ●
+                  └───────────┐
+                              │
+                              ▼
+holds stock for 30 min ┄┄( Pending )
+          ┌────────────────┬──┘
+          │                │
+  payment received      timeout
+          │                │
+         ┌┼────────────────┼──────────────┐
+         ││                │              │
+    ┌────┘▼                ▼              │
+    └─►( Paid )      ( Cancelled )        │
+      ┌───┘                │              │
+      │                    │           reship
+      │                    │              │
+  dispatch                 │              │
+      │                    └─┐            │
+      │                      │            │
+      ▼                      │            │
+ ( Shipped )                 │            │
+      ├───────────────┐      │            │
+      │               │      └──┐         │
+      │               │         │         │
+   signed          refused      │         │
+      │               │         └──┐      │
+      │               │            │      │
+      │               │      ┌─────┼─┐    │
+      ▼               ▼      │     │ │    │
+( Delivered )    ( Returned )┘     │ └────┘
+      │                            │
+      └─────────────┬──────────────┘
+                    │
+                    ▼
+                    ◉
+@120 roles
+                  n
+                  eeeeeeeeeeeee
+                              e
+                              a
+OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
+          eeeeeeeeeeeeeeeeeeeee
+          e                e
+  LLLLLLLLLLLLLLLL      LLLLLLL
+          e                e
+         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+         ee                e              e
+    eeeeeea                a              e
+    eeannNNNNnn      nnNNNNNNNNNnn        e
+      eeeee                e              e
+      e                    e           LLLLLL
+      e                    e              e
+  LLLLLLLL                 e              e
+      e                    eee            e
+      e                      e            e
+      a                      e            e
+ nnNNNNNNNnn                 e            e
+      eeeeeeeeeeeeeeeee      e            e
+      e               e      eeee         e
+      e               e         e         e
+   LLLLLL          LLLLLLL      e         e
+      e               e         eeee      e
+      e               e            e      e
+      e               e      eeeeeeeee    e
+      a               a      e     e e    e
+nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
+      e                            e
+      eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                    e
+                    a
+                    n

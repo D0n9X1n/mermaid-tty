@@ -1,0 +1,114 @@
+@60
+       [ USER ]
+          ││
+         1││1
+     ┌────┘│       ┌┐
+  writes   └───────┘│
+     │              │
+ 0..*│              │
+   ┌─┘              │
+[ POST ]         writes
+   │                │
+   │1               │
+   │                │
+   │   ┌─┐          │
+   └───┘has         │
+         │          │
+     0..*│ 0..*     │
+         │┌─────────┘
+    [ COMMENT ]
+@60 roles
+       nnNNNNnn
+          ee
+         AeeA
+     eeeeeee       ee
+  LLLLLL   eeeeeeeeee
+     e              e
+ AAAAe              e
+   eee              e
+nnNNNNnn         LLLLLL
+   e                e
+   eA               e
+   e                e
+   e   eee          e
+   eeeeeLLL         e
+         e          e
+     AAAAe AAAA     e
+         eeeeeeeeeeee
+    nnNNNNNNNnn
+@80
+       [ USER ]
+          ││
+         1││1
+     ┌────┘│       ┌┐
+  writes   └───────┘│
+     │              │
+ 0..*│              │
+   ┌─┘              │
+[ POST ]         writes
+   │                │
+   │1               │
+   │                │
+   │   ┌─┐          │
+   └───┘has         │
+         │          │
+     0..*│ 0..*     │
+         │┌─────────┘
+    [ COMMENT ]
+@80 roles
+       nnNNNNnn
+          ee
+         AeeA
+     eeeeeee       ee
+  LLLLLL   eeeeeeeeee
+     e              e
+ AAAAe              e
+   eee              e
+nnNNNNnn         LLLLLL
+   e                e
+   eA               e
+   e                e
+   e   eee          e
+   eeeeeLLL         e
+         e          e
+     AAAAe AAAA     e
+         eeeeeeeeeeee
+    nnNNNNNNNnn
+@120
+       [ USER ]
+          ││
+         1││1
+     ┌────┘│       ┌┐
+  writes   └───────┘│
+     │              │
+ 0..*│              │
+   ┌─┘              │
+[ POST ]         writes
+   │                │
+   │1               │
+   │                │
+   │   ┌─┐          │
+   └───┘has         │
+         │          │
+     0..*│ 0..*     │
+         │┌─────────┘
+    [ COMMENT ]
+@120 roles
+       nnNNNNnn
+          ee
+         AeeA
+     eeeeeee       ee
+  LLLLLL   eeeeeeeeee
+     e              e
+ AAAAe              e
+   eee              e
+nnNNNNnn         LLLLLL
+   e                e
+   eA               e
+   e                e
+   e   eee          e
+   eeeeeLLL         e
+         e          e
+     AAAAe AAAA     e
+         eeeeeeeeeeee
+    nnNNNNNNNnn

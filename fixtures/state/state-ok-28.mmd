@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> Paid: payment received
+    Pending --> Cancelled: timeout
+    Paid --> Shipped: dispatch
+    Shipped --> Delivered: signed
+    Shipped --> Returned: refused
+    Returned --> Paid: reship
+    note left of Pending: holds stock for 30 min
+    Delivered --> [*]
+    Cancelled --> [*]

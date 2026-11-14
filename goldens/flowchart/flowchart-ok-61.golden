@@ -1,0 +1,330 @@
+@60
+┌─Build────────────┐
+│   [ Checkout ]   │
+│        │         │
+│        ▼         │
+│ [ Install deps ] │
+│        │         │
+│        ▼         │
+│   [ Compile ]    │
+│        │         │
+│       ┌┘         │
+│       │          │
+│       ▼          │
+│ [ Unit tests ]   │
+└─────────│────────┘
+┌─Verify──│─────────────┐
+│         │             │
+│        ┌┘             │
+│        │              │
+│        ▼              │
+│     [ Lint ]          │
+│        │              │
+│        └──┐           │
+│           │           │
+│           ▼           │
+│ [ Integration tests ]◄──────────────────────────┐
+│           │           │                         │
+│          ┌┼────────────────┐                    │
+│          │├────────────────┼──────────┐         │
+│          ││           │    │          │         │
+│  ┌───────┘▼           │    │          │         │
+│  └[ Security scan ]   │    │        flaky       │
+└───────────│───────────┘    │          │         │
+┌─Release───│─┐              │          │         │
+│           │ │              │          │         │
+│      ┌┐   │ │              │          │         │
+│      │└───┘ │              │          │         │
+│      ▼      │              │          ▼         │
+│ [ Package ] │            fails  [ Retry once ]──┘
+│      │      │              │
+│     ┌┘      │              │
+│     │       │              │
+│     ▼       │              ▼
+│  [ Sign ]   │      [ Block release ]
+│     │       │
+│     └┐      │
+│      │      │
+│      ▼      │
+│ [ Publish ] │
+│      │      │
+│     ┌┘      │
+│     │       │
+│     ▼       │
+│ [ Notify ]  │
+└─────────────┘
+@60 roles
+ffFFFFFfffffffffffff
+f   nnNNNNNNNNnn   f
+f        e         f
+f        a         f
+f nnNNNNNNNNNNNNnn f
+f        e         f
+f        a         f
+f   nnNNNNNNNnn    f
+f        e         f
+f       ee         f
+f       e          f
+f       a          f
+f nnNNNNNNNNNNnn   f
+ffffffffffefffffffff
+ffFFFFFFffeffffffffffffff
+f         e             f
+f        ee             f
+f        e              f
+f        a              f
+f     nnNNNNnn          f
+f        e              f
+f        eeee           f
+f           e           f
+f           a           f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
+f           e           f                         e
+f          eeeeeeeeeeeeeeeeeee                    e
+f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
+f          ee           f    e          e         e
+f  eeeeeeeeea           f    e          e         e
+f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
+ffffffffffffeffffffffffff    e          e         e
+ffFFFFFFFfffeff              e          e         e
+f           e f              e          e         e
+f      ee   e f              e          e         e
+f      eeeeee f              e          e         e
+f      a      f              e          a         e
+f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
+f      e      f              e
+f     ee      f              e
+f     e       f              e
+f     a       f              a
+f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
+f     e       f
+f     ee      f
+f      e      f
+f      a      f
+f nnNNNNNNNnn f
+f      e      f
+f     ee      f
+f     e       f
+f     a       f
+f nnNNNNNNnn  f
+fffffffffffffff
+@80
+┌─Build────────────┐
+│   [ Checkout ]   │
+│        │         │
+│        ▼         │
+│ [ Install deps ] │
+│        │         │
+│        ▼         │
+│   [ Compile ]    │
+│        │         │
+│       ┌┘         │
+│       │          │
+│       ▼          │
+│ [ Unit tests ]   │
+└─────────│────────┘
+┌─Verify──│─────────────┐
+│         │             │
+│        ┌┘             │
+│        │              │
+│        ▼              │
+│     [ Lint ]          │
+│        │              │
+│        └──┐           │
+│           │           │
+│           ▼           │
+│ [ Integration tests ]◄──────────────────────────┐
+│           │           │                         │
+│          ┌┼────────────────┐                    │
+│          │├────────────────┼──────────┐         │
+│          ││           │    │          │         │
+│  ┌───────┘▼           │    │          │         │
+│  └[ Security scan ]   │    │        flaky       │
+└───────────│───────────┘    │          │         │
+┌─Release───│─┐              │          │         │
+│           │ │              │          │         │
+│      ┌┐   │ │              │          │         │
+│      │└───┘ │              │          │         │
+│      ▼      │              │          ▼         │
+│ [ Package ] │            fails  [ Retry once ]──┘
+│      │      │              │
+│     ┌┘      │              │
+│     │       │              │
+│     ▼       │              ▼
+│  [ Sign ]   │      [ Block release ]
+│     │       │
+│     └┐      │
+│      │      │
+│      ▼      │
+│ [ Publish ] │
+│      │      │
+│     ┌┘      │
+│     │       │
+│     ▼       │
+│ [ Notify ]  │
+└─────────────┘
+@80 roles
+ffFFFFFfffffffffffff
+f   nnNNNNNNNNnn   f
+f        e         f
+f        a         f
+f nnNNNNNNNNNNNNnn f
+f        e         f
+f        a         f
+f   nnNNNNNNNnn    f
+f        e         f
+f       ee         f
+f       e          f
+f       a          f
+f nnNNNNNNNNNNnn   f
+ffffffffffefffffffff
+ffFFFFFFffeffffffffffffff
+f         e             f
+f        ee             f
+f        e              f
+f        a              f
+f     nnNNNNnn          f
+f        e              f
+f        eeee           f
+f           e           f
+f           a           f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
+f           e           f                         e
+f          eeeeeeeeeeeeeeeeeee                    e
+f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
+f          ee           f    e          e         e
+f  eeeeeeeeea           f    e          e         e
+f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
+ffffffffffffeffffffffffff    e          e         e
+ffFFFFFFFfffeff              e          e         e
+f           e f              e          e         e
+f      ee   e f              e          e         e
+f      eeeeee f              e          e         e
+f      a      f              e          a         e
+f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
+f      e      f              e
+f     ee      f              e
+f     e       f              e
+f     a       f              a
+f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
+f     e       f
+f     ee      f
+f      e      f
+f      a      f
+f nnNNNNNNNnn f
+f      e      f
+f     ee      f
+f     e       f
+f     a       f
+f nnNNNNNNnn  f
+fffffffffffffff
+@120
+┌─Build────────────┐
+│   [ Checkout ]   │
+│        │         │
+│        ▼         │
+│ [ Install deps ] │
+│        │         │
+│        ▼         │
+│   [ Compile ]    │
+│        │         │
+│       ┌┘         │
+│       │          │
+│       ▼          │
+│ [ Unit tests ]   │
+└─────────│────────┘
+┌─Verify──│─────────────┐
+│         │             │
+│        ┌┘             │
+│        │              │
+│        ▼              │
+│     [ Lint ]          │
+│        │              │
+│        └──┐           │
+│           │           │
+│           ▼           │
+│ [ Integration tests ]◄──────────────────────────┐
+│           │           │                         │
+│          ┌┼────────────────┐                    │
+│          │├────────────────┼──────────┐         │
+│          ││           │    │          │         │
+│  ┌───────┘▼           │    │          │         │
+│  └[ Security scan ]   │    │        flaky       │
+└───────────│───────────┘    │          │         │
+┌─Release───│─┐              │          │         │
+│           │ │              │          │         │
+│      ┌┐   │ │              │          │         │
+│      │└───┘ │              │          │         │
+│      ▼      │              │          ▼         │
+│ [ Package ] │            fails  [ Retry once ]──┘
+│      │      │              │
+│     ┌┘      │              │
+│     │       │              │
+│     ▼       │              ▼
+│  [ Sign ]   │      [ Block release ]
+│     │       │
+│     └┐      │
+│      │      │
+│      ▼      │
+│ [ Publish ] │
+│      │      │
+│     ┌┘      │
+│     │       │
+│     ▼       │
+│ [ Notify ]  │
+└─────────────┘
+@120 roles
+ffFFFFFfffffffffffff
+f   nnNNNNNNNNnn   f
+f        e         f
+f        a         f
+f nnNNNNNNNNNNNNnn f
+f        e         f
+f        a         f
+f   nnNNNNNNNnn    f
+f        e         f
+f       ee         f
+f       e          f
+f       a          f
+f nnNNNNNNNNNNnn   f
+ffffffffffefffffffff
+ffFFFFFFffeffffffffffffff
+f         e             f
+f        ee             f
+f        e              f
+f        a              f
+f     nnNNNNnn          f
+f        e              f
+f        eeee           f
+f           e           f
+f           a           f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
+f           e           f                         e
+f          eeeeeeeeeeeeeeeeeee                    e
+f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
+f          ee           f    e          e         e
+f  eeeeeeeeea           f    e          e         e
+f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
+ffffffffffffeffffffffffff    e          e         e
+ffFFFFFFFfffeff              e          e         e
+f           e f              e          e         e
+f      ee   e f              e          e         e
+f      eeeeee f              e          e         e
+f      a      f              e          a         e
+f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
+f      e      f              e
+f     ee      f              e
+f     e       f              e
+f     a       f              a
+f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
+f     e       f
+f     ee      f
+f      e      f
+f      a      f
+f nnNNNNNNNnn f
+f      e      f
+f     ee      f
+f     e       f
+f     a       f
+f nnNNNNNNnn  f
+fffffffffffffff

@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph Ingest
+        I1[Receive event] --> I2[Validate schema]
+        I2 --> I3[Deduplicate]
+        I3 --> I4[Enrich]
+        I4 --> I5[Normalize]
+        I5 --> I6[Partition]
+        I6 --> I7[Buffer]
+        I7 --> I8[Checkpoint]
+        I8 --> I9[Batch]
+        I9 --> I10[Flush]
+        I10 -->|retry| I1
+    end
+    subgraph Serve
+        S1[Load batch] --> S2[Index]
+        S2 --> S3[Aggregate]
+        S3 --> S4[Cache]
+        S4 --> S5[Expose API]
+        S5 --> S6[Authorize]
+        S6 --> S7[Rate limit]
+        S7 --> S8[Respond]
+        S8 --> S9[Log]
+        S9 --> S10[Report]
+        S10 -->|retry| S1
+    end
+    I10 --> S1

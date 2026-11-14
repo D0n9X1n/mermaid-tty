@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant U as User
+    participant W as Web
+    participant A as API
+    participant K as Worker
+    participant D as DB
+    U->>W: Submit order
+    W->>A: POST /orders
+    A->>D: insert order
+    D-->>A: id
+    A->>K: enqueue charge
+    A-->>W: 202 Accepted
+    W-->>U: Order received
+    K->>K: charge job
+    K->>D: update status
+    K-->>A: done
+    loop every 5s
+        W->>A: GET /orders/id
+        A-->>W: status
+    end

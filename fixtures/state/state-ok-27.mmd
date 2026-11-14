@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> Disconnected
+    Disconnected --> Connecting: connect()
+    Connecting --> Connected: handshake ok
+    Connecting --> Backoff: timeout
+    Backoff --> Connecting: retry
+    Connected --> Disconnected: close()
+    note right of Backoff: waits 2^n seconds, max 60
+    Connected --> [*]
