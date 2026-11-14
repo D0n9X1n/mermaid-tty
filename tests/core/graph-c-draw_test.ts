@@ -264,9 +264,8 @@ test('A4: an end label sits right of a vertical run, above a horizontal one, at 
 // Whether any line or arrow cell of d is drawn for both a and b.
 const shared = (d: ReturnType<typeof D>, a: string, b: string) =>
   d.cells.flat().some((c) => c !== null && c.owners.includes(a) && c.owners.includes(b))
-// Two labelled ends on one face of a TB node get adjacent ports, so one label meets the other's stem: that drawing
-// fails closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and
-// passes.
+// Two labelled ends on one face of a TB node get adjacent ports, so one label's usual spot meets the other's stem; it
+// moves to a free spot beside its own line, and the drawing passes. Across, each label lies in its own run's channel.
 test('A4: an end with a label gets its own port, never a shared stem, and draws, at a fan-out or a fan-in', () => {
   for (const [specs, k] of [
     [['A>B', 'A>C'], 'tailLabel'],

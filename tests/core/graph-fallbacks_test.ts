@@ -36,3 +36,13 @@ test('a state note beside the state a back edge leaves draws: the route keeps of
     )
   }
 })
+
+test('a class diagram with 40 labelled relations still draws: end-label placement scales with the route cells', () => {
+  const relations = Array.from(
+    { length: 39 },
+    (_, i) => `N${i} "${i === 0 ? 'a'.repeat(60) : '1'}" -- "0..*" N${i + 1}`,
+  )
+  const src = ['classDiagram', 'direction LR', ...relations].join('\n')
+  const r = explain(src, { columns: 160 })
+  assert.ok(!isFail(r), JSON.stringify(r))
+})

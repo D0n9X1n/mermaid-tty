@@ -219,7 +219,9 @@ function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'he
       [-1, 0],
     ].some(([dr, dc]) => inside({ r: x.r + dr!, c: x.c + dc! }, q))
   const own = mine.filter((x) => touches(x, b))
-  const rivals = [...mine.filter((x) => touches(x, other)), ...(room?.others(e.id) ?? [])]
+  const rivals = new Set(
+    [...mine.filter((x) => touches(x, other)), ...(room?.others(e.id) ?? [])].map((x) => cellKey(x.r, x.c)),
+  )
   // The usual spot stands when it is free, so every drawing that placed its labels well before is unchanged.
   let at = spots[0]!
   if (room && !free(p, at, w, own, rivals, room)) {
@@ -240,7 +242,7 @@ function free(
   spot: { r: number; c: number },
   w: number,
   own: readonly { r: number; c: number }[],
-  rivals: readonly { r: number; c: number }[],
+  rivals: ReadonlySet<string>,
   room: Room,
 ): boolean {
   const cells = Array.from({ length: w }, (_, i) => ({ r: spot.r, c: spot.c + i }))
@@ -258,10 +260,30 @@ function free(
     return false
   }
 
-  const gap = (xs: readonly { r: number; c: number }[]) =>
-    Math.min(Infinity, ...cells.flatMap((x) => xs.map((y) => Math.max(Math.abs(x.r - y.r), Math.abs(x.c - y.c)))))
-  const near = gap(own)
-  return near <= 1 && near < gap(rivals)
+  // Loops, not spreads: a large graph has more route cells than a call can take as arguments.
+  let near = Infinity
+  for (const x of cells) {
+    for (const y of own) {
+      near = Math.min(near, Math.max(Math.abs(x.r - y.r), Math.abs(x.c - y.c)))
+    }
+  }
+
+  if (near > 1) {
+    return false
+  }
+
+  // A rival cell within near of the label is as near as its own end, so whose end it is would be ambiguous.
+  for (const x of cells) {
+    for (let dr = -near; dr <= near; dr++) {
+      for (let dc = -near; dc <= near; dc++) {
+        if (rivals.has(cellKey(x.r + dr, x.c + dc))) {
+          return false
+        }
+      }
+    }
+  }
+
+  return true
 }
 
 // Between two consecutive frameless children of c, a divider of frame-role caps owned by `${c.id}:div<k>`: ┄ across c's
