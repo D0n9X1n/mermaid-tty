@@ -28,7 +28,7 @@ flowchart TD
 2. **源码。** `readSource`（`core/source.ts`）统一换行符和 HTML 属性引号，读取 frontmatter 标题和配置的严格子集，检查指令和词法敏感空白，移除空行及 `%%` 注释行。它返回首行、带类型的配置标量，以及保留源码行号的正文行。随后 `explain` 检查标题的文本规则。
 3. **查找。** `lookup`（`core/registry.ts`）取首行第一个词，去掉末尾的 `:`，返回对应类型的模块；否则返回 `unknown-type`、`fallback:<keyword>`、`disabled:<type>` 或 `unregistered:<type>`。
 4. **解析。** 类型模块将各行解析为模型。任何语句无法完整读取，整个代码块就会失败。
-5. **逐级适配。** `fitLadder`（`core/fit.ts`）按顺序执行该类型的步骤。每一步按终端宽度布局并绘图；流程图依次执行布局、布线和绘制。`validate` 检查结果，第一个通过的绘图胜出；全部失败时返回最后一步的原因。
+5. **逐级适配。** `fitLadder`（`core/fit.ts`）按顺序执行该类型的步骤。每一步按终端宽度布局并绘图；流程图依次执行布局、布线和绘制。`validate` 检查结果，第一个通过的绘图胜出；`validate` 先检查行宽，所以超出终端宽度的步骤在更耗时的检查之前就被拒绝。全部失败时，返回第一个与宽度无关的原因（宽度原因为 `too-wide`、`row-too-wide` 和 `word-too-wide`），使调试日志说明是什么让一个宽度合适的绘图没能显示；只有宽度失败时，返回最后一步的原因。
 6. **文本行。** `toRows`（`core/render.ts`）按主题配色，将绘图转换为由带样式片段组成的文本行。
 7. **钩子。** `ui.render` 将每行显示为 Claude Code 的 `Text`，使用 `wrap="truncate-end"`，放在前后正文之间。
 

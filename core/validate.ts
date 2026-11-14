@@ -52,11 +52,18 @@ export type Expect = {
 // A drawn end mark of an edge: its glyph, and the node it attaches to. A self-loop's ends both name its one node.
 export type End = { node: string; glyph: string }
 
-// The first broken invariant of d: emphasis, labels, edges, dangling lines, stray parts of an edge, crossings, line
-// glyphs, merged lines, conflicts, row widths, edge labels, frames, edges kept inside their frames, edges crossing
+// The first broken invariant of d: row widths, then emphasis, labels, edges, dangling lines, stray parts of an edge,
+// crossings, line glyphs, merged lines, conflicts, edge labels, frames, edges kept inside their frames, edges crossing
 // frames only as their ends need, then end labels, bars, member rows and their places, keys, order, glyphs, titles and
 // labels in place, row labels, side notes, lifelines and node labels in their pills. null if none.
 export function validate(d: Drawing): Fail | null {
+  // Widths first: a row wider than the terminal rejects the drawing whatever else holds, and measuring rows is cheap,
+  // so a ladder step that cannot fit skips the edge and line checks, which dominate a large diagram's time.
+  const wide = rows(d)
+  if (wide) {
+    return wide
+  }
+
   const all = spots(d)
   return (
     emphasis(all) ??
@@ -68,7 +75,6 @@ export function validate(d: Drawing): Fail | null {
     lineGlyphs(d, all) ??
     merges(d, all) ??
     (d.conflicts.length > 0 ? fail('overwrite') : null) ??
-    rows(d) ??
     edgeLabels(d, all) ??
     frames(d, all) ??
     inFrames(d, all) ??

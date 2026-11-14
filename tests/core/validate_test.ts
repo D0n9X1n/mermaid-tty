@@ -358,18 +358,21 @@ test('A5.mutation-tests: an edge label needs a cell within Chebyshev distance 1 
   assert.equal(validate(labelled(2, 2))?.reason, 'label-not-adjacent')
   assert.equal(validate(labelled(1, 2, 'X>Y'))?.reason, 'label-not-adjacent')
 })
-// Each drawing breaks two adjacent checks of labels, edges, conflicts, row widths and edge labels. The last breaks an
-// edge twice: its ▲ sits on a junction, and its ▼ is missing.
+// Each drawing breaks two adjacent checks of labels, edges, conflicts and edge labels, or row widths and one other. Row
+// widths come first: a drawing wider than the terminal is rejected for that, whatever else it breaks. The last breaks
+// an edge twice: its ▲ sits on a junction, and its ▼ is missing.
 test('A5.mutation-tests: a drawing broken two ways reports the earlier check', () => {
   assert.equal(validate(cut(cut(two(), 3, 2), 1, 2))?.reason, 'label-missing')
   assert.equal(
     validate({ ...cut(two(), 1, 2), conflicts: [{ row: 0, col: 2, had: 'a', by: 'X' }] })?.reason,
     'edge-disconnected',
   )
+  assert.equal(validate({ ...two(), conflicts: [{ row: 0, col: 2, had: 'a', by: 'X' }] })?.reason, 'overwrite')
   assert.equal(
     validate({ ...two(), conflicts: [{ row: 0, col: 2, had: 'a', by: 'X' }], columns: 2 })?.reason,
-    'overwrite',
+    'row-too-wide',
   )
+  assert.equal(validate({ ...cut(cut(two(), 3, 2), 1, 2), columns: 2 })?.reason, 'row-too-wide')
   assert.equal(validate({ ...labelled(2, 2), columns: 2 })?.reason, 'row-too-wide')
   assert.equal(validate(path(['▲', 7, 5, 5], ['A▲', 'B▼']))?.reason, 'edge-disconnected')
 })
