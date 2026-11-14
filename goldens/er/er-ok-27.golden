@@ -1,0 +1,164 @@
+@60
+             [    CUSTOMER     ]
+             [ string id    PK ]                [ PRODUCT ]
+             [ string email    ]                     │
+                      ││                             │1
+                     1││1                            │
+                      ││                             │
+            ┌┐        ││            ┌┐               │   ┌┐
+            a└────────┘└────────────┘b               └───┘│
+            │                        │                    │
+            │                        │                    │
+            │                        │                    │
+            │0..*                    │                    │
+            │                        │0..*                │
+[         ORDER         ]            │                    │
+[ string id          PK ]       [ ADDRESS ]               d
+[ string customer_id FK ]                                 │
+[ date   placed_at      ]                                 │
+            │                                             │
+            │1                                            │
+            │                                             │
+            │               ┌┐                            │
+            └───────────────┘c                            │
+                             │                            │
+                             │                            │
+                         1..*│ 0..*                       │
+                             │┌───────────────────────────┘
+                       [ LINE_ITEM ]
+a places
+b ships to
+c contains
+d ordered as
+@60 roles
+             nnnnnNNNNNNNNnnnnnn
+             nlLLLLLLlLLllllLLln                nnNNNNNNNnn
+             nlLLLLLLlLLLLLlllln                     e
+                      ee                             eA
+                     AeeA                            e
+                      ee                             e
+            ee        ee            ee               e   ee
+            leeeeeeeeeeeeeeeeeeeeeeeel               eeeeee
+            e                        e                    e
+            e                        e                    e
+            e                        e                    e
+            eAAAA                    e                    e
+            e                        eAAAA                e
+nnnnnnnnnnNNNNNnnnnnnnnnn            e                    e
+nlLLLLLLlLLllllllllllLLln       nnNNNNNNNnn               l
+nlLLLLLLlLLLLLLLLLLLlLLln                                 e
+nlLLLLlllLLLLLLLLLlllllln                                 e
+            e                                             e
+            eA                                            e
+            e                                             e
+            e               ee                            e
+            eeeeeeeeeeeeeeeeel                            e
+                             e                            e
+                             e                            e
+                         AAAAe AAAA                       e
+                             eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                       nnNNNNNNNNNnn
+l LLLLLL
+l LLLLLLLL
+l LLLLLLLL
+l LLLLLLLLLL
+@80
+             [    CUSTOMER     ]
+             [ string id    PK ]               [ PRODUCT ]
+             [ string email    ]                    │
+                      ││                            │1
+                     1││1                           │
+                      ││                            │
+            ┌──┐      ││          ┌────┐            │      ┌┐
+         places└──────┘└──────────┘ships to         └──────┘│
+            │                          │                    │
+            │0..*                      │                    │
+            │                          │0..*                │
+[         ORDER         ]              │                    │
+[ string id          PK ]         [ ADDRESS ]          ordered as
+[ string customer_id FK ]                                   │
+[ date   placed_at      ]                                   │
+            │                                               │
+            │1                                              │
+            │                                               │
+            │            ┌────┐                             │
+            └────────────┘contains                          │
+                              │                             │
+                          1..*│ 0..*                        │
+                              │┌────────────────────────────┘
+                        [ LINE_ITEM ]
+@80 roles
+             nnnnnNNNNNNNNnnnnnn
+             nlLLLLLLlLLllllLLln               nnNNNNNNNnn
+             nlLLLLLLlLLLLLlllln                    e
+                      ee                            eA
+                     AeeA                           e
+                      ee                            e
+            eeee      ee          eeeeee            e      ee
+         LLLLLLeeeeeeeeeeeeeeeeeeeeLLLLLLLL         eeeeeeeee
+            e                          e                    e
+            eAAAA                      e                    e
+            e                          eAAAA                e
+nnnnnnnnnnNNNNNnnnnnnnnnn              e                    e
+nlLLLLLLlLLllllllllllLLln         nnNNNNNNNnn          LLLLLLLLLL
+nlLLLLLLlLLLLLLLLLLLlLLln                                   e
+nlLLLLlllLLLLLLLLLlllllln                                   e
+            e                                               e
+            eA                                              e
+            e                                               e
+            e            eeeeee                             e
+            eeeeeeeeeeeeeeLLLLLLLL                          e
+                              e                             e
+                          AAAAe AAAA                        e
+                              eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                        nnNNNNNNNNNnn
+@120
+             [    CUSTOMER     ]
+             [ string id    PK ]               [ PRODUCT ]
+             [ string email    ]                    │
+                      ││                            │1
+                     1││1                           │
+                      ││                            │
+            ┌──┐      ││          ┌────┐            │      ┌┐
+         places└──────┘└──────────┘ships to         └──────┘│
+            │                          │                    │
+            │0..*                      │                    │
+            │                          │0..*                │
+[         ORDER         ]              │                    │
+[ string id          PK ]         [ ADDRESS ]          ordered as
+[ string customer_id FK ]                                   │
+[ date   placed_at      ]                                   │
+            │                                               │
+            │1                                              │
+            │                                               │
+            │            ┌────┐                             │
+            └────────────┘contains                          │
+                              │                             │
+                          1..*│ 0..*                        │
+                              │┌────────────────────────────┘
+                        [ LINE_ITEM ]
+@120 roles
+             nnnnnNNNNNNNNnnnnnn
+             nlLLLLLLlLLllllLLln               nnNNNNNNNnn
+             nlLLLLLLlLLLLLlllln                    e
+                      ee                            eA
+                     AeeA                           e
+                      ee                            e
+            eeee      ee          eeeeee            e      ee
+         LLLLLLeeeeeeeeeeeeeeeeeeeeLLLLLLLL         eeeeeeeee
+            e                          e                    e
+            eAAAA                      e                    e
+            e                          eAAAA                e
+nnnnnnnnnnNNNNNnnnnnnnnnn              e                    e
+nlLLLLLLlLLllllllllllLLln         nnNNNNNNNnn          LLLLLLLLLL
+nlLLLLLLlLLLLLLLLLLLlLLln                                   e
+nlLLLLlllLLLLLLLLLlllllln                                   e
+            e                                               e
+            eA                                              e
+            e                                               e
+            e            eeeeee                             e
+            eeeeeeeeeeeeeeLLLLLLLL                          e
+                              e                             e
+                          AAAAe AAAA                        e
+                              eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+                        nnNNNNNNNNNnn

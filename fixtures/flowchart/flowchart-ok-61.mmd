@@ -1,0 +1,20 @@
+flowchart LR
+    subgraph Build
+        A[Checkout] --> B[Install deps]
+        B --> C[Compile]
+        C --> D[Unit tests]
+    end
+    subgraph Verify
+        E[Lint] --> F[Integration tests]
+        F --> G[Security scan]
+    end
+    subgraph Release
+        H[Package] --> I[Sign]
+        I --> J[Publish]
+        J --> K[Notify]
+    end
+    D --> E
+    G --> H
+    F -->|flaky| F2[Retry once]
+    F2 --> F
+    G -->|fails| X[Block release]

@@ -1,0 +1,152 @@
+@60
+        ●
+        │
+        ▼
+( Disconnected )◄───────────────────────────────────┐
+       └───────────┐                                │
+                   │                             close()
+                   │                                │
+               connect()                            │
+                   │                                │
+                   ▼                                │
+             ( Connecting )◄────────────────┐       │
+        ┌──────────┴─────┐                  │       │
+        │                │                  │       │
+  handshake ok        timeout             retry     │
+        │                │                  │       │
+        │       ┌────────┼┐                 │       │
+        │       │        ││                 │       │
+        │       │        ▼└────────────────┐│       │
+        ▼       └( Backoff )┄┄ waits 2^n   └┘       │
+  ( Connected )┐               seconds, max┌────────┘
+        │      │               60          │
+        │      └───────────────────────────┘
+        │
+        ▼
+        ◉
+@60 roles
+        n
+        e
+        a
+nnNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       eeeeeeeeeeeee                                e
+                   e                             LLLLLLL
+                   e                                e
+               LLLLLLLLL                            e
+                   e                                e
+                   a                                e
+             nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeee       e
+        eeeeeeeeeeeeeeeeee                  e       e
+        e                e                  e       e
+  LLLLLLLLLLLL        LLLLLLL             LLLLL     e
+        e                e                  e       e
+        e       eeeeeeeeeee                 e       e
+        e       e        ee                 e       e
+        e       e        aeeeeeeeeeeeeeeeeeee       e
+        a       ennNNNNNNNnnoooOOOOOOOOO   ee       e
+  nnNNNNNNNNNnne               OOOOOOOOOOOOeeeeeeeeee
+        e      e               OO          e
+        e      eeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e
+        a
+        n
+@80
+        ●
+        │
+        ▼
+( Disconnected )◄───────────────────────────────────────────────┐
+       └────────────────┐                                       │
+                        │                                    close()
+                        │                                       │
+                    connect()                                   │
+                        │                                       │
+                        ▼                                       │
+                  ( Connecting )◄───────────────────────┐       │
+        ┌───────────────┴────┐                          │       │
+        │                    │                          │       │
+  handshake ok            timeout                     retry     │
+        │                    │                          │       │
+        │      ┌─────────────┼┐                         │       │
+        │      │             │└─────┐                   │       │
+        ▼      │             ▼      └───────────────────┼┐      │
+  ( Connected )┘       ┌( Backoff )┄┄ waits 2^n seconds,│└──────┘
+        │              │              max 60            │
+        │              └────────────────────────────────┘
+        │
+        ▼
+        ◉
+@80 roles
+        n
+        e
+        a
+nnNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       eeeeeeeeeeeeeeeeee                                       e
+                        e                                    LLLLLLL
+                        e                                       e
+                    LLLLLLLLL                                   e
+                        e                                       e
+                        a                                       e
+                  nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeee       e
+        eeeeeeeeeeeeeeeeeeeeee                          e       e
+        e                    e                          e       e
+  LLLLLLLLLLLL            LLLLLLL                     LLLLL     e
+        e                    e                          e       e
+        e      eeeeeeeeeeeeeeee                         e       e
+        e      e             eeeeeeee                   e       e
+        a      e             a      eeeeeeeeeeeeeeeeeeeeee      e
+  nnNNNNNNNNNnne       ennNNNNNNNnnoooOOOOOOOOOOOOOOOOOOeeeeeeeee
+        e              e              OOOOOO            e
+        e              eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e
+        a
+        n
+@120
+        ●
+        │
+        ▼
+( Disconnected )◄───────────────────────────────────────────────┐
+       └────────────────┐                                       │
+                        │                                    close()
+                        │                                       │
+                    connect()                                   │
+                        │                                       │
+                        ▼                                       │
+                  ( Connecting )◄───────────────────────┐       │
+        ┌───────────────┴────┐                          │       │
+        │                    │                          │       │
+  handshake ok            timeout                     retry     │
+        │                    │                          │       │
+        │      ┌─────────────┼┐                         │       │
+        │      │             │└─────┐                   │       │
+        ▼      │             ▼      └───────────────────┼┐      │
+  ( Connected )┘       ┌( Backoff )┄┄ waits 2^n seconds,│└──────┘
+        │              │              max 60            │
+        │              └────────────────────────────────┘
+        │
+        ▼
+        ◉
+@120 roles
+        n
+        e
+        a
+nnNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+       eeeeeeeeeeeeeeeeee                                       e
+                        e                                    LLLLLLL
+                        e                                       e
+                    LLLLLLLLL                                   e
+                        e                                       e
+                        a                                       e
+                  nnNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeee       e
+        eeeeeeeeeeeeeeeeeeeeee                          e       e
+        e                    e                          e       e
+  LLLLLLLLLLLL            LLLLLLL                     LLLLL     e
+        e                    e                          e       e
+        e      eeeeeeeeeeeeeeee                         e       e
+        e      e             eeeeeeee                   e       e
+        a      e             a      eeeeeeeeeeeeeeeeeeeeee      e
+  nnNNNNNNNNNnne       ennNNNNNNNnnoooOOOOOOOOOOOOOOOOOOeeeeeeeee
+        e              e              OOOOOO            e
+        e              eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        e
+        a
+        n

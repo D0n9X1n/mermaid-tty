@@ -1,0 +1,182 @@
+@60
+[ User ]      [ Web ]       [ API ] [ Worker ]     [ DB ]
+   │Submit order │             │        │            │
+   │────────────►│             │        │            │
+   │             │POST /orders │        │            │
+   │             │────────────►│        │            │
+   │             │             │    insert order     │
+   │             │             │────────────────────►│
+   │             │             │        │id          │
+   │             │             │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+   │             │             │enqueue │            │
+   │             │             │ charge │            │
+   │             │             │───────►│            │
+   │             │202 Accepted │        │            │
+   │             │◄┄┄┄┄┄┄┄┄┄┄┄┄│        │            │
+   │    Order    │             │        │            │
+   │  received   │             │        │            │
+   │◄┄┄┄┄┄┄┄┄┄┄┄┄│             │        │            │
+   │             │             │        │ charge job │
+   │             │             │        │─┐          │
+   │             │             │        │◄┘          │
+   │             │             │        │   update   │
+   │             │             │        │   status   │
+   │             │             │        │───────────►│
+   │             │             │  done  │            │
+   │             │             │◄┄┄┄┄┄┄┄│            │
+   │           ┌─loop [every 5s]─┐      │            │
+   │           │ │     GET     │ │      │            │
+   │           │ │ /orders/id  │ │      │            │
+   │           │ │────────────►│ │      │            │
+   │           │ │   status    │ │      │            │
+   │           │ │◄┄┄┄┄┄┄┄┄┄┄┄┄│ │      │            │
+   │           └─────────────────┘      │            │
+@60 roles
+nnNNNNnn      nnNNNnn       nnNNNnn nnNNNNNNnn     nnNNnn
+   oLLLLLLLLLLLL o             o        o            o
+   oeeeeeeeeeeeeao             o        o            o
+   o             oLLLLLLLLLLLL o        o            o
+   o             oeeeeeeeeeeeeao        o            o
+   o             o             o    LLLLLLLLLLLL     o
+   o             o             oeeeeeeeeeeeeeeeeeeeeao
+   o             o             o        oLL          o
+   o             o             oaeeeeeeeeeeeeeeeeeeeeo
+   o             o             oLLLLLLL o            o
+   o             o             o LLLLLL o            o
+   o             o             oeeeeeeeao            o
+   o             oLLLLLLLLLLLL o        o            o
+   o             oaeeeeeeeeeeeeo        o            o
+   o    LLLLL    o             o        o            o
+   o  LLLLLLLL   o             o        o            o
+   oaeeeeeeeeeeeeo             o        o            o
+   o             o             o        o LLLLLLLLLL o
+   o             o             o        oee          o
+   o             o             o        oae          o
+   o             o             o        o   LLLLLL   o
+   o             o             o        o   LLLLLL   o
+   o             o             o        oeeeeeeeeeeeao
+   o             o             o  LLLL  o            o
+   o             o             oaeeeeeeeo            o
+   o           ffFFFFFFFFFFFFFFFff      o            o
+   o           f o     LLL     o f      o            o
+   o           f o LLLLLLLLLL  o f      o            o
+   o           f oeeeeeeeeeeeeao f      o            o
+   o           f o   LLLLLL    o f      o            o
+   o           f oaeeeeeeeeeeeeo f      o            o
+   o           fffffffffffffffffff      o            o
+@80
+[ User ]          [ Web ]           [ API ]          [ Worker ]         [ DB ]
+   │  Submit order   │                 │                 │                │
+   │────────────────►│                 │                 │                │
+   │                 │  POST /orders   │                 │                │
+   │                 │────────────────►│                 │                │
+   │                 │                 │           insert order           │
+   │                 │                 │─────────────────────────────────►│
+   │                 │                 │                id                │
+   │                 │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+   │                 │                 │ enqueue charge  │                │
+   │                 │                 │────────────────►│                │
+   │                 │  202 Accepted   │                 │                │
+   │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                 │                │
+   │ Order received  │                 │                 │                │
+   │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                 │                 │                │
+   │                 │                 │                 │ charge job     │
+   │                 │                 │                 │─┐              │
+   │                 │                 │                 │◄┘              │
+   │                 │                 │                 │ update status  │
+   │                 │                 │                 │───────────────►│
+   │                 │                 │      done       │                │
+   │                 │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                │
+   │               ┌─loop [every 5s]─────┐               │                │
+   │               │ │ GET /orders/id  │ │               │                │
+   │               │ │────────────────►│ │               │                │
+   │               │ │     status      │ │               │                │
+   │               │ │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│ │               │                │
+   │               └─────────────────────┘               │                │
+@80 roles
+nnNNNNnn          nnNNNnn           nnNNNnn          nnNNNNNNnn         nnNNnn
+   o  LLLLLLLLLLLL   o                 o                 o                o
+   oeeeeeeeeeeeeeeeeao                 o                 o                o
+   o                 o  LLLLLLLLLLLL   o                 o                o
+   o                 oeeeeeeeeeeeeeeeeao                 o                o
+   o                 o                 o           LLLLLLLLLLLL           o
+   o                 o                 oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+   o                 o                 o                LL                o
+   o                 o                 oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+   o                 o                 o LLLLLLLLLLLLLL  o                o
+   o                 o                 oeeeeeeeeeeeeeeeeao                o
+   o                 o  LLLLLLLLLLLL   o                 o                o
+   o                 oaeeeeeeeeeeeeeeeeo                 o                o
+   o LLLLLLLLLLLLLL  o                 o                 o                o
+   oaeeeeeeeeeeeeeeeeo                 o                 o                o
+   o                 o                 o                 o LLLLLLLLLL     o
+   o                 o                 o                 oee              o
+   o                 o                 o                 oae              o
+   o                 o                 o                 o LLLLLLLLLLLLL  o
+   o                 o                 o                 oeeeeeeeeeeeeeeeao
+   o                 o                 o      LLLL       o                o
+   o                 o                 oaeeeeeeeeeeeeeeeeo                o
+   o               ffFFFFFFFFFFFFFFFffffff               o                o
+   o               f o LLLLLLLLLLLLLL  o f               o                o
+   o               f oeeeeeeeeeeeeeeeeao f               o                o
+   o               f o     LLLLLL      o f               o                o
+   o               f oaeeeeeeeeeeeeeeeeo f               o                o
+   o               fffffffffffffffffffffff               o                o
+@120
+[ User ]          [ Web ]           [ API ]          [ Worker ]         [ DB ]
+   │  Submit order   │                 │                 │                │
+   │────────────────►│                 │                 │                │
+   │                 │  POST /orders   │                 │                │
+   │                 │────────────────►│                 │                │
+   │                 │                 │           insert order           │
+   │                 │                 │─────────────────────────────────►│
+   │                 │                 │                id                │
+   │                 │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│
+   │                 │                 │ enqueue charge  │                │
+   │                 │                 │────────────────►│                │
+   │                 │  202 Accepted   │                 │                │
+   │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                 │                │
+   │ Order received  │                 │                 │                │
+   │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                 │                 │                │
+   │                 │                 │                 │ charge job     │
+   │                 │                 │                 │─┐              │
+   │                 │                 │                 │◄┘              │
+   │                 │                 │                 │ update status  │
+   │                 │                 │                 │───────────────►│
+   │                 │                 │      done       │                │
+   │                 │                 │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│                │
+   │               ┌─loop [every 5s]─────┐               │                │
+   │               │ │ GET /orders/id  │ │               │                │
+   │               │ │────────────────►│ │               │                │
+   │               │ │     status      │ │               │                │
+   │               │ │◄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│ │               │                │
+   │               └─────────────────────┘               │                │
+@120 roles
+nnNNNNnn          nnNNNnn           nnNNNnn          nnNNNNNNnn         nnNNnn
+   o  LLLLLLLLLLLL   o                 o                 o                o
+   oeeeeeeeeeeeeeeeeao                 o                 o                o
+   o                 o  LLLLLLLLLLLL   o                 o                o
+   o                 oeeeeeeeeeeeeeeeeao                 o                o
+   o                 o                 o           LLLLLLLLLLLL           o
+   o                 o                 oeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeao
+   o                 o                 o                LL                o
+   o                 o                 oaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeo
+   o                 o                 o LLLLLLLLLLLLLL  o                o
+   o                 o                 oeeeeeeeeeeeeeeeeao                o
+   o                 o  LLLLLLLLLLLL   o                 o                o
+   o                 oaeeeeeeeeeeeeeeeeo                 o                o
+   o LLLLLLLLLLLLLL  o                 o                 o                o
+   oaeeeeeeeeeeeeeeeeo                 o                 o                o
+   o                 o                 o                 o LLLLLLLLLL     o
+   o                 o                 o                 oee              o
+   o                 o                 o                 oae              o
+   o                 o                 o                 o LLLLLLLLLLLLL  o
+   o                 o                 o                 oeeeeeeeeeeeeeeeao
+   o                 o                 o      LLLL       o                o
+   o                 o                 oaeeeeeeeeeeeeeeeeo                o
+   o               ffFFFFFFFFFFFFFFFffffff               o                o
+   o               f o LLLLLLLLLLLLLL  o f               o                o
+   o               f oeeeeeeeeeeeeeeeeao f               o                o
+   o               f o     LLLLLL      o f               o                o
+   o               f oaeeeeeeeeeeeeeeeeo f               o                o
+   o               fffffffffffffffffffffff               o                o
