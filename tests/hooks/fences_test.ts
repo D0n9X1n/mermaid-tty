@@ -413,3 +413,11 @@ test('a diagram after a block-level HTML tag and a blank line draws; inside the 
   )
   assert.equal(splitFences('<div>\n' + D + '</div>\n').filter((x) => x.kind === 'mermaid').length, 0)
 })
+
+test('an empty list item ends at the blank line after it, so a fence below it is a top-level one', () => {
+  const r = '-\n\n  ~~~\n```mermaid\nflowchart LR\nA --> B\n```\n'
+  assert.deepEqual(
+    splitFences(r).filter((x) => x.kind === 'mermaid'),
+    [],
+  )
+})

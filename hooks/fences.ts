@@ -200,6 +200,9 @@ export function splitFences(reply: string): Segment[] {
   let quote = false
   // The last line was in an HTML block at the top level that ends at a blank line.
   let html = false
+  // The last line opened a list item with nothing on it. Such an item may start with one blank line, not two: a blank
+  // line next leaves it empty, and ends it.
+  let fresh = false
   let from = 0
   let pos = 0
   let open: Open | null = null
@@ -239,6 +242,17 @@ export function splitFences(reply: string): Segment[] {
       pos = next
       i++
       continue
+    }
+
+    if (fresh) {
+      fresh = false
+      if (blank) {
+        items.pop()
+        para = false
+        pos = next
+        i++
+        continue
+      }
     }
 
     if (html) {
@@ -357,6 +371,7 @@ export function splitFences(reply: string): Segment[] {
         m = wide || BREAK.test(first) ? null : MARKER.exec(first)
       }
 
+      fresh = isBlank(first)
       const own = wide ? null : fenceAt(first)
       if (own) {
         open = { ch: own[1]![0]!, len: own[1]!.length, at: pos, bodyAt: next, mermaid: false, indent: 0, base: at }

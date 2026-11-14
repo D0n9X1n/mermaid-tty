@@ -3,12 +3,12 @@ import assert from 'node:assert/strict'
 import { splitFences } from '../../hooks/fences.ts'
 import { all, parse, type Node } from '../docs/markdown.ts'
 
-// splitFences draws a fence only when it is certainly a mermaid code block. The oracle is the CommonMark parser the docs
-// checks pin: every drawn segment must be a mermaid code block that CommonMark starts on the same line, with the same
-// content. 30000 seeded replies, built from the constructs that change how Markdown reads a fence: list markers, tabs,
-// quotes, setext underlines, thematic breaks, HTML, tables and indentation.
+// splitFences draws a fence only when it is certainly a mermaid code block. The oracle is the CommonMark parser the
+// docs checks pin: every drawn segment must be a mermaid code block that CommonMark starts on the same line, with the
+// same content. 30000 seeded replies, built from the constructs that change how Markdown reads a fence: list markers,
+// tabs, quotes, setext underlines, thematic breaks, HTML, tables and indentation.
 const PREFIX = ['', '', '', ' ', '  ', '   ', '    ', '\t', '- ', '* ', '1. ', '2. ', '10) ', '- - ', '-\t', '* \t']
-const PREFIX2 = ['> ', '>', '  > ', '  - ', '1.  ', '| ']
+const PREFIX2 = ['> ', '>', '  > ', '  - ', '1.  ', '| ', '-', '1.']
 const BODY = ['```mermaid', '~~~mermaid', '```Mermaid', '```js', '```', '~~~', '````', 'flowchart LR', 'A --> B']
 const BODY2 = ['text', '', '===', '---', '--', '- - -', '# h', 'mindmap', ' root', '   child', '\tx', '<div>', 'a | b']
 const HTML = ['<details>', '</details>', '<pre>', '<!-- c', '<b>x</b>', '<summary>s</summary>']
