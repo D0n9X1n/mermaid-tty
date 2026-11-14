@@ -337,3 +337,45 @@ test('the info string mermaid matches in any letter case', () => {
     assert.deepEqual(splitFences(r), [prose(r)], JSON.stringify(r))
   }
 })
+
+test('a fence after a list item fence, still inside the item, is its content and never a diagram', () => {
+  const r = '- ```js\n  x\n  ```\n  ```mermaid\nflowchart LR\nA --> B\n```\n'
+  assert.deepEqual(
+    splitFences(r).filter((x) => x.kind === 'mermaid'),
+    [],
+  )
+})
+
+test('a closed fence in a list item body draws, its body without the indentation of its opener', () => {
+  for (const [r, body] of [
+    ['- item\n\n  ```mermaid\n  A\n  ```\n', 'A'],
+    ['1. item\n   ```mermaid\n   A\n   ```\n', 'A'],
+  ] as const) {
+    assert.deepEqual(
+      splitFences(r)
+        .filter((x) => x.kind === 'mermaid')
+        .map((x) => (x as { body: string }).body),
+      [body],
+      JSON.stringify(r),
+    )
+  }
+})
+
+test('an ordered item numbered other than 1 cannot interrupt a paragraph, so its fence opens no item', () => {
+  const r = 'text\n2. ```js\n   x\n   ```\n~~~mermaid\nflowchart LR\nA --> B\n~~~\n'
+  assert.deepEqual(
+    splitFences(r).filter((s) => s.kind === 'mermaid'),
+    [],
+  )
+})
+
+test('a list item fence keeps blank lines, and a fence at the item boundary still draws', () => {
+  const D = '```mermaid\nA\n```\n'
+  assert.deepEqual(splitFences('- ```js\n\n  ```\n' + D), [prose('- ```js\n\n  ```\n'), mermaid(D, 'A')])
+  assert.deepEqual(splitFences('- ```js\n' + D), [prose('- ```js\n'), mermaid(D, 'A')])
+})
+
+test('a whitespace-only body line of an indented fence loses its spaces', () => {
+  const r = '  ```mermaid\n  A\n \n  B\n  ```\n'
+  assert.deepEqual(splitFences(r), [mermaid(r, 'A\n\nB')])
+})
