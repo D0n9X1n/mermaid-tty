@@ -360,6 +360,18 @@ test('A4.fit-ladder: the reason is the first rejection that is not about width; 
     ),
     { reason: 'word-too-wide' },
   )
+  // Of two reasons that are not about width, the first one: the widest step that was rejected for its drawing.
+  assert.deepEqual(
+    fit(
+      [
+        ['natural', fail('label-missing')],
+        ['tight', fail('no-route')],
+        ['wrap', fail('word-too-wide')],
+      ],
+      10,
+    ),
+    { reason: 'label-missing' },
+  )
 })
 
 test('A4.fit-ladder: a five-entity ER logs why its fitting drawing was rejected, not word-too-wide', () => {
