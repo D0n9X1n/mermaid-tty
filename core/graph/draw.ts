@@ -12,6 +12,7 @@ import { width } from '../width.ts'
 import { compactIfValid } from './compact.ts'
 import type { Box, Placed } from './layered.ts'
 import type { GCluster, GEdge, GNode, NodeRow, Note } from './model.ts'
+import { inside } from './route-base.ts'
 import type { Route } from './route.ts'
 
 // One row of a box: capL, a pad, the piece centred (or after one pad cell when flush, a left-aligned row), a pad, capR.
@@ -155,10 +156,20 @@ function lines(
 // An end label (a cardinality) of true end t, owned by `${edge}:${t}`, at node, its true end's node: on a reversed edge
 // the drawn tail is the true head. It sits beside its end's second cell out from its node, the cell past its mark or
 // past the line cell that touches its node: right of that cell when its node is above or below it, else above it,
-// running away from its node. So it clears its node's own rows and columns, and a neighbouring port there. at, its
-// first cell at layout coordinates, is null with no route; a blank label is none.
+// running away from its node. So it clears its node's own rows and columns, and a neighbouring port there. When that
+// spot is not free, as when a neighbouring port's line runs through it or lies as near it as its own, it takes the
+// first free spot beside either of those two cells: one off every line, box, frame border and label, and nearer its own
+// end than any other line, so the validator can tell whose end it is. With none, it keeps the first, and the validator
+// rejects the drawing. at, its first cell at layout coordinates, is null with no route; a blank label is none.
 type EndLabel = { owner: string; node: string; text: string; at: { r: number; c: number } | null }
-function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'head'): EndLabel | null {
+// What a label must keep off: each routed cell's edges, and the cells labels already took.
+type Room = {
+  lines: ReadonlyMap<string, ReadonlySet<string>>
+  claimed: Set<string>
+  others: (edge: string) => { r: number; c: number }[]
+}
+const cellKey = (r: number, c: number) => `${r},${c}`
+function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'head', room?: Room): EndLabel | null {
   // A reversed edge is drawn from its target, so its tail label sits at the drawn head, and the other way round.
   const flipped = t === 'tail' ? 'head' : 'tail'
   const drawn = e.reversed ? flipped : t
@@ -179,11 +190,78 @@ function endLabel(p: Placed, e: GEdge, route: Route | undefined, t: 'tail' | 'he
     return { owner, node, text, at: null }
   }
 
-  if (a.c >= b.col && a.c < b.col + b.cols) {
-    return { owner, node, text, at: { r: a.r, c: a.c + 1 } }
+  const w = width(text)
+  const spots: { r: number; c: number }[] = []
+  for (const x of [a, path[0]!]) {
+    const beside = [
+      { r: x.r, c: x.c + 1 },
+      { r: x.r, c: x.c - w },
+    ]
+    const over = [
+      { r: x.r - 1, c: b.col < x.c ? x.c : x.c - w + 1 },
+      { r: x.r - 1, c: b.col < x.c ? x.c - w + 1 : x.c },
+      { r: x.r + 1, c: b.col < x.c ? x.c : x.c - w + 1 },
+      { r: x.r + 1, c: b.col < x.c ? x.c - w + 1 : x.c },
+    ]
+    spots.push(...(x.c >= b.col && x.c < b.col + b.cols ? [...beside, ...over] : [...over, ...beside]))
   }
 
-  return { owner, node, text, at: { r: a.r - 1, c: b.col < a.c ? a.c : a.c - width(text) + 1 } }
+  // As the validator reads an end label: its own end is this route's cells beside its node; rivals are every other
+  // route's cells and this route's cells beside its other end.
+  const other = p.boxes.get(drawn === 'tail' ? e.to : e.from) ?? p.frames.get(drawn === 'tail' ? e.to : e.from)
+  const mine = [...(route?.cells ?? []), ...marks]
+  const touches = (x: { r: number; c: number }, q: Box | undefined) =>
+    q !== undefined &&
+    [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+    ].some(([dr, dc]) => inside({ r: x.r + dr!, c: x.c + dc! }, q))
+  const own = mine.filter((x) => touches(x, b))
+  const rivals = [...mine.filter((x) => touches(x, other)), ...(room?.others(e.id) ?? [])]
+  // The usual spot stands when it is free, so every drawing that placed its labels well before is unchanged.
+  let at = spots[0]!
+  if (room && !free(p, at, w, own, rivals, room)) {
+    at = spots.find((spot) => free(p, spot, w, own, rivals, room)) ?? at
+  }
+
+  for (let i = 0; i < w; i++) {
+    room?.claimed.add(cellKey(at.r, at.c + i))
+  }
+
+  return { owner, node, text, at }
+}
+
+// Whether a w-cell label at spot is off every line, box, frame border and claimed cell, within a cell of its own end,
+// own, and nearer it than any rival line, as the validator's end-label check requires.
+function free(
+  p: Placed,
+  spot: { r: number; c: number },
+  w: number,
+  own: readonly { r: number; c: number }[],
+  rivals: readonly { r: number; c: number }[],
+  room: Room,
+): boolean {
+  const cells = Array.from({ length: w }, (_, i) => ({ r: spot.r, c: spot.c + i }))
+  const onBorder = (x: { r: number; c: number }, q: Box) =>
+    inside(x, q) && (x.r === q.row || x.r === q.row + q.rows - 1 || x.c === q.col || x.c === q.col + q.cols - 1)
+  // A spot above row 0 or left of column 0 is allowed: the grid grows to hold it.
+  const blocked = (x: { r: number; c: number }) =>
+    room.lines.has(cellKey(x.r, x.c)) ||
+    room.claimed.has(cellKey(x.r, x.c)) ||
+    [...p.boxes.values(), ...(p.notes?.values() ?? [])].some((q) => inside(x, q)) ||
+    [...p.frames.values()].some((q) => onBorder(x, q))
+  // Two labels end to end on one row read as one word, such as 10..*, so a label keeps a cell from another.
+  const touching = room.claimed.has(cellKey(spot.r, spot.c - 1)) || room.claimed.has(cellKey(spot.r, spot.c + w))
+  if (cells.some(blocked) || touching) {
+    return false
+  }
+
+  const gap = (xs: readonly { r: number; c: number }[]) =>
+    Math.min(Infinity, ...cells.flatMap((x) => xs.map((y) => Math.max(Math.abs(x.r - y.r), Math.abs(x.c - y.c)))))
+  const near = gap(own)
+  return near <= 1 && near < gap(rivals)
 }
 
 // Between two consecutive frameless children of c, a divider of frame-role caps owned by `${c.id}:div<k>`: ┄ across c's
@@ -273,6 +351,19 @@ export function drawGraph(
   // shifts the whole graph down or right, as a title, which takes row 0, shifts it a row down; the grid is as wide as
   // the title.
   const live = p.graph.edges.filter((e) => e.style !== 'invisible')
+  // Every routed cell's edges, so an end label keeps off every line, and the cells labels take.
+  const routed = new Map<string, Set<string>>()
+  for (const r of routes) {
+    for (const c of [...r.cells, ...r.ends]) {
+      routed.set(cellKey(c.r, c.c), (routed.get(cellKey(c.r, c.c)) ?? new Set()).add(r.edge))
+    }
+  }
+
+  const room: Room = {
+    lines: routed,
+    claimed: new Set(),
+    others: (edge) => routes.filter((r) => r.edge !== edge).flatMap((r) => [...r.cells, ...r.ends]),
+  }
   const tags = new Map(
     live.map(
       (e) =>
@@ -285,6 +376,7 @@ export function drawGraph(
                 e,
                 routes.find((r) => r.edge === e.id),
                 t,
+                room,
               ) ?? [],
           ),
         ] as const,

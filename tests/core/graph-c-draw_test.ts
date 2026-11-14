@@ -267,7 +267,7 @@ const shared = (d: ReturnType<typeof D>, a: string, b: string) =>
 // Two labelled ends on one face of a TB node get adjacent ports, so one label meets the other's stem: that drawing
 // fails closed, a Conflict or end-label, and the ladder moves on. Across, each label lies in its own run's channel, and
 // passes.
-test('A4: an end with a label gets its own port, never a shared stem, at a fan-out or a fan-in', () => {
+test('A4: an end with a label gets its own port, never a shared stem, and draws, at a fan-out or a fan-in', () => {
   for (const [specs, k] of [
     [['A>B', 'A>C'], 'tailLabel'],
     [['A>C', 'B>C'], 'headLabel'],
@@ -278,11 +278,8 @@ test('A4: an end with a label gets its own port, never a shared stem, at a fan-o
       Object.assign(gr.edges[1]!, { [k]: '0..*' })
       const d = D(gr)
       assert.ok(!shared(d, 'e0', 'e1'), `${k} ${dir}`)
-      if (dir === 'LR') {
-        assert.equal(validate(d), null, `${k} ${dir}`)
-      } else {
-        assert.ok(['overwrite', 'label-missing', 'end-label'].includes(validate(d)?.reason ?? ''), `${k} ${dir}`)
-      }
+      // Side by side ports leave each label a free side: the one beside its line away from the other port.
+      assert.equal(validate(d), null, `${k} ${dir}`)
     }
   }
 })
@@ -343,9 +340,14 @@ function channel(n: number) {
   return drawGraph({ graph: gr, boxes, frames: new Map(), rows: 1, cols: 11 + n }, [route], 80, (x) => x)
 }
 
-test('A4: two end labels that meet end to end are a Conflict; a cell apart they pass', () => {
-  assert.ok(channel(5).conflicts.length > 0)
-  assert.deepEqual(validate(channel(6)), { reason: 'overwrite' })
+test('A4: an end label never meets another end to end: it moves to a free spot, or the drawing fails', () => {
+  // Five and six cells: 0..*'s usual spot overlaps or meets 1's, so it takes a free spot a cell or more away.
+  for (const n of [5, 6]) {
+    const d = channel(n)
+    assert.deepEqual([d.conflicts.length, validate(d)], [0, null], String(n))
+    assert.match(text(d)[0]!, /1 +0..*/, String(n))
+  }
+
   const d = channel(7)
   assert.deepEqual([d.conflicts.length, validate(d)], [0, null])
   assert.equal(text(d)[0], '      1 0..*')
