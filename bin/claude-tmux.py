@@ -352,7 +352,10 @@ def exit_like(status):
     """End this process as Claude Code ended: the same exit code, or the same signal."""
     if os.WIFSIGNALED(status):
         number = os.WTERMSIG(status)
-        signal.signal(number, signal.SIG_DFL)
+        # SIGKILL and SIGSTOP cannot be caught, so their handler cannot be reset; they act on this process as they are.
+        if number not in (signal.SIGKILL, signal.SIGSTOP):
+            signal.signal(number, signal.SIG_DFL)
+
         os.kill(os.getpid(), number)
 
     sys.exit(os.waitstatus_to_exitcode(status))

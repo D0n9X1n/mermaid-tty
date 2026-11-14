@@ -261,6 +261,17 @@ class ExitLikeTests(unittest.TestCase):
             subprocess.run([sys.executable, "-c", driver, script, str(killed_by_term)]).returncode, -signal.SIGTERM
         )
 
+    def test_the_launcher_ends_by_sigkill_when_claude_code_was_killed(self):
+        driver = (
+            "import importlib.util, sys; spec = importlib.util.spec_from_file_location('l', sys.argv[1]); "
+            "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+            "module.exit_like(int(sys.argv[2]))"
+        )
+        script = str(ROOT / "claude-tmux.py")
+        run = subprocess.run([sys.executable, "-c", driver, script, str(signal.SIGKILL)], capture_output=True)
+        self.assertEqual(run.returncode, -signal.SIGKILL)
+        self.assertEqual(run.stderr, b"")
+
 
 if __name__ == "__main__":
     unittest.main()
