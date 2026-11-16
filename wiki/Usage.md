@@ -102,8 +102,10 @@ The `/mermaid-tty` command switches how replies show their diagrams:
 | `/mermaid-tty theme` | Reports the theme in force: `mermaid-tty theme: nord`, for example. |
 | `/mermaid-tty direction LR\|TB\|off` | Sets the flowchart direction Claude is asked to write, and saves it as the `direction` option. It never changes how a diagram is drawn. See [Configuration and Themes](Configuration-and-Themes). |
 | `/mermaid-tty direction` | Reports the direction setting: `mermaid-tty direction: LR`, for example. |
+| `/mermaid-tty crossings on\|off` | Colors each crossing line apart, or keeps every line in the theme's own colors, and saves it as the `crossings` option. See [Configuration and Themes](Configuration-and-Themes). |
+| `/mermaid-tty crossings` | Reports the crossings setting: `mermaid-tty crossings: on`, for example. |
 
-The argument is one word, or `images`, `theme` or `direction` and one setting, in any case. Anything else replies `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]`. The mode lasts for the session. The picture setting and the theme take effect at once, redrawing the replies on screen, and are kept between sessions, as is the direction, so none of them needs a restart. In source mode, every reply goes to Claude Code's own drawing untouched.
+The argument is one word, or `images`, `theme`, `direction` or `crossings` and one setting, in any case. Anything else replies `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]`. The mode lasts for the session. The picture setting, the theme and the crossings setting take effect at once, redrawing the replies on screen, and are kept between sessions, as is the direction, so none of them needs a restart. In source mode, every reply goes to Claude Code's own drawing untouched.
 
 `/copy` copies the Mermaid source in either mode. mermaid-tty changes only how a reply is drawn, and the stored reply keeps the exact source.
 

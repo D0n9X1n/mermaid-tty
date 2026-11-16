@@ -15,6 +15,9 @@ export type Palette = {
   roles: Readonly<Record<Role, Color | null>> // null = no color (mono)
   onFill: Color | null // label text on a role-filled pill
   series: Readonly<Record<SeriesKey, Color | null>> // mono: all null
+  // The colors crossing edges take, one per edge, so a line can be followed past a ┼: none in mono. Each is set apart
+  // from the node, label, edge and arrow colors it is drawn beside, so a colored line still reads as a line.
+  lines: readonly Color[]
   fill: boolean // false in mono: no backgrounds
   dim: readonly Role[] // [] in every theme
 }
@@ -49,6 +52,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       s7: 'permission',
       s8: 'planMode',
     },
+    lines: ['merged', 'success', 'ide', 'planMode'],
   },
   nord: {
     name: 'nord',
@@ -78,6 +82,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       s7: '#BF616A',
       s8: '#5E81AC',
     },
+    lines: ['#EBCB8B', '#B48EAD', '#D08770'],
   },
   dracula: {
     name: 'dracula',
@@ -107,6 +112,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       s7: '#FF5555',
       s8: '#6272A4',
     },
+    lines: ['#F1FA8C', '#BD93F9', '#FFB86C', '#FF5555'],
   },
   gruvbox: {
     name: 'gruvbox',
@@ -136,6 +142,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       s7: '#458588',
       s8: '#928374',
     },
+    lines: ['#FABD2F', '#D3869B', '#FE8019'],
   },
   solarized: {
     name: 'solarized',
@@ -165,6 +172,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       s7: '#6C71C4',
       s8: '#2AA198',
     },
+    lines: ['#B58900', '#D33682', '#6C71C4', '#2AA198'],
   },
   mono: {
     name: 'mono',
@@ -185,6 +193,7 @@ export const THEMES: Readonly<Record<ThemeName, Palette>> = {
       value: null,
     },
     series: { s1: null, s2: null, s3: null, s4: null, s5: null, s6: null, s7: null, s8: null },
+    lines: [],
   },
 }
 

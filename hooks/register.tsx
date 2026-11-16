@@ -8,12 +8,15 @@ import {
   directionReply,
   directionSection,
   imagesReply,
+  crossingsReply,
+  isCrossings,
   isDirection,
   isImages,
   isTheme,
   modeReply,
   parseModeArgs,
   themeReply,
+  type Crossings,
   type Direction,
   type Images,
   type Mode,
@@ -29,12 +32,14 @@ import { safePlan, sweepPictures } from './plan.ts'
 // which a drawing reads, so a change redraws at once with no restart. /mermaid-tty theme sets the theme the same way:
 // in $.state for this session, and saved as the plugin's theme setting through $.config.set for later ones.
 // /mermaid-tty direction LR|TB|off sets, the same way, the flowchart direction a system-prompt section asks Claude to
-// write; it never changes how a diagram is drawn. In a terminal session /btw, the side question, is answered here
-// (hooks/btw.ts) and shown in a pane that draws its fences as a reply does.
+// write; it never changes how a diagram is drawn. /mermaid-tty crossings on|off sets, the same way as the theme,
+// whether each edge that crosses another is drawn in a color of its own. In a terminal session /btw, the side question,
+// is answered here (hooks/btw.ts) and shown in a pane that draws its fences as a reply does.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
 const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
 const DIRECTION = { plugin: 'mermaid-tty', key: 'direction' } as const
+const CROSSINGS = { plugin: 'mermaid-tty', key: 'crossings' } as const
 // Whether this conversation has not been told the direction in force, its note refused. Kept in $.state, not in the
 // module, since a reload (a /config change) starts the module over within the same conversation.
 const UNTOLD = { plugin: 'mermaid-tty', key: 'untold' } as const
@@ -74,6 +79,17 @@ async function theme($: StateDollar, configured: ThemeName): Promise<ThemeName> 
   }
 }
 
+// Whether crossing lines are colored apart: this session's, set by /mermaid-tty crossings, else the configured one. A
+// read while drawing subscribes the drawing; a failing read is the configured one.
+async function crossings($: StateDollar, configured: Crossings): Promise<Crossings> {
+  try {
+    const v = (await $.state.get(CROSSINGS)).value
+    return isCrossings(v) ? v : configured
+  } catch {
+    return configured
+  }
+}
+
 // The direction the prompt asks for: this session's, set by /mermaid-tty direction, else the configured one; a failing
 // read is the configured one.
 async function direction($: StateDollar, configured: Direction): Promise<Direction> {
@@ -92,7 +108,7 @@ const isOurs = (name: unknown) => name === 'mermaid-tty' || String(name).startsW
 // Saves one of the plugin's own /config rows, as if the person picked the value there: true once written, false when no
 // row is found, a hook or a trusted source refuses it, or the call fails. The row is <plugin>.<field>; the plugin's
 // name may carry a marketplace suffix, so the row is found by owner and field, not by a fixed key.
-async function saveOption($: any, field: 'theme' | 'direction', value: string): Promise<boolean> {
+async function saveOption($: any, field: 'theme' | 'direction' | 'crossings', value: string): Promise<boolean> {
   try {
     const rows = await $.config.list()
     const suffix = `.${field}`
@@ -222,10 +238,13 @@ export const register: Register = (on, options) => {
   const configured: ThemeName = isTheme(options.theme) ? options.theme : 'nord'
   // LR unless the setting says TB or off: a terminal is wider than it is tall.
   const configuredDirection: Direction = isDirection(options.direction) ? options.direction : 'LR'
+  // On unless the setting says off: crossing lines are colored apart by default.
+  const configuredCrossings: Crossings = isCrossings(options.crossings) ? options.crossings : 'on'
   // Whether the theme, or the direction, in force was set by the command but not saved, so asking for it again retries
   // the save. A load starts from the saved options, so it starts saved.
   let isThemeUnsaved = false
   let isDirectionUnsaved = false
+  let isCrossingsUnsaved = false
   // Whether this session started in the CLI's terminal, where mermaid-tty draws.
   let inTerminal = false
   // How many /btw questions have arrived: a /btw overtaken by a newer one is dropped.
@@ -242,15 +261,18 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'mermaid-tty',
       description:
-        'Show Mermaid diagrams as source, diagram or text, in a theme, ' +
+        'Show Mermaid diagrams as source, diagram or text, in a theme, with crossing lines colored apart, ' +
         'and set the flowchart direction Claude writes: ' +
-        '/mermaid-tty [source|diagram|text|images [auto|on|off]|theme <name>|direction [LR|TB|off]]',
+        '/mermaid-tty [source|diagram|text|images [auto|on|off]|theme <name>|direction [LR|TB|off]|crossings [on|off]]',
     })
     await loadImages($)
     // Each load starts from the configured theme, so a change in /config, which reloads the module, is never hidden by
     // a theme the command set earlier.
     await $.state.set(THEME, configured)
     isThemeUnsaved = false
+    // The same for crossings.
+    await $.state.set(CROSSINGS, configuredCrossings)
+    isCrossingsUnsaved = false
     // The same for the direction. A load within a session that already held another one is a /config change, or a
     // command whose save the reload now undoes: the thread's system prompt still has the old section, so the model is
     // told in a row of its own.
@@ -313,6 +335,23 @@ export const register: Register = (on, options) => {
 
       isThemeUnsaved = !(await saveOption($, 'theme', a.theme))
       return { text: themeReply(a.theme, changed, !isThemeUnsaved) }
+    }
+
+    if ('crossings' in a) {
+      const was = await crossings($, configuredCrossings)
+      if (a.crossings === 'report' || (a.crossings === was && !isCrossingsUnsaved)) {
+        return { text: crossingsReply(was, false, !isCrossingsUnsaved) }
+      }
+
+      // As for the theme: the setting in force, asked for again after its save was refused, tries the save again.
+      const changed = a.crossings !== was
+      if (changed) {
+        await $.state.set(CROSSINGS, a.crossings)
+        $.ui.invalidate('ui.render')
+      }
+
+      isCrossingsUnsaved = !(await saveOption($, 'crossings', a.crossings))
+      return { text: crossingsReply(a.crossings, changed, !isCrossingsUnsaved) }
     }
 
     if ('direction' in a) {
@@ -385,6 +424,7 @@ export const register: Register = (on, options) => {
       () => mode($),
       undefined,
       () => images($),
+      () => crossings($, configuredCrossings),
     )
     if (!plan) {
       return next(e)
@@ -482,6 +522,7 @@ export const register: Register = (on, options) => {
       () => mode($),
       undefined,
       () => images($),
+      () => crossings($, configuredCrossings),
     )
     const { Box, Text, Markdown } = $.ui.resolve(e)
     const parts = plan ? plan.parts : [{ prose: v.text }]

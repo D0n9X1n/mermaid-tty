@@ -1,4 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
+import { THEMES } from '../../core/themes.ts'
 const FC = '```mermaid\nflowchart LR\nA[读取] --> B[完成]\n```\n'
 const ANSWER = `Here is the flow:\n\n${FC}\nThat is all.`
 const BTW = ($: any, args: string) => $.command.run({ command: 'btw', args })
@@ -457,4 +458,26 @@ test('A6.hook-tests: in kitty the pane draws a fence as a picture, and as text i
   expect(picture?.type).toBe('Image')
   expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
+})
+
+test('A3: the btw pane colors crossing lines apart, and /mermaid-tty crossings off redraws it plain', async ($, on) => {
+  const crossing = 'Here:\n```mermaid\nflowchart TD\nA --> C\nA --> D\nB --> C\nB --> D\n```\n'
+  engine(on, answered(crossing))
+  on('config.list', async () => ({ value: [] }))
+  await start($)
+  await BTW($, 'cross?')
+  const ui = await pane($)
+  const edge = THEMES.nord.roles.edge
+  const colors = async () =>
+    new Set(
+      (await ui.findAll({ type: 'Text' }))
+        .filter((x: any) => /^[─│┌┐└┘├┤┬┴]+$/.test(x.text) && x.props.color && x.props.color !== edge)
+        .map((x: any) => x.props.color),
+    )
+
+  const before = (await colors()).size
+  await $.command.run({ command: 'mermaid-tty', args: 'crossings off' })
+
+  expect(before).toBe(2)
+  expect((await colors()).size).toBe(0)
 })

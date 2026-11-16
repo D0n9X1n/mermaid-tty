@@ -5,6 +5,7 @@ import type { Fail } from './fail.ts'
 import { fail, isFail } from './fail.ts'
 import type { Step } from './fit.ts'
 import { fitLadder } from './fit.ts'
+import { lineColors } from './line-colors.ts'
 import { createLru } from './lru.ts'
 import { lookup, type DiagramModule } from './registry.ts'
 import { readSource } from './source.ts'
@@ -28,7 +29,9 @@ export type Span = {
   dimColor?: boolean
 }
 export type Rows = Span[][]
-export type Options = { columns: number; theme?: string }
+// crossings: whether each edge that crosses another is drawn in a line color of its own (core/line-colors.ts); on
+// unless false.
+export type Options = { columns: number; theme?: string; crossings?: boolean }
 
 // Whether columns is a width a drawing can have: a positive safe integer.
 const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
@@ -85,7 +88,7 @@ export function parseFail(source: string): Fail | null {
 // The rows inner draws of source, in o's theme ('default' when none is given), or its Fail.
 function draw(source: string, o: Options, inner: typeof explain): Rows | Fail {
   const r = inner(source, o)
-  return isFail(r) ? r : toRows(r.drawing, palette(o.theme ?? 'default'))
+  return isFail(r) ? r : toRows(r.drawing, palette(o.theme ?? 'default'), o.crossings !== false)
 }
 
 // The drawing as rows in the theme's palette, or null on any Fail.
@@ -94,13 +97,16 @@ export function renderMermaid(source: string, o: Options): Rows | null {
   return isFail(r) ? null : r
 }
 
-// One cell's span: its role's color, or its series'. A node or decision pill's text and fill cells, when the palette
-// fills, take that color as their background and onFill as their color; caps and C's key cells keep it as their color.
-// Null colors are omitted, so mono's spans carry none. A title is bold; a text cell's em (core/emphasis.ts) sets bold
-// and italic as Mermaid's <strong> and <em> show.
-function cellSpan(cell: Cell, p: Palette): Span {
+// One cell's span: its role's color, or its series'. A crossing edge's own line and arrow cells take its line color
+// (core/line-colors.ts), lines[i] for the edge's index i; a cell two edges draw keeps the edge or arrow color. A node
+// or decision pill's text and fill cells, when the palette fills, take that color as their background and onFill as
+// their color; caps and C's key cells keep it as their color. Null colors are omitted, so mono's spans carry none. A
+// title is bold; a text cell's em (core/emphasis.ts) sets bold and italic as Mermaid's <strong> and <em> show.
+function cellSpan(cell: Cell, p: Palette, lines: ReadonlyMap<string, number>): Span {
   const ink =
-    (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ?? null
+    lineOf(cell, p, lines) ??
+    (Object.hasOwn(p.series, cell.role) ? p.series[cell.role as SeriesKey] : p.roles[cell.role as Role]) ??
+    null
   const pill =
     p.fill && (cell.role === 'node' || cell.role === 'decision') && (cell.kind === 'text' || cell.kind === 'fill')
   const color = pill ? p.onFill : ink
@@ -134,6 +140,19 @@ function cellSpan(cell: Cell, p: Palette): Span {
   return span
 }
 
+// The line color of a cell only one crossing edge draws: an edge's line or its arrowhead. Text, such as a label or ER
+// cardinality, keeps its own color, and so does any cell several edges share.
+function lineOf(cell: Cell, p: Palette, lines: ReadonlyMap<string, number>): Color | undefined {
+  const drawsLine = (cell.kind === 'line' && cell.role === 'edge') || (cell.kind === 'arrow' && cell.role === 'arrow')
+  const owners = new Set(cell.owners)
+  if (!drawsLine || owners.size !== 1) {
+    return undefined
+  }
+
+  const i = lines.get(cell.owners[0]!)
+  return i === undefined ? undefined : p.lines[i]
+}
+
 const sameStyle = (a: Span, b: Span): boolean =>
   a.role === b.role &&
   a.color === b.color &&
@@ -145,7 +164,9 @@ const sameStyle = (a: Span, b: Span): boolean =>
 
 // Each row as spans: cont cells skipped, each missing cell a blank space with no role, neighbours of one role and style
 // merged, and trailing blank spans trimmed.
-export function toRows(d: Drawing, p: Palette): Rows {
+export function toRows(d: Drawing, p: Palette, crossings = true): Rows {
+  // Off, no edge has a line color, so every cell keeps its role's or series' color, as a palette with none draws it.
+  const lines = lineColors(d, crossings ? p.lines.length : 0)
   return d.cells.map((row) => {
     const spans: Span[] = []
     for (const cell of row) {
@@ -153,7 +174,7 @@ export function toRows(d: Drawing, p: Palette): Rows {
         continue
       }
 
-      const s: Span = cell ? cellSpan(cell, p) : { text: ' ' }
+      const s: Span = cell ? cellSpan(cell, p, lines) : { text: ' ' }
       const last = spans[spans.length - 1]
       if (last && sameStyle(last, s)) {
         last.text += s.text
@@ -187,7 +208,7 @@ export function createRenderer(
         return refused
       }
 
-      const key = JSON.stringify([s, o.columns, o.theme])
+      const key = JSON.stringify([s, o.columns, o.theme, o.crossings !== false])
       const hit = cache.get(key)
       if (hit !== undefined) {
         return hit

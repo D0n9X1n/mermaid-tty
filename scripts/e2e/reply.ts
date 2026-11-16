@@ -45,6 +45,21 @@ export const REPLY_BTW = [
   'Side done.',
 ].join('\n')
 
+// REPLY_CROSS: a flowchart whose edges cross, A→D over B→C, so each crossing line takes a color of its own.
+export const REPLY_CROSS = [
+  'Crossing lines:',
+  '',
+  '```mermaid',
+  'flowchart TD',
+  'A[甲] --> C[丙]',
+  'A --> D[丁]',
+  'B[乙] --> C',
+  'B --> D',
+  '```',
+  '',
+  'Crossed.',
+].join('\n')
+
 // REPLY_LEAD: a reply that opens with its diagram, prose after it.
 export const REPLY_LEAD = ['```mermaid', 'flowchart TD', 'S[开始] --> E[结束]', '```', '', 'After the diagram.'].join(
   '\n',

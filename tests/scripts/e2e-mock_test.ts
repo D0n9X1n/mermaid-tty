@@ -7,7 +7,7 @@ import { once } from 'node:events'
 import { connect } from 'node:net'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { chunks, replyFor, startMock } from '../../scripts/e2e/mock.ts'
-import { REPLY, REPLY_BTW, REPLY_LEAD } from '../../scripts/e2e/reply.ts'
+import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from '../../scripts/e2e/reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 
 // Every "text" field of an SSE body, in order, joined: a stream's deltas, reassembled.
@@ -493,6 +493,14 @@ test('A9.harness: a side question, as /btw asks one, gets REPLY_BTW whatever els
   assert.equal(replyFor('not messages'), REPLY)
   assert.deepEqual(
     splitFences(REPLY_BTW).map((s) => s.kind),
+    ['prose', 'mermaid', 'prose'],
+  )
+})
+
+test('A9.harness: a prompt that asks for crossing gets REPLY_CROSS, a diagram between two lines of prose', () => {
+  assert.equal(replyFor([{ role: 'user', content: 'crossing' }]), REPLY_CROSS)
+  assert.deepEqual(
+    splitFences(REPLY_CROSS).map((s) => s.kind),
     ['prose', 'mermaid', 'prose'],
   )
 })

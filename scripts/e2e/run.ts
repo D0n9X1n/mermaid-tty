@@ -1,6 +1,6 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
 //   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario
-//   harness|source-view|stored|lead|btw|all] [--keep]
+//   harness|source-view|stored|lead|btw|crossing|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with
 // --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
@@ -28,9 +28,10 @@ import { THEMES, type ThemeName } from '../../core/themes.ts'
 import { removeSandbox } from './cleanup.ts'
 import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCheck } from './assert.ts'
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
+import type { Cell } from './screen.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
 import { startMock } from './mock.ts'
-import { REPLY, REPLY_BTW, REPLY_LEAD } from './reply.ts'
+import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
@@ -39,7 +40,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
 const win = process.platform === 'win32'
 const THEME_NAMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const
-const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw'] as const
+const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw', 'crossing'] as const
 type Scenario = (typeof SCENARIOS)[number]
 type Run = { theme: ThemeName; color: Color }
 
@@ -353,6 +354,70 @@ async function btw({ s, run, config }: Ctx): Promise<string[]> {
   return problems
 }
 
+// crossing: a diagram whose edges cross draws whole, and each crossing line takes its own color: A→D and B→C differ
+// from each other and from the ┼ they share, which keeps the edge color. Under mono none carries a color. After
+// /mermaid-tty crossings off, all three are drawn in the one edge color.
+async function crossing({ s, run }: Ctx): Promise<string[]> {
+  await submit(s, 'crossing')
+  await s.waitFor(/Crossed\./, 30000)
+  await sleep(500)
+  const cells = await s.cells()
+  const problems = checkDiagramScreen(cells, {
+    labels: { 甲: 'node', 乙: 'node', 丙: 'node', 丁: 'node' },
+    prose: ['Crossing lines:', 'Crossed.'],
+    diagrams: drawnDiagrams(REPLY_CROSS, DRAW_COLUMNS, run.theme),
+    color: colorOf(run),
+    hex: hexOf(run),
+  })
+  problems.push(...sourceShown(await s.text(), fenceBody(REPLY_CROSS).split('\n')))
+  // The drawing, located by its rows as the renderer draws them: A→D's own stretch (row 1, the run from ┴ to ┐),
+  // B→C's (row 2, the run up to ┼) and the ┼ they share. Each is read in the screen's own color mode, so the check
+  // holds in truecolor and 256 colors alike, and under the default theme, whose colors are Claude Code's.
+  const show = (c: Cell['fg']) => `${c.mode}:${c.value}`
+  const rows = drawnDiagrams(REPLY_CROSS, DRAW_COLUMNS, run.theme)[0] ?? []
+  const text = cells.map((row) => row.map((c) => c.ch).join(''))
+  const top = text.findIndex((r) => r.includes(rows[1]?.trim() ?? '\u0000'))
+  const at = (r: number, glyph: string, nth = 0) => {
+    const row = cells[top + r - 1] ?? []
+    return row.filter((c) => c.ch === glyph)[nth]
+  }
+  const ad = at(1, '─')
+  const bc = at(2, '─')
+  const cross = at(2, '┼')
+  if (top < 0 || !ad || !bc || !cross) {
+    problems.push(`crossing: the crossing lines were not found on screen:\n${text.join('\n')}`)
+  } else if (run.theme === 'mono') {
+    for (const [name, c] of [
+      ['A→D', ad],
+      ['B→C', bc],
+      ['┼', cross],
+    ] as const) {
+      if (c.fg.mode !== 'default') {
+        problems.push(`crossing: mono ${name} carries color ${show(c.fg)}`)
+      }
+    }
+  } else {
+    const [a, b, x] = [show(ad.fg), show(bc.fg), show(cross.fg)]
+    if (a === b || a === x || b === x) {
+      problems.push(`crossing: A→D ${a}, B→C ${b} and the ┼ ${x} are not three colors`)
+    }
+  }
+
+  // /mermaid-tty crossings off draws the same reply again with every line in the edge color: A→D's and B→C's own cells
+  // now match the ┼, which never took a line color.
+  await submit(s, '/mermaid-tty crossings off')
+  await s.waitFor(/drawing crossing lines in the edge color/, 10000)
+  await sleep(500)
+  const plain = await s.cells()
+  const cell = (r: number, glyph: string) => (plain[top + r - 1] ?? []).filter((c) => c.ch === glyph)[0]
+  const [a, b, x] = [cell(1, '─'), cell(2, '─'), cell(2, '┼')]
+  if (run.theme !== 'mono' && (!a || !b || !x || show(a.fg) !== show(x.fg) || show(b.fg) !== show(x.fg))) {
+    problems.push(`crossing: after crossings off, A→D, B→C and the ┼ are not one color`)
+  }
+
+  return problems
+}
+
 // The *.jsonl files under dir, at any depth; none when it does not exist.
 function jsonlFiles(dir: string): string[] {
   if (!existsSync(dir)) {
@@ -464,6 +529,7 @@ const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = {
   stored,
   lead,
   btw,
+  crossing,
 }
 
 async function main(): Promise<number> {

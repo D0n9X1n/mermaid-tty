@@ -1,5 +1,7 @@
 // Checks the curated palettes: every role has contrast >= 3 against the palette's background, and every pair of roles,
-// and every pair of series colors, is at least 0.08 apart in OKLab. `default` (theme keys) and `mono` (no color) are
+// and every pair of series colors, is at least 0.08 apart in OKLab. Each line color, which a crossing edge is drawn in,
+// has contrast >= 3 too, and is at least 0.08 from the other line colors and from the node, label, edge and arrow
+// colors it is drawn beside, so a colored line still reads as a line. `default` (theme keys) and `mono` (no color) are
 // exempt. Usage: node scripts/check-palettes.ts (prints the table; exits 1 on any problem)
 import { contrast, oklabDistance } from '../core/color.ts'
 import { THEMES } from '../core/themes.ts'
@@ -57,6 +59,33 @@ export function paletteProblems(themes: Readonly<Record<ThemeName, Palette>> = T
       }),
       ...alike(t, roles),
       ...alike(t, swatches(p.series)),
+      ...lineProblems(t, p),
+    ]
+  })
+}
+
+// The graph roles a crossing edge's color is drawn beside.
+const BESIDE = ['node', 'label', 'edge', 'arrow'] as const
+
+// A palette's line colors that are not #rrggbb, sit too close to the background, to each other, or to a role a line is
+// drawn beside.
+function lineProblems(t: string, p: Palette): string[] {
+  const lines = p.lines.map((c, i) => [`lines[${i}]`, c] as const)
+  const bad = lines.filter(([, c]) => !HEX.test(c))
+  if (bad.length) {
+    return bad.map(([ink, c]) => `${t}.${ink} is not #rrggbb: ${c}`)
+  }
+
+  const near = (a: string, x: string, b: string, y: string) => {
+    const d = oklabDistance(x, y)
+    return d < MIN_DISTANCE ? [`${t}.${a} ${x} ~ ${b} ${y}: OKLab distance ${d.toFixed(4)} < ${MIN_DISTANCE}`] : []
+  }
+  return lines.flatMap(([ink, c], i) => {
+    const k = contrast(c, p.background!)
+    return [
+      ...(k < MIN_CONTRAST ? [`${t}.${ink} ${c}: contrast ${k.toFixed(2)} < ${MIN_CONTRAST} on ${p.background}`] : []),
+      ...lines.slice(i + 1).flatMap(([other, y]) => near(ink, c, other, y)),
+      ...BESIDE.flatMap((role) => near(ink, c, role, p.roles[role]!)),
     ]
   })
 }

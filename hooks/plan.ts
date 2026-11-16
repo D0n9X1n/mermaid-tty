@@ -4,7 +4,7 @@ import { isFail } from '../core/fail.ts'
 import { createRenderer, type Rows } from '../core/render.ts'
 import { splitFences } from './fences.ts'
 import { createPictures, pictureFor, pictureLook, sweepTemp, type Picture, type Pictures } from './image.ts'
-import { passThrough, type Images, type Mode } from './mode.ts'
+import { passThrough, type Crossings, type Images, type Mode } from './mode.ts'
 
 const renderer = createRenderer(64)
 const pictures = createPictures()
@@ -25,8 +25,17 @@ async function readImages(images: () => Promise<Images>): Promise<Images> {
   }
 }
 
+// The crossings setting crossings() answers, on when it throws, before or after it returns a promise.
+async function readCrossings(crossings: () => Promise<Crossings>): Promise<Crossings> {
+  try {
+    return await crossings()
+  } catch {
+    return 'on'
+  }
+}
+
 // planReply, or null when it throws: the hook then sends the reply through next(e) unchanged. images reads the picture
-// setting; left out, or failing, it is auto.
+// setting; left out, or failing, it is auto. crossings reads whether crossing lines are colored apart; left out, on.
 export async function safePlan(
   $: any,
   e: any,
@@ -34,9 +43,10 @@ export async function safePlan(
   mode: () => Promise<Mode>,
   store: Pictures = pictures,
   images: () => Promise<Images> = async () => 'auto',
+  crossings: () => Promise<Crossings> = async () => 'on',
 ) {
   try {
-    return await planReply($, e, theme, mode, store, images)
+    return await planReply($, e, theme, mode, store, images, crossings)
   } catch {
     return null
   }
@@ -46,7 +56,8 @@ export async function safePlan(
 // untouched. A fallback's debug log is best-effort: a failing log never stops a drawing. In diagram mode, where the
 // terminal shows pixels, a fence's cached picture stands in for its rows (or for its source, when text cannot draw it);
 // a miss queues its render and draws as before. A failing picture lookup is no picture. The images setting decides
-// whether the terminal must be detected first (auto), is taken as able (on), or gets no picture (off).
+// whether the terminal must be detected first (auto), is taken as able (on), or gets no picture (off). The crossings
+// setting decides whether crossing lines are colored apart.
 async function planReply(
   $: any,
   e: any,
@@ -54,6 +65,7 @@ async function planReply(
   mode: () => Promise<Mode>,
   store: Pictures,
   images: () => Promise<Images>,
+  crossings: () => Promise<Crossings>,
 ) {
   const columns = e.viewport?.columns
   const m = await mode()
@@ -67,6 +79,7 @@ async function planReply(
     } catch {}
   }
   const segments = splitFences(e.props.text)
+  const colored = segments.some((s) => s.kind === 'mermaid') ? (await readCrossings(crossings)) !== 'off' : true
   const look =
     m === 'diagram' && segments.some((s) => s.kind === 'mermaid')
       ? await pictureLook($, store, theme, await readImages(images)).catch(() => null)
@@ -81,7 +94,9 @@ async function planReply(
     }
 
     const r =
-      s.kind === 'mermaid' && !picture ? renderer.render(s.body, { columns, theme }, (f) => log(f.reason)) : null
+      s.kind === 'mermaid' && !picture
+        ? renderer.render(s.body, { columns, theme, crossings: colored }, (f) => log(f.reason))
+        : null
     if (picture) {
       parts.push({ picture })
     } else if (r && !isFail(r)) {

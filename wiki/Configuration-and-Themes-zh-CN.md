@@ -2,7 +2,7 @@
 
 [英文版](Configuration-and-Themes)
 
-mermaid-tty 有两个选项：`theme` 用于选择所有图表的颜色，`direction` 设置要求 Claude 编写流程图时使用的方向。本页列出可选值、各配色的颜色，以及主题着色的角色。
+mermaid-tty 有三个选项：`theme` 用于选择所有图表的颜色；`direction` 设置要求 Claude 编写流程图时使用的方向；`crossings` 设置交叉连线是否用颜色区分。本页列出可选值、各配色的颜色、主题着色的角色，以及交叉连线如何用颜色区分。
 
 ## theme 选项
 
@@ -49,6 +49,17 @@ mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` �
 该选项只影响 Claude 编写的内容，不改变图表的绘制方式。你写的图表或你要求的方向都会保留。与任何 `LR` 源码一样，从左到右的流程图在窗口放不下时，mermaid-tty 仍会从上到下绘制（见“使用”）。设为 `LR` 或 `TB` 时，mermaid-tty 会在终端绘图的会话中向系统提示词添加一节 `mermaid-tty:flowchart-direction`；设为 `off` 时不添加。
 
 设置方式与 `theme` 相同，例如 `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty direction LR|TB|off`，它会像 `/mermaid-tty theme` 一样保存该选项。`/mermaid-tty direction` 报告当前设置。对话的系统提示词保持首次发送时的内容，因此在对话中修改时还会添加一条供 Claude 阅读的简短说明；新对话会使用新的一节。若该说明被拒绝，回复会说明 Claude 未被告知，再次运行同一命令会重试。
+
+## crossings 选项
+
+`userConfig.crossings` 设置每条与其他连线交叉的边是否使用各自的颜色绘制，以便越过交叉点追踪连线。详见下文“交叉连线”。
+
+| 值 | 交叉连线 |
+|---|---|
+| `on` | 每条交叉的边使用各自的颜色。这是默认值。 |
+| `off` | 每个单元格保持主题自身的颜色，与给交叉连线着色之前相同。 |
+
+设置方式与 `theme` 相同，例如 `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty crossings on|off`。该命令立即重绘屏幕上的回复和 `/btw` 窗格，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty crossings` 报告当前设置。未设置或无法识别的值视为 `on`。
 
 ## 配色
 
@@ -131,3 +142,22 @@ Mermaid 给流程图的判断节点和其他节点相同的填充色，时序图
 - 端点靠字形而非颜色区分：`►`、`◄`、`▲`、`▼` 指向连接的节点，`o` 表示圆端，`x` 表示叉端。
 - 时序图注释在所有主题中都有点线端帽 `┆ … ┆`，在 `mono` 下也能与消息标签区分。
 - 标题加粗，边框标题位于上边框内。
+
+## 交叉连线
+
+流程图、状态图、类图或 ER 图中出现连线交叉时，每条与其他连线交叉的边都使用各自的颜色绘制，箭头也一样。这样就能越过 `┼` 从起点一直追到终点。其他图表保持上面的颜色；`crossings` 选项为 `off` 时，所有图表也都如此。
+
+- **哪些单元格。** 一条边独有的线段和它的端点（箭头，或 `△`、`◆` 等类图标记）使用它的颜色。多条边共用的单元格保持 `edge` 或 `arrow` 颜色：`┼` 本身、同一节点出发的边合并的主干，以及多条边共用的端点。标签和基数（ER 图与类图都一样）保持各自角色的颜色。
+- **哪些颜色。** 颜色足够时，每条交叉的边按源码中的顺序各取一种新颜色。交叉的边多于颜色时颜色会重复使用，但不会分给与该颜色的边交叉或相接的边；找不到这样的颜色时，该边保持 `edge` 颜色。
+- **配色。** 每个主题有自己的连线颜色。它们都与 `node`、`label`、`edge`、`arrow` 的颜色拉开距离，着色后的连线仍然一眼看出是连线；`scripts/check-palettes.ts` 像检查角色一样检查它们：
+
+| 主题 | 连线颜色 |
+|---|---|
+| `default` | `merged`、`success`、`ide`、`planMode` |
+| `nord` | `#EBCB8B`、`#B48EAD`、`#D08770` |
+| `dracula` | `#F1FA8C`、`#BD93F9`、`#FFB86C`、`#FF5555` |
+| `gruvbox` | `#FABD2F`、`#D3869B`、`#FE8019` |
+| `solarized` | `#B58900`、`#D33682`、`#6C71C4`、`#2AA198` |
+| `mono` | 无：所有连线都不着色 |
+
+只有颜色改变：布局、字形以及哪些图能绘制都与之前相同。kitty、Ghostty 和 SonicTerm 中的图片由 Mermaid 自己绘制，保持它的颜色。
