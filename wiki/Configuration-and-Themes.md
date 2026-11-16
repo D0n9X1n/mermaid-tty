@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Configuration-and-Themes-zh-CN)
 
-mermaid-tty has two options: `theme`, which picks the colors of every diagram, and `direction`, which sets the flowchart direction Claude is asked to write. This page lists their values, shows each palette's colors, and explains the roles a theme colors.
+mermaid-tty has two options: `theme`, which picks the colors of every diagram, and `direction`, which sets the flowchart direction Claude is asked to write. This page lists their values, shows each palette's colors, explains the roles a theme colors, and how crossing lines are colored apart.
 
 ## The theme option
 
@@ -131,3 +131,22 @@ Series-colored items take `s1` to `s8` instead of a role. See Palettes above.
 - Edge ends are glyphs, not colors: `►`, `◄`, `▲` and `▼` point at the node they reach, `o` is a circle end, and `x` a cross end.
 - Sequence notes have dotted end caps `┆ … ┆` in every theme, so they stay distinct from message labels in `mono`.
 - The title is bold, and a frame's title sits in its top border.
+
+## Crossing lines
+
+When edges cross in a flowchart, state, class or ER diagram, each edge that crosses another is drawn in a color of its own, arrowhead included. A line can then be followed past the `┼` from its source to its target. Other drawings keep the colors above.
+
+- **Which cells.** An edge's own lines and its end, an arrowhead or a class marker such as `△` or `◆`, take its color. A cell that several edges draw keeps the `edge` or `arrow` color: the `┼` itself, a trunk where edges from one node merge, and an end edges share. Labels and cardinality, ER and class alike, keep their roles' colors.
+- **Which colors.** While colors last, each crossing edge takes a new one, in the order the source lists the edges. When there are more crossing edges than colors, a color comes round again, but never to an edge that crosses or touches one in that color. An edge with no such color left keeps the `edge` color.
+- **Palettes.** Each theme has its own line colors. Every one is set apart from the `node`, `label`, `edge` and `arrow` colors, so a colored line still reads as a line, and `scripts/check-palettes.ts` checks them like the roles:
+
+| Theme | Line colors |
+|---|---|
+| `default` | `merged`, `success`, `ide`, `planMode` |
+| `nord` | `#EBCB8B`, `#B48EAD`, `#D08770` |
+| `dracula` | `#F1FA8C`, `#BD93F9`, `#FFB86C`, `#FF5555` |
+| `gruvbox` | `#FABD2F`, `#D3869B`, `#FE8019` |
+| `solarized` | `#B58900`, `#D33682`, `#6C71C4`, `#2AA198` |
+| `mono` | none: every line stays colorless |
+
+Only the color changes: the layout, the glyphs and which diagrams draw are the same as before. Pictures in kitty, Ghostty and SonicTerm are Mermaid's own and keep its colors.

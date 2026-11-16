@@ -1,6 +1,6 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
 //   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario
-//   harness|source-view|stored|lead|btw|all] [--keep]
+//   harness|source-view|stored|lead|btw|crossing|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with
 // --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
@@ -28,9 +28,10 @@ import { THEMES, type ThemeName } from '../../core/themes.ts'
 import { removeSandbox } from './cleanup.ts'
 import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCheck } from './assert.ts'
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
+import type { Cell } from './screen.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
 import { startMock } from './mock.ts'
-import { REPLY, REPLY_BTW, REPLY_LEAD } from './reply.ts'
+import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
@@ -39,7 +40,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
 const win = process.platform === 'win32'
 const THEME_NAMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const
-const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw'] as const
+const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw', 'crossing'] as const
 type Scenario = (typeof SCENARIOS)[number]
 type Run = { theme: ThemeName; color: Color }
 
@@ -353,6 +354,49 @@ async function btw({ s, run, config }: Ctx): Promise<string[]> {
   return problems
 }
 
+// crossing: a diagram whose edges cross draws whole, and each crossing line takes its own color: the box-drawing cells
+// of its edges carry at least two colors besides the theme's edge color. Under mono they carry none.
+async function crossing({ s, run }: Ctx): Promise<string[]> {
+  await submit(s, 'crossing')
+  await s.waitFor(/Crossed\./, 30000)
+  await sleep(500)
+  const cells = await s.cells()
+  const problems = checkDiagramScreen(cells, {
+    labels: { 甲: 'node', 乙: 'node', 丙: 'node', 丁: 'node' },
+    prose: ['Crossing lines:', 'Crossed.'],
+    diagrams: drawnDiagrams(REPLY_CROSS, DRAW_COLUMNS, run.theme),
+    color: colorOf(run),
+    hex: hexOf(run),
+  })
+  problems.push(...sourceShown(await s.text(), fenceBody(REPLY_CROSS).split('\n')))
+  const show = (c: Cell['fg']) => `${c.mode}:${c.value}`
+  // Only the diagram's rows: from the one holding its first nodes to the one holding its last, so Claude Code's own
+  // rules and borders, drawn in box-drawing glyphs too, are left out.
+  const text = cells.map((row) => row.map((c) => c.ch).join(''))
+  const top = text.findIndex((r) => r.includes('甲'))
+  const bottom = text.findLastIndex((r) => r.includes('丙'))
+  const lines = new Set(
+    cells
+      .slice(Math.max(top, 0), bottom + 1)
+      .flat()
+      .filter((c) => /[─│┌┐└┘├┤┬┴]/.test(c.ch) && c.fg.mode !== 'default')
+      .map((c) => show(c.fg)),
+  )
+  const edge = hexOf(run)?.edge
+  const own = [...lines].filter((c) => edge === undefined || c !== `rgb:${edge}`)
+  if (run.theme === 'mono') {
+    if (lines.size) {
+      problems.push(`crossing: mono lines carry color: ${[...lines].join(' ')}`)
+    }
+  } else if (own.length < 2) {
+    problems.push(
+      `crossing: the crossing lines carry ${own.length} colors of their own, not 2: ${[...lines].join(' ')}`,
+    )
+  }
+
+  return problems
+}
+
 // The *.jsonl files under dir, at any depth; none when it does not exist.
 function jsonlFiles(dir: string): string[] {
   if (!existsSync(dir)) {
@@ -464,6 +508,7 @@ const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = {
   stored,
   lead,
   btw,
+  crossing,
 }
 
 async function main(): Promise<number> {

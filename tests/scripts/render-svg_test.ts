@@ -78,9 +78,9 @@ test('VR.gallery: a ThemeKey color or background resolves through DARK_KEYS to i
   assert.throws(() => rowsToSvg([[{ text: 'a', color: 'nope' }]]), /nope/)
 })
 
-test('VR.gallery: DARK_KEYS previews in hex exactly the 12 ThemeKeys the default theme draws with', () => {
+test('VR.gallery: DARK_KEYS previews in hex exactly the 13 ThemeKeys the default theme draws with', () => {
   const d = THEMES.default
-  const used = new Set([...Object.values(d.roles), ...Object.values(d.series), d.onFill])
+  const used = new Set([...Object.values(d.roles), ...Object.values(d.series), d.onFill, ...d.lines])
   assert.deepEqual(Object.keys(DARK_KEYS).sort(), [...used].sort())
   for (const [k, v] of Object.entries(DARK_KEYS)) {
     assert.match(v, /^#[0-9a-f]{6}$/, k)

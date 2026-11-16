@@ -26,6 +26,7 @@ const USED = [
   'warning',
   'merged',
   'planMode',
+  'ide',
 ] as const
 export const DARK_KEYS: Readonly<Record<string, string>> = Object.fromEntries(USED.map((k) => [k, CC_DARK[k]!]))
 

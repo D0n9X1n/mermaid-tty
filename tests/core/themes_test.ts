@@ -55,6 +55,15 @@ const MORE = {
   solarized: '#002B36 #FDF6E3 #6C71C4 #859900 #268BD2 #859900 #B58900 #CB4B16 #93A1A1 #D33682 #6C71C4 #2AA198',
   mono: '- - - - - - - - - - - -',
 }
+// Each theme's line colors, in the order crossing edges take them.
+const LINES: Record<ThemeName, string> = {
+  default: 'merged success ide planMode',
+  nord: '#EBCB8B #B48EAD #D08770',
+  dracula: '#F1FA8C #BD93F9 #FFB86C #FF5555',
+  gruvbox: '#FABD2F #D3869B #FE8019',
+  solarized: '#B58900 #D33682 #6C71C4 #2AA198',
+  mono: '',
+}
 test("A7: every field of every palette matches plan A's table", () => {
   for (const [t, more] of Object.entries(MORE)) {
     const [background, onFill, title, value, ...series] = more.split(' ').map((c) => (c === '-' ? null : c))
@@ -70,6 +79,7 @@ test("A7: every field of every palette matches plan A's table", () => {
         dim: [],
         roles: { ...Object.fromEntries(R.map((r, i) => [r, seven[i]])), title, value },
         series: Object.fromEntries(series.map((c, i) => [`s${i + 1}`, c])),
+        lines: LINES[t as ThemeName].split(' ').filter(Boolean),
       },
       t,
     )
@@ -210,6 +220,46 @@ test('VR.in-ci: paletteProblems names each color that is not #rrggbb, and measur
       'solarized.s1 is not #rrggbb: #268BD2F',
     ],
   )
+})
+
+// A palette's line colors, replaced: { nord: ['#88C0D0'] }.
+function withLines(lines: Record<string, string[]>): typeof THEMES {
+  const themes = structuredClone(THEMES)
+  for (const [t, ls] of Object.entries(lines)) {
+    ;(themes[t as ThemeName] as { lines: string[] }).lines = ls
+  }
+
+  return themes
+}
+
+// A line color must read as a line beside what it is drawn next to: on the background, apart from the other line
+// colors, and apart from the node, label, edge and arrow colors, or a colored line could pass for one of them.
+test('A3: paletteProblems checks each line color against the background, the other lines and the graph roles', () => {
+  assert.deepEqual(
+    paletteProblems(
+      withLines({
+        nord: ['#2E3440', '#EBCB8B', '#EBCB8C'],
+        dracula: ['#8BE9FD'],
+        gruvbox: ['#FB4934'],
+        solarized: ['merged'],
+      }),
+    ),
+    [
+      'nord.lines[0] #2E3440: contrast 1.00 < 3 on #2E3440',
+      'nord.lines[1] #EBCB8B ~ lines[2] #EBCB8C: OKLab distance 0.0012 < 0.08',
+      'dracula.lines[0] #8BE9FD ~ node #8BE9FD: OKLab distance 0.0000 < 0.08',
+      'gruvbox.lines[0] #FB4934 ~ arrow #FB4934: OKLab distance 0.0000 < 0.08',
+      'solarized.lines[0] is not #rrggbb: merged',
+    ],
+  )
+})
+
+test('A3: every curated theme has at least two line colors, and mono none', () => {
+  for (const t of ['nord', 'dracula', 'gruvbox', 'solarized'] as const) {
+    assert.ok(THEMES[t].lines.length >= 2, t)
+  }
+
+  assert.deepEqual(THEMES.mono.lines, [])
 })
 
 const SCRIPT = fileURLToPath(new URL('../../scripts/check-palettes.ts', import.meta.url))

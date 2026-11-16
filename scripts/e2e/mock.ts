@@ -1,11 +1,11 @@
 // A stand-in for the Anthropic Messages API on 127.0.0.1, for the e2e harness's real Claude Code. startMock() answers
 // every POST /v1/messages, whatever its query string, with REPLY; REPLY_BTW when the last user message is a side
-// question, as /btw asks one; or REPLY_LEAD when it contains lead: as SSE when the request has stream: true, else as
-// one JSON message. Any other method or path gets an empty 404, CONNECT is refused, and stop() closes every connection.
-// Node built-ins only, so the main suite needs nothing installed.
+// question, as /btw asks one; REPLY_CROSS when it contains crossing; or REPLY_LEAD when it contains lead: as SSE when
+// the request has stream: true, else as one JSON message. Any other method or path gets an empty 404, CONNECT is
+// refused, and stop() closes every connection. Node built-ins only, so the main suite needs nothing installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { REPLY, REPLY_BTW, REPLY_LEAD } from './reply.ts'
+import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
 
 // text in runs of at most 64 code points, one per text delta. A string iterates by code point, so no run splits a
 // surrogate pair.
@@ -55,6 +55,10 @@ function lastAsks(messages: unknown, word: string): boolean {
 export function replyFor(messages: unknown): string {
   if (lastAsks(messages, 'side question')) {
     return REPLY_BTW
+  }
+
+  if (lastAsks(messages, 'crossing')) {
+    return REPLY_CROSS
   }
 
   return lastAsks(messages, 'lead') ? REPLY_LEAD : REPLY
