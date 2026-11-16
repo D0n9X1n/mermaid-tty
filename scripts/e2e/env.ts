@@ -80,11 +80,13 @@ export function seedConfig(realCwd: string, key: string, platform: string): stri
   )
 }
 
-// The config dir's settings.json: the plugin's theme, under each of the three keys Claude Code may read its options
-// from (E4).
+// The config dir's settings.json: the plugin's theme, and every option a scenario may switch and save at its default,
+// under each of the three keys Claude Code may read its options from (E4). A release check runs every scenario in one
+// installed config, so a run starts from these whatever an earlier run saved.
 export function seedSettings(theme: string): string {
   const keys = ['mermaid-tty', 'mermaid-tty@inline', 'mermaid-tty@mermaid-tty']
-  return JSON.stringify({ pluginConfigs: Object.fromEntries(keys.map((k) => [k, { options: { theme } }])) }, null, 2)
+  const options = { theme, crossings: 'on', size: 'compact' }
+  return JSON.stringify({ pluginConfigs: Object.fromEntries(keys.map((k) => [k, { options }])) }, null, 2)
 }
 
 // An installed config's file with seed merged in (A9.release): objects merge key by key, seed wins on any other clash,

@@ -415,6 +415,10 @@ async function crossing({ s, run }: Ctx): Promise<string[]> {
     problems.push(`crossing: after crossings off, A→D, B→C and the ┼ are not one color`)
   }
 
+  // Back on, the default, so the setting this run saved never carries into a later run in the same config.
+  await submit(s, '/mermaid-tty crossings on')
+  await s.waitFor(/coloring crossing lines apart/, 10000)
+
   return problems
 }
 
