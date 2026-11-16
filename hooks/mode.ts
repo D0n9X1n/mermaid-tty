@@ -22,23 +22,31 @@ export type Direction = 'LR' | 'TB' | 'off'
 
 export const isDirection = (v: unknown): v is Direction => v === 'LR' || v === 'TB' || v === 'off'
 
+// Whether each edge that crosses another is drawn in a color of its own (core/line-colors.ts): on, the default, or off,
+// which keeps every cell in its theme's own color.
+export type Crossings = 'on' | 'off'
+
+export const isCrossings = (v: unknown): v is Crossings => v === 'on' || v === 'off'
+
 // The command's words for each direction, lower-cased as the argument is.
 const DIRECTION_WORDS: Readonly<Record<string, Direction>> = { lr: 'LR', tb: 'TB', off: 'off' }
 
 // The /mermaid-tty argument, trimmed and matched in any case. Left out or blank, it reports the mode. One mode word
 // sets the mode; images reports the picture setting, and images followed by one setting word sets it; theme reports the
-// theme, and theme followed by a theme name sets it; direction likewise, with LR, TB or off. Another word, an extra
-// one, or anything but a string is a usage error: never ignored, never coerced (String(['source']) would be 'source').
+// theme, and theme followed by a theme name sets it; direction likewise, with LR, TB or off; crossings likewise, with
+// on or off. Another word, an extra one, or anything but a string is a usage error: never ignored, never coerced
+// (String(['source']) would be 'source').
 export type ModeArgs =
   | { set: Mode }
   | { report: true }
   | { images: Images | 'report' }
   | { theme: ThemeName | 'report' }
   | { direction: Direction | 'report' }
+  | { crossings: Crossings | 'report' }
   | { error: string }
 const USAGE =
   `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [${Object.keys(THEMES).join('|')}]` +
-  '|direction [LR|TB|off]]'
+  '|direction [LR|TB|off]|crossings [on|off]]'
 
 export const parseModeArgs = (a: unknown): ModeArgs => {
   if (a === undefined) {
@@ -77,6 +85,14 @@ export const parseModeArgs = (a: unknown): ModeArgs => {
 
     const d = Object.hasOwn(DIRECTION_WORDS, setting) ? DIRECTION_WORDS[setting] : undefined
     return d === undefined ? { error: USAGE } : { direction: d }
+  }
+
+  if (w === 'crossings' && rest.length === 0) {
+    if (setting === undefined) {
+      return { crossings: 'report' }
+    }
+
+    return isCrossings(setting) ? { crossings: setting } : { error: USAGE }
   }
 
   return setting === undefined && (w === 'source' || w === 'diagram' || w === 'text') ? { set: w } : { error: USAGE }
@@ -119,6 +135,17 @@ export const directionReply = (d: Direction, changed: boolean, saved: boolean, t
   ]
   const said = changed ? DIRECTION_CHANGED[d] : `mermaid-tty direction: ${d}`
   return notes.length === 0 ? said : `${said} (${notes.join('; ')})`
+}
+
+// The crossings command's reply: what is drawn now, or the setting in force when nothing changed; a setting that could
+// not be saved says it lasts only this session.
+const CROSSINGS_CHANGED: Record<Crossings, string> = {
+  on: 'mermaid-tty: coloring crossing lines apart',
+  off: 'mermaid-tty: drawing crossing lines in the edge color',
+}
+export const crossingsReply = (c: Crossings, changed: boolean, saved: boolean) => {
+  const said = changed ? CROSSINGS_CHANGED[c] : `mermaid-tty crossings: ${c}`
+  return saved ? said : `${said} (this session only: the setting was not saved)`
 }
 
 const DIRECTION_NAMES: Record<'LR' | 'TB', string> = { LR: 'left to right', TB: 'top to bottom' }

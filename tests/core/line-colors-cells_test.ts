@@ -87,9 +87,8 @@ test('A3: once colors run out, an edge takes the lowest color free to it, not ju
   )
 })
 
-// x crosses a, b and c; a and b also end at one arrowhead. Two colors: x takes 0 and a takes 1, both new. b meets
-// x (0) by crossing and a (1) by the arrowhead, so no color is left for it and it stays plain; c meets only x, and
-// takes 1.
+// x crosses a, b and c; a and b also end at one arrowhead. Two colors: x takes 0 and a takes 1, both new. b meets x (0)
+// by crossing and a (1) by the arrowhead, so no color is left for it and it stays plain; c meets only x, and takes 1.
 const SHARED = build(['x', 'a', 'b', 'c'], (c) => {
   across(c, 'x', 4, 0, 8)
   down(c, 'a', 1, 0, 7)

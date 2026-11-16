@@ -31,6 +31,16 @@
         "TB",
         "off"
       ]
+    },
+    "crossings": {
+      "type": "string",
+      "title": "Crossing lines",
+      "description": "on draws each edge that crosses another in a color of its own, arrowhead included, so a line can be followed past the crossing; off keeps every line in the theme's own colors. /mermaid-tty crossings switches at runtime.",
+      "default": "on",
+      "options": [
+        "on",
+        "off"
+      ]
     }
   }
 }

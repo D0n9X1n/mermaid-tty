@@ -29,7 +29,9 @@ export type Span = {
   dimColor?: boolean
 }
 export type Rows = Span[][]
-export type Options = { columns: number; theme?: string }
+// crossings: whether each edge that crosses another is drawn in a line color of its own (core/line-colors.ts); on
+// unless false.
+export type Options = { columns: number; theme?: string; crossings?: boolean }
 
 // Whether columns is a width a drawing can have: a positive safe integer.
 const drawable = (columns: number): boolean => Number.isSafeInteger(columns) && columns > 0
@@ -86,7 +88,7 @@ export function parseFail(source: string): Fail | null {
 // The rows inner draws of source, in o's theme ('default' when none is given), or its Fail.
 function draw(source: string, o: Options, inner: typeof explain): Rows | Fail {
   const r = inner(source, o)
-  return isFail(r) ? r : toRows(r.drawing, palette(o.theme ?? 'default'))
+  return isFail(r) ? r : toRows(r.drawing, palette(o.theme ?? 'default'), o.crossings !== false)
 }
 
 // The drawing as rows in the theme's palette, or null on any Fail.
@@ -162,8 +164,9 @@ const sameStyle = (a: Span, b: Span): boolean =>
 
 // Each row as spans: cont cells skipped, each missing cell a blank space with no role, neighbours of one role and style
 // merged, and trailing blank spans trimmed.
-export function toRows(d: Drawing, p: Palette): Rows {
-  const lines = lineColors(d, p.lines.length)
+export function toRows(d: Drawing, p: Palette, crossings = true): Rows {
+  // Off, no edge has a line color, so every cell keeps its role's or series' color, as a palette with none draws it.
+  const lines = lineColors(d, crossings ? p.lines.length : 0)
   return d.cells.map((row) => {
     const spans: Span[] = []
     for (const cell of row) {
@@ -205,7 +208,7 @@ export function createRenderer(
         return refused
       }
 
-      const key = JSON.stringify([s, o.columns, o.theme])
+      const key = JSON.stringify([s, o.columns, o.theme, o.crossings !== false])
       const hit = cache.get(key)
       if (hit !== undefined) {
         return hit

@@ -1,7 +1,7 @@
 // Crossing edges, each in a color of its own: which edges cross, the color each gets, and the spans toRows draws.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { explain, toRows, type Span } from '../../core/render.ts'
+import { createRenderer, explain, toRows, type Span } from '../../core/render.ts'
 import { createCanvas } from '../../core/canvas.ts'
 import { lineColors } from '../../core/line-colors.ts'
 import { THEMES } from '../../core/themes.ts'
@@ -216,4 +216,30 @@ test('A3: an edge with no cell of its own takes no color, so it never leaves a l
 
   assert.deepEqual([...colors.keys()], ['f'])
   assert.deepEqual([...colorsOf(d, rows, 'f')], [nord.lines[0]])
+})
+
+// Off turns the line colors off: every cell keeps its role's or series' color, exactly as a palette with no line colors
+// draws it, arrowheads and series-colored lines included.
+test('A3: with crossings off, the rows are the same as with no line colors at all', () => {
+  for (const source of [CROSS, TANGLE, 'mindmap\nroot\n  A\n  B']) {
+    const d = drawn(source)
+
+    const off = toRows(d, nord, false)
+
+    assert.deepEqual(off, toRows(d, { ...nord, lines: [] }), source)
+  }
+})
+
+test('A3: the renderer keys its cache on crossings, so turning it off and on never draws a stale drawing', () => {
+  const renderer = createRenderer(8)
+  const o = { columns: 80, theme: 'nord' }
+
+  const on = renderer.render(TANGLE, { ...o, crossings: true })
+  const off = renderer.render(TANGLE, { ...o, crossings: false })
+  const again = renderer.render(TANGLE, { ...o, crossings: true })
+  const unset = renderer.render(TANGLE, o)
+
+  assert.notDeepEqual(on, off)
+  assert.deepEqual(again, on)
+  assert.deepEqual(unset, on)
 })

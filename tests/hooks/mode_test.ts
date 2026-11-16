@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  crossingsReply,
   directionNote,
   directionReply,
   directionSection,
@@ -30,7 +31,7 @@ test('A6.command: arguments and replies', () => {
 test('A6.command: arguments are trimmed and case-blind; a second word is an error', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   }
   assert.deepEqual(parseModeArgs('diagram'), { set: 'diagram' })
   assert.deepEqual(parseModeArgs('  '), { report: true })
@@ -52,7 +53,7 @@ test('A6.command: a reply for each mode, changed or not', () => {
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
   for (const a of [['source'], { toString: null }, 42, null]) {
@@ -68,7 +69,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
   assert.equal(modeReply('text', false), 'mermaid-tty mode: text')
   assert.deepEqual(parseModeArgs('svg'), {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   })
 })
 
@@ -77,7 +78,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
 test('A6.command: images parses its setting; bare images reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   }
   assert.deepEqual(parseModeArgs('images'), { images: 'report' })
   assert.deepEqual(parseModeArgs(' IMAGES  Off '), { images: 'off' })
@@ -100,7 +101,7 @@ test('A6.command: a reply for each images setting, changed or not', () => {
 test('A6.command: theme parses a theme name; bare theme reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   }
   assert.deepEqual(parseModeArgs('theme'), { theme: 'report' })
   assert.deepEqual(parseModeArgs(' THEME  Dracula '), { theme: 'dracula' })
@@ -130,7 +131,7 @@ test('A6.command: a theme reply names the theme, says whether it changed, and wh
 test('A6.command: direction parses LR, TB or off; bare direction reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
   }
   assert.deepEqual(parseModeArgs('direction'), { direction: 'report' })
   assert.deepEqual(parseModeArgs(' DIRECTION lr '), { direction: 'LR' })
@@ -169,4 +170,27 @@ test('A6.direction: the system-prompt section asks for the configured header, an
   assert.equal(directionSection('off'), null)
   assert.match(directionNote('TB'), /`flowchart TB`/)
   assert.match(directionNote('off'), /no longer/)
+})
+
+// crossings takes one optional word after it: left out it reports; on or off set it, in any case; any other word, or a
+// third one, is the usage.
+test('A6.command: crossings parses on or off; bare crossings reports; anything else is the usage', () => {
+  const usage = parseModeArgs('nope')
+
+  assert.deepEqual(parseModeArgs('crossings'), { crossings: 'report' })
+  assert.deepEqual(parseModeArgs(' CROSSINGS  Off '), { crossings: 'off' })
+  assert.deepEqual(parseModeArgs('crossings on'), { crossings: 'on' })
+  assert.deepEqual(parseModeArgs('crossings yes'), usage)
+  assert.deepEqual(parseModeArgs('crossings on off'), usage)
+  assert.match((usage as { error: string }).error, /\|crossings \[on\|off\]\]$/)
+})
+
+test('A6.command: a crossings reply says what is drawn, whether it changed, and whether it was saved', () => {
+  assert.equal(crossingsReply('on', false, true), 'mermaid-tty crossings: on')
+  assert.equal(crossingsReply('off', true, true), 'mermaid-tty: drawing crossing lines in the edge color')
+  assert.equal(crossingsReply('on', true, true), 'mermaid-tty: coloring crossing lines apart')
+  assert.equal(
+    crossingsReply('off', true, false),
+    'mermaid-tty: drawing crossing lines in the edge color (this session only: the setting was not saved)',
+  )
 })

@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Configuration-and-Themes-zh-CN)
 
-mermaid-tty has two options: `theme`, which picks the colors of every diagram, and `direction`, which sets the flowchart direction Claude is asked to write. This page lists their values, shows each palette's colors, explains the roles a theme colors, and how crossing lines are colored apart.
+mermaid-tty has three options: `theme`, which picks the colors of every diagram; `direction`, which sets the flowchart direction Claude is asked to write; and `crossings`, which sets whether crossing lines are colored apart. This page lists their values, shows each palette's colors, explains the roles a theme colors, and how crossing lines are colored apart.
 
 ## The theme option
 
@@ -49,6 +49,17 @@ To switch while Claude Code runs, use `/mermaid-tty theme <name>`. The replies o
 The option only shapes what Claude writes: it never changes how a diagram is drawn. A diagram you write, or a direction you ask for, is kept. mermaid-tty still draws a left-to-right flowchart top to bottom when it is too wide for the window, as for any `LR` source (see Usage). With `LR` or `TB`, mermaid-tty adds a section to the system prompt, `mermaid-tty:flowchart-direction`, in sessions that draw in a terminal. `off` adds nothing.
 
 Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty direction LR|TB|off`, which saves the option the same way `/mermaid-tty theme` does. `/mermaid-tty direction` reports the setting in force. A conversation's system prompt stays as it was first sent, so a change made during a conversation also adds a short note that Claude reads; a new conversation gets the new section. If that note is refused, the reply says Claude was not told, and running the same command again retries it.
+
+## The crossings option
+
+`userConfig.crossings` sets whether each edge that crosses another is drawn in a color of its own, so a line can be followed past the crossing. See Crossing lines below.
+
+| Value | Crossing lines |
+|---|---|
+| `on` | Each crossing edge takes a color of its own. This is the default. |
+| `off` | Every cell keeps its theme's own color, as before crossing lines were colored. |
+
+Set it like `theme`, for example `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty crossings on|off`. The command redraws the replies on screen and the `/btw` pane at once, and saves the option the same way `/mermaid-tty theme` does; a save that is refused lasts for the session, and the reply says so. `/mermaid-tty crossings` reports the setting in force. An unset or unknown value is `on`.
 
 ## Palettes
 
@@ -134,7 +145,7 @@ Series-colored items take `s1` to `s8` instead of a role. See Palettes above.
 
 ## Crossing lines
 
-When edges cross in a flowchart, state, class or ER diagram, each edge that crosses another is drawn in a color of its own, arrowhead included. A line can then be followed past the `┼` from its source to its target. Other drawings keep the colors above.
+When edges cross in a flowchart, state, class or ER diagram, each edge that crosses another is drawn in a color of its own, arrowhead included. A line can then be followed past the `┼` from its source to its target. Other drawings keep the colors above, and so does every drawing with the `crossings` option `off`.
 
 - **Which cells.** An edge's own lines and its end, an arrowhead or a class marker such as `△` or `◆`, take its color. A cell that several edges draw keeps the `edge` or `arrow` color: the `┼` itself, a trunk where edges from one node merge, and an end edges share. Labels and cardinality, ER and class alike, keep their roles' colors.
 - **Which colors.** While colors last, each crossing edge takes a new one, in the order the source lists the edges. When there are more crossing edges than colors, a color comes round again, but never to an edge that crosses or touches one in that color. An edge with no such color left keeps the `edge` color.

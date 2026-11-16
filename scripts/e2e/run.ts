@@ -355,7 +355,8 @@ async function btw({ s, run, config }: Ctx): Promise<string[]> {
 }
 
 // crossing: a diagram whose edges cross draws whole, and each crossing line takes its own color: A→D and B→C differ
-// from each other and from the ┼ they share, which keeps the edge color. Under mono none carries a color.
+// from each other and from the ┼ they share, which keeps the edge color. Under mono none carries a color. After
+// /mermaid-tty crossings off, all three are drawn in the one edge color.
 async function crossing({ s, run }: Ctx): Promise<string[]> {
   await submit(s, 'crossing')
   await s.waitFor(/Crossed\./, 30000)
@@ -400,6 +401,18 @@ async function crossing({ s, run }: Ctx): Promise<string[]> {
     if (a === b || a === x || b === x) {
       problems.push(`crossing: A→D ${a}, B→C ${b} and the ┼ ${x} are not three colors`)
     }
+  }
+
+  // /mermaid-tty crossings off draws the same reply again with every line in the edge color: A→D's and B→C's own cells
+  // now match the ┼, which never took a line color.
+  await submit(s, '/mermaid-tty crossings off')
+  await s.waitFor(/drawing crossing lines in the edge color/, 10000)
+  await sleep(500)
+  const plain = await s.cells()
+  const cell = (r: number, glyph: string) => (plain[top + r - 1] ?? []).filter((c) => c.ch === glyph)[0]
+  const [a, b, x] = [cell(1, '─'), cell(2, '─'), cell(2, '┼')]
+  if (run.theme !== 'mono' && (!a || !b || !x || show(a.fg) !== show(x.fg) || show(b.fg) !== show(x.fg))) {
+    problems.push(`crossing: after crossings off, A→D, B→C and the ┼ are not one color`)
   }
 
   return problems
