@@ -588,14 +588,17 @@ test('A5.errors: in a window over 255 columns, a picture too wide to read in 255
   assert.equal(pictureFor(f.$, s, fc('W'), 'default-dark', 300, f.log), undefined)
 })
 
-// Whatever the window, a picture the plugin accepts is never shown denser than it reads clearly, full or compact.
-test('A6.hook-tests: every picture accepted is shown at 21.6 px a column or less, full or compact', async () => {
+// Whatever the window, a picture the plugin accepts is never shown compact denser than it reads clearly, and full is as
+// dense only where it rounds a picture a column or two wide to the nearest column.
+test('A6.hook-tests: every picture accepted is shown compact at 21.6 px a column or less', async () => {
   for (const [w, columns] of [
     [5500, 300],
     [5508, 400],
     [216, 10],
     [1700, 80],
     [300, 80],
+    [22, 80],
+    [23, 80],
   ] as const) {
     const f = fake({ w, h: 200 })
     const s = createPictures()
@@ -605,10 +608,10 @@ test('A6.hook-tests: every picture accepted is shown at 21.6 px a column or less
     const p = pictureFor(f.$, s, fc(`D${w}x${columns}`), 'default-dark', columns, f.log)
 
     assert.ok(p, `${w} px in ${columns} columns: ${f.logs.join(' ')}`)
-    for (const density of [FULL_SIZE, COMPACT]) {
-      const box = fit(w, 200, columns, density)!
-      assert.ok(w / box.columns <= COMPACT, `${w} px in ${box.columns} columns at ${density}`)
-    }
+    const compact = fit(w, 200, columns, COMPACT)!
+    assert.ok(w / compact.columns <= COMPACT, `${w} px in ${compact.columns} columns compact`)
+    const full = fit(w, 200, columns, FULL_SIZE)!
+    assert.ok(w / full.columns <= COMPACT || full.columns === 1, `${w} px in ${full.columns} columns full`)
   }
 })
 

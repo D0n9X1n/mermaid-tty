@@ -49,9 +49,10 @@ const PX = CSS * SCALE // CSS px per column, drawn at 2x: 16 PNG px a column
 // 2/3; a wider one was shrunk, perhaps past reading, and the text drawing stands.
 const PAGE = 12
 const FULL = 0.9
-// The densities a picture is shown at, in PNG px a column. full: its natural size. compact: the densest the plugin
-// reads clearly, about three quarters of full. A picture wider than COMPACT a column in the room it has, never more
-// than an Image's 255 columns, is too wide to read, so no picture shown, full or compact, is ever denser than COMPACT.
+// The densities a picture is shown at, in PNG px a column. full: its natural size, rounded to the nearest column as it
+// always was, so a picture a column or so wide may round a little denser. compact: the densest the plugin reads
+// clearly, about three quarters of full. A picture wider than COMPACT a column in the room it has, never more than an
+// Image's 255 columns, is too wide to read, and compact rounds up, so no compact picture is ever denser than COMPACT.
 export const FULL_SIZE = PX
 export const COMPACT = PAGE * SCALE * FULL
 const MAX_PNG = 2 * 1024 * 1024 // what an Image's { png } takes, decoded

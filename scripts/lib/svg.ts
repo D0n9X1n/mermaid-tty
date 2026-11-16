@@ -37,20 +37,30 @@ export function glyphCells(rows: { text: string }[][], width: (s: string) => num
   })
   return out
 }
-export function toSvg(rows: Styled[][], width: (s: string) => number, title: string, pics: Pic[] = []): string {
+// The room left around what a window draws, in cells: a chart that runs to the window's edges reads cramped.
+export type Space = { columns: number; rows: number }
+export function toSvg(
+  rows: Styled[][],
+  width: (s: string) => number,
+  title: string,
+  pics: Pic[] = [],
+  space: Space = { columns: 0, rows: 0 },
+): string {
   const cols = Math.max(
     1,
     ...rows.map((r) => r.reduce((n, sp) => n + width(sp.text), 0)),
     ...pics.map((p) => p.col + p.columns),
   )
-  const W = cols * CELL + 2 * PAD
-  const H = rows.length * ROW + 2 * PAD + BAR
+  const x = PAD + space.columns * CELL
+  const y = PAD + BAR + space.rows * ROW
+  const W = (cols + 2 * space.columns) * CELL + 2 * PAD
+  const H = (rows.length + 2 * space.rows) * ROW + 2 * PAD + BAR
   const out: string[] = []
   out.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">`,
     `<rect width="${W}" height="${H}" rx="10" fill="${BG}"/>`,
     ...['#ff5f57', '#febc2e', '#28c840'].map((c, i) => `<circle cx="${PAD + 6 + i * 18}" cy="14" r="5" fill="${c}"/>`),
-    `<g transform="translate(${PAD} ${PAD + BAR})" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="${FONT}">`,
+    `<g transform="translate(${x} ${y})" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="${FONT}">`,
   )
   rows.forEach((row, r) => {
     let col = 0
