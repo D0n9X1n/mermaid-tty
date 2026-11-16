@@ -25,6 +25,15 @@ async function readImages(images: () => Promise<Images>): Promise<Images> {
   }
 }
 
+// The crossings setting crossings() answers, on when it throws, before or after it returns a promise.
+async function readCrossings(crossings: () => Promise<Crossings>): Promise<Crossings> {
+  try {
+    return await crossings()
+  } catch {
+    return 'on'
+  }
+}
+
 // planReply, or null when it throws: the hook then sends the reply through next(e) unchanged. images reads the picture
 // setting; left out, or failing, it is auto. crossings reads whether crossing lines are colored apart; left out, on.
 export async function safePlan(
@@ -70,8 +79,7 @@ async function planReply(
     } catch {}
   }
   const segments = splitFences(e.props.text)
-  // A failing read keeps the default, on, rather than drop the drawing.
-  const colored = segments.some((s) => s.kind === 'mermaid') ? (await crossings().catch(() => 'on')) !== 'off' : true
+  const colored = segments.some((s) => s.kind === 'mermaid') ? (await readCrossings(crossings)) !== 'off' : true
   const look =
     m === 'diagram' && segments.some((s) => s.kind === 'mermaid')
       ? await pictureLook($, store, theme, await readImages(images)).catch(() => null)

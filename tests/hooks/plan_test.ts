@@ -21,6 +21,21 @@ test('A5.errors: a throwing mode read, UI resolve or renderer callback gives nul
   assert.equal(await safePlan({ ui }, ev(`a\n${FC}b`), 'default', async () => boom()), null)
   assert.equal(await safePlan({ ui: { ...ui, resolve: boom } }, ev(`a\n${FC}b`), 'default', diagram), null)
 })
+// The crossings setting only colors lines: a read that fails, by throwing or by rejecting, keeps the default, on, and
+// never drops the drawing.
+test('A5.errors: a crossings read that throws or rejects still draws the diagram, its crossing lines colored', async () => {
+  const cross = '```mermaid\nflowchart TD\nA --> C\nA --> D\nB --> C\nB --> D\n```\n'
+  const at = (crossings: () => Promise<'on' | 'off'>) =>
+    safePlan({ ui }, ev(`a\n${cross}b`), 'nord', diagram, undefined, async () => 'off', crossings)
+
+  const thrown = await at(() => boom())
+  const rejected = await at(async () => boom())
+  const on = await at(async () => 'on')
+
+  assert.ok(thrown && rejected && on)
+  assert.deepEqual(thrown.parts, on.parts)
+  assert.deepEqual(rejected.parts, on.parts)
+})
 test('A5.errors: a throwing or rejecting debug log still draws the diagram; the failed fence joins the prose', async () => {
   // Each run uses its own failing fence, so no cache hit skips the logger.
   for (const [k, thrower] of [
