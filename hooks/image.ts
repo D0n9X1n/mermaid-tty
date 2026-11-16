@@ -49,6 +49,11 @@ const PX = CSS * SCALE // CSS px per column, drawn at 2x: 16 PNG px a column
 // 2/3; a wider one was shrunk, perhaps past reading, and the text drawing stands.
 const PAGE = 12
 const FULL = 0.9
+// The densities a picture is shown at, in PNG px a column. full: its natural size. compact: the densest the plugin
+// reads clearly, the one past which a picture is too wide to read, about three quarters of full: a smaller picture can
+// never be one the plugin would refuse.
+export const FULL_SIZE = PX
+export const COMPACT = PAGE * SCALE * FULL
 const MAX_PNG = 2 * 1024 * 1024 // what an Image's { png } takes, decoded
 const MAX_SVG = 4 * 1024 * 1024 // what $.fs.read reads
 const MAX_SOURCE = 50000 // Mermaid's maxTextSize: past it, mmdc draws an error picture and exits 0
@@ -462,10 +467,17 @@ async function draw(
   }
 }
 
-// The cells a w x h PNG takes in at most `columns`: its natural width (16 px a column) or less, 1 to 255 columns, and
-// rows = round(columns * h / w / 2), cells being about 1:2. Null past 255 rows.
-export function fit(w: number, h: number, columns: number): { columns: number; rows: number } | null {
-  const c = Math.max(1, Math.min(255, columns, Math.round(w / PX)))
+// The cells a w x h PNG takes in at most `columns`: its width at `density` PNG px a column (16, its natural size, by
+// default) or less, 1 to 255 columns, and rows = round(columns * h / w / 2), cells being about 1:2. Null past 255 rows.
+// Full rounds to the nearest column, as it always has; any denser size rounds up, so it is never denser than asked.
+export function fit(
+  w: number,
+  h: number,
+  columns: number,
+  density: number = FULL_SIZE,
+): { columns: number; rows: number } | null {
+  const natural = density === FULL_SIZE ? Math.round(w / density) : Math.ceil(w / density)
+  const c = Math.max(1, Math.min(255, columns, natural))
   const rows = Math.max(1, Math.round((c * h) / w / 2))
   return rows > 255 ? null : { columns: c, rows }
 }

@@ -2,7 +2,7 @@
 
 [英文版](Configuration-and-Themes)
 
-mermaid-tty 有三个选项：`theme` 用于选择所有图表的颜色；`direction` 设置要求 Claude 编写流程图时使用的方向；`crossings` 设置交叉连线是否用颜色区分。本页列出可选值、各配色的颜色、主题着色的角色，以及交叉连线如何用颜色区分。
+mermaid-tty 有四个选项：`theme` 用于选择所有图表的颜色；`direction` 设置要求 Claude 编写流程图时使用的方向；`crossings` 设置交叉连线是否用颜色区分；`size` 设置图表图片显示的大小。本页列出可选值、各配色的颜色、主题着色的角色，以及交叉连线如何用颜色区分。
 
 ## theme 选项
 
@@ -60,6 +60,19 @@ mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` �
 | `off` | 每个单元格保持主题自身的颜色，与给交叉连线着色之前相同。 |
 
 设置方式与 `theme` 相同，例如 `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty crossings on|off`。该命令立即重绘屏幕上的回复和 `/btw` 窗格，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty crossings` 报告当前设置。未设置或无法识别的值视为 `on`。
+
+## size 选项
+
+`userConfig.size` 设置终端能显示图片时（见[使用](Usage-zh-CN)中的“图片”）图表图片显示的大小。文本绘制保持原有大小。
+
+| 值 | 图片 |
+|---|---|
+| `compact` | 约为完整大小的四分之三：每列 21.6 个图片像素，这是 mermaid-tty 在一列中能容纳且仍清晰可读的上限，超过它的图片会被视为太宽而改用文本显示。这是默认值。 |
+| `full` | 图片的原始大小：每列 16 个像素。 |
+
+两种大小下图片都不会宽于窗口：较宽的图片会像以前一样缩窄以适应，并保持比例。该选项只设置图片显示的方框，因此切换时不会重新渲染图片。
+
+设置方式与 `theme` 相同，例如 `echo '{"size":"full"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty size full|compact`。该命令立即重绘屏幕上的图片，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty size` 报告当前设置。未设置或无法识别的值视为 `compact`。
 
 ## 配色
 

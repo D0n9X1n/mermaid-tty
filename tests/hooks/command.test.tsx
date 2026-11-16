@@ -29,7 +29,7 @@ test('A6.command: source passes replies through; diagram draws again; bare repor
 
 // A hook beneath the plugin answers next() with the text it gets; reply() is the command's output line.
 const USAGE =
-  'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]'
+  'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]'
 const echo = (on: any) =>
   on('ui.render', { component: 'AssistantMessage' }, async ($: any, e: any) => {
     const { Text } = $.ui.resolve(e)

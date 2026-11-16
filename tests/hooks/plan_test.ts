@@ -139,6 +139,29 @@ test('A6.hook-tests: where pixels show, a fence draws as text first, then as its
   assert.deepEqual((p!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 })
   assert.equal((p!.parts[2] as any).prose, `m\n${BAD}b`)
 })
+// The size only sets the box a picture is shown in: the same cached picture, once rendered, shows smaller in compact,
+// with no render of its own, and a size read that fails keeps compact.
+test('A6.hook-tests: a picture shows in fewer cells in compact, from the one picture rendered', async () => {
+  const { $, runs } = pix()
+  const s = createPictures()
+  const reply = `a\n${FC}b`
+  const plan = (size: () => Promise<'full' | 'compact'>) =>
+    safePlan($, ev(reply), 'default', diagram, s, undefined, undefined, size)
+  await plan(async () => 'full')
+  await s.idle()
+  const rendered = runs.length
+
+  const full = await plan(async () => 'full')
+  const compact = await plan(async () => 'compact')
+  const thrown = await plan(() => {
+    throw new Error('down')
+  })
+
+  assert.deepEqual((full!.parts[1] as any).picture, { png: PNG, columns: 20, rows: 20 })
+  assert.deepEqual((compact!.parts[1] as any).picture, { png: PNG, columns: 15, rows: 15 })
+  assert.deepEqual((thrown!.parts[1] as any).picture, { png: PNG, columns: 15, rows: 15 })
+  assert.equal(runs.length, rendered)
+})
 test('A6.hook-tests: a fence too wide for text, which core parses, gets a picture in place of its source', async () => {
   const { $ } = pix()
   const s = createPictures()

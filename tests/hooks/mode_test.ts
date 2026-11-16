@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   crossingsReply,
+  sizeReply,
   directionNote,
   directionReply,
   directionSection,
@@ -31,7 +32,7 @@ test('A6.command: arguments and replies', () => {
 test('A6.command: arguments are trimmed and case-blind; a second word is an error', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   }
   assert.deepEqual(parseModeArgs('diagram'), { set: 'diagram' })
   assert.deepEqual(parseModeArgs('  '), { report: true })
@@ -53,7 +54,7 @@ test('A6.command: a reply for each mode, changed or not', () => {
 test('A6.command: an argument that is not a string is a usage error, never coerced', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   }
   assert.deepEqual(parseModeArgs(undefined), { report: true })
   for (const a of [['source'], { toString: null }, 42, null]) {
@@ -69,7 +70,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
   assert.equal(modeReply('text', false), 'mermaid-tty mode: text')
   assert.deepEqual(parseModeArgs('svg'), {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   })
 })
 
@@ -78,7 +79,7 @@ test('A6.command: text mode parses, replies, and still draws', () => {
 test('A6.command: images parses its setting; bare images reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   }
   assert.deepEqual(parseModeArgs('images'), { images: 'report' })
   assert.deepEqual(parseModeArgs(' IMAGES  Off '), { images: 'off' })
@@ -101,7 +102,7 @@ test('A6.command: a reply for each images setting, changed or not', () => {
 test('A6.command: theme parses a theme name; bare theme reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   }
   assert.deepEqual(parseModeArgs('theme'), { theme: 'report' })
   assert.deepEqual(parseModeArgs(' THEME  Dracula '), { theme: 'dracula' })
@@ -131,7 +132,7 @@ test('A6.command: a theme reply names the theme, says whether it changed, and wh
 test('A6.command: direction parses LR, TB or off; bare direction reports; anything else is the usage', () => {
   const usage = {
     error:
-      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]]',
+      'usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [default|nord|dracula|gruvbox|solarized|mono]|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]',
   }
   assert.deepEqual(parseModeArgs('direction'), { direction: 'report' })
   assert.deepEqual(parseModeArgs(' DIRECTION lr '), { direction: 'LR' })
@@ -182,7 +183,7 @@ test('A6.command: crossings parses on or off; bare crossings reports; anything e
   assert.deepEqual(parseModeArgs('crossings on'), { crossings: 'on' })
   assert.deepEqual(parseModeArgs('crossings yes'), usage)
   assert.deepEqual(parseModeArgs('crossings on off'), usage)
-  assert.match((usage as { error: string }).error, /\|crossings \[on\|off\]\]$/)
+  assert.match((usage as { error: string }).error, /\|crossings \[on\|off\]\|/)
 })
 
 test('A6.command: a crossings reply says what is drawn, whether it changed, and whether it was saved', () => {
@@ -192,5 +193,28 @@ test('A6.command: a crossings reply says what is drawn, whether it changed, and 
   assert.equal(
     crossingsReply('off', true, false),
     'mermaid-tty: drawing crossing lines in the edge color (this session only: the setting was not saved)',
+  )
+})
+
+// size takes one optional word after it: left out it reports; full or compact set it, in any case; any other word, or a
+// third one, is the usage.
+test('A6.command: size parses full or compact; bare size reports; anything else is the usage', () => {
+  const usage = parseModeArgs('nope')
+
+  assert.deepEqual(parseModeArgs('size'), { size: 'report' })
+  assert.deepEqual(parseModeArgs(' SIZE  Full '), { size: 'full' })
+  assert.deepEqual(parseModeArgs('size compact'), { size: 'compact' })
+  assert.deepEqual(parseModeArgs('size small'), usage)
+  assert.deepEqual(parseModeArgs('size full compact'), usage)
+  assert.match((usage as { error: string }).error, /\|size \[full\|compact\]\]$/)
+})
+
+test('A6.command: a size reply says how pictures are shown, whether it changed, and whether it was saved', () => {
+  assert.equal(sizeReply('compact', false, true), 'mermaid-tty size: compact')
+  assert.equal(sizeReply('full', true, true), 'mermaid-tty: showing pictures at full size')
+  assert.equal(sizeReply('compact', true, true), 'mermaid-tty: showing pictures compact')
+  assert.equal(
+    sizeReply('full', true, false),
+    'mermaid-tty: showing pictures at full size (this session only: the setting was not saved)',
   )
 })

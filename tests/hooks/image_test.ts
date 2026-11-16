@@ -6,7 +6,9 @@ import { tmpdir } from 'node:os'
 import { join, sep } from 'node:path'
 import {
   createPictures,
+  COMPACT,
   fit,
+  FULL_SIZE,
   madeTempDir,
   MAKE_TEMP,
   pictureFor,
@@ -151,6 +153,30 @@ test('A6.hook-tests: sizing fits the columns, keeps the aspect, clamps to 1..255
   assert.deepEqual(fit(3200, 400, 80), { columns: 80, rows: 5 }) // wider than the columns: scaled into them
   assert.deepEqual(fit(1600, 10, 300), { columns: 100, rows: 1 }) // at least one row
   assert.deepEqual(fit(8000, 400, 300), { columns: 255, rows: 6 }) // at most 255 columns
+})
+// compact shows a picture at the densest scale the plugin already reads clearly, the one at which a picture is too wide
+// to read: 21.6 PNG px a column, about three quarters of full. Its columns round up, so it is never denser than that.
+test('A6.hook-tests: compact draws a picture at about 21.6 px a column, rounding up, keeping its aspect', () => {
+  assert.equal(COMPACT, 21.6)
+  assert.equal(FULL_SIZE, 16)
+  assert.deepEqual(fit(320, 640, 80, COMPACT), { columns: 15, rows: 15 })
+  assert.deepEqual(fit(640, 320, 80, COMPACT), { columns: 30, rows: 8 })
+  assert.deepEqual(fit(222, 650, 80, COMPACT), { columns: 11, rows: 16 }) // 10.3 rounds up, not down to 10
+  assert.deepEqual(fit(1600, 400, 80, COMPACT), { columns: 75, rows: 9 }) // full fills 80; compact is smaller
+  assert.deepEqual(fit(3200, 400, 80, COMPACT), { columns: 80, rows: 5 }) // the columns are tighter still
+  assert.deepEqual(fit(320, 640, 80), fit(320, 640, 80, FULL_SIZE)) // full is today's size
+})
+
+// Whatever the picture and the room, compact never shows it denser than the density the plugin reads clearly.
+test('A6.hook-tests: compact is never denser than 21.6 px a column', () => {
+  for (const w of [17, 100, 222, 333, 1000, 1600, 4321]) {
+    for (const columns of [10, 40, 80, 200]) {
+      const box = fit(w, 200, columns, COMPACT)
+      if (box && box.columns < columns) {
+        assert.ok(w / box.columns <= COMPACT, `${w} px in ${box.columns} columns`)
+      }
+    }
+  }
 })
 test('A6.hook-tests: a picture taller than 255 rows is no picture', () => {
   assert.deepEqual(fit(160, 5000, 80), { columns: 10, rows: 156 })

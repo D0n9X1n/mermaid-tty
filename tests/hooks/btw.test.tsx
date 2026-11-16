@@ -456,7 +456,7 @@ test('A6.hook-tests: in kitty the pane draws a fence as a picture, and as text i
   await $.command.run({ command: 'mermaid-tty', args: 'text' })
 
   expect(picture?.type).toBe('Image')
-  expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
+  expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 15, rows: 15 }) // compact, the default size
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
 })
 

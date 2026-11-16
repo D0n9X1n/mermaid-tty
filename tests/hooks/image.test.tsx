@@ -57,7 +57,7 @@ test("A6.hook-tests: in kitty a fence draws as text, then as an Image of mmdc's 
   const ui = await mount($, 'flowchart TD\nK1 --> K2')
   const img = await ui.find({ key: 'mermaid-0' })
   expect(img?.type).toBe('Image')
-  expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
+  expect(img?.props).toMatchObject({ source: { png: PNG }, columns: 15, rows: 15 }) // compact, the default size
   expect(runs.map(name)).toEqual(['mmdc --version', 'make temp', 'mmdc -i', 'mmdc -i', 'remove temp'])
 })
 

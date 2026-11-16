@@ -28,14 +28,20 @@ export type Crossings = 'on' | 'off'
 
 export const isCrossings = (v: unknown): v is Crossings => v === 'on' || v === 'off'
 
+// How large a diagram's picture is shown: compact, the default, at the densest the plugin reads clearly, about three
+// quarters of full; or full, its natural size. Text drawings are never resized.
+export type Size = 'full' | 'compact'
+
+export const isSize = (v: unknown): v is Size => v === 'full' || v === 'compact'
+
 // The command's words for each direction, lower-cased as the argument is.
 const DIRECTION_WORDS: Readonly<Record<string, Direction>> = { lr: 'LR', tb: 'TB', off: 'off' }
 
 // The /mermaid-tty argument, trimmed and matched in any case. Left out or blank, it reports the mode. One mode word
 // sets the mode; images reports the picture setting, and images followed by one setting word sets it; theme reports the
 // theme, and theme followed by a theme name sets it; direction likewise, with LR, TB or off; crossings likewise, with
-// on or off. Another word, an extra one, or anything but a string is a usage error: never ignored, never coerced
-// (String(['source']) would be 'source').
+// on or off; size likewise, with full or compact. Another word, an extra one, or anything but a string is a usage
+// error: never ignored, never coerced (String(['source']) would be 'source').
 export type ModeArgs =
   | { set: Mode }
   | { report: true }
@@ -43,10 +49,11 @@ export type ModeArgs =
   | { theme: ThemeName | 'report' }
   | { direction: Direction | 'report' }
   | { crossings: Crossings | 'report' }
+  | { size: Size | 'report' }
   | { error: string }
 const USAGE =
   `usage: /mermaid-tty [source|diagram|text|images [auto|on|off]|theme [${Object.keys(THEMES).join('|')}]` +
-  '|direction [LR|TB|off]|crossings [on|off]]'
+  '|direction [LR|TB|off]|crossings [on|off]|size [full|compact]]'
 
 export const parseModeArgs = (a: unknown): ModeArgs => {
   if (a === undefined) {
@@ -93,6 +100,14 @@ export const parseModeArgs = (a: unknown): ModeArgs => {
     }
 
     return isCrossings(setting) ? { crossings: setting } : { error: USAGE }
+  }
+
+  if (w === 'size' && rest.length === 0) {
+    if (setting === undefined) {
+      return { size: 'report' }
+    }
+
+    return isSize(setting) ? { size: setting } : { error: USAGE }
   }
 
   return setting === undefined && (w === 'source' || w === 'diagram' || w === 'text') ? { set: w } : { error: USAGE }
@@ -145,6 +160,17 @@ const CROSSINGS_CHANGED: Record<Crossings, string> = {
 }
 export const crossingsReply = (c: Crossings, changed: boolean, saved: boolean) => {
   const said = changed ? CROSSINGS_CHANGED[c] : `mermaid-tty crossings: ${c}`
+  return saved ? said : `${said} (this session only: the setting was not saved)`
+}
+
+// The size command's reply: how pictures are shown now, or the setting in force when nothing changed; a setting that
+// could not be saved says it lasts only this session.
+const SIZE_CHANGED: Record<Size, string> = {
+  full: 'mermaid-tty: showing pictures at full size',
+  compact: 'mermaid-tty: showing pictures compact',
+}
+export const sizeReply = (z: Size, changed: boolean, saved: boolean) => {
+  const said = changed ? SIZE_CHANGED[z] : `mermaid-tty size: ${z}`
   return saved ? said : `${said} (this session only: the setting was not saved)`
 }
 
