@@ -42,6 +42,8 @@ export const IMAGES: Image[] = [
   { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'nord' },
   { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'nord' },
   { file: 'assets/readme/cjk.svg', source: 'assets/readme/src/cjk.mmd', columns: 60, theme: 'nord' },
+  // Edges that cross, each drawn in a color of its own so it can be followed past the ┼.
+  { file: 'assets/readme/crossing.svg', source: 'assets/readme/src/crossing.mmd', columns: 40, theme: 'nord' },
   // A showcase of the other types, one each, drawn by core like the rest.
   ...['mindmap', 'gitgraph', 'gantt', 'class', 'pie'].map((t) => ({
     file: `assets/readme/${t}.svg`,

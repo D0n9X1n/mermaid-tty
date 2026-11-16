@@ -45,6 +45,10 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 | ![A gantt chart drawn by mermaid-tty](assets/readme/gantt.svg) | ![A class diagram drawn by mermaid-tty](assets/readme/class.svg) |
 | ![A pie chart drawn by mermaid-tty](assets/readme/pie.svg) | ![A flowchart with Chinese labels drawn by mermaid-tty](assets/readme/cjk.svg) |
 
+**Crossing lines, colored apart**: where edges cross, each takes a color of its own, so a line can be followed past the crossing from where it starts to where it ends. Turn it off with `/mermaid-tty crossings off`:
+
+![A flowchart whose crossing edges are each drawn in a color of their own](assets/readme/crossing.svg)
+
 **Six themes**: nord by default, three more curated palettes, your Claude Code theme, or `mono`. Switch any time with `/mermaid-tty theme <name>`:
 
 | nord (default) | dracula | gruvbox |
@@ -62,6 +66,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme.
 - **Six themes, switched live.** `nord`, the default, `dracula`, `gruvbox` and `solarized` use their official colors; `default` follows your Claude Code theme; `mono` draws without color. `/mermaid-tty theme <name>` redraws at once and keeps the choice.
 - **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. This changes only what Claude writes: a left-to-right chart too wide for your window still draws top to bottom.
+- **Crossing lines you can follow.** Where edges cross, each takes a color of its own, arrowhead included, so you can tell which line goes from what to what. `/mermaid-tty crossings off` keeps every line in the theme's colors.
 - **Side questions too.** A `/btw` answer opens in a pane that draws its diagrams like a reply, and adds nothing to the conversation.
 - **The source stays yours.** The transcript keeps the Mermaid text, `/copy` copies it exactly, and one command shows it again.
 - **Nothing else to install, nothing left behind.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies, and no picture files once a session closes.
