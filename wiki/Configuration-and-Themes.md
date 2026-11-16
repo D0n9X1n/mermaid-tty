@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Configuration-and-Themes-zh-CN)
 
-mermaid-tty has three options: `theme`, which picks the colors of every diagram; `direction`, which sets the flowchart direction Claude is asked to write; and `crossings`, which sets whether crossing lines are colored apart. This page lists their values, shows each palette's colors, explains the roles a theme colors, and how crossing lines are colored apart.
+mermaid-tty has four options: `theme`, which picks the colors of every diagram; `direction`, which sets the flowchart direction Claude is asked to write; `crossings`, which sets whether crossing lines are colored apart; and `size`, which sets how large a diagram's picture is shown. This page lists their values, shows each palette's colors, explains the roles a theme colors, and how crossing lines are colored apart.
 
 ## The theme option
 
@@ -60,6 +60,19 @@ Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin conf
 | `off` | Every cell keeps its theme's own color, as before crossing lines were colored. |
 
 Set it like `theme`, for example `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty crossings on|off`. The command redraws the replies on screen and the `/btw` pane at once, and saves the option the same way `/mermaid-tty theme` does; a save that is refused lasts for the session, and the reply says so. `/mermaid-tty crossings` reports the setting in force. An unset or unknown value is `on`.
+
+## The size option
+
+`userConfig.size` sets how large a diagram's picture is shown, where the terminal shows pictures (see Pictures in [Usage](Usage)). Text drawings keep their size.
+
+| Value | Pictures |
+|---|---|
+| `compact` | About three quarters of full: 21.6 of the picture's pixels to a column, the most mermaid-tty fits in a column and still reads clearly, the same limit past which it shows a picture too wide to read as text instead. This is the default. |
+| `full` | The picture's natural size: 16 of its pixels to a column. |
+
+Either way a picture is never wider than the window: a wide one is narrowed to fit, as before, and keeps its proportions, and one too wide to read even at the `compact` density is shown as text. In `compact` a picture is never denser than that; `full` rounds to the nearest column as it always has, so a picture only a column wide may come out a little denser. The size only sets the box the picture is shown in, so the pictures already rendered are shown again at the new size. Saving the option reloads mermaid-tty, as any option change does, and it renders the pictures again after that. A tiny picture, a column or two wide, may come out a column wider in `compact`, since its columns round up so it is never too dense.
+
+Set it like `theme`, for example `echo '{"size":"full"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty size full|compact`. The command redraws the pictures on screen at once and saves the option the same way `/mermaid-tty theme` does; a save that is refused lasts for the session, and the reply says so. `/mermaid-tty size` reports the setting in force. An unset or unknown value is `compact`.
 
 ## Palettes
 

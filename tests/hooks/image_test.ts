@@ -6,7 +6,9 @@ import { tmpdir } from 'node:os'
 import { join, sep } from 'node:path'
 import {
   createPictures,
+  COMPACT,
   fit,
+  FULL_SIZE,
   madeTempDir,
   MAKE_TEMP,
   pictureFor,
@@ -151,6 +153,41 @@ test('A6.hook-tests: sizing fits the columns, keeps the aspect, clamps to 1..255
   assert.deepEqual(fit(3200, 400, 80), { columns: 80, rows: 5 }) // wider than the columns: scaled into them
   assert.deepEqual(fit(1600, 10, 300), { columns: 100, rows: 1 }) // at least one row
   assert.deepEqual(fit(8000, 400, 300), { columns: 255, rows: 6 }) // at most 255 columns
+})
+// compact shows a picture at the densest scale the plugin already reads clearly, the one at which a picture is too wide
+// to read: 21.6 PNG px a column, about three quarters of full. Its columns round up, so it is never denser than that.
+test('A6.hook-tests: compact draws a picture at about 21.6 px a column, rounding up, keeping its aspect', () => {
+  assert.equal(COMPACT, 21.6)
+  assert.equal(FULL_SIZE, 16)
+  assert.deepEqual(fit(320, 640, 80, COMPACT), { columns: 15, rows: 15 })
+  assert.deepEqual(fit(640, 320, 80, COMPACT), { columns: 30, rows: 8 })
+  assert.deepEqual(fit(222, 650, 80, COMPACT), { columns: 11, rows: 16 }) // 10.3 rounds up, not down to 10
+  assert.deepEqual(fit(1600, 400, 80, COMPACT), { columns: 75, rows: 9 }) // full fills 80; compact is smaller
+  assert.deepEqual(fit(3200, 400, 80, COMPACT), { columns: 80, rows: 5 }) // the columns are tighter still
+  assert.deepEqual(fit(320, 640, 80), fit(320, 640, 80, FULL_SIZE)) // full is today's size
+})
+
+// A tiny picture rounds up in compact, so it can take one column more than full: never denser, at worst a cell larger.
+test('A6.hook-tests: a picture a column or two wide may take one column more in compact than in full', () => {
+  assert.deepEqual(fit(22, 44, 80), { columns: 1, rows: 1 })
+  assert.deepEqual(fit(22, 44, 80, COMPACT), { columns: 2, rows: 2 })
+  for (const w of [17, 22, 30, 40, 50, 64]) {
+    const full = fit(w, 2 * w, 80)!
+    const compact = fit(w, 2 * w, 80, COMPACT)!
+    assert.ok(compact.columns <= full.columns + 1, `${w} px: ${compact.columns} > ${full.columns} + 1`)
+  }
+})
+
+// Whatever the picture and the room, compact never shows it denser than the density the plugin reads clearly.
+test('A6.hook-tests: compact is never denser than 21.6 px a column', () => {
+  for (const w of [17, 100, 222, 333, 1000, 1600, 4321]) {
+    for (const columns of [10, 40, 80, 200]) {
+      const box = fit(w, 200, columns, COMPACT)
+      if (box && box.columns < columns) {
+        assert.ok(w / box.columns <= COMPACT, `${w} px in ${box.columns} columns`)
+      }
+    }
+  }
 })
 test('A6.hook-tests: a picture taller than 255 rows is no picture', () => {
   assert.deepEqual(fit(160, 5000, 80), { columns: 10, rows: 156 })
@@ -536,6 +573,47 @@ for (const [name, o, reason] of [
     assert.equal(f.runs.filter((r) => isMake(r.argv)).length, 1)
   })
 }
+
+// An Image is at most 255 columns, so in a window wider than that a picture is read at 255: one wider than 255 columns
+// at the readable density is too wide to read, however wide the window. 6000 px fits 300 columns at 21.6 a column but
+// would be drawn at 23.5 a column in 255.
+test('A5.errors: in a window over 255 columns, a picture too wide to read in 255 keeps the text drawing', async () => {
+  const f = fake({ w: 6000, h: 400 })
+  const s = createPictures()
+
+  pictureFor(f.$, s, fc('W'), 'default-dark', 300, f.log)
+  await s.idle()
+
+  assert.deepEqual(f.logs, ['image: too wide to read'])
+  assert.equal(pictureFor(f.$, s, fc('W'), 'default-dark', 300, f.log), undefined)
+})
+
+// Whatever the window, a picture the plugin accepts is never shown compact denser than it reads clearly, and full is as
+// dense only where it rounds a picture a column or two wide to the nearest column.
+test('A6.hook-tests: every picture accepted is shown compact at 21.6 px a column or less', async () => {
+  for (const [w, columns] of [
+    [5500, 300],
+    [5508, 400],
+    [216, 10],
+    [1700, 80],
+    [300, 80],
+    [22, 80],
+    [23, 80],
+  ] as const) {
+    const f = fake({ w, h: 200 })
+    const s = createPictures()
+    pictureFor(f.$, s, fc(`D${w}x${columns}`), 'default-dark', columns, f.log)
+    await s.idle()
+
+    const p = pictureFor(f.$, s, fc(`D${w}x${columns}`), 'default-dark', columns, f.log)
+
+    assert.ok(p, `${w} px in ${columns} columns: ${f.logs.join(' ')}`)
+    const compact = fit(w, 200, columns, COMPACT)!
+    assert.ok(w / compact.columns <= COMPACT, `${w} px in ${compact.columns} columns compact`)
+    const full = fit(w, 200, columns, FULL_SIZE)!
+    assert.ok(w / full.columns <= COMPACT || full.columns === 1, `${w} px in ${full.columns} columns full`)
+  }
+})
 
 test('A5.errors: no temp dir, or a path the temp run should not have made, runs no mmdc and removes nothing', async () => {
   for (const made of [

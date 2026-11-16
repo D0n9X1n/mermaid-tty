@@ -445,7 +445,7 @@ const kitty = (on: any) => {
   }))
 }
 
-test('A6.hook-tests: in kitty the pane draws a fence as a picture, and as text in text mode', async ($, on) => {
+test('A6.hook-tests: in kitty the pane draws a fence as a picture at its size, and as text in text mode', async ($, on) => {
   kitty(on)
   engine(on, answered('```mermaid\nflowchart TD\nP1 --> P2\n```\n'))
   await start($)
@@ -453,10 +453,14 @@ test('A6.hook-tests: in kitty the pane draws a fence as a picture, and as text i
 
   const ui = await pane($)
   const picture = await ui.find({ key: 'mermaid-0' })
+  // The pane shows the same picture again at once when the size changes, as a reply does.
+  await $.command.run({ command: 'mermaid-tty', args: 'size full' })
+  const full = await ui.find({ key: 'mermaid-0' })
   await $.command.run({ command: 'mermaid-tty', args: 'text' })
 
   expect(picture?.type).toBe('Image')
-  expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
+  expect(picture?.props).toMatchObject({ source: { png: PNG }, columns: 15, rows: 15 }) // compact, the default size
+  expect(full?.props).toMatchObject({ source: { png: PNG }, columns: 20, rows: 20 })
   expect((await ui.find({ key: 'mermaid-0' }))?.type).toBe('Box')
 })
 

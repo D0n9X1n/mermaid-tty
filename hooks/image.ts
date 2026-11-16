@@ -49,6 +49,12 @@ const PX = CSS * SCALE // CSS px per column, drawn at 2x: 16 PNG px a column
 // 2/3; a wider one was shrunk, perhaps past reading, and the text drawing stands.
 const PAGE = 12
 const FULL = 0.9
+// The densities a picture is shown at, in PNG px a column. full: its natural size, rounded to the nearest column as it
+// always was, so a picture a column or so wide may round a little denser. compact: the densest the plugin reads
+// clearly, about three quarters of full. A picture wider than COMPACT a column in the room it has, never more than an
+// Image's 255 columns, is too wide to read, and compact rounds up, so no compact picture is ever denser than COMPACT.
+export const FULL_SIZE = PX
+export const COMPACT = PAGE * SCALE * FULL
 const MAX_PNG = 2 * 1024 * 1024 // what an Image's { png } takes, decoded
 const MAX_SVG = 4 * 1024 * 1024 // what $.fs.read reads
 const MAX_SOURCE = 50000 // Mermaid's maxTextSize: past it, mmdc draws an error picture and exits 0
@@ -446,7 +452,8 @@ async function draw(
       return 'not a png'
     }
 
-    if (size.width > columns * PAGE * SCALE * FULL) {
+    // An Image is at most 255 columns, so a window wider than that shows a picture in 255.
+    if (size.width > Math.min(columns, 255) * COMPACT) {
       return 'too wide to read'
     }
 
@@ -462,10 +469,17 @@ async function draw(
   }
 }
 
-// The cells a w x h PNG takes in at most `columns`: its natural width (16 px a column) or less, 1 to 255 columns, and
-// rows = round(columns * h / w / 2), cells being about 1:2. Null past 255 rows.
-export function fit(w: number, h: number, columns: number): { columns: number; rows: number } | null {
-  const c = Math.max(1, Math.min(255, columns, Math.round(w / PX)))
+// The cells a w x h PNG takes in at most `columns`: its width at `density` PNG px a column (16, its natural size, by
+// default) or less, 1 to 255 columns, and rows = round(columns * h / w / 2), cells being about 1:2. Null past 255 rows.
+// Full rounds to the nearest column, as it always has; any denser size rounds up, so it is never denser than asked.
+export function fit(
+  w: number,
+  h: number,
+  columns: number,
+  density: number = FULL_SIZE,
+): { columns: number; rows: number } | null {
+  const natural = density === FULL_SIZE ? Math.round(w / density) : Math.ceil(w / density)
+  const c = Math.max(1, Math.min(255, columns, natural))
   const rows = Math.max(1, Math.round((c * h) / w / 2))
   return rows > 255 ? null : { columns: c, rows }
 }

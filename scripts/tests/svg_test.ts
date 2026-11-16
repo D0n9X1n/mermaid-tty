@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { BASE, CELL, ROW, glyphCells, misplaced, toSvg } from '../lib/svg.ts'
+import { BAR, BASE, CELL, PAD, ROW, glyphCells, misplaced, toSvg } from '../lib/svg.ts'
 import { width } from '../../core/width.ts'
 // e\u0301 is e + U+0301 COMBINING ACUTE ACCENT, one grapheme; \u200B is ZERO WIDTH SPACE. Escapes, since a copy can
 // lose either.
@@ -44,6 +44,17 @@ test('toSvg places every glyph at col × CELL and sizes pill backgrounds by widt
   assert.ok(svg.includes(`<text x="${3 * CELL}" y="14" fill="#fff">]</text>`))
   assert.ok(svg.includes(`<rect x="0" y="0" width="${4 * CELL}" height="18" fill="#333"/>`))
   assert.ok(svg.includes('>&lt;</text>'))
+  assert.deepEqual(misplaced(svg, rows, width), [])
+})
+// The room around a chart: the window grows by that many cells on each side and the drawing moves in by as many, while
+// every glyph keeps its own cell.
+test('toSvg leaves the space asked for around the drawing, on every side, glyphs still on their cells', () => {
+  const svg = toSvg(rows, width, 'demo', [], { columns: 2, rows: 1 })
+  const plain = toSvg(rows, width, 'demo')
+  const size = (s: string) => /width="(\d+)" height="(\d+)" viewBox/.exec(s)!.slice(1).map(Number)
+
+  assert.deepEqual(size(svg), [size(plain)[0]! + 4 * CELL, size(plain)[1]! + 2 * ROW])
+  assert.ok(svg.includes(`<g transform="translate(${PAD + 2 * CELL} ${PAD + BAR + ROW})"`))
   assert.deepEqual(misplaced(svg, rows, width), [])
 })
 test('a glyph in row 1 sits at y = ROW + BASE, and its background at y = ROW', () => {

@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="275" height="240" viewBox="0 0 275 240" role="img" aria-label="cjk">
-<rect width="275" height="240" rx="10" fill="#1e1f26"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="311" height="276" viewBox="0 0 311 276" role="img" aria-label="cjk">
+<rect width="311" height="276" rx="10" fill="#1e1f26"/>
 <circle cx="22" cy="14" r="5" fill="#ff5f57"/>
 <circle cx="40" cy="14" r="5" fill="#febc2e"/>
 <circle cx="58" cy="14" r="5" fill="#28c840"/>
-<g transform="translate(16 44)" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="15">
+<g transform="translate(34 62)" font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'PingFang SC', 'Noto Sans Mono CJK SC', monospace" font-size="15">
 <rect x="18" y="0" width="90" height="18" fill="#88C0D0"/>
 <rect x="9" y="54" width="99" height="18" fill="#EBCB8B"/>
 <rect x="9" y="162" width="90" height="18" fill="#88C0D0"/>

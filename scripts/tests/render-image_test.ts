@@ -5,9 +5,10 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { width } from '../../core/width.ts'
-import { toSvg } from '../lib/svg.ts'
+import { BAR, CELL, PAD, ROW, toSvg } from '../lib/svg.ts'
 import { IMAGES, THEMES } from '../lib/images.ts'
-import { ROOT, renderImage, styledRows } from '../lib/render-image.ts'
+import { ROOT, SPACE, renderImage, styledRows } from '../lib/render-image.ts'
+import { COMPACT, fit, pngSize } from '../../hooks/image.ts'
 const HEX = /^#[0-9a-f]{6}$/i
 test('every span resolves to hex colors under every theme', () => {
   for (const theme of THEMES) {
@@ -89,4 +90,21 @@ test("a picture reply draws its prose and puts the fence's PNG where the text dr
   assert.equal((svg.match(/<image /g) ?? []).length, 1)
   assert.ok(svg.includes(`href="data:image/png;base64,${png}"`))
   assert.ok(!rows.flat().some((s) => /[─-╿]/.test(s.text)), 'no box-drawing glyphs: the fence is a picture')
+})
+
+// The README shows a picture as the plugin does by default, compact, and every image leaves room around its chart.
+test('a README picture is drawn compact, and every README image leaves space around what it shows', () => {
+  const img = IMAGES.find((i) => i.picture)!
+  const png = readFileSync(join(ROOT, img.picture!)).toString('base64')
+  const size = pngSize(png)!
+
+  const { svg } = renderImage(img)
+  const box = /<image x="\d+" y="\d+" width="(\d+)"/.exec(svg)!
+
+  assert.equal(Number(box[1]) / CELL, fit(size.width, size.height, img.columns, COMPACT)!.columns)
+  for (const each of IMAGES) {
+    assert.ok(
+      renderImage(each).svg.includes(`translate(${PAD + SPACE.columns * CELL} ${PAD + BAR + SPACE.rows * ROW})`),
+    )
+  }
 })

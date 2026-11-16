@@ -11,6 +11,8 @@ declare module 'claude-code' {
       btw: { question: string; text: string } // the latest /btw mermaid-tty answered, shown in the btw pane
       // whether crossing edges are colored apart; unset: the configured setting
       crossings: 'on' | 'off'
+      // how large a diagram's picture is shown; unset: the configured size
+      size: 'full' | 'compact'
     }
   }
 }

@@ -41,6 +41,16 @@
         "on",
         "off"
       ]
+    },
+    "size": {
+      "type": "string",
+      "title": "Picture size",
+      "description": "compact draws a diagram's picture at the smallest size mermaid-tty still reads clearly, about three quarters of full; full draws it at its natural size. Only pictures change: text drawings keep their size. /mermaid-tty size switches at runtime.",
+      "default": "compact",
+      "options": [
+        "compact",
+        "full"
+      ]
     }
   }
 }

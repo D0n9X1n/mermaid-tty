@@ -7,8 +7,8 @@ import { type Span, renderMermaid } from '../../core/render.ts'
 import { width } from '../../core/width.ts'
 import { type Image } from './images.ts'
 import { CC_DARK } from './palette.ts'
-import { fit, pngSize } from '../../hooks/image.ts'
-import { type Pic, type Styled, toSvg } from './svg.ts'
+import { COMPACT, fit, pngSize } from '../../hooks/image.ts'
+import { type Pic, type Space, type Styled, toSvg } from './svg.ts'
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 // The reference palette lives in palette.ts, shared with the review gallery.
 const DARK = CC_DARK
@@ -80,8 +80,10 @@ export function replyRows(
       continue
     }
 
+    // Shown as the plugin shows a picture by default: compact, narrower than the window, so the reply keeps room beside
+    // it.
     const size = pngSize(png)
-    const box = size && fit(size.width, size.height, columns)
+    const box = size && fit(size.width, size.height, columns, COMPACT)
     if (!box) {
       throw new Error('picture: not a PNG, or over 255 rows')
     }
@@ -92,6 +94,8 @@ export function replyRows(
 
   return out
 }
+// The room every README picture leaves around what it shows, so a chart never runs to the window's edges.
+export const SPACE: Space = { columns: 2, rows: 1 }
 export function renderImage(img: Image): { svg: string; rows: Styled[][] } {
   const src = readFileSync(join(ROOT, img.source), 'utf8')
   const pics: Pic[] = []
@@ -103,5 +107,5 @@ export function renderImage(img: Image): { svg: string; rows: Styled[][] } {
     throw new Error(`${img.source}: core fell back at ${img.columns} columns`)
   }
 
-  return { svg: toSvg(rows, width, basename(img.file, '.svg'), pics), rows }
+  return { svg: toSvg(rows, width, basename(img.file, '.svg'), pics, SPACE), rows }
 }

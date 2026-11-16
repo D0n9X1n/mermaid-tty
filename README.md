@@ -63,7 +63,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Faithful or nothing.** Each diagram is drawn whole and checked before it's shown. If it can't be drawn as Mermaid means it, mermaid-tty falls back to the source, never a guess.
 - **Fits your terminal.** No row is wider than your window's columns: gaps tighten, labels wrap, and wide graphs turn vertical.
 - **Exact CJK widths.** Chinese, Japanese and Korean labels take two columns each, so every line meets.
-- **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme.
+- **Pictures where they work.** In kitty, Ghostty and SonicTerm, and inside tmux through a launcher, Mermaid's own picture replaces the text, drawn in your theme, compact by default; `/mermaid-tty size full` shows it at its natural size.
 - **Six themes, switched live.** `nord`, the default, `dracula`, `gruvbox` and `solarized` use their official colors; `default` follows your Claude Code theme; `mono` draws without color. `/mermaid-tty theme <name>` redraws at once and keeps the choice.
 - **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. This changes only what Claude writes: a left-to-right chart too wide for your window still draws top to bottom.
 - **Crossing lines you can follow.** Where edges cross, each takes a color of its own, arrowhead included, so you can tell which line goes from what to what. `/mermaid-tty crossings off` keeps every line in the theme's colors.
