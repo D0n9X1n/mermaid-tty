@@ -50,8 +50,8 @@ const PX = CSS * SCALE // CSS px per column, drawn at 2x: 16 PNG px a column
 const PAGE = 12
 const FULL = 0.9
 // The densities a picture is shown at, in PNG px a column. full: its natural size. compact: the densest the plugin
-// reads clearly, the one past which a picture is too wide to read, about three quarters of full: a smaller picture can
-// never be one the plugin would refuse.
+// reads clearly, about three quarters of full. A picture wider than COMPACT a column in the room it has, never more
+// than an Image's 255 columns, is too wide to read, so no picture shown, full or compact, is ever denser than COMPACT.
 export const FULL_SIZE = PX
 export const COMPACT = PAGE * SCALE * FULL
 const MAX_PNG = 2 * 1024 * 1024 // what an Image's { png } takes, decoded
@@ -451,7 +451,8 @@ async function draw(
       return 'not a png'
     }
 
-    if (size.width > columns * PAGE * SCALE * FULL) {
+    // An Image is at most 255 columns, so a window wider than that shows a picture in 255.
+    if (size.width > Math.min(columns, 255) * COMPACT) {
       return 'too wide to read'
     }
 

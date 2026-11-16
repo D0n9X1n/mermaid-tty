@@ -95,6 +95,41 @@ test(
   },
 )
 
+test(
+  'A6.hook-tests: a configured size outside full and compact shows it compact',
+  { options: { size: 'huge' } },
+  async ($, on) => {
+    world(on, { TERM: 'xterm-kitty' })
+
+    const ui = await mount($, 'flowchart TD\nU1 --> U2')
+
+    expect(await box(ui)).toEqual([15, 15])
+  },
+)
+
+// The size is kept in $.state; a read of it that fails, by throwing or by rejecting, is the configured size, as a
+// failing theme or crossings read is the configured one.
+for (const how of ['throws', 'rejects'] as const) {
+  test(`A5.errors: a size read that ${how} shows the configured size`, { options: { size: 'full' } }, async ($, on) => {
+    world(on, { TERM: 'xterm-kitty' })
+    on('state.get', async (_$: any, e: any, next: any) => {
+      if (JSON.stringify(e).includes('"size"')) {
+        if (how === 'throws') {
+          throw new Error('down')
+        }
+
+        return { deny: 'down' }
+      }
+
+      return next(e)
+    })
+
+    const ui = await mount($, `flowchart TD\nR${how} --> R2`)
+
+    expect(await box(ui)).toEqual([20, 20])
+  })
+}
+
 test('A6.command: /mermaid-tty size full redraws the picture at once, renders nothing again, and saves', async ($, on) => {
   const runs = world(on, { TERM: 'xterm-kitty' })
   const writes = config(on)
