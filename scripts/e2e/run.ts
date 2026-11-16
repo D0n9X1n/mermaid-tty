@@ -354,8 +354,8 @@ async function btw({ s, run, config }: Ctx): Promise<string[]> {
   return problems
 }
 
-// crossing: a diagram whose edges cross draws whole, and each crossing line takes its own color: the box-drawing cells
-// of its edges carry at least two colors besides the theme's edge color. Under mono they carry none.
+// crossing: a diagram whose edges cross draws whole, and each crossing line takes its own color: A→D and B→C differ
+// from each other and from the ┼ they share, which keeps the edge color. Under mono none carries a color.
 async function crossing({ s, run }: Ctx): Promise<string[]> {
   await submit(s, 'crossing')
   await s.waitFor(/Crossed\./, 30000)
@@ -369,29 +369,37 @@ async function crossing({ s, run }: Ctx): Promise<string[]> {
     hex: hexOf(run),
   })
   problems.push(...sourceShown(await s.text(), fenceBody(REPLY_CROSS).split('\n')))
+  // The drawing, located by its rows as the renderer draws them: A→D's own stretch (row 1, the run from ┴ to ┐),
+  // B→C's (row 2, the run up to ┼) and the ┼ they share. Each is read in the screen's own color mode, so the check
+  // holds in truecolor and 256 colors alike, and under the default theme, whose colors are Claude Code's.
   const show = (c: Cell['fg']) => `${c.mode}:${c.value}`
-  // Only the diagram's rows: from the one holding its first nodes to the one holding its last, so Claude Code's own
-  // rules and borders, drawn in box-drawing glyphs too, are left out.
+  const rows = drawnDiagrams(REPLY_CROSS, DRAW_COLUMNS, run.theme)[0] ?? []
   const text = cells.map((row) => row.map((c) => c.ch).join(''))
-  const top = text.findIndex((r) => r.includes('甲'))
-  const bottom = text.findLastIndex((r) => r.includes('丙'))
-  const lines = new Set(
-    cells
-      .slice(Math.max(top, 0), bottom + 1)
-      .flat()
-      .filter((c) => /[─│┌┐└┘├┤┬┴]/.test(c.ch) && c.fg.mode !== 'default')
-      .map((c) => show(c.fg)),
-  )
-  const edge = hexOf(run)?.edge
-  const own = [...lines].filter((c) => edge === undefined || c !== `rgb:${edge}`)
-  if (run.theme === 'mono') {
-    if (lines.size) {
-      problems.push(`crossing: mono lines carry color: ${[...lines].join(' ')}`)
+  const top = text.findIndex((r) => r.includes(rows[1]?.trim() ?? '\u0000'))
+  const at = (r: number, glyph: string, nth = 0) => {
+    const row = cells[top + r - 1] ?? []
+    return row.filter((c) => c.ch === glyph)[nth]
+  }
+  const ad = at(1, '─')
+  const bc = at(2, '─')
+  const cross = at(2, '┼')
+  if (top < 0 || !ad || !bc || !cross) {
+    problems.push(`crossing: the crossing lines were not found on screen:\n${text.join('\n')}`)
+  } else if (run.theme === 'mono') {
+    for (const [name, c] of [
+      ['A→D', ad],
+      ['B→C', bc],
+      ['┼', cross],
+    ] as const) {
+      if (c.fg.mode !== 'default') {
+        problems.push(`crossing: mono ${name} carries color ${show(c.fg)}`)
+      }
     }
-  } else if (own.length < 2) {
-    problems.push(
-      `crossing: the crossing lines carry ${own.length} colors of their own, not 2: ${[...lines].join(' ')}`,
-    )
+  } else {
+    const [a, b, x] = [show(ad.fg), show(bc.fg), show(cross.fg)]
+    if (a === b || a === x || b === x) {
+      problems.push(`crossing: A→D ${a}, B→C ${b} and the ┼ ${x} are not three colors`)
+    }
   }
 
   return problems

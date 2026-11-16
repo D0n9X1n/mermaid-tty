@@ -19,8 +19,8 @@ const CROSS = 'flowchart TD\nA --> C\nA --> D\nB --> C\nB --> D'
 const FAN = 'flowchart TD\nA --> B\nA --> C\nA --> D'
 const nord = THEMES.nord
 
-// Each pair of edges that cross, found as the code under test must find them: a line cell whose owners all draw straight
-// through it, some up and down, some across.
+// Each pair of edges that cross, found as the code under test must find them: a line cell whose owners all draw
+// straight through it, some up and down, some across.
 const crossingPairs = (d: Drawing): [string, string][] => {
   const pairs = new Map<string, [string, string]>()
   for (const row of d.cells) {

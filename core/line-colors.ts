@@ -1,5 +1,5 @@
-// core/line-colors.ts — a color of its own for each edge that crosses another, so a reader can follow a line past a ┼
-// from its source to its target. Presentation only: it reads a validated drawing and changes no cell, role or glyph.
+// core/line-colors.ts — a color of its own for each edge that crosses another, so a reader can follow a line past a
+// ┼ from its source to its target. Presentation only: it reads a validated drawing and changes no cell, role or glyph.
 import type { Drawing } from './canvas.ts'
 
 const VERTICAL = 5 // up | down
