@@ -190,8 +190,10 @@ test('A9.harness: seedConfig approves the key by its last 20 characters, trimmed
   })
 })
 
-test("A9.harness: seedSettings sets the theme under each of the three keys the plugin's options may be read from (E4)", () => {
-  const each = (theme: string) => ({ options: { theme } })
+// Every option a scenario may switch and save is seeded at its default, so a run in a shared installed config starts
+// the same whatever a run before it saved: a crossing run that ends with crossings off never leaves the next one off.
+test("A9.harness: seedSettings sets the theme, and crossings and size at their defaults, under each of the three keys the plugin's options may be read from (E4)", () => {
+  const each = (theme: string) => ({ options: { theme, crossings: 'on', size: 'compact' } })
   assert.deepEqual(JSON.parse(seedSettings('nord')), {
     pluginConfigs: {
       'mermaid-tty': each('nord'),
