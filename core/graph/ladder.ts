@@ -54,8 +54,10 @@ export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
 }
 
 // One try at wrapAt: build the graph, add its notes, lay it out at 0, then 2, then 4 extra cells of rank and node gap
-// while routing conflicts, draw it, stack the title above, then the legend below. Build runs once per layout, so each
-// retry starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing keyable fails 'step'.
+// while routing conflicts, draw it, stack the title above, then the legend below. Only when all three conflict do the
+// three gaps run again with the search's rescue on, so a graph that routes without it keeps the same drawing. Build
+// runs once per layout, so each retry starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing
+// keyable fails 'step'.
 function attempt(
   build: Build,
   dir: Dir,
@@ -66,7 +68,14 @@ function attempt(
   title: string | null,
 ): Drawing | Fail {
   let last: Fail = fail('route-conflict')
-  for (const extra of [0, 2, 4]) {
+  for (const [extra, rescue] of [
+    [0, false],
+    [2, false],
+    [4, false],
+    [0, true],
+    [2, true],
+    [4, true],
+  ] as const) {
     const b = build({ dir, keyed, wrapAt })
     if (isFail(b)) {
       return b
@@ -85,7 +94,7 @@ function attempt(
       return placed
     }
 
-    const routes = routeGraph(placed)
+    const routes = routeGraph(placed, rescue)
     if (isFail(routes)) {
       if (routes.reason !== 'route-conflict') {
         return routes

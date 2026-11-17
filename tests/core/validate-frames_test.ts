@@ -290,15 +290,17 @@ test('An edge through a frame that holds neither of its ends fails edge-crosses-
   // framed(straight) above is the passing case: F holds one end, and the edge crosses its border once.
   assert.equal(validate(framed(straight)), null)
 })
-// The two-subgraph LR chart (case 2) at 80 columns: the dotted W2 → Job queue edge enters Data tier, which holds
-// neither end, and leaves through its right wall. Every step of the ladder draws a frame crossed so, or another broken
-// drawing, so the fence falls back.
-test('The two-subgraph LR chart at 80 columns, its dotted edge crossing Data tier, falls back', () => {
+// The two-subgraph LR chart (case 2) at 80 columns: Data tier holds neither end of the dotted W2 → Job queue edge, so
+// that edge must never cross its border. The drawing routes it around Data tier, and validate accepts it.
+test('The two-subgraph LR chart at 80 columns draws, its dotted edge kept out of Data tier', () => {
   const src =
     'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
     '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
+
   const r = explain(src, { columns: 80 })
-  assert.ok(!('drawing' in r), 'drawing' in r ? show(r.drawing) : '')
+
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(validate(r.drawing), null, show(r.drawing))
 })
 // An edge whose end is the frame itself is not exempt from every crossing. Only its mark, which meets the border from
 // outside, is the frame's; its line obeys the rule like any other, so a self-loop on S stays outside S. Here S-->S ran

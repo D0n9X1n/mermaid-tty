@@ -74,9 +74,9 @@ Stage interfaces return a `Fail`, a short reason. Some parsers use an internal `
 | `main-axis.ts` | The main axis: each rank's band and its gaps. A fan-out entering and bypassing a new cluster gets two cells outside its border for a turn and arrow stem; its incoming channel stays inside. |
 | `sizes.ts` | Box sizes: a node's widest label piece, its pads and its caps. |
 | `gaps.ts` | The gaps between rank bands, read back for the router. |
-| `route.ts` | The router: orthogonal routes, by a weighted Manhattan search with a shared budget. If outside lanes fail for back edges sharing an endpoint, bounded general search tries other attachment slots while preserving labels and waypoints. |
+| `route.ts` | The router: orthogonal routes, by a weighted Manhattan search with a shared budget. If outside lanes fail for back edges sharing an endpoint, bounded general search tries other attachment slots while preserving labels and waypoints. When an edge runs the budget out, a rescue pass refills it once and splits it across that edge's source slots, so one slot that reaches no target cannot starve the rest. |
 | `draw.ts` | A placed, routed graph drawn on the canvas: nodes, frames, routes and labels. |
-| `ladder.ts` | Shared `natural`, `tight`, `wrap`, conditional `lrToTd` and `keyed` steps; retries routing with extra gaps. |
+| `ladder.ts` | Shared `natural`, `tight`, `wrap`, conditional `lrToTd` and `keyed` steps; retries routing with extra gaps, then, only if every gap conflicts, with the router's rescue on. |
 | `members.ts` | Class member rows and ER attribute columns, with owner ids and fixed wrapping. |
 | `notes.ts` | Side notes, or separate note nodes with dotted links for horizontal graphs. |
 

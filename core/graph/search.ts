@@ -27,6 +27,8 @@ import {
 } from './route-base.ts'
 import type { Point, Route, Segment } from './route-base.ts'
 
+const BUDGET = 5000
+
 // The cell just outside box b on face (0 above, 1 right, 2 below, 3 left), at slot i along that face.
 function slotCell(b: Box, face: number, i: number): Point {
   if (face === 0) {
@@ -52,7 +54,15 @@ const ALONG: readonly ((a: Point, b: Point) => number)[] = [
   (a, b) => b.c - a.c,
 ]
 
-export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = []): Route[] | Fail {
+// Every edge's path searches share one budget of BUDGET steps, so a dense graph fails fast instead of searching on. The
+// first source slot an edge tries can spend all of it on targets it never reaches; with rescue, the edge that runs out
+// gets one refill, split evenly across its source slots, so the later slots get their turn.
+export function searchRoutes(
+  p: Placed,
+  constrainedFirst = false,
+  reserved: Route[] = [],
+  rescue = false,
+): Route[] | Fail {
   const groups = mergeGroups(p)
   const edges = p.graph.edges.filter((e) => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   if (constrainedFirst) {
@@ -67,7 +77,8 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
 
   const routes: Route[] = []
   const ports = new Map<string, Point>()
-  const budget = { left: 5000 }
+  const budget = { left: BUDGET }
+  let rescued = false
   type Used = Segment & { from: string; to: string; ch?: string }
   const occupied = new Map<string, Used[]>()
   const protectedCells = new Set<string>()
@@ -457,32 +468,44 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
     const targets = candidates(e.to, e.style, e.head, back(preferred), portOf(groups, e, 'head'), true, e.from).filter(
       (port) => !fanInOut || preferred % 2 !== 0 || port.face === back(preferred),
     )
-    let result: { route: Route; source: Port; target: Port } | null = null
-    for (const source of sources) {
-      // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight.
-      const faces = [...new Set(targets.map((t) => t.face))]
-      const off = (t: Port) => (t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c))
-      for (const target of e.reversed
-        ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v))
-        : targets) {
+    // The first slot pair that routes, trying sources in order. With share, each source slot may spend at most its
+    // share of the budget, so one slot that can reach no target cannot spend what the others need.
+    const first = (share: number | null): { route: Route; source: Port; target: Port } | null => {
+      for (const source of sources) {
+        const floor = share === null ? 0 : Math.max(0, budget.left - share)
+        // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight.
+        const faces = [...new Set(targets.map((t) => t.face))]
+        const off = (t: Port) => (t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c))
+        for (const target of e.reversed
+          ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v))
+          : targets) {
+          if (budget.left <= floor) {
+            break
+          }
+
+          if (keyOf(source.at) === keyOf(target.at)) {
+            continue
+          }
+
+          const route = tryRoute(e, source, target)
+          if (route) {
+            return { route, source, target }
+          }
+        }
+
         if (budget.left <= 0) {
-          return fail('route-conflict')
-        }
-
-        if (keyOf(source.at) === keyOf(target.at)) {
-          continue
-        }
-
-        const route = tryRoute(e, source, target)
-        if (route) {
-          result = { route, source, target }
-          break
+          return null
         }
       }
 
-      if (result) {
-        break
-      }
+      return null
+    }
+    let result = first(null)
+    // The budget ran out on this edge: once per search, refill it and share it out across this edge's source slots.
+    if (!result && rescue && budget.left <= 0 && !rescued) {
+      rescued = true
+      budget.left = BUDGET
+      result = first(Math.floor(BUDGET / Math.max(1, sources.length)))
     }
 
     if (!result) {

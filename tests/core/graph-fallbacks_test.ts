@@ -46,3 +46,45 @@ test('a class diagram with 40 labelled relations still draws: end-label placemen
   const r = explain(src, { columns: 160 })
   assert.ok(!isFail(r), JSON.stringify(r))
 })
+
+test('a line whose first source slot reaches no target still draws: that slot cannot spend the search other slots need', () => {
+  const src = [
+    'flowchart LR',
+    '  U[Client application user]',
+    '  subgraph REQ["Regional request path - held for approval"]',
+    '    S[Chat front end - held until approval]',
+    '    E[Identity login.region.example]',
+    '    W[Gateway service - shard alpha beta]',
+    '    DS[Directory Service]',
+    '    I[Index service region]',
+    '    M[Mailbox service region]',
+    '  end',
+    '  subgraph TEL["Regional telemetry"]',
+    '    G[Collector pipeline region one]',
+    '    K[Query cluster - inferred]',
+    '    A[Archive storage regionlogs]',
+    '  end',
+    '  subgraph PUB["Public cloud"]',
+    '    C[Cosmos store prod collector log]',
+    '    WD[Processor job process log - to confirm]',
+    '  end',
+    '  U --> S',
+    '  S --> W',
+    '  W -.-> E',
+    '  W --> DS',
+    '  W --> M',
+    '  W --> I',
+    '  W -.-> G',
+    '  G -.-> K',
+    '  G -.-> A',
+    '  G -.-> C',
+    '  W -.-> WD',
+  ].join('\n')
+
+  const drawn = [160, 200].map((columns) => {
+    const r = explain(src, { columns })
+    return isFail(r) ? `${columns}: ${r.reason}` : `${columns}: ok`
+  })
+
+  assert.deepEqual(drawn, ['160: ok', '200: ok'])
+})

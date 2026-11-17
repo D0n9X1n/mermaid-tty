@@ -342,15 +342,15 @@ test('A5.errors: matrix row flowchart-reject-02, a subgraph with no end, falls b
 })
 
 // An LR chart with two subgraphs. Case 1 (flowchart-reject-06) can reach Data tier only by crossing it more than once
-// or not at all, so it falls back at every width. Case 2 draws left to right at 120, each edge crossing a frame once;
-// at 80 and 60 every step crosses Data tier wrongly or conflicts, so it falls back rather than draw a broken frame.
-test('An LR chart with two subgraphs, case 2, draws at 120 columns and falls back at 80 and 60', () => {
+// or not at all, so it falls back at every width. Case 2 draws at 120, 80 and 60, each edge crossing a frame once: at
+// 80 and 60 the search's rescue routes the dotted W2 → Job queue edge around Data tier rather than through it.
+test('An LR chart with two subgraphs, case 2, draws at 120, 80 and 60 columns', () => {
   const src =
     'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +
     '  subgraph data [Data tier]\n    Cache[(Redis)]\n    DB[(Postgres)]\n  end\n  W1 --> Cache\n  W2 --> DB\n  W2 -.-> Q>Job queue] --> Worker[[Worker]]\n'
-  const wide = explain(src, { columns: 120 })
-  assert.ok('drawing' in wide && validate(wide.drawing) === null)
-  for (const columns of [60, 80]) {
-    assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
+  for (const columns of [120, 80, 60]) {
+    const r = explain(src, { columns })
+
+    assert.ok('drawing' in r && validate(r.drawing) === null, `${columns}`)
   }
 })
