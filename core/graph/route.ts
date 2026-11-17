@@ -13,15 +13,15 @@ export type { Route } from './route-base.ts'
 
 // May extend rows/cols for exterior routing lanes; node, label and frame boxes never move. A back edge with no dummy
 // and no label routes first with the forward edges, in the nearest free column, so a 2-cycle draws as two parallel
-// edges, not a long detour; else, as each back edge with a dummy or label, in an outside lane. rescue lets the search
-// router refill its budget once and share it across the source slots of the edge that ran out (searchRoutes).
-export function routeGraph(p: Placed, rescue = false): Route[] | Fail {
+// edges, not a long detour; else, as each back edge with a dummy or label, in an outside lane. work, a rescue pass's
+// shared budget, bounds every path search and lets the search router refill its own budget once (searchRoutes).
+export function routeGraph(p: Placed, work?: { left: number }): Route[] | Fail {
   const backs = p.graph.edges.filter((e) => e.reversed && e.style !== 'invisible')
   const laned = (e: GEdge) =>
     p.boxes.has(`${e.id}:label`) || [...p.boxes.keys()].some((id) => id.startsWith(`${e.id}#`))
   if (backs.some((e) => !laned(e))) {
     const trial = { ...p }
-    const rs = routeWith(trial, backs.filter(laned), rescue)
+    const rs = routeWith(trial, backs.filter(laned), work)
     if (Array.isArray(rs)) {
       p.rows = trial.rows
       p.cols = trial.cols
@@ -29,7 +29,7 @@ export function routeGraph(p: Placed, rescue = false): Route[] | Fail {
     }
   }
 
-  const routed = routeWith(p, backs, rescue)
+  const routed = routeWith(p, backs, work)
   const sharedEnd = backs.some((a) => backs.some((b) => a !== b && (a.from === b.from || a.to === b.to)))
   if (Array.isArray(routed) || !sharedEnd) {
     return routed
@@ -37,18 +37,18 @@ export function routeGraph(p: Placed, rescue = false): Route[] | Fail {
 
   // Outside lanes use each face's middle. Shared back-edge endpoints may need separate slots on other faces; the
   // bounded general search can use those slots while still obeying the dummy and label waypoints.
-  const searched = searchRoutes(p, false, [], rescue)
-  return Array.isArray(searched) ? searched : searchRoutes(p, true, [], rescue)
+  const searched = searchRoutes(p, false, [], work)
+  return Array.isArray(searched) ? searched : searchRoutes(p, true, [], work)
 }
 
 // The edges in outside routed in outside lanes, the rest by channels, else by search.
-function routeWith(p: Placed, outside: readonly GEdge[], rescue: boolean): Route[] | Fail {
+function routeWith(p: Placed, outside: readonly GEdge[], work: { left: number } | undefined): Route[] | Fail {
   const ids = new Set(outside.map((e) => e.id))
   const byOrder = (a: Route, b: Route) =>
     p.graph.edges.find((e) => e.id === a.edge)!.order - p.graph.edges.find((e) => e.id === b.edge)!.order
   if (outside.length) {
     const forward = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter((e) => !ids.has(e.id)) } }
-    const rs = routeWith(forward, [], rescue)
+    const rs = routeWith(forward, [], work)
     p.rows = Math.max(p.rows, forward.rows)
     p.cols = Math.max(p.cols, forward.cols)
     if (!Array.isArray(rs)) {
@@ -57,7 +57,7 @@ function routeWith(p: Placed, outside: readonly GEdge[], rescue: boolean): Route
 
     let needsReservation = false
     for (const e of outside) {
-      const route = outsideRoute(p, e, rs)
+      const route = outsideRoute(p, e, rs, work)
       if (!route) {
         needsReservation = true
         break
@@ -69,7 +69,7 @@ function routeWith(p: Placed, outside: readonly GEdge[], rescue: boolean): Route
     if (needsReservation) {
       const lanes: Route[] = []
       for (const e of outside) {
-        const route = outsideRoute(p, e, lanes)
+        const route = outsideRoute(p, e, lanes, work)
         if (!route) {
           return fail('route-conflict')
         }
@@ -78,7 +78,7 @@ function routeWith(p: Placed, outside: readonly GEdge[], rescue: boolean): Route
       }
 
       const reserved = { ...p, graph: { ...p.graph, edges: p.graph.edges.filter((e) => !ids.has(e.id)) } }
-      const remaining = searchRoutes(reserved, false, lanes, rescue)
+      const remaining = searchRoutes(reserved, false, lanes, work)
       p.rows = Math.max(p.rows, reserved.rows)
       p.cols = Math.max(p.cols, reserved.cols)
       if (!Array.isArray(remaining)) {
@@ -96,6 +96,6 @@ function routeWith(p: Placed, outside: readonly GEdge[], rescue: boolean): Route
     return fast
   }
 
-  const searched = searchRoutes(p, false, [], rescue)
-  return Array.isArray(searched) ? searched : searchRoutes(p, true, [], rescue)
+  const searched = searchRoutes(p, false, [], work)
+  return Array.isArray(searched) ? searched : searchRoutes(p, true, [], work)
 }

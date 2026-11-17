@@ -54,10 +54,9 @@ export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
 }
 
 // One try at wrapAt: build the graph, add its notes, lay it out at 0, then 2, then 4 extra cells of rank and node gap
-// while routing conflicts, draw it, stack the title above, then the legend below. Only when all three conflict do the
-// three gaps run again with the search's rescue on, so a graph that routes without it keeps the same drawing. Build
-// runs once per layout, so each retry starts fresh. Any Fail but a route-conflict returns at once; keyed with nothing
-// keyable fails 'step'.
+// while routing conflicts, draw it, stack the title above, then the legend below. work, a rescue pass's budget, goes to
+// the router, and the try stops once it is spent (routeGraph). Build runs once per layout, so each retry starts fresh.
+// Any Fail but a route-conflict returns at once; keyed with nothing keyable fails 'step'.
 function attempt(
   build: Build,
   dir: Dir,
@@ -66,16 +65,14 @@ function attempt(
   wrapAt: number | null,
   columns: number,
   title: string | null,
+  work: { left: number } | undefined,
 ): Drawing | Fail {
   let last: Fail = fail('route-conflict')
-  for (const [extra, rescue] of [
-    [0, false],
-    [2, false],
-    [4, false],
-    [0, true],
-    [2, true],
-    [4, true],
-  ] as const) {
+  for (const extra of [0, 2, 4]) {
+    if (work && work.left <= 0) {
+      return last
+    }
+
     const b = build({ dir, keyed, wrapAt })
     if (isFail(b)) {
       return b
@@ -94,7 +91,7 @@ function attempt(
       return placed
     }
 
-    const routes = routeGraph(placed, rescue)
+    const routes = routeGraph(placed, work)
     if (isFail(routes)) {
       if (routes.reason !== 'route-conflict') {
         return routes
@@ -120,8 +117,17 @@ function attempt(
 }
 
 // step's drawing at columns: each of its wrapAt tries in order, the first drawing validate accepts, else the last try.
-// lrToTd and keyed draw LR as TB and RL as BT; only keyed builds keyed. A step off the graph ladder fails 'step'.
-export function drawAt(build: Build, dir: Dir, step: Step, columns: number, title: string | null): Drawing | Fail {
+// lrToTd and keyed draw LR as TB and RL as BT; only keyed builds keyed. A step off the graph ladder fails 'step'. With
+// work, every try routes on the rescue pass's shared budget: a graph module's rescue layout, which fitLadder runs only
+// after every step failed without it, so a drawing the normal ladder finds is never replaced.
+export function drawAt(
+  build: Build,
+  dir: Dir,
+  step: Step,
+  columns: number,
+  title: string | null,
+  work?: { left: number },
+): Drawing | Fail {
   if (!isGraphStep(step)) {
     return fail('step')
   }
@@ -134,7 +140,7 @@ export function drawAt(build: Build, dir: Dir, step: Step, columns: number, titl
   const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
   let last: Drawing | Fail = fail('too-wide')
   for (const wrapAt of wraps) {
-    last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title)
+    last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title, work)
     if (!isFail(last) && validate(last) === null) {
       return last
     }

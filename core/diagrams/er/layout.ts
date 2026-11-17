@@ -110,6 +110,7 @@ export const er: DiagramModule<ErModel> = {
   parse,
   steps: (m) => graphSteps(m.dir, true),
   layout: (m, step, columns) => drawAt((o) => build(m, o), m.dir, step, columns, m.title),
+  rescue: (m, step, columns, work) => drawAt((o) => build(m, o), m.dir, step, columns, m.title, work),
 }
 
 register(er as DiagramModule)

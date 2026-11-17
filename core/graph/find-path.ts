@@ -14,7 +14,9 @@ export const back = (d: number) => (d + 2) % 4
 const bits = [1, 2, 4, 8]
 type SearchCell = Point & { direction: number; previous: number }
 
-// Weighted Manhattan search with directional states and a shared expansion budget. Never exponential.
+// Weighted Manhattan search with directional states and a shared expansion budget. Never exponential. work, when given,
+// is a second budget shared by every search of a rescue pass: each expansion takes one from it too, and the search
+// stops, never taking it below zero, once it is spent.
 export function findPath(
   start: Port,
   end: Port,
@@ -23,6 +25,7 @@ export function findPath(
   rows: number,
   cols: number,
   budget: { left: number },
+  work?: { left: number },
 ): Point[] | null {
   const queue: SearchCell[] = [{ ...start.at, direction: start.face, previous: -1 }]
   const seen = new Uint8Array(rows * cols * 4)
@@ -73,7 +76,11 @@ export function findPath(
   put(0)
   let found = -1
   let remaining = Math.min(1500, 200 + 8 * (Math.abs(start.at.r - end.at.r) + Math.abs(start.at.c - end.at.c)))
-  while (heap.length && remaining-- > 0 && budget.left-- > 0) {
+  while (heap.length && remaining-- > 0 && (work === undefined || work.left > 0) && budget.left-- > 0) {
+    if (work) {
+      work.left--
+    }
+
     const i = take()
     const c = queue[i]!
     if (c.r === end.at.r && c.c === end.at.c && allowed(c, bits[back(c.direction)]! | bits[end.face]!)) {

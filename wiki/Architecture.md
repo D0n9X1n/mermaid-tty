@@ -28,7 +28,7 @@ flowchart TD
 2. **Source.** `readSource` (`core/source.ts`) normalizes line endings and HTML attribute quotes, reads a strict subset of frontmatter title/config, checks directives and lexer-sensitive whitespace, and drops blank and `%%` comment lines. It returns the header, typed config scalars and remaining lines with source line numbers. `explain` then checks the title's text rules.
 3. **Lookup.** `lookup` (`core/registry.ts`) takes the header's first word, less a trailing `:`, and returns that type's module. Otherwise it fails with `unknown-type`, `fallback:<keyword>`, `disabled:<type>` or `unregistered:<type>`.
 4. **Parse.** The module's parser reads the lines into its model. A statement it can't read whole fails the block.
-5. **Fit ladder.** `fitLadder` (`core/fit.ts`) runs the module's steps in order. Each step lays the model out at the terminal's width and draws it; for a flowchart, that is layout, route and draw. `validate` checks the drawing, and the first drawing it accepts wins. `validate` measures row widths first, so a step too wide for the terminal is rejected before the costlier checks. If it accepts none, the result is the first reason that is not about width (`too-wide`, `row-too-wide` or `word-too-wide`), so the debug log names what kept a drawing that fitted off the screen; when width is all that failed, it is the last step's reason.
+5. **Fit ladder.** `fitLadder` (`core/fit.ts`) runs the module's steps in order. Each step lays the model out at the terminal's width and draws it; for a flowchart, that is layout, route and draw. `validate` checks the drawing, and the first drawing it accepts wins. `validate` measures row widths first, so a step too wide for the terminal is rejected before the costlier checks. If it accepts none, the result is the first reason that is not about width (`too-wide`, `row-too-wide` or `word-too-wide`), so the debug log names what kept a drawing that fitted off the screen; when width is all that failed, it is the last step's reason. Only after every step has failed does a graph type (flowchart, state, class, ER) run its steps again through its `rescue` layout, in the same order and under the same checks, and the first drawing it draws is taken. The whole rescue pass shares `RESCUE_WORK` (50,000) path-search expansions across every step, wrap, gap and search, and stops once they are spent, so a diagram no rescue can draw falls back after bounded extra work. A rescue that draws nothing leaves the steps' reason. Because the rescue runs last, a drawing the steps find never changes.
 6. **Rows.** `toRows` (`core/render.ts`) turns the drawing into rows of styled spans, in the theme's palette.
 7. **Hook.** The `ui.render` hook draws each row as a Claude Code `Text` line, with `wrap="truncate-end"`, between the prose around it.
 
@@ -43,7 +43,7 @@ Stage interfaces return a `Fail`, a short reason. Some parsers use an internal `
 | `render.ts` | The entry point: `explain`, `renderMermaid`, `toRows`, and `createRenderer`, the cached renderer the hook uses. |
 | `source.ts` | `readSource`: a block's header, frontmatter title and lines. |
 | `registry.ts` | Every header keyword and its type, `ENABLED`, `register` and `lookup`. |
-| `fit.ts` | `fitLadder`: tries a type's steps until `validate` accepts a drawing. |
+| `fit.ts` | `fitLadder`: tries a type's steps until `validate` accepts a drawing, then, if none did, its `rescue` layout for each step. |
 | `validate.ts` | The validator: the fail-closed gate between a layout and the screen. |
 | `canvas.ts` | The cell grid: each cell's glyph, role and owners, a write policy, and a conflict log. |
 | `glyphs.ts` | `GLYPHS`, the glyph allow-list, and the Box Drawing glyph for a cell's arms. |
@@ -74,9 +74,9 @@ Stage interfaces return a `Fail`, a short reason. Some parsers use an internal `
 | `main-axis.ts` | The main axis: each rank's band and its gaps. A fan-out entering and bypassing a new cluster gets two cells outside its border for a turn and arrow stem; its incoming channel stays inside. |
 | `sizes.ts` | Box sizes: a node's widest label piece, its pads and its caps. |
 | `gaps.ts` | The gaps between rank bands, read back for the router. |
-| `route.ts` | The router: orthogonal routes, by a weighted Manhattan search with a shared budget. If outside lanes fail for back edges sharing an endpoint, bounded general search tries other attachment slots while preserving labels and waypoints. When an edge runs the budget out, a rescue pass refills it once and splits it across that edge's source slots, so one slot that reaches no target cannot starve the rest. |
+| `route.ts` | The router: orthogonal routes, by a weighted Manhattan search with a shared budget. If outside lanes fail for back edges sharing an endpoint, bounded general search tries other attachment slots while preserving labels and waypoints. In a rescue, every path search also draws on the rescue pass's shared work, and the first edge that runs the budget out gets one refill and tries its source slots again. Each slot gets an even share of what is left, and that share bounds every path search the slot runs, so a slot that reaches no target cannot starve the rest. One search spends at most twice the budget. |
 | `draw.ts` | A placed, routed graph drawn on the canvas: nodes, frames, routes and labels. |
-| `ladder.ts` | Shared `natural`, `tight`, `wrap`, conditional `lrToTd` and `keyed` steps; retries routing with extra gaps, then, only if every gap conflicts, with the router's rescue on. |
+| `ladder.ts` | Shared `natural`, `tight`, `wrap`, conditional `lrToTd` and `keyed` steps; retries routing with extra gaps. `drawAt` with rescue routes every try with the router's rescue on; it is the graph types' `rescue` layout. |
 | `members.ts` | Class member rows and ER attribute columns, with owner ids and fixed wrapping. |
 | `notes.ts` | Side notes, or separate note nodes with dotted links for horizontal graphs. |
 

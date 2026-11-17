@@ -38,6 +38,7 @@ export const state: DiagramModule<StateModel> = {
   parse: parseState,
   steps: (m: StateModel): readonly Step[] => graphSteps(m.graph.dir, true),
   layout: (m, step, columns) => drawAt((o) => build(m, o), m.graph.dir, step, columns, m.title),
+  rescue: (m, step, columns, work) => drawAt((o) => build(m, o), m.graph.dir, step, columns, m.title, work),
 }
 
 register(state as DiagramModule)
