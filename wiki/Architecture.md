@@ -71,7 +71,7 @@ Stage interfaces return a `Fail`, a short reason. Some parsers use an internal `
 | `order.ts` | Order within ranks: barycenter sweeps; the order with the fewest crossings wins. |
 | `nest.ts` | One rank's order, each strip's items kept together. |
 | `cross.ts` | The cross axis: each rank packed, then items pulled toward their medians. |
-| `main-axis.ts` | The main axis: each rank's band, and the gaps between bands. |
+| `main-axis.ts` | The main axis: each rank's band and its gaps. A fan-out entering and bypassing a new cluster gets two cells outside its border for a turn and arrow stem; its incoming channel stays inside. |
 | `sizes.ts` | Box sizes: a node's widest label piece, its pads and its caps. |
 | `gaps.ts` | The gaps between rank bands, read back for the router. |
 | `route.ts` | The router: orthogonal routes, by a weighted Manhattan search with a shared budget. |

@@ -52,7 +52,31 @@ export function place(
   const x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
   const heights = placed.map((r) => Math.max(...r.map((i) => i.main)))
   const channel = channels(tracks(placed, level.segs), gap.rankGap)
-  const b = borders(span, (c) => path(c).length, channel, placed.length)
+  // Labels and dummies can place the branches in different gaps. Classify a fan-out by its real endpoints so the strip
+  // still leaves an exterior turn when its sibling branch ends before the first internal node's rank.
+  const items = new Map(placed.flat().map((item) => [item.id, item]))
+  const exterior = new Set<number>()
+  for (const [cluster, [lo]] of span) {
+    if (lo === 0) {
+      continue
+    }
+
+    const held = (id: string) => path(items.get(id)!.owner).includes(cluster)
+    const branches = new Map<string, number>()
+    for (const edge of level.edges) {
+      if (items.get(edge.from)!.rank >= lo || held(edge.from)) {
+        continue
+      }
+
+      branches.set(edge.from, (branches.get(edge.from) ?? 0) | (held(edge.to) ? 1 : 2))
+    }
+
+    if ([...branches.values()].includes(3)) {
+      exterior.add(lo)
+    }
+  }
+
+  const b = borders(span, (c) => path(c).length, channel, placed.length, exterior)
   if (across) {
     for (const [c, w] of [...fits].sort(([a], [z]) => path(z).length - path(a).length)) {
       const [lo, hi] = span.get(c)!
