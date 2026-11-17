@@ -1,10 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas, type Drawing } from '../../core/canvas.ts'
-import { fail, type Fail } from '../../core/fail.ts'
-import { fitLadder, type Step } from '../../core/fit.ts'
+import { fail, isFail, type Fail } from '../../core/fail.ts'
+import { fitLadder, RESCUE_WORK, type Step } from '../../core/fit.ts'
+import { flowchart } from '../../core/diagrams/flowchart/layout.ts'
+import type { Graph } from '../../core/graph/model.ts'
 import { lookup, type DiagramModule } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'
+import { readSource, type Source } from '../../core/source.ts'
+import { validate } from '../../core/validate.ts'
 import { text } from './graph-fixture.ts'
 
 // A fake type whose model lists what each step draws, normally and with the rescue: a one-row label n cells wide, or a
@@ -130,8 +134,8 @@ test('only the graph types have a rescue', () => {
   assert.deepEqual(rescued, ['flowchart', 'stateDiagram-v2', 'classDiagram', 'erDiagram'])
 })
 
-// This chart fits at wrap with wrapAt 16 and no rescue. The rescue routes it at a wider wrapAt, which must not win: a
-// drawing the normal ladder finds stays exactly as it was.
+// This chart fits at wrap without the rescue. At that step the rescue draws a valid but different drawing, which must
+// not win: a drawing the normal ladder finds is shown exactly as the ladder draws it without any rescue.
 const FITS_NORMALLY = [
   'flowchart LR',
   '  U[Client application user]',
@@ -165,44 +169,29 @@ const FITS_NORMALLY = [
   '  W -.-> WD',
 ].join('\n')
 
-test('a chart the normal ladder draws keeps that exact drawing at 160 columns', () => {
-  const r = explain(FITS_NORMALLY, { columns: 160 })
+test('a chart the normal ladder draws keeps that drawing at 160 columns, and the rescue never runs', () => {
+  const model = flowchart.parse(readSource(FITS_NORMALLY) as Source) as Graph
+  const { rescue, ...normal } = flowchart
+  const calls: Step[] = []
+  const spied: DiagramModule<Graph> = {
+    ...flowchart,
+    rescue: (m, step, columns, work) => {
+      calls.push(step)
+      return rescue!(m, step, columns, work)
+    },
+  }
 
-  assert.ok('drawing' in r, JSON.stringify(r))
-  assert.equal(r.step, 'wrap')
-  assert.deepEqual(text(r.drawing), [
-    '                    ┌─Regional request path - held for approval──────────────────────────────┐',
-    '                    │                                                                        │',
-    '[      Client      ]──┐                                                 ┌┄►[  Identity   ]   │',
-    '[ application user ]│ │                                                 ┆  [ login.regio ]   │',
-    '                    │ │  [ Chat front end - ]                           ┆                    │',
-    '                    │ └─►[    held until    ]─┐                        ┌┼──►[ Directory ]    │',
-    '                    │    [     approval     ] │                        │┆   [  Service  ]    │',
-    '                    │                         │  [ Gateway service ]   │┆                    │',
-    '                    │                         └─►[  - shard alpha  ]┄┬┄┼┘ [ Index service ]  │',
-    '                    │                            [      beta       ]─┼┬┴─►[    region     ]  │',
-    '                    │                                     ┆          ┆│                      │',
-    '                    │                                     ┆          ┆└─►[ Mailbox service ] │',
-    '                    │                                     ┆          ┆   [     region      ] │',
-    '                    │                                     ┆          ┆                       │',
-    '                    └─────────────────────────────────────┆──────────┆───────────────────────┘',
-    '                                                          ┆          ┆',
-    '                                                          ┆         ┌┆Regional telemetry─────────────────────────────┐',
-    '                                                          ┆         │┆                                               │',
-    '                                                          ┆         │┆                         ┌┄►[ Query cluster - ]│',
-    '                                                          ┆         │┆   [    Collector    ]   ┆  [    inferred     ]│',
-    '                                                          ┆         │└┄┄►[ pipeline region ]┄┄┄┤                     │',
-    '                                                          ┆         │    [       one       ]   ├┄►[ Archive storage ]│',
-    '                                                          ┆         │                          ┆  [   regionlogs    ]│',
-    '                                                          ┆         │                          ┆                     │',
-    '                                                          ┆         └──────────────────────────┆─────────────────────┘',
-    '                                                          ┆                                    ┆',
-    '                                                          ┆         ┌─Public cloud─────────────┆─────────────────────┐',
-    '                                                          ┆         │                          ┆                     │',
-    '                                                          ┆         │    [  Processor job   ]  ┆  [  Cosmos store  ] │',
-    '                                                          └┄┄┄┄┄┄┄┄┄┄┄┄┄►[ process log - to ]  └┄►[ prod collector ] │',
-    '                                                                    │    [     confirm      ]     [      log       ] │',
-    '                                                                    │                                                │',
-    '                                                                    └────────────────────────────────────────────────┘',
-  ])
+  const alone = fitLadder(normal, model, 160)
+  const fitted = fitLadder(spied, model, 160)
+  const shown = explain(FITS_NORMALLY, { columns: 160 })
+  const rescued = rescue!(model, 'wrap', 160, { left: RESCUE_WORK })
+
+  assert.ok('drawing' in alone, JSON.stringify(alone))
+  assert.equal(alone.step, 'wrap')
+  assert.deepEqual(fitted, alone)
+  assert.deepEqual(shown, alone)
+  assert.deepEqual(calls, [])
+  assert.ok(!isFail(rescued), JSON.stringify(rescued))
+  assert.equal(validate(rescued), null)
+  assert.notDeepEqual(text(rescued), text(alone.drawing))
 })
