@@ -28,7 +28,16 @@ export function routeGraph(p: Placed): Route[] | Fail {
     }
   }
 
-  return routeWith(p, backs)
+  const routed = routeWith(p, backs)
+  const sharedEnd = backs.some((a) => backs.some((b) => a !== b && (a.from === b.from || a.to === b.to)))
+  if (Array.isArray(routed) || !sharedEnd) {
+    return routed
+  }
+
+  // Outside lanes use each face's middle. Shared back-edge endpoints may need separate slots on other faces; the
+  // bounded general search can use those slots while still obeying the dummy and label waypoints.
+  const searched = searchRoutes(p)
+  return Array.isArray(searched) ? searched : searchRoutes(p, true)
 }
 
 // The edges in outside routed in outside lanes, the rest by channels, else by search.
