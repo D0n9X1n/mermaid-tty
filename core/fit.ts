@@ -22,11 +22,18 @@ export type Step =
 // often fail for width alone; that says nothing about why a wider step that fitted was rejected.
 const WIDTH = new Set(['too-wide', 'row-too-wide', 'word-too-wide'])
 
+// The path-search expansions one fitLadder call's whole rescue pass may spend, across every step, wrap, gap and search.
+// A rescue that draws needs well under this; one that cannot stops here instead of searching on.
+export const RESCUE_WORK = 50000
+
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a
 // wider claim would pass it), or when validate rejects its drawing. If every step is skipped, the first reason that is
 // not about width, so the debug log names what kept a fitting drawing off the screen; the last step's reason when width
-// is all that failed; 'too-wide' when the ladder has no step.
+// is all that failed; 'too-wide' when the ladder has no step. Only then, if the type has a rescue, each step runs again
+// through it, in order, under the same checks, until RESCUE_WORK expansions are spent; the first it draws is taken.
+// Running it last keeps every drawing the steps find exactly as it is, and a rescue that draws nothing leaves the
+// steps' reason.
 export function fitLadder<M>(
   mod: DiagramModule<M>,
   model: M,
@@ -43,19 +50,37 @@ export function fitLadder<M>(
 
   for (const step of mod.steps(model)) {
     const drawing = mod.layout(model, step, columns)
-    if (isFail(drawing)) {
-      skip(drawing)
-      continue
-    }
-
-    const rejected = drawing.columns !== columns ? fail('columns-mismatch') : validate(drawing)
+    const rejected = check(drawing, columns)
     if (rejected) {
       skip(rejected)
       continue
     }
 
-    return { step, drawing }
+    return { step, drawing: drawing as Drawing }
+  }
+
+  const work = { left: RESCUE_WORK }
+  for (const step of mod.rescue ? mod.steps(model) : []) {
+    if (work.left <= 0) {
+      break
+    }
+
+    const drawing = mod.rescue!(model, step, columns, work)
+    if (!check(drawing, columns)) {
+      return { step, drawing: drawing as Drawing }
+    }
   }
 
   return cause ?? last
+}
+
+// Why a layout's result is not a drawing to show: its own Fail, columns-mismatch when it declares other columns than it
+// was given (validate measures rows against the drawing's own columns, so a wider claim would pass it), or what
+// validate rejects; null when it is one.
+function check(drawing: Drawing | Fail, columns: number): Fail | null {
+  if (isFail(drawing)) {
+    return drawing
+  }
+
+  return drawing.columns !== columns ? fail('columns-mismatch') : validate(drawing)
 }

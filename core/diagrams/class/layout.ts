@@ -142,6 +142,7 @@ export const classDiagram: DiagramModule<ClassModel> = {
   parse,
   steps: (m: ClassModel) => graphSteps(m.dir, items(m).length > 0),
   layout: (m, step, columns) => drawAt(build(m), m.dir, step, columns, m.title),
+  rescue: (m, step, columns, work) => drawAt(build(m), m.dir, step, columns, m.title, work),
 }
 
 register(classDiagram as DiagramModule)

@@ -20,7 +20,7 @@ import {
 } from './route-base.ts'
 import type { Point, Route } from './route-base.ts'
 
-export function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null {
+export function outsideRoute(p: Placed, e: GEdge, routes: Route[], work?: { left: number }): Route | null {
   const a = p.boxes.get(e.from) ?? p.frames.get(e.from)
   const b = p.boxes.get(e.to) ?? p.frames.get(e.to)
   if (!a || !b) {
@@ -164,6 +164,7 @@ export function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null
         rows,
         cols,
         budget,
+        work,
       )
       if (!first) {
         continue
@@ -183,6 +184,7 @@ export function outsideRoute(p: Placed, e: GEdge, routes: Route[]): Route | null
         rows,
         cols,
         budget,
+        work,
       )
       if (!last) {
         continue

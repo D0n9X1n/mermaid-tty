@@ -52,7 +52,18 @@ const ALONG: readonly ((a: Point, b: Point) => number)[] = [
   (a, b) => b.c - a.c,
 ]
 
-export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Route[] = []): Route[] | Fail {
+// Every path search in one call shares a budget of 5000 steps, so a dense graph fails fast instead of searching on. An
+// edge's first source slot may spend all of it on targets it never reaches. With work, the rescue pass's shared budget,
+// the first edge that runs it out gets one refill of 5000 and tries its source slots again, each held to an even share
+// of what is left over the slots not yet tried, so a later slot gets its turn. A slot's share bounds every path search
+// it runs, and what it spends, its one step past zero included, comes off the shared budget; so one call spends at most
+// twice 5000 steps. Every step, the refill's too, also comes off work, and the search stops when work is spent.
+export function searchRoutes(
+  p: Placed,
+  constrainedFirst = false,
+  reserved: Route[] = [],
+  work?: { left: number },
+): Route[] | Fail {
   const groups = mergeGroups(p)
   const edges = p.graph.edges.filter((e) => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   if (constrainedFirst) {
@@ -68,6 +79,7 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
   const routes: Route[] = []
   const ports = new Map<string, Point>()
   const budget = { left: 5000 }
+  let refilled = false
   type Used = Segment & { from: string; to: string; ch?: string }
   const occupied = new Map<string, Used[]>()
   const protectedCells = new Set<string>()
@@ -201,7 +213,8 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
 
     return out
   }
-  const tryRoute = (e: GEdge, source: Port, target: Port): Route | null => {
+  // spend is the budget this try's path searches draw on: the shared one, or in the refill the source slot's share.
+  const tryRoute = (e: GEdge, source: Port, target: Port, spend: { left: number }): Route | null => {
     const vertical = p.graph.dir === 'TB' || p.graph.dir === 'BT'
     const label = p.boxes.get(`${e.id}:label`)
     const ink = labelInk(p, e)
@@ -368,7 +381,8 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
         },
         Math.max(maxR, current.r + 3, stop.r + 3),
         Math.max(maxC, current.c + 3, stop.c + 3),
-        budget,
+        spend,
+        work,
       )
       if (!part) {
         return null
@@ -457,32 +471,54 @@ export function searchRoutes(p: Placed, constrainedFirst = false, reserved: Rout
     const targets = candidates(e.to, e.style, e.head, back(preferred), portOf(groups, e, 'head'), true, e.from).filter(
       (port) => !fanInOut || preferred % 2 !== 0 || port.face === back(preferred),
     )
-    let result: { route: Route; source: Port; target: Port } | null = null
-    for (const source of sources) {
-      // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight.
-      const faces = [...new Set(targets.map((t) => t.face))]
-      const off = (t: Port) => (t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c))
-      for (const target of e.reversed
-        ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v))
-        : targets) {
-        if (budget.left <= 0) {
-          return fail('route-conflict')
+    // The first slot pair that routes, trying sources in order; null when none does or the budget runs out. shared:
+    // every slot draws on the whole budget; else each on its share.
+    const first = (shared: boolean): { route: Route; source: Port; target: Port } | null => {
+      for (const [i, source] of sources.entries()) {
+        const spend = shared ? budget : { left: Math.floor(budget.left / (sources.length - i)) }
+        const share = spend.left
+        // A back edge routed here takes the nearest slot across from its source on each face, so it runs straight.
+        const faces = [...new Set(targets.map((t) => t.face))]
+        const off = (t: Port) => (t.face % 2 ? Math.abs(t.at.r - source.at.r) : Math.abs(t.at.c - source.at.c))
+        let found: { route: Route; source: Port; target: Port } | null = null
+        for (const target of e.reversed
+          ? targets.toSorted((u, v) => faces.indexOf(u.face) - faces.indexOf(v.face) || off(u) - off(v))
+          : targets) {
+          if (budget.left <= 0 || (work && work.left <= 0)) {
+            return null
+          }
+
+          if (spend.left <= 0) {
+            break
+          }
+
+          if (keyOf(source.at) === keyOf(target.at)) {
+            continue
+          }
+
+          const route = tryRoute(e, source, target, spend)
+          if (route) {
+            found = { route, source, target }
+            break
+          }
         }
 
-        if (keyOf(source.at) === keyOf(target.at)) {
-          continue
+        if (!shared) {
+          budget.left -= share - spend.left
         }
 
-        const route = tryRoute(e, source, target)
-        if (route) {
-          result = { route, source, target }
-          break
+        if (found) {
+          return found
         }
       }
 
-      if (result) {
-        break
-      }
+      return null
+    }
+    let result = first(true)
+    if (!result && work && work.left > 0 && budget.left <= 0 && !refilled) {
+      refilled = true
+      budget.left = 5000
+      result = first(false)
     }
 
     if (!result) {
