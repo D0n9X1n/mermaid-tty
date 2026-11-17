@@ -7,47 +7,42 @@
 │        │         │
 │        ▼         │
 │   [ Compile ]    │
-│        │         │
 │       ┌┘         │
 │       │          │
 │       ▼          │
 │ [ Unit tests ]   │
 └─────────│────────┘
 ┌─Verify──│─────────────┐
-│         │             │
 │        ┌┘             │
 │        │              │
 │        ▼              │
 │     [ Lint ]          │
-│        │              │
 │        └──┐           │
 │           │           │
 │           ▼           │
-│ [ Integration tests ]◄──────────────────────────┐
-│           │           │                         │
-│          ┌┼────────────────┐                    │
-│          │├────────────────┼──────────┐         │
-│          ││           │    │          │         │
-│  ┌───────┘▼           │    │          │         │
-│  └[ Security scan ]   │    │        flaky       │
-└───────────│───────────┘    │          │         │
-┌─Release───│─┐              │          │         │
-│           │ │              │          │         │
-│      ┌┐   │ │              │          │         │
-│      │└───┘ │              │          │         │
-│      ▼      │              │          ▼         │
-│ [ Package ] │            fails  [ Retry once ]──┘
-│      │      │              │
-│     ┌┘      │              │
-│     │       │              │
-│     ▼       │              ▼
-│  [ Sign ]   │      [ Block release ]
-│     │       │
+│ [ Integration tests ]◄──────────────────┐
+│           ├───────────────────┐         │
+│           │           │       │         │
+│           ▼           │       │         │
+│  ┌[ Security scan ]   │     flaky       │
+└──│────────│───────────┘       │         │
+   │        │                   │         │
+   └────────┼───────┐           │         │
+┌─Release───│─┐     │           │         │
+│           │ │     │           │         │
+│      ┌┐   │ │     │           │         │
+│      │└───┘ │     │           │         │
+│      ▼      │     │           ▼         │
+│ [ Package ] │   fails   [ Retry once ]──┘
+│      │      │     │
+│     ┌┘      │     │   ┌┐
+│     │       │     └───┘│
+│     ▼       │          ▼
+│  [ Sign ]   │  [ Block release ]
 │     └┐      │
 │      │      │
 │      ▼      │
 │ [ Publish ] │
-│      │      │
 │     ┌┘      │
 │     │       │
 │     ▼       │
@@ -62,47 +57,42 @@ f nnNNNNNNNNNNNNnn f
 f        e         f
 f        a         f
 f   nnNNNNNNNnn    f
-f        e         f
 f       ee         f
 f       e          f
 f       a          f
 f nnNNNNNNNNNNnn   f
 ffffffffffefffffffff
 ffFFFFFFffeffffffffffffff
-f         e             f
 f        ee             f
 f        e              f
 f        a              f
 f     nnNNNNnn          f
-f        e              f
 f        eeee           f
 f           e           f
 f           a           f
-f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
-f           e           f                         e
-f          eeeeeeeeeeeeeeeeeee                    e
-f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
-f          ee           f    e          e         e
-f  eeeeeeeeea           f    e          e         e
-f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
-ffffffffffffeffffffffffff    e          e         e
-ffFFFFFFFfffeff              e          e         e
-f           e f              e          e         e
-f      ee   e f              e          e         e
-f      eeeeee f              e          e         e
-f      a      f              e          a         e
-f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
-f      e      f              e
-f     ee      f              e
-f     e       f              e
-f     a       f              a
-f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
-f     e       f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
+f           eeeeeeeeeeeeeeeeeeeee         e
+f           e           f       e         e
+f           a           f       e         e
+f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
+fffeffffffffeffffffffffff       e         e
+   e        e                   e         e
+   eeeeeeeeeeeeeeeeee           e         e
+ffFFFFFFFfffeff     e           e         e
+f           e f     e           e         e
+f      ee   e f     e           e         e
+f      eeeeee f     e           e         e
+f      a      f     e           a         e
+f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee
+f      e      f     e
+f     ee      f     e   ee
+f     e       f     eeeeee
+f     a       f          a
+f  nnNNNNnn   f  nnNNNNNNNNNNNNNnn
 f     ee      f
 f      e      f
 f      a      f
 f nnNNNNNNNnn f
-f      e      f
 f     ee      f
 f     e       f
 f     a       f
@@ -117,47 +107,42 @@ fffffffffffffff
 │        │         │
 │        ▼         │
 │   [ Compile ]    │
-│        │         │
 │       ┌┘         │
 │       │          │
 │       ▼          │
 │ [ Unit tests ]   │
 └─────────│────────┘
 ┌─Verify──│─────────────┐
-│         │             │
 │        ┌┘             │
 │        │              │
 │        ▼              │
 │     [ Lint ]          │
-│        │              │
 │        └──┐           │
 │           │           │
 │           ▼           │
-│ [ Integration tests ]◄──────────────────────────┐
-│           │           │                         │
-│          ┌┼────────────────┐                    │
-│          │├────────────────┼──────────┐         │
-│          ││           │    │          │         │
-│  ┌───────┘▼           │    │          │         │
-│  └[ Security scan ]   │    │        flaky       │
-└───────────│───────────┘    │          │         │
-┌─Release───│─┐              │          │         │
-│           │ │              │          │         │
-│      ┌┐   │ │              │          │         │
-│      │└───┘ │              │          │         │
-│      ▼      │              │          ▼         │
-│ [ Package ] │            fails  [ Retry once ]──┘
-│      │      │              │
-│     ┌┘      │              │
-│     │       │              │
-│     ▼       │              ▼
-│  [ Sign ]   │      [ Block release ]
-│     │       │
+│ [ Integration tests ]◄──────────────────┐
+│           ├───────────────────┐         │
+│           │           │       │         │
+│           ▼           │       │         │
+│  ┌[ Security scan ]   │     flaky       │
+└──│────────│───────────┘       │         │
+   │        │                   │         │
+   └────────┼───────┐           │         │
+┌─Release───│─┐     │           │         │
+│           │ │     │           │         │
+│      ┌┐   │ │     │           │         │
+│      │└───┘ │     │           │         │
+│      ▼      │     │           ▼         │
+│ [ Package ] │   fails   [ Retry once ]──┘
+│      │      │     │
+│     ┌┘      │     │   ┌┐
+│     │       │     └───┘│
+│     ▼       │          ▼
+│  [ Sign ]   │  [ Block release ]
 │     └┐      │
 │      │      │
 │      ▼      │
 │ [ Publish ] │
-│      │      │
 │     ┌┘      │
 │     │       │
 │     ▼       │
@@ -172,47 +157,42 @@ f nnNNNNNNNNNNNNnn f
 f        e         f
 f        a         f
 f   nnNNNNNNNnn    f
-f        e         f
 f       ee         f
 f       e          f
 f       a          f
 f nnNNNNNNNNNNnn   f
 ffffffffffefffffffff
 ffFFFFFFffeffffffffffffff
-f         e             f
 f        ee             f
 f        e              f
 f        a              f
 f     nnNNNNnn          f
-f        e              f
 f        eeee           f
 f           e           f
 f           a           f
-f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
-f           e           f                         e
-f          eeeeeeeeeeeeeeeeeee                    e
-f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
-f          ee           f    e          e         e
-f  eeeeeeeeea           f    e          e         e
-f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
-ffffffffffffeffffffffffff    e          e         e
-ffFFFFFFFfffeff              e          e         e
-f           e f              e          e         e
-f      ee   e f              e          e         e
-f      eeeeee f              e          e         e
-f      a      f              e          a         e
-f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
-f      e      f              e
-f     ee      f              e
-f     e       f              e
-f     a       f              a
-f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
-f     e       f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
+f           eeeeeeeeeeeeeeeeeeeee         e
+f           e           f       e         e
+f           a           f       e         e
+f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
+fffeffffffffeffffffffffff       e         e
+   e        e                   e         e
+   eeeeeeeeeeeeeeeeee           e         e
+ffFFFFFFFfffeff     e           e         e
+f           e f     e           e         e
+f      ee   e f     e           e         e
+f      eeeeee f     e           e         e
+f      a      f     e           a         e
+f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee
+f      e      f     e
+f     ee      f     e   ee
+f     e       f     eeeeee
+f     a       f          a
+f  nnNNNNnn   f  nnNNNNNNNNNNNNNnn
 f     ee      f
 f      e      f
 f      a      f
 f nnNNNNNNNnn f
-f      e      f
 f     ee      f
 f     e       f
 f     a       f
@@ -227,47 +207,42 @@ fffffffffffffff
 │        │         │
 │        ▼         │
 │   [ Compile ]    │
-│        │         │
 │       ┌┘         │
 │       │          │
 │       ▼          │
 │ [ Unit tests ]   │
 └─────────│────────┘
 ┌─Verify──│─────────────┐
-│         │             │
 │        ┌┘             │
 │        │              │
 │        ▼              │
 │     [ Lint ]          │
-│        │              │
 │        └──┐           │
 │           │           │
 │           ▼           │
-│ [ Integration tests ]◄──────────────────────────┐
-│           │           │                         │
-│          ┌┼────────────────┐                    │
-│          │├────────────────┼──────────┐         │
-│          ││           │    │          │         │
-│  ┌───────┘▼           │    │          │         │
-│  └[ Security scan ]   │    │        flaky       │
-└───────────│───────────┘    │          │         │
-┌─Release───│─┐              │          │         │
-│           │ │              │          │         │
-│      ┌┐   │ │              │          │         │
-│      │└───┘ │              │          │         │
-│      ▼      │              │          ▼         │
-│ [ Package ] │            fails  [ Retry once ]──┘
-│      │      │              │
-│     ┌┘      │              │
-│     │       │              │
-│     ▼       │              ▼
-│  [ Sign ]   │      [ Block release ]
-│     │       │
+│ [ Integration tests ]◄──────────────────┐
+│           ├───────────────────┐         │
+│           │           │       │         │
+│           ▼           │       │         │
+│  ┌[ Security scan ]   │     flaky       │
+└──│────────│───────────┘       │         │
+   │        │                   │         │
+   └────────┼───────┐           │         │
+┌─Release───│─┐     │           │         │
+│           │ │     │           │         │
+│      ┌┐   │ │     │           │         │
+│      │└───┘ │     │           │         │
+│      ▼      │     │           ▼         │
+│ [ Package ] │   fails   [ Retry once ]──┘
+│      │      │     │
+│     ┌┘      │     │   ┌┐
+│     │       │     └───┘│
+│     ▼       │          ▼
+│  [ Sign ]   │  [ Block release ]
 │     └┐      │
 │      │      │
 │      ▼      │
 │ [ Publish ] │
-│      │      │
 │     ┌┘      │
 │     │       │
 │     ▼       │
@@ -282,47 +257,42 @@ f nnNNNNNNNNNNNNnn f
 f        e         f
 f        a         f
 f   nnNNNNNNNnn    f
-f        e         f
 f       ee         f
 f       e          f
 f       a          f
 f nnNNNNNNNNNNnn   f
 ffffffffffefffffffff
 ffFFFFFFffeffffffffffffff
-f         e             f
 f        ee             f
 f        e              f
 f        a              f
 f     nnNNNNnn          f
-f        e              f
 f        eeee           f
 f           e           f
 f           a           f
-f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeeeeeeeeeee
-f           e           f                         e
-f          eeeeeeeeeeeeeeeeeee                    e
-f          eeeeeeeeeeeeeeeeeeeeeeeeeeeeee         e
-f          ee           f    e          e         e
-f  eeeeeeeeea           f    e          e         e
-f  ennNNNNNNNNNNNNNnn   f    e        LLLLL       e
-ffffffffffffeffffffffffff    e          e         e
-ffFFFFFFFfffeff              e          e         e
-f           e f              e          e         e
-f      ee   e f              e          e         e
-f      eeeeee f              e          e         e
-f      a      f              e          a         e
-f nnNNNNNNNnn f            LLLLL  nnNNNNNNNNNNnneee
-f      e      f              e
-f     ee      f              e
-f     e       f              e
-f     a       f              a
-f  nnNNNNnn   f      nnNNNNNNNNNNNNNnn
-f     e       f
+f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
+f           eeeeeeeeeeeeeeeeeeeee         e
+f           e           f       e         e
+f           a           f       e         e
+f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
+fffeffffffffeffffffffffff       e         e
+   e        e                   e         e
+   eeeeeeeeeeeeeeeeee           e         e
+ffFFFFFFFfffeff     e           e         e
+f           e f     e           e         e
+f      ee   e f     e           e         e
+f      eeeeee f     e           e         e
+f      a      f     e           a         e
+f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee
+f      e      f     e
+f     ee      f     e   ee
+f     e       f     eeeeee
+f     a       f          a
+f  nnNNNNnn   f  nnNNNNNNNNNNNNNnn
 f     ee      f
 f      e      f
 f      a      f
 f nnNNNNNNNnn f
-f      e      f
 f     ee      f
 f     e       f
 f     a       f
