@@ -6,6 +6,9 @@ import { ANSWER, answered, BTW, engine, forks, held, start, tick, usage } from '
 // which markers are on disk.
 const SESSION = '69712be4-0d07-4be9-af9e-2498d779f9fc'
 const MARKER = `/Users/x/.cache/mermaid-tty/btw-${SESSION}`
+// A path as the hooks beneath see it, in POSIX form: on Windows the engine hands them the plugin's /Users/x/...
+// resolved against a drive, with backslashes, so each is compared as / separated with no drive.
+const posix = (path: string) => path.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
 const cueSink = (on: any, onDisk: string[] = []) => {
   const rows: (string | undefined)[] = []
   const marks: { path: string; text: string }[] = []
@@ -33,7 +36,7 @@ const cueSink = (on: any, onDisk: string[] = []) => {
     return { value: undefined }
   })
   on('fs.write', async (_$: any, e: any, next: any) => {
-    if (!e.path.includes('mermaid-tty/btw-')) {
+    if (!posix(e.path).includes('mermaid-tty/btw-')) {
       return next(e)
     }
 
@@ -47,12 +50,12 @@ const cueSink = (on: any, onDisk: string[] = []) => {
       return { deny: 'read-only' }
     }
 
-    marks.push({ path: e.path, text: e.text })
+    marks.push({ path: posix(e.path), text: e.text })
     return { value: undefined }
   })
   on('fs.exists', async (_$: any, e: any) => {
-    checked.push(e.path)
-    return { value: onDisk.includes(e.path) }
+    checked.push(posix(e.path))
+    return { value: onDisk.includes(posix(e.path)) }
   })
   on('session.id', async () => ({ value: SESSION }))
   return {
