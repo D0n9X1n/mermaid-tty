@@ -40,6 +40,15 @@ export const IMAGES: Image[] = [
   })),
   { file: 'assets/readme/before.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'nord', raw: true },
   { file: 'assets/readme/after.svg', source: 'assets/readme/src/hero.mmd', columns: 60, theme: 'nord' },
+  // The foot of Claude Code's screen while mermaid-tty answers a /btw: its status row under the prompt, as the e2e
+  // harness read it from a real session with the side question's answer held.
+  {
+    file: 'assets/readme/btw-status.svg',
+    source: 'assets/readme/src/btw-status.txt',
+    columns: 72,
+    theme: 'nord',
+    raw: true,
+  },
   { file: 'assets/readme/sequence.svg', source: 'assets/readme/src/sequence.mmd', columns: 72, theme: 'nord' },
   { file: 'assets/readme/cjk.svg', source: 'assets/readme/src/cjk.mmd', columns: 60, theme: 'nord' },
   // Edges that cross, each drawn in a color of its own so it can be followed past the ┼.

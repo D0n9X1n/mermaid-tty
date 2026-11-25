@@ -49,6 +49,10 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 
 ![A flowchart whose crossing edges are each drawn in a color of their own](assets/readme/crossing.svg)
 
+**Side questions you can see working**: while mermaid-tty answers a `/btw`, a row under the prompt says so, until the answer opens in its pane. A custom status line can show it instead with `MERMAID_TTY_BTW_STATUS=file`:
+
+![Claude Code's prompt while mermaid-tty answers a /btw, its status row reading mermaid-tty: answering /btw…](assets/readme/btw-status.svg)
+
 **Six themes**: nord by default, three more curated palettes, your Claude Code theme, or `mono`. Switch any time with `/mermaid-tty theme <name>`:
 
 | nord (default) | dracula | gruvbox |
@@ -67,7 +71,7 @@ Claude replies with a `mermaid` block; your terminal shows the diagram. mermaid-
 - **Six themes, switched live.** `nord`, the default, `dracula`, `gruvbox` and `solarized` use their official colors; `default` follows your Claude Code theme; `mono` draws without color. `/mermaid-tty theme <name>` redraws at once and keeps the choice.
 - **Wide, not tall.** Claude is asked to write flowcharts left to right, which suits a terminal; set `TB` or `off` with `/mermaid-tty direction`. This changes only what Claude writes: a left-to-right chart too wide for your window still draws top to bottom.
 - **Crossing lines you can follow.** Where edges cross, each takes a color of its own, arrowhead included, so you can tell which line goes from what to what. `/mermaid-tty crossings off` keeps every line in the theme's colors.
-- **Side questions too.** A `/btw` answer opens in a pane that draws its diagrams like a reply, and adds nothing to the conversation.
+- **Side questions too.** A `/btw` answer opens in a pane that draws its diagrams like a reply, and adds nothing to the conversation. While it's being answered, a row under the prompt, or your own status line, says so.
 - **The source stays yours.** The transcript keeps the Mermaid text, `/copy` copies it exactly, and one command shows it again.
 - **Nothing else to install, nothing left behind.** Pure TypeScript on macOS, Linux and Windows: no build step, no runtime dependencies, and no picture files once a session closes.
 - **Made for the CLI.** It works in Claude Code's terminal; the desktop app and SDK keep their own drawing.

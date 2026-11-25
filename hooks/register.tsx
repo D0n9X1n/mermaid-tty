@@ -1,7 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
-import { forkPrompt, isBtw, takesBtw } from './btw.ts'
+import { BTW_STATUS, forkPrompt, isBtw, isWindows, markerPath, takesBtw, usesMarker } from './btw.ts'
 import type { Picture } from './image.ts'
 import {
   directionNote,
@@ -225,6 +225,124 @@ async function showBtw($: any, isStale: () => boolean, question: string, answer:
   return false
 }
 
+// Where the /btw cue is shown: the status row or a marker file at its path, for the /btw it stands for, by number.
+type Shown = ({ at: 'row' } | { at: 'marker'; path: string }) & { owner: number }
+
+// This session's marker path, or null where none can be: Windows, no POSIX home, or a session id that names no file.
+// With switchedOn, also null unless MERMAID_TTY_BTW_STATUS asks for the marker. Any read that fails means null: the row
+// needs nothing but the engine.
+async function cueMarker($: any, switchedOn: boolean): Promise<string | null> {
+  try {
+    const vars = {
+      os: await $.env.get('OS'),
+      systemRoot: await $.env.get('SystemRoot'),
+      windir: await $.env.get('windir'),
+    }
+    const wanted = switchedOn ? usesMarker(await $.env.get('MERMAID_TTY_BTW_STATUS'), vars) : !isWindows(vars)
+    if (!wanted) {
+      return null
+    }
+
+    return markerPath(await $.env.get('HOME'), await $.session.id())
+  } catch {
+    return null
+  }
+}
+
+// Sets the status row, or clears it with undefined; false when the call fails. mermaid-tty sends its row calls in the
+// order the cue needs. $.ui.status returns before the hooks beneath it run and says nothing of when they apply a call,
+// so a hook of another plugin's that holds one may apply it after a later one: the row is best effort. The sweep in
+// syncCue sends another clear as each /btw ends and as a session ends while none is answered, which a show held longer
+// can still land after. The marker, a status line's cue, has no such limit: each write is awaited before the next.
+function setRow($: any, text: string | undefined): boolean {
+  try {
+    $.ui.status(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Shows the cue for owner where this session asks for it, and returns where it went, or null where it could go nowhere.
+// A marker that cannot be written leaves the row as the cue, so the person still sees one. A status line reads the
+// marker's text, 1 while a /btw is answered, and its age, which each /btw's own write starts again.
+async function showCue($: any, owner: number): Promise<Shown | null> {
+  const path = await cueMarker($, true)
+  if (path !== null) {
+    try {
+      await $.fs.write(path, '1')
+      return { at: 'marker', path, owner }
+    } catch {}
+  }
+
+  return setRow($, BTW_STATUS) ? { at: 'row', owner } : null
+}
+
+// Takes the cue down where showCue put it. There is no file removal, so a marker is emptied, which a status line reads
+// as no cue; one that cannot be emptied ages out of the status line. The engine drops a refused status row without a
+// word to the plugin, so a row is cleared again whenever no /btw may leave one up: see syncCue's sweep.
+async function hideCue($: any, shown: Shown) {
+  if (shown.at === 'marker') {
+    await Promise.resolve($.fs.write(shown.path, '')).catch(() => {})
+    return
+  }
+
+  setRow($, undefined)
+}
+
+// Takes down whatever a run before this module may have left, as a session starts: the row, and this session's marker
+// if one is on disk, the switch on or off, so turning the switch off never strands a marker. No marker is written where
+// none was.
+async function resetCue($: any) {
+  const left = await cueMarker($, false)
+  if (left !== null && (await Promise.resolve($.fs.exists(left)).catch(() => false))) {
+    await Promise.resolve($.fs.write(left, '')).catch(() => {})
+  }
+
+  setRow($, undefined)
+}
+
+// The /btw cue's state, one per load of the module. answering is the /btw whose fork the cue stands for, by its number,
+// or 0 when none is being answered: only the /btw that set it takes it down, so an older one settling late never hides
+// a newer one's cue. shown is where the cue is now and for which /btw; tried, the /btw a show was last tried for;
+// turns, the cue's writes, one after another.
+type Cues = { answering: number; shown: Shown | null; tried: number; turns: Promise<unknown> }
+
+// Queues one write of the cue, after those before it. The step brings the cue to what answering says when the step
+// ends, so a /btw that arrived while a write was under way is caught up at once, and the last step always leaves the
+// cue as the newest /btw needs it. A cue shown for an older /btw is taken down and shown again for the newer, so the
+// newer one tries its own marker and starts its own age. A show is tried once per /btw, so a session that can show
+// nothing never spins. With reset, as a session starts, it first takes down whatever a run before this module may have
+// left. With sweep, before Claude Code runs a /btw and as a session ends, a step that finds no /btw answered clears the
+// row once more, so one whose clear the engine dropped does not stay up.
+async function syncCue($: any, cues: Cues, how?: 'reset' | 'sweep') {
+  const step = async () => {
+    if (how === 'reset') {
+      await resetCue($)
+      cues.shown = null
+    }
+
+    while (true) {
+      const wanted = cues.answering
+      if (cues.shown !== null && cues.shown.owner !== wanted) {
+        await hideCue($, cues.shown)
+        cues.shown = null
+      } else if (wanted !== 0 && cues.shown === null && cues.tried !== wanted) {
+        cues.tried = wanted
+        cues.shown = await showCue($, wanted)
+      } else {
+        break
+      }
+    }
+
+    if (how === 'sweep' && cues.answering === 0 && cues.shown === null) {
+      setRow($, undefined)
+    }
+  }
+  cues.turns = cues.turns.then(step, step)
+  await cues.turns
+}
+
 // One drawn fence as an element: a picture where one is rendered, else its rows, each row one truncated line.
 function fenceElement(p: { rows: Rows } | { picture: Picture }, key: string, ui: any): RenderElement {
   const { Box, Text, Image } = ui
@@ -279,6 +397,8 @@ export const register: Register = (on, options) => {
     turns = run.catch(() => {})
     return run
   }
+  // The /btw cue: which /btw it stands for, where it is shown, and its writes (Cues).
+  const cues: Cues = { answering: 0, shown: null, tried: 0, turns: Promise.resolve() }
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -321,16 +441,27 @@ export const register: Register = (on, options) => {
       void sweepPictures($)
     }
 
+    // A session starts with no /btw cue: a reload while one was answered forgets it, so the row and this session's
+    // marker are taken down whatever was shown.
+    cues.answering = 0
+    await syncCue($, cues, 'reset')
     return next(e)
   })
 
   // Nothing of a picture stays on disk once a terminal session closes: its renders' temp dirs go, in flight or left
   // behind, within the end's short bound.
   on('session.end', async ($, e, next) => {
-    if (inTerminal) {
-      await sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)), true)
-    }
-
+    // An ending session's /btw is over, /clear's included, which goes on under a new session id with no session.start:
+    // each one under way is overtaken, so it neither marks, forks nor shows a pane in the next conversation, and its
+    // cue comes down where it was shown, the old session's marker. The cue and the pictures are taken down side by
+    // side, so a marker write that is slow to finish never eats into the short time an ending session gives the
+    // pictures.
+    asked++
+    cues.answering = 0
+    const pictures = inTerminal
+      ? sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)), true)
+      : Promise.resolve()
+    await Promise.all([syncCue($, cues, 'sweep'), pictures])
     return next(e)
   })
 
@@ -519,14 +650,33 @@ export const register: Register = (on, options) => {
       return {}
     }
 
+    // The newest /btw decides the cue: one Claude Code answers takes down any an older fork left before it runs, and
+    // one answered here shows it before its fork starts.
+    cues.answering = takes ? mine : 0
+    await syncCue($, cues, takes ? undefined : 'sweep')
+    // Writing the cue waits, so a newer /btw may have arrived meanwhile: this one then ends with nothing, neither
+    // forking nor handing on an obsolete question.
+    if (isStale()) {
+      return {}
+    }
+
     if (!takes) {
       return next(e)
     }
 
+    // While it is the one the cue stands for, every way out takes the cue down, before Claude Code runs it if handed
+    // on.
+    const done = async () => {
+      if (cues.answering === mine) {
+        cues.answering = 0
+        await syncCue($, cues, 'sweep')
+      }
+    }
     let answer: string | undefined
     try {
       const r = await $.model.fork({ prompt: forkPrompt(e.args) })
       if (!r.isAnswered && r.reason === 'aborted') {
+        await done()
         return {}
       }
 
@@ -538,6 +688,7 @@ export const register: Register = (on, options) => {
     // The answer is shown, or the pane closed, one /btw at a time, each step taken only while this one is the newest:
     // an older one still storing, opening or closing finishes before a newer one starts, and then does nothing more.
     const shown = await inTurn(() => showBtw($, isStale, e.args.trim(), answer))
+    await done()
     if (isStale()) {
       return {}
     }

@@ -2,7 +2,7 @@
 
 [英文版](Configuration-and-Themes)
 
-mermaid-tty 有四个选项：`theme` 用于选择所有图表的颜色；`direction` 设置要求 Claude 编写流程图时使用的方向；`crossings` 设置交叉连线是否用颜色区分；`size` 设置图表图片显示的大小。本页列出可选值、各配色的颜色、主题着色的角色，以及交叉连线如何用颜色区分。
+mermaid-tty 有四个选项：`theme` 用于选择所有图表的颜色；`direction` 设置要求 Claude 编写流程图时使用的方向；`crossings` 设置交叉连线是否用颜色区分；`size` 设置图表图片显示的大小。另有一个环境变量 `MERMAID_TTY_BTW_STATUS`，设置 `/btw` 回答期间的提示显示在哪里。本页列出可选值、各配色的颜色、主题着色的角色，以及交叉连线如何用颜色区分。
 
 ## theme 选项
 
@@ -73,6 +73,17 @@ mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` �
 两种大小下图片都不会宽于窗口：较宽的图片会像以前一样缩窄以适应，并保持比例；即使按 `compact` 的密度仍太宽而无法阅读的图片会以文本显示。`compact` 下图片绝不会比该密度更密；`full` 像以前一样按最近的列取整，因此只有一列宽的图片可能略密一些。该选项只设置图片显示的方框，因此已渲染的图片会按新大小重新显示。保存该选项会像任何选项变化一样重新加载 mermaid-tty，之后会重新渲染图片。只有一两列宽的极小图片在 `compact` 下可能多出一列，因为它的列数向上取整，以免过密。
 
 设置方式与 `theme` 相同，例如 `echo '{"size":"full"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty size full|compact`。该命令立即重绘屏幕上的图片，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty size` 报告当前设置。未设置或无法识别的值视为 `compact`。
+
+## /btw 提示
+
+mermaid-tty 回答 `/btw` 期间会显示提示。环境变量 `MERMAID_TTY_BTW_STATUS` 设置提示显示的位置：
+
+| 值 | 提示 |
+|---|---|
+| 未设置，或 `file` 以外的任何值 | 提示符下方的状态行：`mermaid-tty: answering /btw…`。这是默认值。 |
+| `file` | 不显示状态行，改为写一个供自定义状态栏读取的标记文件，路径为 `$HOME/.cache/mermaid-tty/btw-<session_id>`。在 Windows 上此值不起作用，提示仍是状态行。 |
+
+请把它设在 Claude Code 的状态栏命令也能继承的地方，例如 `settings.json` 的 `env` 中。标记的内容、过期规则以及状态栏需要的刷新间隔，见[使用](Usage-zh-CN)中的“旁支提问”。
 
 ## 配色
 
