@@ -27,6 +27,14 @@ function events(sse: string): { event: string; data: any }[] {
       return { event: m[1]!, data: JSON.parse(m[2]!) }
     })
 }
+// Whether p settles within ms; the timer is cleared either way, so a hold that never arrives fails the test, not hangs
+// it.
+async function within(p: Promise<unknown>, ms: number): Promise<boolean> {
+  const wait = new AbortController()
+  const came = await Promise.race([p.then(() => true), sleep(ms, false, { signal: wait.signal }).catch(() => false)])
+  wait.abort()
+  return came
+}
 // A streamed POST /v1/messages whose one user message is content; resolves to the response's text.
 const stream = (url: string, content: unknown) =>
   fetch(`${url}/v1/messages`, {
@@ -503,4 +511,52 @@ test('A9.harness: a prompt that asks for crossing gets REPLY_CROSS, a diagram be
     splitFences(REPLY_CROSS).map((s) => s.kind),
     ['prose', 'mermaid', 'prose'],
   )
+})
+
+test('A9.harness: a held side question says it came in, and gets no reply until let go; others are answered', async () => {
+  const m = await startMock()
+  try {
+    const hold = m.holdSide()
+    let answered = false
+    const side = stream(m.url, 'This is a side question: what?').then((s) => {
+      answered = true
+      return s
+    })
+    const came = await within(hold.arrived, 5000)
+    const other = await stream(m.url, 'lead')
+    await sleep(100)
+    const heldThen = !answered
+    hold.release()
+
+    assert.equal(came, true)
+    assert.equal(text(other), REPLY_LEAD)
+    assert.equal(heldThen, true)
+    assert.equal(text(await side), REPLY_BTW)
+  } finally {
+    await m.stop()
+  }
+})
+
+test('A9.harness: a hold covers only the next side question, and stop() ends one still held', async () => {
+  const m = await startMock()
+  let came = false
+  let second = ''
+  let third: Promise<unknown> = Promise.resolve()
+  try {
+    const hold = m.holdSide()
+    const first = stream(m.url, 'side question one').catch(() => 'closed')
+    came = await within(hold.arrived, 5000)
+    hold.release()
+    await first
+    second = await stream(m.url, 'side question two')
+    m.holdSide()
+    third = stream(m.url, 'side question three').catch(() => 'closed')
+    await sleep(50)
+  } finally {
+    await m.stop()
+  }
+
+  assert.equal(came, true)
+  assert.equal(text(second), REPLY_BTW)
+  assert.equal(await within(third, 2000), true)
 })

@@ -2,7 +2,7 @@
 
 [Chinese (Simplified)](Usage-zh-CN)
 
-How to install mermaid-tty, where it draws, which diagrams it draws, how to see their source, how `/btw` answers draw, why a diagram falls back, how width is measured, and how to remove it.
+How to install mermaid-tty, where it draws, which diagrams it draws, how to see their source, how `/btw` answers draw and show they are being answered, why a diagram falls back, how width is measured, and how to remove it.
 
 ## Install
 
@@ -123,6 +123,20 @@ ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid
 - Esc closes the pane, as does its close mark. A new `/btw` replaces the answer in it; an answer that comes back after a newer `/btw` was asked is dropped.
 
 Claude Code's own `/btw` runs instead, as if mermaid-tty weren't installed, in source mode, outside the terminal, with no question, before Claude's first reply has finished, when the answer fails or comes back empty, and when the pane can't be shown. Pressing Esc while it answers cancels the question. The pane shows only the latest answer: it has none of the built-in panel's history, copy or fork keys.
+
+### While a /btw is answered
+
+While mermaid-tty answers a `/btw`, a status row under the prompt reads `mermaid-tty: answering /btw…`. Claude Code adds the plugin's name and a ⚠ mark to the row. The row goes once the answer opens in the pane, is handed to Claude Code's own `/btw`, or is cancelled. A newer `/btw` takes the row over, and an older answer that comes back late leaves it alone. A new session, a `/clear` and a plugin reload each start with no row. The row is best effort: another plugin that holds Claude Code's status calls can make it show or go out of turn (see [Architecture](Architecture)). When no `/btw` is being answered, mermaid-tty sends another clear as each `/btw` ends and as a session ends, but a show held longer can still land after it. The marker below has no such limit.
+
+A custom status line can show the same cue instead. Set `MERMAID_TTY_BTW_STATUS=file`, for example in the `env` block of Claude Code's `settings.json`, which its status line command inherits too. mermaid-tty then shows no row of its own, so the cue appears once, and writes a marker file:
+
+- **Path:** `$HOME/.cache/mermaid-tty/btw-<session_id>`, where `<session_id>` is the `session_id` of the status line's JSON input. The file lives under your own home, so no other user can place a link where mermaid-tty writes.
+- **Ids:** only a lowercase id, `[a-z0-9_-]+`, as Claude Code's are, gets a marker. A status line must reject any other id before it opens a file: on a disk that ignores case, as macOS's does, `btw-OTHER` and `btw-other` are one file, so an uppercase id could read another session's marker. A session started with an uppercase `--session-id` shows the row instead.
+- **Content:** `1` while a `/btw` is answered, and empty once it is done. mermaid-tty can't delete files, so a finished marker stays as an empty file.
+- **Staleness:** read a marker as current only when it is `1` and was changed in the last 300 seconds. That way a marker left by a session that crashed, or one that couldn't be emptied, stops showing within five minutes. Its change time is also when the answer started.
+- **Refresh:** a status line runs again on Claude Code's events and every `refreshInterval` seconds. A `/btw` adds no reply, so set `refreshInterval` to 1 or 2 for the cue to show while the answer runs.
+
+If the marker can't be written, the row shows instead. On Windows the switch is ignored and the row is the cue, because Git Bash, which runs a status line there, spells the home folder differently from mermaid-tty. A new session empties its marker if one is on disk, even with the switch off. With the switch off, no marker is written.
 
 ## Pictures
 

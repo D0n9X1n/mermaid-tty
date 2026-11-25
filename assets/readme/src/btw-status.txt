@@ -1,0 +1,8 @@
+❯ /btw what does the flow do?
+
+✢ Actioning…
+────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────
+  ⚠ mermaid-tty: answering /btw…
+  ⏵⏵ auto mode on (shift+tab to cycle) · esc to interrupt · ← for agents

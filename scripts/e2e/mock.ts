@@ -2,7 +2,9 @@
 // every POST /v1/messages, whatever its query string, with REPLY; REPLY_BTW when the last user message is a side
 // question, as /btw asks one; REPLY_CROSS when it contains crossing; or REPLY_LEAD when it contains lead: as SSE when
 // the request has stream: true, else as one JSON message. Any other method or path gets an empty 404, CONNECT is
-// refused, and stop() closes every connection. Node built-ins only, so the main suite needs nothing installed.
+// refused, and stop() closes every connection. holdSide() keeps the next side question unanswered until its release is
+// called, and says through arrived when that question has come in, so a scenario can read the screen while a /btw is
+// being answered. Node built-ins only, so the main suite needs nothing installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
@@ -64,8 +66,14 @@ export function replyFor(messages: unknown): string {
   return lastAsks(messages, 'lead') ? REPLY_LEAD : REPLY
 }
 
-export async function startMock(): Promise<{ url: string; stop(): Promise<void> }> {
+export type Hold = { release(): void; arrived: Promise<void> }
+export type Mock = { url: string; stop(): Promise<void>; holdSide(): Hold }
+
+export async function startMock(): Promise<Mock> {
   let n = 0
+  // The hold the next side question waits on, taken by that request, and how it says it came in; null when side
+  // questions are answered at once.
+  let sideHold: { until: Promise<void>; came: () => void } | null = null
   const server = createServer(async (req, res) => {
     // The path, without its query string: the SDK posts to /v1/messages?beta=true.
     if (req.method !== 'POST' || req.url?.split('?')[0] !== '/v1/messages') {
@@ -85,6 +93,13 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
 
     const body = parse(Buffer.concat(parts).toString('utf8'))
     const text = replyFor(body.messages)
+    if (text === REPLY_BTW && sideHold) {
+      const hold = sideHold
+      sideHold = null
+      hold.came()
+      await hold.until
+    }
+
     const pieces = chunks(text)
     const message = {
       id: `msg_mock_${++n}`,
@@ -135,5 +150,13 @@ export async function startMock(): Promise<{ url: string; stop(): Promise<void> 
       server.close((e) => (e ? reject(e) : resolve()))
       server.closeAllConnections()
     })
-  return { url: `http://127.0.0.1:${port}`, stop }
+  const holdSide = (): Hold => {
+    let release: () => void = () => {}
+    let came: () => void = () => {}
+    const until = new Promise<void>((resolve) => (release = resolve))
+    const arrived = new Promise<void>((resolve) => (came = resolve))
+    sideHold = { until, came }
+    return { release, arrived }
+  }
+  return { url: `http://127.0.0.1:${port}`, stop, holdSide }
 }

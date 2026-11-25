@@ -30,8 +30,9 @@ import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCh
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import type { Cell } from './screen.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
-import { startMock } from './mock.ts'
+import { startMock, type Mock } from './mock.ts'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
+import { BTW_STATUS } from '../../hooks/btw.ts'
 import { splitFences } from '../../hooks/fences.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
@@ -100,8 +101,8 @@ function installClaude(v: string): string {
   return bin
 }
 
-// What a scenario gets: its session, its run, and its sandbox's config dir and temp dir.
-type Ctx = { s: Session; run: Run; config: string; base: string; copied: string }
+// What a scenario gets: its session, its run, its sandbox's config dir and temp dir, and the mock it talks to.
+type Ctx = { s: Session; run: Run; config: string; base: string; copied: string; mock: Mock }
 const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 // The prompt line showing text. Claude Code follows ❯ with a no-break space, which \s matches, where a plain space
 // would not.
@@ -166,7 +167,7 @@ async function runOne(
     })
     s = await startSession({ driver, argv: installed ? [claude] : [claude, '--plugin-dir', repoRoot], cwd, env })
     await s.waitFor(/❯/, 15000)
-    return await SCENARIO_RUN[scenario]({ s, run, config, base, copied })
+    return await SCENARIO_RUN[scenario]({ s, run, config, base, copied, mock })
   } catch (e) {
     return [e instanceof Error ? e.message : String(e)]
   } finally {
@@ -316,27 +317,56 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
   return problems
 }
 
-// btw: a /btw side question asked after a reply is answered in mermaid-tty's pane, its diagram drawn, not its source,
-// and nothing of it reaches the stored transcript. Escape closes the pane.
-async function btw({ s, run, config }: Ctx): Promise<string[]> {
+// btw: while a /btw side question asked after a reply is answered, mermaid-tty's status row says so; then the answer
+// shows in mermaid-tty's pane, its diagram drawn, not its source, the row gone, and nothing of it reaches the stored
+// transcript. Escape closes the pane.
+async function btw({ s, run, config, mock }: Ctx): Promise<string[]> {
+  const problems: string[] = []
   const since = Date.now() - 1000
   // A short reply first, so the session has a transcript to fork and the pane has room on screen.
   await submit(s, 'lead')
   await s.waitFor(/After the diagram\./, 30000)
-  await submit(s, '/btw what does it do?')
+  // The answer is held until the row has been read, so the row is read while the fork runs: only once the side question
+  // has reached the mock, and always let go, so no failure here leaves the session waiting on it.
+  const hold = mock.holdSide()
+  try {
+    await submit(s, '/btw what does it do?')
+    const wait = new AbortController()
+    const came = await Promise.race([
+      hold.arrived.then(() => true),
+      sleep(15000, false, { signal: wait.signal }).catch(() => false),
+    ])
+    wait.abort()
+    if (!came) {
+      throw new Error('the side question never reached the mock')
+    }
+
+    await s.waitFor(new RegExp(escape(BTW_STATUS)), 15000)
+  } catch (e) {
+    problems.push(`btw: no status row while answering: ${e instanceof Error ? e.message : String(e)}`)
+  } finally {
+    hold.release()
+  }
+
   await s.waitFor(/Side done\./, 30000)
   await sleep(500)
   const text = await s.text()
   // The pane's rows inside its frame: each row between a │ in the first column and one in the last.
   const inside = (await s.cells()).map((row) => (row[0]?.ch === '│' && row.at(-1)?.ch === '│' ? row.slice(1, -1) : row))
-  const problems = checkDiagramScreen(inside, {
-    labels: { 侧问: 'node', 回答: 'node' },
-    prose: ['Side answer:', 'Side done.'],
-    diagrams: drawnDiagrams(REPLY_BTW, DRAW_COLUMNS, run.theme),
-    color: colorOf(run),
-    hex: hexOf(run),
-  })
+  problems.push(
+    ...checkDiagramScreen(inside, {
+      labels: { 侧问: 'node', 回答: 'node' },
+      prose: ['Side answer:', 'Side done.'],
+      diagrams: drawnDiagrams(REPLY_BTW, DRAW_COLUMNS, run.theme),
+      color: colorOf(run),
+      hex: hexOf(run),
+    }),
+  )
   problems.push(...sourceShown(text, fenceBody(REPLY_BTW).split('\n')))
+  if (text.includes(BTW_STATUS)) {
+    problems.push('btw: the status row stays once the answer shows')
+  }
+
   if (!text.includes('/btw what does it do?')) {
     problems.push('btw: the pane does not show the question')
   }
