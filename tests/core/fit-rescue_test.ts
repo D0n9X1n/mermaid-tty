@@ -279,8 +279,8 @@ test('an LR flowchart that only draws top to bottom falls back to it', () => {
   assert.deepEqual(r.drawing.cells, turned.drawing.cells)
 })
 
-// RL falls back to bottom to top the same way: this graph routes no way right to left at 44 columns, and draws bottom
-// to top, as the same graph written BT does. Both draw through the rescue, the fallback at its tighter spacing first.
+// RL falls back to bottom to top the same way: this graph routes no way right to left at 44 columns, and draws exactly
+// as the same graph written BT does, its rescue trying natural spacing before the tighter ones.
 test('an RL flowchart that only draws bottom to top falls back to it', () => {
   const source = [
     'flowchart RL',
@@ -301,8 +301,7 @@ test('an RL flowchart that only draws bottom to top falls back to it', () => {
   assert.ok(!isFail(r), JSON.stringify(r))
   assert.equal(r.step, 'lrToTd')
   assert.equal(validate(r.drawing), null)
-  const top = (d: Drawing, id: string) => d.cells.findIndex((row) => row.some((c) => c?.owners.includes(id)))
-  assert.ok(top(r.drawing, 'D') > top(r.drawing, 'A'), 'D, the source, draws below A, as bottom to top puts it')
+  assert.deepEqual(r.drawing.cells, turned.drawing.cells)
 })
 
 // On one shared budget the order of the fallback's rescue tries decides which graphs draw, so it tries both orders,
