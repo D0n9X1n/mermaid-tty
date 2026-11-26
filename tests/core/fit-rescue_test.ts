@@ -9,7 +9,6 @@ import { lookup, type DiagramModule } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'
 import { readSource, type Source } from '../../core/source.ts'
 import { validate } from '../../core/validate.ts'
-import { text } from './graph-fixture.ts'
 
 // A fake type whose model lists what each step draws, normally and with the rescue: a one-row label n cells wide, or a
 // Fail. calls logs every layout and rescue, in order.
