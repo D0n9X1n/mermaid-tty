@@ -1,10 +1,17 @@
-// The engine beneath the plugin for the /btw kit tests: a fork that answers scripted replies, a pane that is placed,
-// and Claude Code's own /btw, each recorded. Shared by btw.test.tsx and btw-status.test.tsx.
+// The engine beneath the plugin for the /btw kit tests: a fork that answers scripted replies, a completion that answers
+// when there was nothing to fork, the session's conversation, a pane that is placed, and Claude Code's own /btw, each
+// recorded. Shared by btw.test.tsx and btw-status.test.tsx.
 export const FC = '```mermaid\nflowchart LR\nA[读取] --> B[完成]\n```\n'
 export const ANSWER = `Here is the flow:\n\n${FC}\nThat is all.`
 export const BTW = ($: any, args: string) => $.command.run({ command: 'btw', args })
 export const usage = { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
 export const answered = (text: string) => ({ isAnswered: true, text, usage })
+export const NOTHING_TO_FORK = { isAnswered: false, reason: 'nothing-to-fork' }
+// A conversation with something to answer from, as $.session.messages() gives it.
+export const CONVERSATION = [
+  { role: 'user', text: 'lead', toolUses: [] },
+  { role: 'assistant', text: 'After the diagram.', toolUses: [] },
+]
 
 // The kit answers neither the fork nor the pane's open, so hooks beneath the plugin stand for them: each fork answers
 // the next reply in turn, and each prompt and open is recorded. A reply may be a promise, held to order the forks.
@@ -16,6 +23,11 @@ export const engine = (on: any, ...replies: unknown[]) => {
   const opens: any[] = []
   const closes: string[] = []
   const builtin: string[] = []
+  // What each completion was asked, the replies they answer in turn, and the conversation the session holds: none by
+  // default, as in a session that has sent nothing. A reply or the conversation may be a promise, held to order it.
+  const completions: any[] = []
+  const completed: unknown[] = []
+  const conversation = { value: [] as unknown }
   const placed = { value: { isPlaced: true } as object }
   // Each open answers the next of these in turn, a promise held to order it, then placed; one that rejects throws.
   const openings: unknown[] = []
@@ -24,6 +36,12 @@ export const engine = (on: any, ...replies: unknown[]) => {
     forks.onFork()
     return { value: await replies.shift() }
   })
+  on('model.complete', async (_$: any, e: any) => {
+    completions.push(e)
+    return { value: await completed.shift() }
+  })
+  on('session.messages', async () => ({ value: await conversation.value }))
+  on('session.model', async () => ({ value: 'claude-opus-5-5' }))
   on('ui.open', async (_$: any, e: any) => {
     opens.push(e)
     return openings.length ? { value: await openings.shift() } : placed
@@ -38,7 +56,7 @@ export const engine = (on: any, ...replies: unknown[]) => {
   })
   on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
   on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
-  return { prompts, opens, closes, builtin, placed, openings }
+  return { prompts, opens, closes, builtin, placed, openings, completions, completed, conversation }
 }
 export const pane = ($: any, surface = 'terminal') =>
   $.ui.mount({
