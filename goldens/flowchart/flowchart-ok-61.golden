@@ -24,10 +24,10 @@
 │           ├─────────────────┐           │
 │           │           │     │           │
 │           ▼           │     │           │
-│  ┌[ Security scan ]   │   flaky         │
-└──│────────│───────────┘     │           │
-   │        │                 │           │
-   └────────┼───────┐         │           │
+│   [ Security scan ]   │   flaky         │
+└───────────│───────────┘     │           │
+            │                 │           │
+            ├───────┐         │           │
 ┌─Release───│─┐     │         │           │
 │           │ │     │         │           │
 │      ┌┐   │ │     │         └─┐         │
@@ -74,10 +74,10 @@ f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
 f           eeeeeeeeeeeeeeeeeee           e
 f           e           f     e           e
 f           a           f     e           e
-f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
-fffeffffffffeffffffffffff     e           e
-   e        e                 e           e
-   eeeeeeeeeeeeeeeeee         e           e
+f   nnNNNNNNNNNNNNNnn   f   LLLLL         e
+ffffffffffffeffffffffffff     e           e
+            e                 e           e
+            eeeeeeeee         e           e
 ffFFFFFFFfffeff     e         e           e
 f           e f     e         e           e
 f      ee   e f     e         eee         e
@@ -124,10 +124,10 @@ fffffffffffffff
 │           ├─────────────────┐           │
 │           │           │     │           │
 │           ▼           │     │           │
-│  ┌[ Security scan ]   │   flaky         │
-└──│────────│───────────┘     │           │
-   │        │                 │           │
-   └────────┼───────┐         │           │
+│   [ Security scan ]   │   flaky         │
+└───────────│───────────┘     │           │
+            │                 │           │
+            ├───────┐         │           │
 ┌─Release───│─┐     │         │           │
 │           │ │     │         │           │
 │      ┌┐   │ │     │         └─┐         │
@@ -174,10 +174,10 @@ f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
 f           eeeeeeeeeeeeeeeeeee           e
 f           e           f     e           e
 f           a           f     e           e
-f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
-fffeffffffffeffffffffffff     e           e
-   e        e                 e           e
-   eeeeeeeeeeeeeeeeee         e           e
+f   nnNNNNNNNNNNNNNnn   f   LLLLL         e
+ffffffffffffeffffffffffff     e           e
+            e                 e           e
+            eeeeeeeee         e           e
 ffFFFFFFFfffeff     e         e           e
 f           e f     e         e           e
 f      ee   e f     e         eee         e
@@ -224,10 +224,10 @@ fffffffffffffff
 │           ├─────────────────┐           │
 │           │           │     │           │
 │           ▼           │     │           │
-│  ┌[ Security scan ]   │   flaky         │
-└──│────────│───────────┘     │           │
-   │        │                 │           │
-   └────────┼───────┐         │           │
+│   [ Security scan ]   │   flaky         │
+└───────────│───────────┘     │           │
+            │                 │           │
+            ├───────┐         │           │
 ┌─Release───│─┐     │         │           │
 │           │ │     │         │           │
 │      ┌┐   │ │     │         └─┐         │
@@ -274,10 +274,10 @@ f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
 f           eeeeeeeeeeeeeeeeeee           e
 f           e           f     e           e
 f           a           f     e           e
-f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
-fffeffffffffeffffffffffff     e           e
-   e        e                 e           e
-   eeeeeeeeeeeeeeeeee         e           e
+f   nnNNNNNNNNNNNNNnn   f   LLLLL         e
+ffffffffffffeffffffffffff     e           e
+            e                 e           e
+            eeeeeeeee         e           e
 ffFFFFFFFfffeff     e         e           e
 f           e f     e         e           e
 f      ee   e f     e         eee         e

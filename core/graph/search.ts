@@ -24,6 +24,7 @@ import {
   straightCrossing,
   titleCells,
   walls,
+  within,
 } from './route-base.ts'
 import type { Point, Route, Segment } from './route-base.ts'
 
@@ -179,6 +180,12 @@ function searchOnce(
   }
   const titles = titleCells(p)
   const title = (c: Point) => titles.has(keyOf(c))
+  const frameless = new Set(p.graph.clusters.filter((c) => c.frameless).map((c) => c.id))
+  // Whether frame f holds the box of id strictly inside its border.
+  const holds = (f: Box, id: string) => {
+    const b = p.boxes.get(id) ?? p.frames.get(id)
+    return !!b && within({ r: b.row, c: b.col }, f) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, f)
+  }
   const candidates = (
     id: string,
     style: string,
@@ -251,7 +258,14 @@ function searchOnce(
     const label = p.boxes.get(`${e.id}:label`)
     const ink = labelInk(p, e)
     const fs = fences(p, e)
+    // A drawn frame that holds neither end, nor is one, is a wall to this edge, inside and border: a path through it is
+    // one crossesTrue refuses, so the search goes round it from the start instead of finding only that path.
+    const shut = [...p.frames]
+      .filter(([id]) => id !== e.from && id !== e.to && !frameless.has(id))
+      .filter(([, f]) => !holds(f, e.from) && !holds(f, e.to))
+      .map(([, f]) => f)
     const blocked = (c: Point) =>
+      shut.some((f) => inside(c, f)) ||
       (stems.has(keyOf(c)) && keyOf(c) !== keyOf(move(target.at, target.face))) ||
       title(c) ||
       !fenced(fs, c) ||

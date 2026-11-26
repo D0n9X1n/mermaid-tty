@@ -42,3 +42,33 @@ test('A3: edges beside a subgraph that share a node keep to one side of it toget
   assert.ok(!isFail(r), isFail(r) ? r.reason : '')
   assert.equal(validate(r.drawing), null)
 })
+
+// A path that is shortest through a subgraph holding neither end of its edge is one the edge may not take: the search
+// goes round such a subgraph from the start, so a way round is found when there is one.
+test('A3: an edge goes round a subgraph that holds neither of its ends', () => {
+  const source = flow(
+    'TD',
+    'D -->|x| E["Show source"]',
+    'D -->|x| F["Validate input"]',
+    'E --> G["Fork session"]',
+    'F --> H["Load config"]',
+    'G --> I["Render"]',
+    'H --> J{"Source mode?"}',
+    'J -->|x| K["Draw diagram"]',
+    'J -->|x| B',
+    'I --> L{"Cache hit?"}',
+    'L -->|x| M["Load config"]',
+    'L -->|x| N["Render"]',
+    'K --> O["Log error"]',
+    'N --> Q["Retry"]',
+    'Q --> B',
+    'subgraph G1 ["Fork path"]',
+    '  N',
+    '  O',
+    'end',
+  )
+  const r = explain(source, { columns: 120 })
+
+  assert.ok(!isFail(r), isFail(r) ? r.reason : '')
+  assert.equal(validate(r.drawing), null)
+})
