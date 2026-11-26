@@ -388,17 +388,39 @@ test('A5.mutation-tests: every subgraph draws round its own nodes', () => {
   }
 })
 
-// A keyed node inside a frame draws its key there and its full text in a legend row below the drawing: the legend row
-// names it, so the frame still holds it.
-test('A5.mutation-tests: a keyed node in a frame, its legend row below, is still held by the frame', () => {
-  const sources = [
-    'classDiagram\nnamespace Work {\n  note "DeliveryConfirmation"\n}',
-    'flowchart TD\n  subgraph S [Work]\n    A["A label far too long to draw in place here"]\n  end',
-  ]
-  for (const source of sources) {
-    const r = explain(source, { columns: 24 })
+// A keyed node inside a frame draws its key there and its full text in the legend below the drawing, wrapped onto more
+// rows when it is long: the legend names it, so the frame still holds it.
+test('A5.mutation-tests: a keyed node in a frame, its legend lines below, is still held by the frame', () => {
+  for (const text of ['DeliveryConfirmation', 'DeliveryConfirmation pending', 'DeliveryConfirmation pending review']) {
+    const r = explain(`classDiagram\nnamespace Work {\n  note "${text}"\n}`, { columns: 24 })
 
-    assert.ok('drawing' in r, `${source}: ${JSON.stringify(r)}`)
-    assert.equal(validate(r.drawing), null)
+    assert.ok('drawing' in r, `${text}: ${JSON.stringify(r)}`)
+    assert.equal(r.step, 'keyed', text)
+    assert.equal(validate(r.drawing), null, text)
   }
+})
+
+// Only a keyed item's own legend cells are exempt: another node's cells moved onto a legend row are drawn outside its
+// frame, and fail.
+test('A5.mutation-tests: a node moved onto a legend row still fails node-outside-frame', () => {
+  const r = explain('classDiagram\nnamespace Work {\n  class A\n  note "Read the long description"\n}', {
+    columns: 20,
+  })
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(r.step, 'keyed')
+  assert.equal(validate(r.drawing), null)
+  const cells = r.drawing.cells.map((row) => [...row])
+  const own = cells.flatMap((row, i) => row.flatMap((c, j) => (c?.owners.includes('A') ? [[i, j] as const] : [])))
+  const legendRow = cells.findIndex((row) => row.some((c) => c?.legend))
+  assert.ok(own.length > 0 && legendRow >= 0)
+
+  const moved = own.map(([i, j]) => cells[i]![j]!)
+  for (const [i, j] of own) {
+    cells[i]![j] = null
+  }
+
+  const end = cells[legendRow]!.length
+  moved.forEach((c, k) => (cells[legendRow]![end + 1 + k] = c))
+
+  assert.equal(validate({ ...r.drawing, cells })?.reason, 'node-outside-frame')
 })
