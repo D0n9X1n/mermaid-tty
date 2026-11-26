@@ -125,15 +125,13 @@ export function frames(d: Drawing, all: readonly Spot[]): Fail | null {
 
 // Each frame holds its own nodes: every cell drawn for one of them, by its owners, lies strictly inside the frame's
 // box. A node drawn outside, or across the border, reads as belonging elsewhere. A node with no cells has nothing to
-// place. A keyed item draws its key in place and its full text in the legend, stacked under the drawing from the first
-// row holding a legend key cell: there it is named, not drawn, so its own cells in that block, wrapped lines included,
-// do not count. Any other cell does, wherever it lies. Run after frames, so every listed frame spans a box.
+// place. A keyed item draws its key in place and its full text in the legend under the drawing, which names it rather
+// than drawing it: the cells the legend drew (expect.named) do not count, and every other cell does, wherever it lies.
+// Run after frames, so every listed frame spans a box.
 export function held(d: Drawing, all: readonly Spot[]): Fail | null {
-  const keyed = new Set((d.expect.keys ?? []).map((k) => k.item))
-  const legend = Math.min(...all.filter((p) => p.cell.legend).map((p) => p.r))
-  const named = (p: Spot) => p.r >= legend && p.cell.owners.some((o) => keyed.has(o))
+  const named = new Set((d.expect.named ?? []).map(({ at }) => `${at.r},${at.c}`))
   const drawn = new Map<string, Spot[]>()
-  for (const p of all.filter((p) => !named(p))) {
+  for (const p of all.filter((p) => !named.has(`${p.r},${p.c}`))) {
     for (const o of p.cell.owners) {
       drawn.set(o, [...(drawn.get(o) ?? []), p])
     }

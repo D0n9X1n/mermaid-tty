@@ -37,6 +37,7 @@ export type Expect = {
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[] // each frame's owner id: a cluster, a sequence frame or box
   held?: readonly { frame: string; nodes: readonly string[] }[] // each frame's nodes, its nested frames' included
+  named?: readonly { at: { r: number; c: number } }[] // C: each cell a legend drew, naming a keyed item there
   // C: each bar; lanes: its width across the axis, default 1; at: its base cell
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]
   // C: each drawn member row or column; place: its first cell, from its pill's top-left

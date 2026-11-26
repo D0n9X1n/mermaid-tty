@@ -424,3 +424,27 @@ test('A5.mutation-tests: a node moved onto a legend row still fails node-outside
 
   assert.equal(validate({ ...r.drawing, cells })?.reason, 'node-outside-frame')
 })
+
+// A keyed node's own key cells, drawn in place, are not legend cells: moved below the legend, they leave the frame
+// empty and the node outside it, and fail.
+test('A5.mutation-tests: a keyed node moved below its legend fails node-outside-frame', () => {
+  const r = explain('classDiagram\nnamespace Work {\n  note "DeliveryConfirmation"\n}', { columns: 24 })
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(r.step, 'keyed')
+  assert.equal(validate(r.drawing), null)
+  const named = new Set((r.drawing.expect.named ?? []).map(({ at }) => `${at.r},${at.c}`))
+  const cells = r.drawing.cells.map((row) => [...row])
+  const own = cells.flatMap((row, i) =>
+    row.flatMap((c, j) => (c?.owners.includes('note0') && !named.has(`${i},${j}`) ? [[i, j] as const] : [])),
+  )
+  assert.ok(own.length > 0)
+
+  const below = own.map(([i, j]) => cells[i]![j]!)
+  for (const [i, j] of own) {
+    cells[i]![j] = null
+  }
+
+  cells.push(below.map((c) => c))
+
+  assert.equal(validate({ ...r.drawing, cells })?.reason, 'node-outside-frame')
+})
