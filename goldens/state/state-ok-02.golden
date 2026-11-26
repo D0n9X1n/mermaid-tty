@@ -4,8 +4,8 @@
       │
       ▼
   ( Still )
-    ▲┌┤
-    ││└─────────┐
+    ▲┌┴─────────┐
+    ││          │
     │▼          │
  ( Moving )     │
      │          │
@@ -24,8 +24,8 @@
       e
       a
   nnNNNNNnn
-    aee
-    eeeeeeeeeeeee
+    aeeeeeeeeeeee
+    ee          e
     ea          e
  nnNNNNNNnn     e
      e          e
@@ -44,8 +44,8 @@ nnNNNNNnn    e
       │
       ▼
   ( Still )
-    ▲┌┤
-    ││└─────────┐
+    ▲┌┴─────────┐
+    ││          │
     │▼          │
  ( Moving )     │
      │          │
@@ -64,8 +64,8 @@ nnNNNNNnn    e
       e
       a
   nnNNNNNnn
-    aee
-    eeeeeeeeeeeee
+    aeeeeeeeeeeee
+    ee          e
     ea          e
  nnNNNNNNnn     e
      e          e
@@ -84,8 +84,8 @@ nnNNNNNnn    e
       │
       ▼
   ( Still )
-    ▲┌┤
-    ││└─────────┐
+    ▲┌┴─────────┐
+    ││          │
     │▼          │
  ( Moving )     │
      │          │
@@ -104,8 +104,8 @@ nnNNNNNnn    e
       e
       a
   nnNNNNNnn
-    aee
-    eeeeeeeeeeeee
+    aeeeeeeeeeeee
+    ee          e
     ea          e
  nnNNNNNNnn     e
      e          e

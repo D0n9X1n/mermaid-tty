@@ -78,3 +78,11 @@ test('A3: long edges fanning into the same nodes draw, their labels and bends cl
   draws(flow('LR', ...BTW_FLOW.slice(4, 8), ...BTW_FLOW.slice(9)))
   draws(flow('LR', ...BTW_FLOW))
 })
+
+// Edges fanning into one node from different sources each end on its face with an arrowhead, which needs the row in
+// front of the face for its stem. A run routed earlier along that row would leave a later edge no way in.
+test('A3: a node many edges fan into keeps the row before its face free for each arrowhead', () => {
+  draws(flow('LR', ...BTW_FLOW), 80)
+  draws(flow('TD', ...BTW_FLOW), 80)
+  draws(flow('TD', 'A --> B & C & D', 'B -->|x| N', 'C -->|y| N', 'D -->|z| N', 'A -->|w| N'), 80)
+})

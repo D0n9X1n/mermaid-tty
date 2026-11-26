@@ -55,7 +55,7 @@ test('A1: R3 fan-in cannot join a fan-out network that implies a missing edge', 
   assert.deepEqual(falsePairs(r.drawing), [], text(r.drawing).join('\n'))
   assert.equal(
     text(r.drawing).join('\n'),
-    ['[ A ]  [ D ]', '  │      └─┐', ' ┌┤     ┌┐ │', ' │└─────┘│ │', ' ▼       ▼ ▼', '[ C ]  [ B ]'].join('\n'),
+    ['[ A ]  [ D ]', '  │      └─┐', '  ├──────┐ │', '  │      │ │', '  ▼      ▼ ▼', '[ C ]  [ B ]'].join('\n'),
   )
 })
 

@@ -43,22 +43,20 @@ test('a path search with no work left expands nothing', () => {
 // A chart no step and no rescue routes at 80 columns, so the rescue pass runs to its end. The whole rescue pass, every
 // step, wrap, gap and search, shares RESCUE_WORK expansions, and stops once they are spent.
 const UNROUTED = [
-  'flowchart LR',
-  '  A("Done") --> B["Native /btw"]',
-  '  B ---|nothing-to-fork| C[["Worker"]]',
-  '  A ==>|nothing-to-fork| D[("Timeout?")]',
-  '  C -->|retry| E{{"Pane placed?"}}',
-  '  D ==> F(("Done"))',
-  '  D -->|yes| G[("Ask the model")]',
-  '  E -->|成功| H[("Write result")]',
-  '  G -->|ok| H',
-  '  D ---|answered| H',
-  '  C -.->|error or empty| G',
-  '  A --> H',
-  '  C -.->|retry| H',
-  '  G --- G',
-  '  G --- C',
-  '  E -.-> C',
+  'flowchart TD',
+  '  A>"Auth ok?"] ==> B{"Notify user"}',
+  '  A -->|error or empty| C{"Log"}',
+  '  A --> D["Fork the session"]',
+  '  C -->|成功| E[("Notify user")]',
+  '  C -.->|retry| F("Show source")',
+  '  C --> E',
+  '  B --> F',
+  '  C --- B',
+  '  B -->|again| B',
+  '  subgraph S1 ["Group"]',
+  '    D',
+  '    E',
+  '  end',
 ].join('\n')
 test('a chart no rescue draws spends at most RESCUE_WORK expansions in the whole rescue pass, then stops', () => {
   const src = UNROUTED

@@ -15,20 +15,23 @@
 │┌[ Web 1 ]  [ Web 2 ]─────────────┐
 └│┆─│────────────│┆────┘           │
  │┆┌│Data tier───│┆─────────────┐  │
- │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
- │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
- │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+ │┆││    ┌┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │┆│└────┼┬┐     │┆    ┌┤       │  │
+ │└┄┄┄┄┄┄┘│└─────┘└┄┄┄┄┘┆       │  │
 ┌┘ │      ▼             ▼       │  │
 │  │ [( Redis )]  > Job queue ] │  │
 │  │                    │       │  │
-│  │                    │       │  └─────────────┐
-│  │                    │       │                │
-│  │                    └─────────►[[ Worker ]]  │
+│  │                    │       │  │   ┌┐
+│  │                    │       │  └───┼┼────────┐
+│  │                    └──────────────┘│        │
+│  │                            │       ▼        │
+│  │                            │  [[ Worker ]]  │
 │  │                            │       │        │
-│  │                  ┌┬┐       │       │        │
-└─────────────────────┘│└───────────────┼────────┘
-   │                   ▼        │       │
-   │             [( Postgres )]◄────────┘
+│  │                     ┌┐     │       │        │
+│  │            ┌──────┬─┼┼────┐│┌──────┘        │
+└───────────────┘      │ ││    └─┼───────────────┘
+   │                   ▼ ▼└──────┘
+   │             [( Postgres )] │
    └────────────────────────────┘
 @60 roles
  nnnNNNNnnn
@@ -47,20 +50,23 @@ f     a          a     f
 fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
 feefeffffffffffffeefffff           e
  eefeFFFFFFFFFfffeeffffffffffffff  e
- eefe   eeeeeeeeeeeeeeeee       f  e
- eeeeeeeeeee     ee    ee       f  e
- e feeeeeeeeeeeeeeeeeeeee       f  e
+ eefe    eeeeeeeeeeeeeeee       f  e
+ eefeeeeeeee     ee    ee       f  e
+ eeeeeeeeeeeeeeeeeeeeeeee       f  e
 ee f      a             a       f  e
 e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
 e  f                    e       f  e
+e  f                    e       f  e   ee
 e  f                    e       f  eeeeeeeeeeeeeee
-e  f                    e       f                e
-e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                    eeeeeeeeeeeeeeeee        e
+e  f                            f       a        e
+e  f                            f  nnnNNNNNNnnn  e
 e  f                            f       e        e
-e  f                  eee       f       e        e
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-   f                   a        f       e
-   f             nnnNNNNNNNNnnnaeeeeeeeee
+e  f                     ee     f       e        e
+e  f            eeeeeeeeeeeeeeeefeeeeeeee        e
+eeeeeeeeeeeeeeeee      e ee    eeeeeeeeeeeeeeeeeee
+   f                   a aeeeeeeee
+   f             nnnNNNNNNNNnnn f
    ffffffffffffffffffffffffffffff
 @80
  (( User ))
@@ -79,20 +85,23 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 │┌[ Web 1 ]  [ Web 2 ]─────────────┐
 └│┆─│────────────│┆────┘           │
  │┆┌│Data tier───│┆─────────────┐  │
- │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
- │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
- │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+ │┆││    ┌┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │┆│└────┼┬┐     │┆    ┌┤       │  │
+ │└┄┄┄┄┄┄┘│└─────┘└┄┄┄┄┘┆       │  │
 ┌┘ │      ▼             ▼       │  │
 │  │ [( Redis )]  > Job queue ] │  │
 │  │                    │       │  │
-│  │                    │       │  └─────────────┐
-│  │                    │       │                │
-│  │                    └─────────►[[ Worker ]]  │
+│  │                    │       │  │   ┌┐
+│  │                    │       │  └───┼┼────────┐
+│  │                    └──────────────┘│        │
+│  │                            │       ▼        │
+│  │                            │  [[ Worker ]]  │
 │  │                            │       │        │
-│  │                  ┌┬┐       │       │        │
-└─────────────────────┘│└───────────────┼────────┘
-   │                   ▼        │       │
-   │             [( Postgres )]◄────────┘
+│  │                     ┌┐     │       │        │
+│  │            ┌──────┬─┼┼────┐│┌──────┘        │
+└───────────────┘      │ ││    └─┼───────────────┘
+   │                   ▼ ▼└──────┘
+   │             [( Postgres )] │
    └────────────────────────────┘
 @80 roles
  nnnNNNNnnn
@@ -111,20 +120,23 @@ f     a          a     f
 fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
 feefeffffffffffffeefffff           e
  eefeFFFFFFFFFfffeeffffffffffffff  e
- eefe   eeeeeeeeeeeeeeeee       f  e
- eeeeeeeeeee     ee    ee       f  e
- e feeeeeeeeeeeeeeeeeeeee       f  e
+ eefe    eeeeeeeeeeeeeeee       f  e
+ eefeeeeeeee     ee    ee       f  e
+ eeeeeeeeeeeeeeeeeeeeeeee       f  e
 ee f      a             a       f  e
 e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
 e  f                    e       f  e
+e  f                    e       f  e   ee
 e  f                    e       f  eeeeeeeeeeeeeee
-e  f                    e       f                e
-e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                    eeeeeeeeeeeeeeeee        e
+e  f                            f       a        e
+e  f                            f  nnnNNNNNNnnn  e
 e  f                            f       e        e
-e  f                  eee       f       e        e
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-   f                   a        f       e
-   f             nnnNNNNNNNNnnnaeeeeeeeee
+e  f                     ee     f       e        e
+e  f            eeeeeeeeeeeeeeeefeeeeeeee        e
+eeeeeeeeeeeeeeeee      e ee    eeeeeeeeeeeeeeeeeee
+   f                   a aeeeeeeee
+   f             nnnNNNNNNNNnnn f
    ffffffffffffffffffffffffffffff
 @120
  (( User ))
@@ -143,20 +155,23 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 │┌[ Web 1 ]  [ Web 2 ]─────────────┐
 └│┆─│────────────│┆────┘           │
  │┆┌│Data tier───│┆─────────────┐  │
- │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
- │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
- │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+ │┆││    ┌┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │┆│└────┼┬┐     │┆    ┌┤       │  │
+ │└┄┄┄┄┄┄┘│└─────┘└┄┄┄┄┘┆       │  │
 ┌┘ │      ▼             ▼       │  │
 │  │ [( Redis )]  > Job queue ] │  │
 │  │                    │       │  │
-│  │                    │       │  └─────────────┐
-│  │                    │       │                │
-│  │                    └─────────►[[ Worker ]]  │
+│  │                    │       │  │   ┌┐
+│  │                    │       │  └───┼┼────────┐
+│  │                    └──────────────┘│        │
+│  │                            │       ▼        │
+│  │                            │  [[ Worker ]]  │
 │  │                            │       │        │
-│  │                  ┌┬┐       │       │        │
-└─────────────────────┘│└───────────────┼────────┘
-   │                   ▼        │       │
-   │             [( Postgres )]◄────────┘
+│  │                     ┌┐     │       │        │
+│  │            ┌──────┬─┼┼────┐│┌──────┘        │
+└───────────────┘      │ ││    └─┼───────────────┘
+   │                   ▼ ▼└──────┘
+   │             [( Postgres )] │
    └────────────────────────────┘
 @120 roles
  nnnNNNNnnn
@@ -175,18 +190,21 @@ f     a          a     f
 fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
 feefeffffffffffffeefffff           e
  eefeFFFFFFFFFfffeeffffffffffffff  e
- eefe   eeeeeeeeeeeeeeeee       f  e
- eeeeeeeeeee     ee    ee       f  e
- e feeeeeeeeeeeeeeeeeeeee       f  e
+ eefe    eeeeeeeeeeeeeeee       f  e
+ eefeeeeeeee     ee    ee       f  e
+ eeeeeeeeeeeeeeeeeeeeeeee       f  e
 ee f      a             a       f  e
 e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
 e  f                    e       f  e
+e  f                    e       f  e   ee
 e  f                    e       f  eeeeeeeeeeeeeee
-e  f                    e       f                e
-e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                    eeeeeeeeeeeeeeeee        e
+e  f                            f       a        e
+e  f                            f  nnnNNNNNNnnn  e
 e  f                            f       e        e
-e  f                  eee       f       e        e
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-   f                   a        f       e
-   f             nnnNNNNNNNNnnnaeeeeeeeee
+e  f                     ee     f       e        e
+e  f            eeeeeeeeeeeeeeeefeeeeeeee        e
+eeeeeeeeeeeeeeeee      e ee    eeeeeeeeeeeeeeeeeee
+   f                   a aeeeeeeee
+   f             nnnNNNNNNNNnnn f
    ffffffffffffffffffffffffffffff

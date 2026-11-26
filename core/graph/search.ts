@@ -211,6 +211,7 @@ export function searchRoutes(
     const ink = labelInk(p, e)
     const fs = fences(p, e)
     const blocked = (c: Point) =>
+      (stems.has(keyOf(c)) && keyOf(c) !== keyOf(move(target.at, target.face))) ||
       title(c) ||
       !fenced(fs, c) ||
       (margins.get(keyOf(c)) ?? []).some(
@@ -452,7 +453,27 @@ export function searchRoutes(
     return { edge: e.id, style: e.style as Route['style'], cells, ends }
   }
   const preferred = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
-  for (const e of edges) {
+  // The cells in front of each slot on the incoming face of every node an edge still to route ends on: an arrowhead
+  // there needs the cell for its straight stem, so an edge routed earlier keeps its runs off them. An edge that cannot
+  // route so routes again without them.
+  const stemsBefore = (from: number) => {
+    const out = new Set<string>()
+    const face = back(preferred)
+    for (const n of edges.slice(from)) {
+      const b = p.boxes.get(n.to)
+      if (!b || n.head === 'none' || n.from === n.to) {
+        continue
+      }
+
+      for (let i = 0; i < (face % 2 ? b.rows : b.cols); i++) {
+        out.add(keyOf(move(slotCell(b, face, i), face)))
+      }
+    }
+
+    return out
+  }
+  let stems = new Set<string>()
+  for (const [k, e] of edges.entries()) {
     const sources = candidates(e.from, e.style, e.tail, preferred, portOf(groups, e, 'tail'))
     const fanInOut =
       e.from !== e.to &&
@@ -505,7 +526,13 @@ export function searchRoutes(
 
       return null
     }
+    stems = stemsBefore(k + 1)
     let result = first(true)
+    if (!result && stems.size > 0) {
+      stems = new Set()
+      result = first(true)
+    }
+
     if (!result && work && work.left > 0 && budget.left <= 0 && !refilled) {
       refilled = true
       budget.left = 5000
