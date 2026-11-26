@@ -40,24 +40,10 @@ test('a path search with no work left expands nothing', () => {
   assert.equal(budget.left, 1000)
 })
 
-// A chart no step and no rescue routes at 80 columns, so the rescue pass runs to its end. The whole rescue pass, every
-// step, wrap, gap and search, shares RESCUE_WORK expansions, and stops once they are spent.
-const UNROUTED = [
-  'flowchart TD',
-  '  A>"Auth ok?"] ==> B{"Notify user"}',
-  '  A -->|error or empty| C{"Log"}',
-  '  A --> D["Fork the session"]',
-  '  C -->|成功| E[("Notify user")]',
-  '  C -.->|retry| F("Show source")',
-  '  C --> E',
-  '  B --> F',
-  '  C --- B',
-  '  B -->|again| B',
-  '  subgraph S1 ["Group"]',
-  '    D',
-  '    E',
-  '  end',
-].join('\n')
+// A chart no step and no rescue routes at 80 columns, so the rescue pass runs to its end: three sources each joined to
+// the same three targets. The whole rescue pass, every step, wrap, gap and search, shares RESCUE_WORK expansions, and
+// stops once they are spent.
+const UNROUTED = ['flowchart TD', '  A --> X & Y & Z', '  B --> X & Y & Z', '  C --> X & Y & Z'].join('\n')
 test('a chart no rescue draws spends at most RESCUE_WORK expansions in the whole rescue pass, then stops', () => {
   const src = UNROUTED
   const model = flowchart.parse(readSource(src) as Source) as Graph
