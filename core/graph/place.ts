@@ -185,9 +185,11 @@ export function place(
   }
 }
 
-// ranks with each end of a laned back edge, one with a label or a bend, placed after every block on its rank. Such an
-// edge leaves its ends straight out toward its lane, past everything at this level (layered.ts); a block between an end
-// and that lane is a frame the edge cannot cross, and going round it leaves a turn its end has no room for.
+// ranks with each end of a laned back edge, one with a label or a bend, placed after every block of its own strip on
+// its rank. Such an edge leaves its ends straight out toward its lane, past everything at this level (layered.ts); a
+// block between an end and that lane is a frame the edge cannot cross, and going round it leaves a turn its end has no
+// room for. Only past blocks with the end's own owner, so the end never leaves its strip's run and the strip stays
+// whole.
 function lanedPastBlocks(ranks: Item[][], level: Level, backs: ReadonlySet<string>): Item[][] {
   const laned = new Set<string>()
   const counts = new Map<string, number>()
@@ -203,11 +205,14 @@ function lanedPastBlocks(ranks: Item[][], level: Level, backs: ReadonlySet<strin
   }
 
   for (const rank of ranks) {
-    const last = rank.findLastIndex((it) => it.kind === 'block')
-    const ends = rank.slice(0, Math.max(0, last)).filter((it) => it.kind === 'node' && laned.has(it.id))
-    for (const it of ends) {
+    for (const it of rank.filter((x) => x.kind === 'node' && laned.has(x.id))) {
+      const last = rank.findLastIndex((x) => x.kind === 'block' && x.owner === it.owner)
+      if (last < 0 || rank.indexOf(it) > last) {
+        continue
+      }
+
       rank.splice(rank.indexOf(it), 1)
-      rank.splice(rank.findLastIndex((x) => x.kind === 'block') + 1, 0, it)
+      rank.splice(rank.findLastIndex((x) => x.kind === 'block' && x.owner === it.owner) + 1, 0, it)
     }
   }
 

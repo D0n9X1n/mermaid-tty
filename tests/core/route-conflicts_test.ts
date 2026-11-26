@@ -55,8 +55,9 @@ test('A3: a self-loop on a node inside a subgraph draws, labelled or not, in eve
   }
 })
 
-// A side question's flowchart: long edges from C and E fan into N and X side by side, so their labels and bends sit on
-// neighbouring rows. Each must keep a free cell from the others, or the edge that has to pass beside them cannot.
+// A side question's flowchart, all 14 of its edges: long edges from C and E fan into N and X side by side, so their
+// labels and bends sit on neighbouring rows. Each must keep a free cell from the others, or the edge that has to pass
+// beside them cannot.
 const BTW_FLOW = [
   'A["/btw question"] --> B{"Terminal, not source mode, question not blank?"}',
   'B -->|no| N["Native /btw"]',
@@ -74,9 +75,30 @@ const BTW_FLOW = [
   'P -->|no| N',
 ]
 
+// Its smallest part that once fell back at every width: nine edges, from C's fan-out to the pane and N.
+const BTW_CORE = [
+  'C -->|nothing-to-fork| D{"Any message with text?"}',
+  'C -->|error or empty| N',
+  'C -->|Esc| X["Nothing shown"]',
+  'D -->|yes| E["Ask the model over the conversation"]',
+  'E -->|answered| P',
+  'E -->|error or empty| N',
+  'E -->|Esc| X',
+  'P -->|yes| Q["mermaid-tty btw pane"]',
+  'P -->|no| N',
+]
+
+// Both draw at the widths a terminal has. Below 70 columns the whole flowchart's unbreakable label nothing-to-fork
+// leaves it too wide, a fallback for width, not routing.
 test('A3: long edges fanning into the same nodes draw, their labels and bends clear of each other', () => {
-  draws(flow('LR', ...BTW_FLOW.slice(4, 8), ...BTW_FLOW.slice(9)))
-  draws(flow('LR', ...BTW_FLOW))
+  assert.equal(BTW_FLOW.length, 14)
+  for (const columns of [60, 80, 120, 400]) {
+    draws(flow('LR', ...BTW_CORE), columns)
+  }
+
+  for (const columns of [70, 80, 120, 400]) {
+    draws(flow('LR', ...BTW_FLOW), columns)
+  }
 })
 
 // Edges fanning into one node from different sources each end on its face with an arrowhead, which needs the row in
@@ -157,4 +179,21 @@ test('A3: a labelled edge back past a subgraph between its ends draws', () => {
     ),
     120,
   )
+})
+
+// Two subgraphs side by side, a back edge between the nodes of one: its bend and the other edges' labels stay at their
+// own subgraph's level, never moved across the sibling, so the plain layout still draws.
+test('A3: an edge kept beside its own subgraph never moves across a sibling subgraph', () => {
+  const source = flow(
+    'LR',
+    'A -->|yes| B; A --> C; C --> D; D -->|retry| C',
+    'subgraph S0; A; B; end',
+    'subgraph S1; C; D; end',
+  )
+  for (const columns of [60, 80, 120, 400]) {
+    const r = explain(source, { columns })
+
+    assert.ok(!isFail(r), `${columns}: ${JSON.stringify(r)}`)
+    assert.equal(r.step, 'natural', `${columns}`)
+  }
 })

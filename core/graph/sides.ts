@@ -16,10 +16,11 @@ function moveBeside(rank: Item[], it: Item, side: Side, inStrip: (it: Item) => b
 }
 
 // ranks with each edge's items kept to one side of every strip, as above. spans: each strip's first and last rank. Only
-// items at the strip's own level move, so no other strip's items are split apart; each strip is set right up to three
-// times, as moving an end for one edge can put another edge of that end on the wrong side. backs: the back edges. One
-// with a label or a bend runs in a lane past everything at its level, after every strip (layered.ts): so an end of it
-// outside a strip and level with it keeps to the strip's after side, where it can reach that lane.
+// items at the strip's own level move, labels and bends as well as nodes, so no other strip's items are split apart;
+// each strip is set right up to three times, as moving an end for one edge can put another edge of that end on the
+// wrong side. backs: the back edges. One with a label or a bend runs in a lane past everything at its level, after
+// every strip (layered.ts): so an end of it outside a strip and level with it keeps to the strip's after side, where it
+// can reach that lane.
 export function keepSides(
   ranks: Item[][],
   segs: readonly Seg[],
@@ -90,7 +91,7 @@ export function keepSides(
 
         const want = sideOf(reach[0]!)!
         for (const it of reach.slice(1)) {
-          if (sideOf(it) !== want && (it.kind === 'label' || it.kind === 'dummy')) {
+          if (sideOf(it) !== want && (it.kind === 'label' || it.kind === 'dummy') && beside(it)) {
             moveBeside(ranks[it.rank]!, it, want, inStrip)
             moved = true
           }
@@ -134,7 +135,7 @@ export function keepSides(
         }
 
         for (const it of items) {
-          const movable = it.kind === 'label' || it.kind === 'dummy' || (it.kind === 'node' && beside(it))
+          const movable = beside(it) && it.kind !== 'block' && it.kind !== 'spacer'
           if (sideOf(it) !== want && movable) {
             moveBeside(ranks[it.rank]!, it, want, inStrip)
             moved = true

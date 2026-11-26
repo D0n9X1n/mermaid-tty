@@ -568,11 +568,19 @@ export function drawGraph(
   }
   // An invisible edge (~~~) is listed only as hidden: it draws nowhere.
   const hidden = p.graph.edges.filter((e) => e.style === 'invisible').map((e) => e.id)
+  // Each framed cluster's nodes, its nested clusters' included, which validate checks are drawn inside its frame.
+  const byId = new Map(p.graph.clusters.map((c) => [c.id, c]))
+  const nodesOf = (c: GCluster): string[] => [
+    ...c.nodes,
+    ...c.clusters.flatMap((k) => (byId.has(k) ? nodesOf(byId.get(k)!) : [])),
+  ]
+  const held = p.graph.clusters.filter((c) => !c.frameless).map((c) => ({ frame: c.id, nodes: nodesOf(c) }))
   const made = cv.toDrawing({
     labels,
     edges,
     edgeLabels,
     frames,
+    ...(held.length > 0 ? { held } : {}),
     ...(hidden.length > 0 ? { hidden } : {}),
     ...(members.size > 0
       ? {

@@ -1,6 +1,6 @@
-// The validator's frame checks: each subgraph or sequence frame stays a closed box, keeps the edges between its own
-// nodes inside it, and is crossed only as its hold on an edge's ends needs; and each end label names its own edge's
-// end.
+// The validator's frame checks: each subgraph or sequence frame stays a closed box, holds its own nodes, keeps the
+// edges between them inside it, and is crossed only as its hold on an edge's ends needs; and each end label names its
+// own edge's end.
 import type { Drawing } from './canvas.ts'
 import type { Fail } from './fail.ts'
 import { fail } from './fail.ts'
@@ -117,6 +117,32 @@ export function frames(d: Drawing, all: readonly Spot[]): Fail | null {
       if (!kept(r, left) || !kept(r, right)) {
         return fail('frame-broken')
       }
+    }
+  }
+
+  return null
+}
+
+// Each frame holds its own nodes: every cell drawn for one of them, by its owners, lies strictly inside the frame's
+// box. A node drawn outside, or across the border, reads as belonging elsewhere. A node with no cells has nothing to
+// place. Run after frames, so every listed frame spans a box.
+export function held(d: Drawing, all: readonly Spot[]): Fail | null {
+  const drawn = new Map<string, Spot[]>()
+  for (const p of all) {
+    for (const o of p.cell.owners) {
+      drawn.set(o, [...(drawn.get(o) ?? []), p])
+    }
+  }
+
+  for (const { frame, nodes } of d.expect.held ?? []) {
+    const b = frameBox(all, frame)
+    if (!b) {
+      continue
+    }
+
+    const inside = (p: Spot) => p.r > b.top && p.r < b.bottom && p.c > b.left && p.c < b.right
+    if (nodes.some((n) => !(drawn.get(n) ?? []).every(inside))) {
+      return fail('node-outside-frame')
     }
   }
 

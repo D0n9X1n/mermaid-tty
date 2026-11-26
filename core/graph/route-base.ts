@@ -161,7 +161,8 @@ export function titleCells(p: Placed): ReadonlySet<string> {
   for (const n of p.graph.clusters) {
     const b = p.frames.get(n.id)
     if (b && n.title !== null) {
-      for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) {
+      const end = b.col + 3 + width(n.title)
+      for (let c = b.col + 2; c <= end; c++) {
         out.add(`${b.row},${c}`)
       }
     }

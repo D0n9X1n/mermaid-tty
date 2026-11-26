@@ -18,7 +18,7 @@ import {
   places,
   rowLabels,
 } from './validate-charts.ts'
-import { crossFrames, endLabels, frames, inFrames } from './validate-frames.ts'
+import { crossFrames, endLabels, frames, held, inFrames } from './validate-frames.ts'
 import { crossings, dangling, edgeLabels, edges, lineGlyphs, merges, rows, strays } from './validate-lines.ts'
 
 export type Expect = {
@@ -36,6 +36,7 @@ export type Expect = {
   hidden?: readonly string[] // invisible edges (~~~), drawn nowhere
   edgeLabels: readonly { owner: string; edge: string }[]
   frames: readonly string[] // each frame's owner id: a cluster, a sequence frame or box
+  held?: readonly { frame: string; nodes: readonly string[] }[] // each frame's nodes, its nested frames' included
   // C: each bar; lanes: its width across the axis, default 1; at: its base cell
   bars?: readonly { owner: string; eighths: number; axis: 'h' | 'v'; lanes?: number; at?: { r: number; c: number } }[]
   // C: each drawn member row or column; place: its first cell, from its pill's top-left
@@ -77,6 +78,7 @@ export function validate(d: Drawing): Fail | null {
     (d.conflicts.length > 0 ? fail('overwrite') : null) ??
     edgeLabels(d, all) ??
     frames(d, all) ??
+    held(d, all) ??
     inFrames(d, all) ??
     crossFrames(d, all) ??
     endLabels(d, all) ??

@@ -353,3 +353,37 @@ test('An edge from a frame that runs through the frame fails edge-crosses-frame'
   })
   assert.equal(validate(d)?.reason, 'edge-crosses-frame', show(d))
 })
+
+// F holds B, at row 4, strictly inside its box; A, at row 0, sits outside it. A frame listed as holding A reads A drawn
+// outside its own frame, as belonging elsewhere.
+test('A5.mutation-tests: a node drawn outside the frame that holds it fails node-outside-frame', () => {
+  const holding = (nodes: string[]) => {
+    const d = framed(straight)
+    return { ...d, expect: { ...d.expect, held: [{ frame: 'F', nodes }] } }
+  }
+
+  assert.equal(validate(holding(['B'])), null)
+  assert.equal(validate(holding(['A', 'B']))?.reason, 'node-outside-frame')
+})
+
+// A layout that moved a node out of its own subgraph's run on a rank drew that subgraph empty, its nodes beside it.
+test('A5.mutation-tests: every subgraph draws round its own nodes', () => {
+  const src = [
+    'flowchart RL',
+    'A --> B; B --> C; C --> D; A -->|yes| F; D -->|retry| C; F --> A',
+    'subgraph S0; A; B; end',
+    'subgraph S1; C; D; end',
+    'subgraph S2; X; end',
+  ].join('\n')
+  for (const columns of [60, 80, 120]) {
+    const r = explain(src, { columns })
+
+    assert.ok('drawing' in r, `${columns}: ${JSON.stringify(r)}`)
+    assert.deepEqual(r.drawing.expect.held, [
+      { frame: 'S0', nodes: ['A', 'B'] },
+      { frame: 'S1', nodes: ['C', 'D'] },
+      { frame: 'S2', nodes: ['X'] },
+    ])
+    assert.equal(validate(r.drawing), null)
+  }
+})
