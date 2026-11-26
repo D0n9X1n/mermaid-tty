@@ -1,8 +1,9 @@
 // The side question's own request, for when there is nothing to fork: a resumed session, or one whose first turn has
 // not finished, holds no request of its main thread for $.model.fork to share. The conversation then goes to the model
-// as data in one user message, newest turns first kept, with the question after it, as side-question tools that
-// cannot fork do (OpenClaw, opencode-aside). Tool calls and results stay in, clipped, since a side question is often
-// about what a tool printed. No JSX and no engine, so node --test can import it.
+// as data in one user message, newest turns first kept, with the question after it, as side-question tools that cannot
+// fork do (OpenClaw, opencode-aside). A session with nothing said yet sends the question alone. Tool calls and results
+// stay in, clipped, since a side question is often about what a tool printed. No JSX and no engine, so node --test can
+// import it.
 
 // The system prompt: Claude Code's own side-question framing, and that the history is data. A transcript holds tool
 // output, which is third-party text, so nothing in it may steer the answer.
@@ -14,8 +15,16 @@ export const SIDE_SYSTEM =
   'reading files, running commands or searching, say it cannot be checked from a side question. If the conversation ' +
   'does not say, say you do not know.'
 
-// The most of the conversation sent, in characters of its JSON: about 50,000 tokens, which leaves a side question
-// quick and cheap however long the session ran. The oldest turns go first.
+// The system prompt for a session with nothing said yet: no conversation to read, so the question is answered from what
+// the model knows, as Claude Code's own /btw answers it there. Still one answer with no tools.
+export const QUESTION_SYSTEM =
+  'You answer a side question from a user of an AI coding assistant, in a session where nothing has been said yet. ' +
+  'Answer the question in <side_question> directly, in a single response, from what you know. You have no tools: do ' +
+  'not write tool calls, do not promise to look anything up, and if answering would need reading files, running ' +
+  'commands or searching, say it cannot be checked from a side question. If you do not know, say so.'
+
+// The most of the conversation sent, in characters of its JSON: about 50,000 tokens, which leaves a side question quick
+// and cheap however long the session ran. The oldest turns go first.
 export const HISTORY_CHARS = 200_000
 // The most of one tool call kept, its input and its result together. A result's end is kept over its middle, since a
 // command's last lines say how it went.
@@ -73,8 +82,8 @@ function row(m: unknown): Row | null {
 // v as the history block holds it: JSON with every < escaped, so no text of a turn can close the block.
 const encode = (v: unknown) => JSON.stringify(v).replaceAll('<', '\\u003c')
 
-// The longest end of r's text whose row, alone in the list, encodes within HISTORY_CHARS. Escapes make a character
-// cost up to six, so the length is searched for, measured as sent: a longer end never encodes shorter.
+// The longest end of r's text whose row, alone in the list, encodes within HISTORY_CHARS. Escapes make a character cost
+// up to six, so the length is searched for, measured as sent: a longer end never encodes shorter.
 function lastPart(r: Row): Row {
   const fits = (n: number) => encode([{ ...r, text: r.text.slice(r.text.length - n) }]).length <= HISTORY_CHARS
   let lo = 0
@@ -124,5 +133,8 @@ export function historyPrompt(messages: unknown, question: string): string | nul
   }
 
   const json = encode(newest(rows))
-  return `<conversation_history>\n${json}\n</conversation_history>\n\n<side_question>\n${question}\n</side_question>`
+  return `<conversation_history>\n${json}\n</conversation_history>\n\n${questionPrompt(question)}`
 }
+
+// The one user message for question when there is no conversation to send: the question alone.
+export const questionPrompt = (question: string) => `<side_question>\n${question}\n</side_question>`
