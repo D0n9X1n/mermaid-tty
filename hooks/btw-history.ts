@@ -1,8 +1,8 @@
 // The side question's own request, for when there is nothing to fork: a resumed session, or one whose first turn has
 // not finished, holds no request of its main thread for $.model.fork to share. The conversation then goes to the model
-// as data in one user message, newest turns first kept, with the question after it, as side-question tools that
-// cannot fork do (OpenClaw, opencode-aside). Tool calls and results stay in, clipped, since a side question is often
-// about what a tool printed. No JSX and no engine, so node --test can import it.
+// as data in one user message, newest turns first kept, with the question after it, as side-question tools that cannot
+// fork do (OpenClaw, opencode-aside). Tool calls and results stay in, clipped, since a side question is often about
+// what a tool printed. No JSX and no engine, so node --test can import it.
 
 // The system prompt: Claude Code's own side-question framing, and that the history is data. A transcript holds tool
 // output, which is third-party text, so nothing in it may steer the answer.
@@ -14,8 +14,8 @@ export const SIDE_SYSTEM =
   'reading files, running commands or searching, say it cannot be checked from a side question. If the conversation ' +
   'does not say, say you do not know.'
 
-// The most of the conversation sent, in characters of its JSON: about 50,000 tokens, which leaves a side question
-// quick and cheap however long the session ran. The oldest turns go first.
+// The most of the conversation sent, in characters of its JSON: about 50,000 tokens, which leaves a side question quick
+// and cheap however long the session ran. The oldest turns go first.
 export const HISTORY_CHARS = 200_000
 // The most of one tool call kept, its input and its result together. A result's end is kept over its middle, since a
 // command's last lines say how it went.
@@ -73,8 +73,8 @@ function row(m: unknown): Row | null {
 // v as the history block holds it: JSON with every < escaped, so no text of a turn can close the block.
 const encode = (v: unknown) => JSON.stringify(v).replaceAll('<', '\\u003c')
 
-// The longest end of r's text whose row, alone in the list, encodes within HISTORY_CHARS. Escapes make a character
-// cost up to six, so the length is searched for, measured as sent: a longer end never encodes shorter.
+// The longest end of r's text whose row, alone in the list, encodes within HISTORY_CHARS. Escapes make a character cost
+// up to six, so the length is searched for, measured as sent: a longer end never encodes shorter.
 function lastPart(r: Row): Row {
   const fits = (n: number) => encode([{ ...r, text: r.text.slice(r.text.length - n) }]).length <= HISTORY_CHARS
   let lo = 0
