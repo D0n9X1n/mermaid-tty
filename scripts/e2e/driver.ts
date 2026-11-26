@@ -11,7 +11,7 @@ import type { Driver } from './env.ts'
 import { createScreen, type Cell } from './screen.ts'
 
 export type { Driver }
-export type Key = 'enter' | 'ctrl-o' | 'escape' | 'down'
+export type Key = 'enter' | 'ctrl-o' | 'escape' | 'down' | 'backspace'
 // A running session. Its reads are async: the tmux driver captures and parses a screen, and the pty driver first parses
 // all the output it has received. Under the tmux driver, a command the server does not answer within 2 s fails.
 export type Session = {
@@ -38,8 +38,20 @@ export type SessionOptions = { driver: Driver; argv: string[]; cwd: string; env:
 
 const COLS = 100
 const ROWS = 40
-const PTY_KEYS: Record<Key, string> = { enter: '\r', 'ctrl-o': '\x0f', escape: '\x1b', down: '\x1b[B' }
-const TMUX_KEYS: Record<Key, string> = { enter: 'Enter', 'ctrl-o': 'C-o', escape: 'Escape', down: 'Down' }
+const PTY_KEYS: Record<Key, string> = {
+  enter: '\r',
+  'ctrl-o': '\x0f',
+  escape: '\x1b',
+  down: '\x1b[B',
+  backspace: '\x7f',
+}
+const TMUX_KEYS: Record<Key, string> = {
+  enter: 'Enter',
+  'ctrl-o': 'C-o',
+  escape: 'Escape',
+  down: 'Down',
+  backspace: 'BSpace',
+}
 
 export async function startSession(o: SessionOptions): Promise<Session> {
   return o.driver === 'pty' ? ptySession(o) : tmuxSession(o)

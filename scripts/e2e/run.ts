@@ -122,6 +122,19 @@ async function submit(s: Session, text: string): Promise<void> {
   await s.waitFor(promptLine(text), 5000)
   await s.key('enter')
 }
+// Waits until Claude Code offers mermaid-tty's own command as /mermaid-tty is typed, which the plugin registers as its
+// session starts, so its hooks have run; then erases what was typed, sending nothing.
+async function pluginLoaded(s: Session): Promise<void> {
+  const typed = '/mermaid-tty'
+  await s.type(typed)
+  await s.waitFor(/Show Mermaid diagrams/, 30000)
+  for (let i = 0; i < typed.length; i++) {
+    await s.key('backspace')
+  }
+
+  await s.waitFor(/^(?![\s\S]*Show Mermaid diagrams)/, 5000)
+}
+
 // Asks the mock's REPLY for, and waits until the screen shows its last prose line, then lets the drawing settle.
 async function showDiagrams(s: Session): Promise<void> {
   await submit(s, 'Show the diagrams')
@@ -344,10 +357,10 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   const problems: string[] = []
   const since = Date.now() - 1000
   // A short reply first, so the session has a transcript to fork and the pane has room on screen. A fresh session sends
-  // none, and waits a second instead: Claude Code shows its prompt before it has loaded a plugin's hooks, and a /btw
-  // sent in that time is its own, whatever the plugin does.
+  // none: it waits for mermaid-tty to be loaded instead, since Claude Code shows its prompt before it has run a
+  // plugin's hooks, and a /btw sent in that time is its own, whatever the plugin does.
   if (fresh) {
-    await sleep(1000)
+    await pluginLoaded(s)
   } else {
     await submit(s, 'lead')
     await s.waitFor(/After the diagram\./, 30000)
