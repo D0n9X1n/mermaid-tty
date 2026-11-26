@@ -1,6 +1,6 @@
 // node scripts/e2e/run.ts [--claude-version V] [--theme default|nord|dracula|gruvbox|solarized|mono|all]
 //   [--installed CONFIG_DIR] [--color truecolor|256] [--driver pty|tmux] [--scenario
-//   harness|source-view|stored|lead|btw|crossing|all] [--keep]
+//   harness|source-view|stored|lead|btw|btw-resumed|crossing|all] [--keep]
 // The e2e scenarios (A9): a real Claude Code, installed from npm at the pinned version, loads this repo with
 // --plugin-dir
 // in a fresh config against the mock Messages API, and each scenario reads its screen. Each run is one theme, color and
@@ -41,7 +41,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
 const win = process.platform === 'win32'
 const THEME_NAMES = ['default', 'nord', 'dracula', 'gruvbox', 'solarized', 'mono'] as const
-const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw', 'crossing'] as const
+const SCENARIOS = ['harness', 'source-view', 'stored', 'lead', 'btw', 'btw-resumed', 'crossing'] as const
 type Scenario = (typeof SCENARIOS)[number]
 type Run = { theme: ThemeName; color: Color }
 
@@ -101,8 +101,17 @@ function installClaude(v: string): string {
   return bin
 }
 
-// What a scenario gets: its session, its run, its sandbox's config dir and temp dir, and the mock it talks to.
-type Ctx = { s: Session; run: Run; config: string; base: string; copied: string; mock: Mock }
+// What a scenario gets: its session, its run, its sandbox's config dir and temp dir, the mock it talks to, and resume,
+// which ends the session and continues its conversation in a new one, as claude --continue does, and resolves to it.
+type Ctx = {
+  s: Session
+  run: Run
+  config: string
+  base: string
+  copied: string
+  mock: Mock
+  resume: () => Promise<Session>
+}
 const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 // The prompt line showing text. Claude Code follows ❯ with a no-break space, which \s matches, where a plain space
 // would not.
@@ -165,9 +174,16 @@ async function runOne(
       driver,
       path: [bin, process.env.PATH ?? ''].join(delimiter),
     })
-    s = await startSession({ driver, argv: installed ? [claude] : [claude, '--plugin-dir', repoRoot], cwd, env })
+    const argv = installed ? [claude] : [claude, '--plugin-dir', repoRoot]
+    s = await startSession({ driver, argv, cwd, env })
     await s.waitFor(/❯/, 15000)
-    return await SCENARIO_RUN[scenario]({ s, run, config, base, copied, mock })
+    const resume = async () => {
+      await s?.stop()
+      s = await startSession({ driver, argv: [...argv, '--continue'], cwd, env })
+      await s.waitFor(/❯/, 15000)
+      return s
+    }
+    return await SCENARIO_RUN[scenario]({ s, run, config, base, copied, mock, resume })
   } catch (e) {
     return [e instanceof Error ? e.message : String(e)]
   } finally {
@@ -319,13 +335,21 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
 
 // btw: while a /btw side question asked after a reply is answered, mermaid-tty's status row says so; then the answer
 // shows in mermaid-tty's pane, its diagram drawn, not its source, the row gone, and nothing of it reaches the stored
-// transcript. Escape closes the pane.
-async function btw({ s, run, config, mock }: Ctx): Promise<string[]> {
+// transcript. Escape closes the pane. With resumed, the /btw is asked in a session that continues that conversation and
+// has sent nothing yet, so there is no request of its own a fork could share: mermaid-tty still answers it.
+async function btw(c: Ctx, resumed = false): Promise<string[]> {
+  const { run, config, mock } = c
+  let s = c.s
   const problems: string[] = []
   const since = Date.now() - 1000
   // A short reply first, so the session has a transcript to fork and the pane has room on screen.
   await submit(s, 'lead')
   await s.waitFor(/After the diagram\./, 30000)
+  if (resumed) {
+    s = await c.resume()
+    await s.waitFor(/After the diagram\./, 30000)
+  }
+
   // The answer is held until the row has been read, so the row is read while the fork runs: only once the side question
   // has reached the mock, and always let go, so no failure here leaves the session waiting on it.
   const hold = mock.holdSide()
@@ -381,6 +405,46 @@ async function btw({ s, run, config, mock }: Ctx): Promise<string[]> {
 
   await s.key('escape')
   await s.waitFor(/^(?![\s\S]*Side done\.)/, 10000).catch(() => problems.push('btw: escape left the pane open'))
+  if (resumed) {
+    problems.push(...(await btwCancelled(s, mock)))
+  }
+
+  return problems
+}
+
+// Esc while a /btw is still being answered cancels it: no answer shows, neither in mermaid-tty's pane nor in Claude
+// Code's own panel, and the status row goes. Esc is pressed only once the request is out and held at the mock, so it
+// cuts a request in flight, not one yet to start.
+async function btwCancelled(s: Session, mock: Mock): Promise<string[]> {
+  const problems: string[] = []
+  const hold = mock.holdSide()
+  try {
+    await submit(s, '/btw and now?')
+    const wait = new AbortController()
+    const came = await Promise.race([
+      hold.arrived.then(() => true),
+      sleep(15000, false, { signal: wait.signal }).catch(() => false),
+    ])
+    wait.abort()
+    if (!came) {
+      throw new Error('the side question never reached the mock')
+    }
+
+    await s.waitFor(new RegExp(escape(BTW_STATUS)), 15000)
+    await s.key('escape')
+    await s.waitFor(new RegExp(`^(?![\\s\\S]*${escape(BTW_STATUS)})`), 10000)
+  } catch (e) {
+    problems.push(`btw: escape did not cancel the answer: ${e instanceof Error ? e.message : String(e)}`)
+  } finally {
+    hold.release()
+  }
+
+  await sleep(2000)
+  const text = await s.text()
+  if (text.includes('Side done.') || text.includes('Answering')) {
+    problems.push('btw: an answer shows after escape cancelled it')
+  }
+
   return problems
 }
 
@@ -563,6 +627,7 @@ const SCENARIO_RUN: Record<Scenario, (c: Ctx) => Promise<string[]>> = {
   stored,
   lead,
   btw,
+  'btw-resumed': (c) => btw(c, true),
   crossing,
 }
 

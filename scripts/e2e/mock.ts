@@ -1,10 +1,11 @@
 // A stand-in for the Anthropic Messages API on 127.0.0.1, for the e2e harness's real Claude Code. startMock() answers
 // every POST /v1/messages, whatever its query string, with REPLY; REPLY_BTW when the last user message is a side
-// question, as /btw asks one; REPLY_CROSS when it contains crossing; or REPLY_LEAD when it contains lead: as SSE when
-// the request has stream: true, else as one JSON message. Any other method or path gets an empty 404, CONNECT is
-// refused, and stop() closes every connection. holdSide() keeps the next side question unanswered until its release is
-// called, and says through arrived when that question has come in, so a scenario can read the screen while a /btw is
-// being answered. Node built-ins only, so the main suite needs nothing installed.
+// question, as /btw asks one, or the system prompt frames one, as mermaid-tty's answer from the conversation does;
+// REPLY_CROSS when it contains crossing; or REPLY_LEAD when it contains lead: as SSE when the request has stream: true,
+// else as one JSON message. Any other method or path gets an empty 404, CONNECT is refused, and stop() closes every
+// connection. holdSide() keeps the next side question unanswered until its release is called, and says through arrived
+// when that question has come in, so a scenario can read the screen while a /btw is being answered. Node built-ins
+// only, so the main suite needs nothing installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
@@ -25,7 +26,7 @@ export function chunks(text: string): string[] {
 const sse = (event: string, data: object) => `event: ${event}\ndata: ${JSON.stringify({ type: event, ...data })}\n\n`
 
 // What the mock reads of a request; any of it may be missing or malformed.
-type Body = { model?: unknown; stream?: unknown; messages?: unknown }
+type Body = { model?: unknown; stream?: unknown; system?: unknown; messages?: unknown }
 
 // The request's JSON body, or {} when it is not a JSON object, so that every POST still gets a reply.
 function parse(raw: string): Body {
@@ -53,9 +54,15 @@ function lastAsks(messages: unknown, word: string): boolean {
   return texts.some((t) => typeof t === 'string' && t.includes(word))
 }
 
-// The reply for a request's messages: a side question first, since its prompt may hold any word.
-export function replyFor(messages: unknown): string {
-  if (lastAsks(messages, 'side question')) {
+// Whether the system prompt, a string or text blocks, contains word.
+function systemAsks(system: unknown, word: string): boolean {
+  const texts = Array.isArray(system) ? system.map((b) => b?.text) : [system]
+  return texts.some((t) => typeof t === 'string' && t.includes(word))
+}
+
+// The reply for a request's messages and system prompt: a side question first, since its prompt may hold any word.
+export function replyFor(messages: unknown, system?: unknown): string {
+  if (lastAsks(messages, 'side question') || systemAsks(system, 'side question')) {
     return REPLY_BTW
   }
 
@@ -92,7 +99,7 @@ export async function startMock(): Promise<Mock> {
     }
 
     const body = parse(Buffer.concat(parts).toString('utf8'))
-    const text = replyFor(body.messages)
+    const text = replyFor(body.messages, body.system)
     if (text === REPLY_BTW && sideHold) {
       const hold = sideHold
       sideHold = null

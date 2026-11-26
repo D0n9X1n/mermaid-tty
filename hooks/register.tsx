@@ -2,6 +2,7 @@ import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
 import { BTW_STATUS, forkPrompt, isBtw, isWindows, markerPath, takesBtw, usesMarker } from './btw.ts'
+import { ANSWER_TOKENS, answerText, historyPrompt, SIDE_SYSTEM } from './btw-history.ts'
 import type { Picture } from './image.ts'
 import {
   directionNote,
@@ -223,6 +224,26 @@ async function showBtw($: any, isStale: () => boolean, question: string, answer:
   }
 
   return false
+}
+
+// The answer to question from the conversation itself, for when there is nothing to fork: the session's model asked
+// over the session's messages, with no tools, as $.model.fork would have asked it, and cut short with signal. Resolves
+// as a fork does, nothing-to-fork again when no message has text to answer from. The messages are those since the last
+// compaction, its summary first, as the main thread's next request would hold them. A /btw overtaken while they are
+// read asks nothing: its answer would be dropped, and the request paid for all the same.
+async function fromConversation($: any, question: string, signal: AbortSignal, isStale: () => boolean) {
+  const prompt = historyPrompt(await $.session.messages(), question)
+  if (prompt === null || isStale()) {
+    return { isAnswered: false, reason: 'nothing-to-fork' } as const
+  }
+
+  const model = await $.session.model()
+  if (isStale()) {
+    return { isAnswered: false, reason: 'nothing-to-fork' } as const
+  }
+
+  const r = await $.model.complete({ model, system: SIDE_SYSTEM, prompt, maxTokens: ANSWER_TOKENS }, { signal })
+  return r.isAnswered ? { ...r, text: answerText(r.text, r.usage?.output_tokens ?? 0) } : r
 }
 
 // Where the /btw cue is shown: the status row or a marker file at its path, for the /btw it stands for, by number.
@@ -628,11 +649,12 @@ export const register: Register = (on, options) => {
   })
 
   // /btw in a terminal session, outside source mode: the question goes to a fork of this session's transcript, as
-  // Claude Code's own /btw sends it, and the answer to the btw pane. The answer adds nothing to the conversation: no
-  // output row, no context. The fork is awaited here, so whatever comes back but an answer hands /btw to Claude Code,
+  // Claude Code's own /btw sends it, and the answer to the btw pane. A session with nothing to fork yet, one resumed or
+  // still on its first turn, is asked over its conversation instead. The answer adds nothing to the conversation: no
+  // output row, no context. The answer is awaited here, so whatever comes back but an answer hands /btw to Claude Code,
   // which runs it as if mermaid-tty were not installed; a cancelled one shows nothing. Claude Code shows the command as
-  // running meanwhile, and the prompt stays free. The pane opens from this hook, which answers the person's command, so
-  // it is placed at any width wherever the surface places panes.
+  // running meanwhile, and queues a prompt sent before it ends. The pane opens from this hook, which answers the
+  // person's command, so it is placed at any width wherever the surface places panes.
   on('command.run', { command: 'btw' }, async ($, e, next) => {
     // Every /btw is numbered as it arrives, before anything is awaited, the ones Claude Code answers too. Only the
     // newest may still act once it has waited: an older one ends with nothing, so it neither hands an obsolete question
@@ -674,7 +696,11 @@ export const register: Register = (on, options) => {
     }
     let answer: string | undefined
     try {
-      const r = await $.model.fork({ prompt: forkPrompt(e.args) })
+      let r = await $.model.fork({ prompt: forkPrompt(e.args) })
+      if (!r.isAnswered && r.reason === 'nothing-to-fork' && !isStale()) {
+        r = await fromConversation($, e.args, next.signal, isStale)
+      }
+
       if (!r.isAnswered && r.reason === 'aborted') {
         await done()
         return {}

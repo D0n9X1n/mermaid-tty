@@ -1,6 +1,19 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { THEMES } from '../../core/themes.ts'
-import { ANSWER, answered, BTW, engine, FC, held, pane, start, tick, usage } from './btw-kit.tsx'
+import {
+  ANSWER,
+  answered,
+  BTW,
+  CONVERSATION,
+  engine,
+  FC,
+  held,
+  NOTHING_TO_FORK,
+  pane,
+  start,
+  tick,
+  usage,
+} from './btw-kit.tsx'
 
 test('A6.command: /btw answers from a fork in a pane that draws its fences, adding nothing to the session', async ($, on) => {
   const e = engine(on, answered(ANSWER))
@@ -26,7 +39,7 @@ test('A6.command: /btw answers from a fork in a pane that draws its fences, addi
 test('A6.command: a fork with no answer hands /btw to Claude Code, and a cancelled one shows nothing', async ($, on) => {
   const e = engine(
     on,
-    { isAnswered: false, reason: 'nothing-to-fork' },
+    NOTHING_TO_FORK,
     { isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage },
     { isAnswered: false, reason: 'empty-reply', usage },
     { isAnswered: false, reason: 'aborted', usage },
@@ -40,6 +53,129 @@ test('A6.command: a fork with no answer hands /btw to Claude Code, and a cancell
   expect(e.builtin).toEqual(['one', 'two', 'three'])
   expect(cancelled).toEqual({})
   expect(e.opens).toEqual([])
+})
+
+// A resumed session, or one whose first turn has not finished, holds no request a fork may share: the answer then comes
+// from the conversation itself, and shows in the pane as a fork's would.
+test('A6.command: with nothing to fork, /btw is answered from the conversation in the pane, adding nothing', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK)
+  e.conversation.value = CONVERSATION
+  e.completed.push(answered(ANSWER))
+  const session = mock.session(on)
+  await start($)
+
+  const r = await BTW($, 'what does it do?')
+  const ui = await pane($)
+
+  expect(r).toEqual({})
+  expect(e.builtin).toEqual([])
+  expect(session.appended()).toEqual([])
+  expect(e.completions).toHaveLength(1)
+  expect(e.completions[0].model).toBe('claude-opus-5-5')
+  expect(e.completions[0].prompt).toContain('After the diagram.')
+  expect(e.completions[0].prompt).toContain('what does it do?')
+  expect(e.completions[0].system).toContain('side question')
+  expect(e.completions[0].maxTokens).toBe(8192)
+  expect(e.opens).toEqual([expect.objectContaining({ id: 'btw', title: 'btw', focus: true, closeOnEscape: true })])
+  expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
+})
+
+test('A6.command: an answer from the conversation cut at its length limit says so in the pane', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK)
+  e.conversation.value = CONVERSATION
+  e.completed.push({ isAnswered: true, text: 'The flow reads', usage: { ...usage, output_tokens: 8192 } })
+  await start($)
+
+  await BTW($, 'long?')
+  const ui = await pane($)
+
+  expect(JSON.stringify(await ui.drawn())).toContain('cut short at its length limit')
+})
+
+test('A6.command: with nothing to fork and no conversation, /btw is Claude Code own, asking no model', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK, NOTHING_TO_FORK)
+  await start($)
+
+  const none = await BTW($, 'first?')
+  e.conversation.value = [{ role: 'user', text: '  ', toolUses: [] }]
+  const blank = await BTW($, 'blank?')
+
+  expect([none, blank]).toEqual([{ text: 'the built-in /btw' }, { text: 'the built-in /btw' }])
+  expect(e.builtin).toEqual(['first?', 'blank?'])
+  expect(e.completions).toEqual([])
+  expect(e.opens).toEqual([])
+})
+
+test('A6.command: an answer from the conversation that fails hands /btw on, and a cancelled one shows nothing', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK, NOTHING_TO_FORK, NOTHING_TO_FORK, NOTHING_TO_FORK)
+  e.conversation.value = CONVERSATION
+  const failing = held()
+  e.completed.push(
+    { isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage },
+    { isAnswered: false, reason: 'empty-reply', usage },
+    failing.promise,
+    { isAnswered: false, reason: 'aborted', usage },
+  )
+  await start($)
+  failing.fail(new Error('no implementation for model.complete'))
+
+  const said = [await BTW($, 'one'), await BTW($, 'two'), await BTW($, 'three')]
+  const cancelled = await BTW($, 'four')
+
+  expect(said.map((r: any) => r.text)).toEqual(['the built-in /btw', 'the built-in /btw', 'the built-in /btw'])
+  expect(e.builtin).toEqual(['one', 'two', 'three'])
+  expect(cancelled).toEqual({})
+  expect(e.opens).toEqual([])
+})
+
+test('A6.command: a conversation that cannot be read hands /btw on without asking a model', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK)
+  const unreadable = held()
+  e.conversation.value = unreadable.promise
+  await start($)
+  unreadable.fail(new Error('no transcript'))
+
+  const r = await BTW($, 'can you read it?')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.completions).toEqual([])
+})
+
+test('A6.command: an answer from the conversation that arrives after a newer /btw is dropped', async ($, on) => {
+  const slow = held()
+  const e = engine(on, NOTHING_TO_FORK, answered('the newer answer'))
+  e.conversation.value = CONVERSATION
+  e.completed.push(slow.promise)
+  await start($)
+
+  const older = BTW($, 'older')
+  await tick()
+  const newer = await BTW($, 'newer')
+  slow.settle(answered('the older answer'))
+  const late = await older
+  const ui = await pane($)
+
+  expect([newer, late]).toEqual([{}, {}])
+  expect(e.opens).toHaveLength(1)
+  expect(await ui.find({ type: 'Markdown', text: 'the newer answer' })).toBeDefined()
+  expect(await ui.find({ type: 'Markdown', text: 'the older answer' })).toBeUndefined()
+})
+
+test('A6.command: a /btw overtaken while its conversation is read asks no model', async ($, on) => {
+  const reading = held()
+  const e = engine(on, NOTHING_TO_FORK, answered('the newer answer'))
+  e.conversation.value = reading.promise
+  await start($)
+
+  const older = BTW($, 'older')
+  await tick()
+  const newer = await BTW($, 'newer')
+  reading.settle(CONVERSATION)
+  const late = await older
+
+  expect([newer, late]).toEqual([{}, {}])
+  expect(e.completions).toEqual([])
+  expect(e.opens).toHaveLength(1)
 })
 
 test('A6.command: /btw with no question, in source mode, or with no session start goes to Claude Code', async ($, on) => {

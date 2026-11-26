@@ -489,13 +489,19 @@ test('A9.harness: the mock refuses CONNECT, closing the connection without a byt
   }
 })
 
-test('A9.harness: a side question, as /btw asks one, gets REPLY_BTW whatever else it says; lead gets REPLY_LEAD', () => {
+test('A9.harness: a side question, in the last message or the system prompt, gets REPLY_BTW; lead gets REPLY_LEAD', () => {
   const side = [
     { type: 'text', text: 'This is a side question from the user.' },
     { type: 'text', text: 'lead?' },
   ]
 
   assert.equal(replyFor([{ role: 'user', content: side }]), REPLY_BTW)
+  assert.equal(replyFor([{ role: 'user', content: 'lead' }], 'You answer a side question.'), REPLY_BTW)
+  assert.equal(replyFor([{ role: 'user', content: 'lead' }], [{ type: 'text', text: 'a side question' }]), REPLY_BTW)
+  assert.equal(
+    replyFor([{ role: 'user', content: 'lead' }], [{ type: 'text', text: 'You are Claude Code' }]),
+    REPLY_LEAD,
+  )
   assert.equal(replyFor([{ role: 'user', content: 'lead' }]), REPLY_LEAD)
   assert.equal(replyFor([{ role: 'user', content: 'hello' }]), REPLY)
   assert.equal(replyFor('not messages'), REPLY)

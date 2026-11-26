@@ -1,6 +1,18 @@
 // The cue mermaid-tty shows while it answers a /btw: its status row, or the marker a custom status line reads.
 import { test, expect, mock } from 'claude-code/testing'
-import { ANSWER, answered, BTW, engine, forks, held, start, tick, usage } from './btw-kit.tsx'
+import {
+  ANSWER,
+  answered,
+  BTW,
+  CONVERSATION,
+  engine,
+  forks,
+  held,
+  NOTHING_TO_FORK,
+  start,
+  tick,
+  usage,
+} from './btw-kit.tsx'
 
 // The cue beneath the plugin: each status row text and each marker write, in order, the session id it is named by, and
 // which markers are on disk.
@@ -134,6 +146,46 @@ for (const [name, windows] of Object.entries({ OS: 'Windows_NT', SystemRoot: 'C:
     expect(cue.marks).toEqual([])
   })
 }
+
+test('A6.status: with nothing to fork, the cue stays up until the answer from the conversation shows', async ($, on) => {
+  mock.env(on, FILE_MODE)
+  const answer = held()
+  const cue = cueSink(on)
+  const e = engine(on, NOTHING_TO_FORK)
+  e.conversation.value = CONVERSATION
+  e.completed.push(answer.promise)
+  await start($)
+
+  const running = BTW($, 'slow?')
+  await tick()
+  const whileAnswering = cue.marks.at(-1)
+  const asked = e.completions.length
+  answer.settle(answered(ANSWER))
+  await running
+
+  expect(asked).toBe(1)
+  expect(whileAnswering).toEqual({ path: MARKER, text: '1' })
+  expect(cue.marks.at(-1)).toEqual({ path: MARKER, text: '' })
+  expect(e.opens).toHaveLength(1)
+})
+
+test('A6.status: with nothing to fork, a cancelled answer from the conversation takes its cue down', async ($, on) => {
+  const answer = held()
+  const cue = cueSink(on)
+  const e = engine(on, NOTHING_TO_FORK)
+  e.conversation.value = CONVERSATION
+  e.completed.push(answer.promise)
+  await start($)
+
+  const running = BTW($, 'cancel me')
+  await tick()
+  const whileAnswering = cue.rowOn()
+  answer.settle({ isAnswered: false, reason: 'aborted', usage })
+
+  expect(await running).toEqual({})
+  expect(whileAnswering).toBe(true)
+  expect(cue.rowOn()).toBe(false)
+})
 
 test('A6.status: a marker that cannot be written leaves the row as the cue', async ($, on) => {
   mock.env(on, FILE_MODE)
