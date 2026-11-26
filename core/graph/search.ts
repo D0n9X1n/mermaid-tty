@@ -2,7 +2,6 @@
 // already placed. The fallback when the channel router fails, and the router for edges beside reserved lanes.
 import { fail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
-import { width } from '../width.ts'
 import { gaps } from './gaps.ts'
 import type { Box, Placed } from './layered.ts'
 import type { GEdge } from './model.ts'
@@ -23,6 +22,7 @@ import {
   middle,
   portOf,
   straightCrossing,
+  titleCells,
   walls,
 } from './route-base.ts'
 import type { Point, Route, Segment } from './route-base.ts'
@@ -136,17 +136,8 @@ export function searchRoutes(
     const b = (p.boxes.get(id) ?? p.frames.get(id))!
     return port.face % 2 ? port.at.r - b.row : port.at.c - b.col
   }
-  const titleCells = new Set<string>()
-  for (const n of p.graph.clusters) {
-    const b = p.frames.get(n.id)
-    if (b && n.title !== null) {
-      for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) {
-        titleCells.add(`${b.row},${c}`)
-      }
-    }
-  }
-
-  const title = (c: Point) => titleCells.has(keyOf(c))
+  const titles = titleCells(p)
+  const title = (c: Point) => titles.has(keyOf(c))
   const candidates = (
     id: string,
     style: string,

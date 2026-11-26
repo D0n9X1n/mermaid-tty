@@ -16,7 +16,8 @@ export type Spacing = { rankGap: number; nodeGap: number; wrapAt: number | null 
 // A level's rank band along its main axis, rows or columns from to to: block is null for the top level, else the sealed
 // cluster laid out on its own. Placed.bands lists each level's in order; gaps() reads the gaps between them.
 export type Band = { block: string | null; axis: 'row' | 'col'; from: number; to: number }
-// notes: each side note's box, by note id, beside its node's pill in boxes.
+// notes: each side note's box, by note id, beside its node's pill in boxes. titles: the cells frame titles take, by
+// "row,col", when they are not where each frame's top border puts them, as in a layout routed mirrored (mirror.ts).
 export type Placed = {
   graph: Graph
   boxes: ReadonlyMap<string, Box>
@@ -25,6 +26,7 @@ export type Placed = {
   cols: number
   bands?: readonly Band[]
   notes?: ReadonlyMap<string, Box>
+  titles?: ReadonlySet<string>
 }
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })

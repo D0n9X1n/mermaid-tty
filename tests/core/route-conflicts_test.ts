@@ -22,3 +22,25 @@ test('A3: a labelled edge into a subgraph draws, with the subgraph above, below 
     draws(flow(dir, 'D -->|x| L', 'subgraph S1 [组]', '  K', '  L', 'end'))
   }
 })
+
+// Bottom to top and right to left are top to bottom and left to right mirrored: whatever draws one way draws the other.
+test('A3: a graph that draws top to bottom or left to right also draws mirrored', () => {
+  const shapes = [
+    ['A --> B', 'B -->|again| B', 'B --> C'],
+    ['A --> B', 'B -->|x| B', 'B -->|y| B'],
+    ['A --> C', 'A --> D', 'B --> C', 'B --> D'],
+    ['A & B --> C & D'],
+    ['A --> B', 'B -->|again| B', 'B --> C', 'C -->|retry| A'],
+    ['A --> B', 'B -->|again| B', 'B -->|more| B', 'B --> C', 'A --> C'],
+  ]
+  for (const lines of shapes) {
+    for (const [one, other] of [
+      ['TB', 'BT'],
+      ['LR', 'RL'],
+    ]) {
+      if (!isFail(explain(flow(one!, ...lines), { columns: 400 }))) {
+        draws(flow(other!, ...lines))
+      }
+    }
+  }
+})
