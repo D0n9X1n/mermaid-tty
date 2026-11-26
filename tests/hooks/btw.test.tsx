@@ -1,5 +1,6 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { THEMES } from '../../core/themes.ts'
+import { QUESTION_SYSTEM, SIDE_SYSTEM } from '../../hooks/btw-history.ts'
 import {
   ANSWER,
   answered,
@@ -74,7 +75,7 @@ test('A6.command: with nothing to fork, /btw is answered from the conversation i
   expect(e.completions[0].model).toBe('claude-opus-5-5')
   expect(e.completions[0].prompt).toContain('After the diagram.')
   expect(e.completions[0].prompt).toContain('what does it do?')
-  expect(e.completions[0].system).toContain('side question')
+  expect(e.completions[0].system).toBe(SIDE_SYSTEM)
   expect(e.completions[0].maxTokens).toBe(8192)
   expect(e.opens).toEqual([expect.objectContaining({ id: 'btw', title: 'btw', focus: true, closeOnEscape: true })])
   expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
@@ -92,17 +93,66 @@ test('A6.command: an answer from the conversation cut at its length limit says s
   expect(JSON.stringify(await ui.drawn())).toContain('cut short at its length limit')
 })
 
-test('A6.command: with nothing to fork and no conversation, /btw is Claude Code own, asking no model', async ($, on) => {
+// A session that has said nothing yet still gets its /btw answered in the pane: the question goes to the model alone,
+// with no conversation block, as Claude Code's own /btw answers it from what the model knows.
+test('A6.command: with nothing to fork and no conversation, /btw is answered from the question alone', async ($, on) => {
   const e = engine(on, NOTHING_TO_FORK, NOTHING_TO_FORK)
+  e.completed.push(answered(ANSWER), answered('Blank too.'))
+  const session = mock.session(on)
   await start($)
 
   const none = await BTW($, 'first?')
+  const drawn = await (await pane($)).find({ key: 'mermaid-0' })
   e.conversation.value = [{ role: 'user', text: '  ', toolUses: [] }]
   const blank = await BTW($, 'blank?')
 
-  expect([none, blank]).toEqual([{ text: 'the built-in /btw' }, { text: 'the built-in /btw' }])
-  expect(e.builtin).toEqual(['first?', 'blank?'])
-  expect(e.completions).toEqual([])
+  expect([none, blank]).toEqual([{}, {}])
+  expect(e.builtin).toEqual([])
+  expect(session.appended()).toEqual([])
+  expect(e.completions).toHaveLength(2)
+  expect(e.completions[0].model).toBe('claude-opus-5-5')
+  expect(e.completions[0].maxTokens).toBe(8192)
+  expect(e.completions[0].prompt).toContain('first?')
+  expect(e.completions[0].prompt).not.toContain('conversation_history')
+  expect(e.completions[0].system).toBe(QUESTION_SYSTEM)
+  expect(e.completions[1].system).toBe(QUESTION_SYSTEM)
+  expect(e.completions[1].prompt).toContain('blank?')
+  expect(e.completions[1].prompt).not.toContain('conversation_history')
+  expect(e.opens).toHaveLength(2)
+  expect(drawn?.text).toContain('读取')
+})
+
+// A turn whose only content is a tool call is still conversation: what the tool was asked is background the side
+// question may be about, so it goes in the history block, not the question alone.
+test('A6.command: a turn holding only a tool call is answered over the conversation', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK)
+  e.conversation.value = [{ role: 'assistant', text: '', toolUses: [{ tool: 'Read', input: { file: 'a.ts' } }] }]
+  e.completed.push(answered(ANSWER))
+  await start($)
+
+  await BTW($, 'what was read?')
+
+  expect(e.completions).toHaveLength(1)
+  expect(e.completions[0].system).toBe(SIDE_SYSTEM)
+  expect(e.completions[0].prompt).toContain('<conversation_history>')
+  expect(e.completions[0].prompt).toContain('a.ts')
+})
+
+test('A6.command: an answer to the question alone that fails hands /btw on, and a cancelled one shows nothing', async ($, on) => {
+  const e = engine(on, NOTHING_TO_FORK, NOTHING_TO_FORK, NOTHING_TO_FORK)
+  e.completed.push(
+    { isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage },
+    { isAnswered: false, reason: 'empty-reply', usage },
+    { isAnswered: false, reason: 'aborted', usage },
+  )
+  await start($)
+
+  const said = [await BTW($, 'one'), await BTW($, 'two')]
+  const cancelled = await BTW($, 'three')
+
+  expect(said.map((r: any) => r.text)).toEqual(['the built-in /btw', 'the built-in /btw'])
+  expect(e.builtin).toEqual(['one', 'two'])
+  expect(cancelled).toEqual({})
   expect(e.opens).toEqual([])
 })
 
@@ -171,6 +221,23 @@ test('A6.command: a /btw overtaken while its conversation is read asks no model'
   await tick()
   const newer = await BTW($, 'newer')
   reading.settle(CONVERSATION)
+  const late = await older
+
+  expect([newer, late]).toEqual([{}, {}])
+  expect(e.completions).toEqual([])
+  expect(e.opens).toHaveLength(1)
+})
+
+test('A6.command: a /btw overtaken while the session model is read asks no model', async ($, on) => {
+  const reading = held()
+  const e = engine(on, NOTHING_TO_FORK, answered('the newer answer'))
+  e.model.value = reading.promise
+  await start($)
+
+  const older = BTW($, 'older')
+  await tick()
+  const newer = await BTW($, 'newer')
+  reading.settle('claude-opus-5-5')
   const late = await older
 
   expect([newer, late]).toEqual([{}, {}])

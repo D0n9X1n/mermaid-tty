@@ -28,6 +28,8 @@ export const engine = (on: any, ...replies: unknown[]) => {
   const completions: any[] = []
   const completed: unknown[] = []
   const conversation = { value: [] as unknown }
+  // The session's model, a promise held to order it.
+  const model = { value: 'claude-opus-5-5' as unknown }
   const placed = { value: { isPlaced: true } as object }
   // Each open answers the next of these in turn, a promise held to order it, then placed; one that rejects throws.
   const openings: unknown[] = []
@@ -41,7 +43,7 @@ export const engine = (on: any, ...replies: unknown[]) => {
     return { value: await completed.shift() }
   })
   on('session.messages', async () => ({ value: await conversation.value }))
-  on('session.model', async () => ({ value: 'claude-opus-5-5' }))
+  on('session.model', async () => ({ value: await model.value }))
   on('ui.open', async (_$: any, e: any) => {
     opens.push(e)
     return openings.length ? { value: await openings.shift() } : placed
@@ -56,7 +58,7 @@ export const engine = (on: any, ...replies: unknown[]) => {
   })
   on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
   on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
-  return { prompts, opens, closes, builtin, placed, openings, completions, completed, conversation }
+  return { prompts, opens, closes, builtin, placed, openings, completions, completed, conversation, model }
 }
 export const pane = ($: any, surface = 'terminal') =>
   $.ui.mount({

@@ -6,6 +6,8 @@ import {
   CUT_NOTE,
   HISTORY_CHARS,
   historyPrompt,
+  QUESTION_SYSTEM,
+  questionPrompt,
   SIDE_SYSTEM,
   TOOL_CHARS,
 } from '../../hooks/btw-history.ts'
@@ -42,6 +44,15 @@ test('A6.command: a conversation with no text has nothing to answer from', () =>
   assert.equal(historyPrompt([user(''), assistant('   ')], 'why?'), null)
   assert.equal(historyPrompt(undefined, 'why?'), null)
   assert.equal(historyPrompt({ deny: 'no' }, 'why?'), null)
+})
+
+test('A6.command: with no conversation, the question goes alone, told it has no tools and no conversation', () => {
+  const prompt = questionPrompt('what is a fork?')
+
+  assert.equal(prompt, '<side_question>\nwhat is a fork?\n</side_question>')
+  assert.match(QUESTION_SYSTEM, /side question/)
+  assert.match(QUESTION_SYSTEM, /no tools/)
+  assert.doesNotMatch(QUESTION_SYSTEM, /conversation_history/)
 })
 
 test('A6.command: a tool call and its result are kept as one clipped line, so a side question can see them', () => {
