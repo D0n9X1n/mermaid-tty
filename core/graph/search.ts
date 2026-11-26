@@ -27,6 +27,8 @@ import {
 } from './route-base.ts'
 import type { Point, Route, Segment } from './route-base.ts'
 
+// How many times the rescue's second pass routes again, each time with the edge it got stuck on first.
+const RIP_TRIES = 4
 // The cell just outside box b on face (0 above, 1 right, 2 below, 3 left), at slot i along that face.
 function slotCell(b: Box, face: number, i: number): Point {
   if (face === 0) {
@@ -62,8 +64,42 @@ export function searchRoutes(
   p: Placed,
   constrainedFirst = false,
   reserved: Route[] = [],
-  work?: { left: number },
+  work?: { left: number; rip?: boolean },
 ): Route[] | Fail {
+  // With work.rip, the rescue's second pass: each edge the search gets stuck on routes first next time, up to RIP_TRIES
+  // times, so an edge an earlier one walled in gets its turn before it. Never twice for one edge, and never past work.
+  const tries = work?.rip ? RIP_TRIES : 1
+  const first: string[] = []
+  const size = { rows: p.rows, cols: p.cols }
+  for (let t = 0; t < tries; t++) {
+    p.rows = size.rows
+    p.cols = size.cols
+    const r = searchOnce(p, constrainedFirst, reserved, work, first)
+    if (Array.isArray(r)) {
+      return r
+    }
+
+    if (r.stuck === undefined || first.includes(r.stuck) || (work && work.left <= 0)) {
+      break
+    }
+
+    first.unshift(r.stuck)
+  }
+
+  p.rows = size.rows
+  p.cols = size.cols
+  return fail('route-conflict')
+}
+
+// One search over every edge, those named in first routed first, in that order: the routes, or the edge it got stuck
+// on.
+function searchOnce(
+  p: Placed,
+  constrainedFirst: boolean,
+  reserved: Route[],
+  work: { left: number } | undefined,
+  first: readonly string[],
+): Route[] | { stuck: string } {
   const groups = mergeGroups(p)
   const edges = p.graph.edges.filter((e) => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   if (constrainedFirst) {
@@ -74,6 +110,11 @@ export function searchRoutes(
         b.minlen - a.minlen ||
         a.order - b.order,
     )
+  }
+
+  if (first.length) {
+    const rank = (e: GEdge) => (first.includes(e.id) ? first.indexOf(e.id) : first.length)
+    edges.sort((a, b) => rank(a) - rank(b))
   }
 
   const routes: Route[] = []
@@ -540,7 +581,7 @@ export function searchRoutes(
     }
 
     if (!result) {
-      return fail('route-conflict')
+      return { stuck: e.id }
     }
 
     const { route, source, target } = result

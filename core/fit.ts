@@ -31,9 +31,10 @@ export const RESCUE_WORK = 50000
 // wider claim would pass it), or when validate rejects its drawing. If every step is skipped, the first reason that is
 // not about width, so the debug log names what kept a fitting drawing off the screen; the last step's reason when width
 // is all that failed; 'too-wide' when the ladder has no step. Only then, if the type has a rescue, each step runs again
-// through it, in order, under the same checks, until RESCUE_WORK expansions are spent; the first it draws is taken.
-// Running it last keeps every drawing the steps find exactly as it is, and a rescue that draws nothing leaves the
-// steps' reason.
+// through it, in order, under the same checks, until RESCUE_WORK expansions are spent; the first it draws is taken. If
+// none does, a second rescue pass runs the same way, on RESCUE_WORK of its own, with rip set: the search router then
+// routes again with each edge it got stuck on first. Running them last keeps every drawing the steps find exactly as it
+// is, the second pass keeps every drawing the first finds, and a rescue that draws nothing leaves the steps' reason.
 export function fitLadder<M>(
   mod: DiagramModule<M>,
   model: M,
@@ -59,15 +60,17 @@ export function fitLadder<M>(
     return { step, drawing: drawing as Drawing }
   }
 
-  const work = { left: RESCUE_WORK }
-  for (const step of mod.rescue ? mod.steps(model) : []) {
-    if (work.left <= 0) {
-      break
-    }
+  for (const rip of [false, true]) {
+    const work = { left: RESCUE_WORK, rip }
+    for (const step of mod.rescue ? mod.steps(model) : []) {
+      if (work.left <= 0) {
+        break
+      }
 
-    const drawing = mod.rescue!(model, step, columns, work)
-    if (!check(drawing, columns)) {
-      return { step, drawing: drawing as Drawing }
+      const drawing = mod.rescue!(model, step, columns, work)
+      if (!check(drawing, columns)) {
+        return { step, drawing: drawing as Drawing }
+      }
     }
   }
 

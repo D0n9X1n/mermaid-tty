@@ -95,3 +95,12 @@ test('A3: a labelled edge back beside an unrelated part of the graph draws', () 
     draws(flow(dir, 'B ---|x| D(("Read config"))', 'F --> C', 'D ==> B'))
   }
 })
+
+// Every source joined to every target, and many arrow styles into one node: each incoming group takes a column of its
+// own on the target's face.
+test('A3: complete fans and many arrow styles into one node draw', () => {
+  for (const dir of ['TD', 'BT', 'LR', 'RL']) {
+    draws(flow(dir, 'A --> X & Y & Z', 'B --> X & Y & Z', 'C --> X & Y & Z'), 80)
+    draws(flow(dir, 'A --> X', 'B ==> X', 'C -.-> X', 'D --o X', 'E --x X', 'F <--> X', 'G o--o X', 'H x--x X'), 80)
+  }
+})
