@@ -53,6 +53,8 @@ export function keepSides(
 
         return rank.indexOf(it) < first ? 'before' : 'after'
       }
+      // An edge that enters the strip: its items outside it, level with it, keep to its outer end's side.
+      const passing: Item[][] = []
       for (const items of chains.values()) {
         const chain = items.toSorted((a, b) => a.rank - b.rank)
         const top = chain[0]!
@@ -61,24 +63,61 @@ export function keepSides(
           continue
         }
 
-        // The edge's items level with the strip and outside it, from the outer end toward the inner one when the strip
-        // holds one end, else top down.
-        const walk = inStrip(top) ? chain.toReversed() : chain
-        const flank = walk.filter((it) => !inStrip(it) && it.rank >= lo && it.rank <= hi && sideOf(it) !== null)
-        if (flank.length < 2) {
+        const flank = (walk: readonly Item[]) =>
+          walk.filter((it) => !inStrip(it) && it.rank >= lo && it.rank <= hi && sideOf(it) !== null)
+        if (!inStrip(top) && !inStrip(bottom)) {
+          passing.push(flank(chain))
           continue
         }
 
-        let want: Side = sideOf(flank[0]!)!
-        if (!inStrip(top) && !inStrip(bottom)) {
-          const after = flank.filter((it) => sideOf(it) === 'after').length
-          want = after * 2 > flank.length ? 'after' : 'before'
-          if (after * 2 === flank.length) {
-            want = sideOf(flank[0]!)!
-          }
+        // From the outer end toward the inner one.
+        const reach = flank(inStrip(top) ? chain.toReversed() : chain)
+        if (reach.length < 2) {
+          continue
         }
 
-        for (const it of flank) {
+        const want = sideOf(reach[0]!)!
+        for (const it of reach.slice(1)) {
+          if (sideOf(it) !== want && (it.kind === 'label' || it.kind === 'dummy')) {
+            moveBeside(ranks[it.rank]!, it, want, inStrip)
+            moved = true
+          }
+        }
+      }
+
+      // Edges that pass the strip, holding neither end, and the ends they share: each group goes to the side most of
+      // its items are on, ties to its first item's, so an end two such edges share is never pulled both ways.
+      const group = new Map<Item, number>()
+      const join = (a: number, b: number) => {
+        for (const [it, g] of group) {
+          if (g === b) {
+            group.set(it, a)
+          }
+        }
+      }
+      passing.forEach((items, i) => {
+        for (const it of items) {
+          const g = group.get(it)
+          if (g !== undefined && g !== i) {
+            join(i, g)
+          }
+
+          group.set(it, i)
+        }
+      })
+      for (const g of new Set(group.values())) {
+        const items = [...group].filter(([, x]) => x === g).map(([it]) => it)
+        if (items.length < 2) {
+          continue
+        }
+
+        const after = items.filter((it) => sideOf(it) === 'after').length
+        let want: Side = after * 2 > items.length ? 'after' : 'before'
+        if (after * 2 === items.length) {
+          want = sideOf(items[0]!)!
+        }
+
+        for (const it of items) {
           const movable = it.kind === 'label' || it.kind === 'dummy' || (it.kind === 'node' && beside(it))
           if (sideOf(it) !== want && movable) {
             moveBeside(ranks[it.rank]!, it, want, inStrip)

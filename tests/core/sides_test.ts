@@ -22,3 +22,23 @@ test('A3: an edge beside a subgraph that holds neither end keeps to one side of 
     }
   }
 })
+
+// A node two edges beside a subgraph share is pulled to one side by each: both edges, and the node, go to one side.
+test('A3: edges beside a subgraph that share a node keep to one side of it together', () => {
+  const source = flow(
+    'TD',
+    'I --> K{"Any text?"}',
+    'K -->|x| M["Cache result"]',
+    'J --> N["Return response"]',
+    'M --> B',
+    'N --> B',
+    'subgraph G1 ["Validation"]',
+    '  L',
+    '  M',
+    'end',
+  )
+  const r = explain(source, { columns: 120 })
+
+  assert.ok(!isFail(r), isFail(r) ? r.reason : '')
+  assert.equal(validate(r.drawing), null)
+})
