@@ -54,3 +54,27 @@ test('A3: a self-loop on a node inside a subgraph draws, labelled or not, in eve
     }
   }
 })
+
+// A side question's flowchart: long edges from C and E fan into N and X side by side, so their labels and bends sit on
+// neighbouring rows. Each must keep a free cell from the others, or the edge that has to pass beside them cannot.
+const BTW_FLOW = [
+  'A["/btw question"] --> B{"Terminal, not source mode, question not blank?"}',
+  'B -->|no| N["Native /btw"]',
+  'B -->|yes| C["Fork the session transcript"]',
+  'C -->|answered| P{"Pane placed?"}',
+  'C -->|nothing-to-fork| D{"Any message with text?"}',
+  'C -->|error or empty| N',
+  'C -->|Esc| X["Nothing shown"]',
+  'D -->|no| N',
+  'D -->|yes| E["Ask the model over the conversation"]',
+  'E -->|answered| P',
+  'E -->|error or empty| N',
+  'E -->|Esc| X',
+  'P -->|yes| Q["mermaid-tty btw pane"]',
+  'P -->|no| N',
+]
+
+test('A3: long edges fanning into the same nodes draw, their labels and bends clear of each other', () => {
+  draws(flow('LR', ...BTW_FLOW.slice(4, 8), ...BTW_FLOW.slice(9)))
+  draws(flow('LR', ...BTW_FLOW))
+})

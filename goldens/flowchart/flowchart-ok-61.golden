@@ -21,16 +21,16 @@
 │           │           │
 │           ▼           │
 │ [ Integration tests ]◄──────────────────┐
-│           ├───────────────────┐         │
-│           │           │       │         │
-│           ▼           │       │         │
-│  ┌[ Security scan ]   │     flaky       │
-└──│────────│───────────┘       │         │
-   │        │                   │         │
-   └────────┼───────┐           │         │
-┌─Release───│─┐     │           │         │
-│           │ │     │           │         │
-│      ┌┐   │ │     │           │         │
+│           ├─────────────────┐           │
+│           │           │     │           │
+│           ▼           │     │           │
+│  ┌[ Security scan ]   │   flaky         │
+└──│────────│───────────┘     │           │
+   │        │                 │           │
+   └────────┼───────┐         │           │
+┌─Release───│─┐     │         │           │
+│           │ │     │         │           │
+│      ┌┐   │ │     │         └─┐         │
 │      │└───┘ │     │           │         │
 │      ▼      │     │           ▼         │
 │ [ Package ] │   fails   [ Retry once ]──┘
@@ -71,16 +71,16 @@ f        eeee           f
 f           e           f
 f           a           f
 f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
-f           eeeeeeeeeeeeeeeeeeeee         e
-f           e           f       e         e
-f           a           f       e         e
-f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
-fffeffffffffeffffffffffff       e         e
-   e        e                   e         e
-   eeeeeeeeeeeeeeeeee           e         e
-ffFFFFFFFfffeff     e           e         e
-f           e f     e           e         e
-f      ee   e f     e           e         e
+f           eeeeeeeeeeeeeeeeeee           e
+f           e           f     e           e
+f           a           f     e           e
+f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
+fffeffffffffeffffffffffff     e           e
+   e        e                 e           e
+   eeeeeeeeeeeeeeeeee         e           e
+ffFFFFFFFfffeff     e         e           e
+f           e f     e         e           e
+f      ee   e f     e         eee         e
 f      eeeeee f     e           e         e
 f      a      f     e           a         e
 f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee
@@ -121,16 +121,16 @@ fffffffffffffff
 │           │           │
 │           ▼           │
 │ [ Integration tests ]◄──────────────────┐
-│           ├───────────────────┐         │
-│           │           │       │         │
-│           ▼           │       │         │
-│  ┌[ Security scan ]   │     flaky       │
-└──│────────│───────────┘       │         │
-   │        │                   │         │
-   └────────┼───────┐           │         │
-┌─Release───│─┐     │           │         │
-│           │ │     │           │         │
-│      ┌┐   │ │     │           │         │
+│           ├─────────────────┐           │
+│           │           │     │           │
+│           ▼           │     │           │
+│  ┌[ Security scan ]   │   flaky         │
+└──│────────│───────────┘     │           │
+   │        │                 │           │
+   └────────┼───────┐         │           │
+┌─Release───│─┐     │         │           │
+│           │ │     │         │           │
+│      ┌┐   │ │     │         └─┐         │
 │      │└───┘ │     │           │         │
 │      ▼      │     │           ▼         │
 │ [ Package ] │   fails   [ Retry once ]──┘
@@ -171,16 +171,16 @@ f        eeee           f
 f           e           f
 f           a           f
 f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
-f           eeeeeeeeeeeeeeeeeeeee         e
-f           e           f       e         e
-f           a           f       e         e
-f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
-fffeffffffffeffffffffffff       e         e
-   e        e                   e         e
-   eeeeeeeeeeeeeeeeee           e         e
-ffFFFFFFFfffeff     e           e         e
-f           e f     e           e         e
-f      ee   e f     e           e         e
+f           eeeeeeeeeeeeeeeeeee           e
+f           e           f     e           e
+f           a           f     e           e
+f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
+fffeffffffffeffffffffffff     e           e
+   e        e                 e           e
+   eeeeeeeeeeeeeeeeee         e           e
+ffFFFFFFFfffeff     e         e           e
+f           e f     e         e           e
+f      ee   e f     e         eee         e
 f      eeeeee f     e           e         e
 f      a      f     e           a         e
 f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee
@@ -221,16 +221,16 @@ fffffffffffffff
 │           │           │
 │           ▼           │
 │ [ Integration tests ]◄──────────────────┐
-│           ├───────────────────┐         │
-│           │           │       │         │
-│           ▼           │       │         │
-│  ┌[ Security scan ]   │     flaky       │
-└──│────────│───────────┘       │         │
-   │        │                   │         │
-   └────────┼───────┐           │         │
-┌─Release───│─┐     │           │         │
-│           │ │     │           │         │
-│      ┌┐   │ │     │           │         │
+│           ├─────────────────┐           │
+│           │           │     │           │
+│           ▼           │     │           │
+│  ┌[ Security scan ]   │   flaky         │
+└──│────────│───────────┘     │           │
+   │        │                 │           │
+   └────────┼───────┐         │           │
+┌─Release───│─┐     │         │           │
+│           │ │     │         │           │
+│      ┌┐   │ │     │         └─┐         │
 │      │└───┘ │     │           │         │
 │      ▼      │     │           ▼         │
 │ [ Package ] │   fails   [ Retry once ]──┘
@@ -271,16 +271,16 @@ f        eeee           f
 f           e           f
 f           a           f
 f nnNNNNNNNNNNNNNNNNNnnaeeeeeeeeeeeeeeeeeee
-f           eeeeeeeeeeeeeeeeeeeee         e
-f           e           f       e         e
-f           a           f       e         e
-f  ennNNNNNNNNNNNNNnn   f     LLLLL       e
-fffeffffffffeffffffffffff       e         e
-   e        e                   e         e
-   eeeeeeeeeeeeeeeeee           e         e
-ffFFFFFFFfffeff     e           e         e
-f           e f     e           e         e
-f      ee   e f     e           e         e
+f           eeeeeeeeeeeeeeeeeee           e
+f           e           f     e           e
+f           a           f     e           e
+f  ennNNNNNNNNNNNNNnn   f   LLLLL         e
+fffeffffffffeffffffffffff     e           e
+   e        e                 e           e
+   eeeeeeeeeeeeeeeeee         e           e
+ffFFFFFFFfffeff     e         e           e
+f           e f     e         e           e
+f      ee   e f     e         eee         e
 f      eeeeee f     e           e         e
 f      a      f     e           a         e
 f nnNNNNNNNnn f   LLLLL   nnNNNNNNNNNNnneee

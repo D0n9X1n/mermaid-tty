@@ -374,7 +374,7 @@ test('A4.fit-ladder: the reason is the first rejection that is not about width; 
   )
 })
 
-test('A4.fit-ladder: a five-entity ER logs why its fitting drawing was rejected, not word-too-wide', () => {
+test('A4.fit-ladder: a five-entity ER draws, its relationship names keyed', () => {
   const src = [
     'erDiagram',
     'CUSTOMER ||--o{ ORDER : places',
@@ -384,5 +384,7 @@ test('A4.fit-ladder: a five-entity ER logs why its fitting drawing was rejected,
     'ORDER }o--|| ADDRESS : "ships to"',
   ].join('\n')
   const r = explain(src, { columns: 200 })
-  assert.ok('reason' in r && !['too-wide', 'row-too-wide', 'word-too-wide'].includes(r.reason), JSON.stringify(r))
+
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(validate(r.drawing), null)
 })

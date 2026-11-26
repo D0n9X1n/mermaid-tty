@@ -30,6 +30,13 @@ export type Placed = {
 }
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
+// Whether box a overlaps box b, or, unless touching is allowed, comes within a cell of it.
+function near(a: Box, b: Box, touching: boolean): boolean {
+  const m = touching ? 0 : 1
+  return (
+    a.row < b.row + b.rows + m && b.row < a.row + a.rows + m && a.col < b.col + b.cols + m && b.col < a.col + a.cols + m
+  )
+}
 
 // The cells a back edge's lane takes across the ranks: its label's extent that way, or one cell with no label.
 function laneWidth(label: Box | undefined, across: boolean): number {
@@ -234,13 +241,10 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     const cross =
       (single && Math.abs(source - target) <= 1 ? source : target) - ((across ? label.rows : label.cols) >> 1)
     const candidate = across ? { ...label, row: cross } : { ...label, col: cross }
+    // The router walls off a cell beside any box but the edge's own ends, label and bends, so a label moved there would
+    // leave its edge no way past: it keeps that cell free, as it keeps off the boxes themselves.
     const overlaps = [...boxes].some(
-      ([id, n]) =>
-        id !== `${e.id}:label` &&
-        candidate.row < n.row + n.rows &&
-        n.row < candidate.row + candidate.rows &&
-        candidate.col < n.col + n.cols &&
-        n.col < candidate.col + candidate.cols,
+      ([id, n]) => id !== `${e.id}:label` && near(candidate, n, id === e.from || id === e.to),
     )
     const frameConflict = [...frames.values()].some((f) => {
       const within = (b: Box) =>
@@ -267,14 +271,9 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     for (const [id, b] of boxes) {
       if (id.startsWith(`${e.id}#`)) {
         const candidate = across ? { ...b, row: axis } : { ...b, col: axis }
-        const overlap = [...boxes].some(
-          ([other, n]) =>
-            other !== id &&
-            candidate.row < n.row + n.rows &&
-            n.row < candidate.row + candidate.rows &&
-            candidate.col < n.col + n.cols &&
-            n.col < candidate.col + candidate.cols,
-        )
+        const own = (other: string) =>
+          other === e.from || other === e.to || other === `${e.id}:label` || other.startsWith(`${e.id}#`)
+        const overlap = [...boxes].some(([other, n]) => other !== id && near(candidate, n, own(other)))
         const crossesFrame = [...frames.values()].some((f) => {
           const within = (b: Box) =>
             b.row > f.row && b.col > f.col && b.row + b.rows < f.row + f.rows && b.col + b.cols < f.col + f.cols

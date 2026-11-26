@@ -401,7 +401,7 @@ test('A1: Q1 diamond junctions are centered under and over their nodes', () => {
 })
 
 test('A1: Q1 route conflicts retry the same step with two more cells of spacing', () => {
-  const g = graph('flowchart LR\nN0["start<br/>more"] ==>|成功| N1\nN0 ==> N1')
+  const g = graph('flowchart LR\nN0 -.-> N1\nN0 --> N1\nN0 -.->|成功| N1')
   assert.equal(verdict(pipeline(g, { rankGap: 6, nodeGap: 1, wrapAt: null }, 120)), 'route-conflict')
   const expected = pipeline(g, { rankGap: 8, nodeGap: 3, wrapAt: null }, 120)
   assert.equal(verdict(expected), 'valid')
@@ -410,7 +410,7 @@ test('A1: Q1 route conflicts retry the same step with two more cells of spacing'
 })
 
 test('A1: R2 the final plus-four spacing retry is required and bounded', () => {
-  const g = graph('flowchart LR\nN0["读取<br/>配置"] -->|yes| N1\nN1 --> N2\nN0 -->|成功| N1\nN0 --> N1')
+  const g = graph('flowchart LR\nN0["start<br/>more"]\nN1 -.->|成功| N3\nN2 -->|成功| N3\nN1 -.-> N2\nN0 -.-> N2')
   assert.equal(verdict(pipeline(g, { rankGap: 6, nodeGap: 1, wrapAt: null }, 120)), 'route-conflict')
   assert.equal(verdict(pipeline(g, { rankGap: 8, nodeGap: 3, wrapAt: null }, 120)), 'route-conflict')
   const expected = pipeline(g, { rankGap: 10, nodeGap: 5, wrapAt: null }, 120)

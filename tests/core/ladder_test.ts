@@ -55,7 +55,7 @@ const counted = (gr: Graph) => {
   return { b, calls }
 }
 test('A4.fit-ladder: a route-conflict retries the try at two, then four more cells of gap', () => {
-  const gr = g('LR', ['N0=>N1|成功', 'N0=>N1'], { N0: 'start<br/>more' })
+  const gr = g('LR', ['N0.>N1', 'N0>N1', 'N0.>N1|成功'])
   const { b, calls } = counted(gr)
   const d = drawAt(b, 'LR', 'natural', 120, null) as Drawing
   assert.equal(validate(d), null)
