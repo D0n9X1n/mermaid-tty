@@ -5,6 +5,7 @@ import { crossAxis, LEFT, RIGHT } from './cross.ts'
 import { bandTops, borders, channels, tracks } from './main-axis.ts'
 import type { GEdge } from './model.ts'
 import { order } from './order.ts'
+import { keepSides } from './sides.ts'
 import { addSpacers, pathOf, spans } from './strips.ts'
 
 // A rectangle along the axes: its start and size across the ranks (cross, wide) and along them (main, long).
@@ -48,7 +49,7 @@ export function place(
   }
 
   const fits = new Map([...fit].filter(([c]) => span.has(c)))
-  const placed = order(ranks, level.segs, path)
+  const placed = keepSides(order(ranks, level.segs, path), level.segs, path, span)
   const x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
   const heights = placed.map((r) => Math.max(...r.map((i) => i.main)))
   const channel = channels(tracks(placed, level.segs), gap.rankGap)
@@ -71,7 +72,22 @@ export function place(
       branches.set(edge.from, (branches.get(edge.from) ?? 0) | (held(edge.to) ? 1 : 2))
     }
 
-    if ([...branches.values()].includes(3)) {
+    // A label or dummy on the rank above the strip, whose edge goes on into it, must leave through its own cell: with
+    // the strip's top border right under it, it could not turn off a title cell there. The gap gets the exterior rows
+    // too, so it can. Ranks that run across meet the strip's side, which holds no title.
+    const entered =
+      !across &&
+      level.segs.some((s) => {
+        const upper = items.get(s.upper)
+        return (
+          upper !== undefined &&
+          upper.rank === lo - 1 &&
+          (upper.kind === 'label' || upper.kind === 'dummy') &&
+          !held(s.upper) &&
+          held(s.lower)
+        )
+      })
+    if ([...branches.values()].includes(3) || entered) {
       exterior.add(lo)
     }
   }

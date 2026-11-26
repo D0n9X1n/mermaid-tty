@@ -17,19 +17,18 @@ const S = (t: string): Drawing =>
   sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro, whose edge label's row once ran through both sides of the Group subgraph: the layout keeps the label off
-// its border (R2 in flowchart-layout_test.ts), but its edge can reach N1 only by running through it and back in, three
-// crossings where one is due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator
-// half of the finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on
-// between() further down.
-test("A5.mutation-tests: QA's cluster-border repro, its edge through S0 and back, falls back", () => {
+// QA's repro, whose edge label's row once ran through both sides of the Group subgraph. Its label stays on N0's side of
+// Group, so the edge crosses Group's border once, into it, and the drawing validates. The validator half of the
+// finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between()
+// further down.
+test("A5.mutation-tests: QA's cluster-border repro crosses S0's border once, its label on N0's side", () => {
   const src =
     'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
-  assert.deepEqual(flowchart.layout(parseFlowchart(readSource(src) as Source) as any, 'natural', 80), {
-    reason: 'route-conflict',
-  })
   for (const columns of [60, 80, 120]) {
-    assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
+    const r = explain(src, { columns })
+
+    assert.ok('drawing' in r, `${columns}`)
+    assert.equal(validate(r.drawing), null)
   }
 })
 test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {

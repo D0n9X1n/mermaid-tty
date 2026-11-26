@@ -1,0 +1,192 @@
+@60
+ (( User ))
+     └──┐
+        │
+        ▼
+ ┌───/ CDN /
+┌│App tier─────────────┐
+││        ┌┐           │
+│└────────┘│           │
+│          ▼           │
+│ {{ Load balancer }}  │
+│     ┌┐   │    ┌┐     │
+│     │└───┴────┘│     │
+│     ▼          ▼     │
+│┌[ Web 1 ]  [ Web 2 ]─────────────┐
+└│┆─│────────────│┆────┘           │
+ │┆┌│Data tier───│┆─────────────┐  │
+ │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
+ │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+┌┘ │      ▼             ▼       │  │
+│  │ [( Redis )]  > Job queue ] │  │
+│  │                    │       │  │
+│  │                    │       │  └─────────────┐
+│  │                    │       │                │
+│  │                    └─────────►[[ Worker ]]  │
+│  │                            │       │        │
+│  │                  ┌┬┐       │       │        │
+└─────────────────────┘│└───────────────┼────────┘
+   │                   ▼        │       │
+   │             [( Postgres )]◄────────┘
+   └────────────────────────────┘
+@60 roles
+ nnnNNNNnnn
+     eeee
+        e
+        a
+ eeeennNNNnn
+feFFFFFFFFffffffffffffff
+fe        ee           f
+feeeeeeeeeee           f
+f          a           f
+f nnnNNNNNNNNNNNNNnnn  f
+f     ee   e    ee     f
+f     eeeeeeeeeeee     f
+f     a          a     f
+fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
+feefeffffffffffffeefffff           e
+ eefeFFFFFFFFFfffeeffffffffffffff  e
+ eefe   eeeeeeeeeeeeeeeee       f  e
+ eeeeeeeeeee     ee    ee       f  e
+ e feeeeeeeeeeeeeeeeeeeee       f  e
+ee f      a             a       f  e
+e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
+e  f                    e       f  e
+e  f                    e       f  eeeeeeeeeeeeeee
+e  f                    e       f                e
+e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                            f       e        e
+e  f                  eee       f       e        e
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+   f                   a        f       e
+   f             nnnNNNNNNNNnnnaeeeeeeeee
+   ffffffffffffffffffffffffffffff
+@80
+ (( User ))
+     └──┐
+        │
+        ▼
+ ┌───/ CDN /
+┌│App tier─────────────┐
+││        ┌┐           │
+│└────────┘│           │
+│          ▼           │
+│ {{ Load balancer }}  │
+│     ┌┐   │    ┌┐     │
+│     │└───┴────┘│     │
+│     ▼          ▼     │
+│┌[ Web 1 ]  [ Web 2 ]─────────────┐
+└│┆─│────────────│┆────┘           │
+ │┆┌│Data tier───│┆─────────────┐  │
+ │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
+ │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+┌┘ │      ▼             ▼       │  │
+│  │ [( Redis )]  > Job queue ] │  │
+│  │                    │       │  │
+│  │                    │       │  └─────────────┐
+│  │                    │       │                │
+│  │                    └─────────►[[ Worker ]]  │
+│  │                            │       │        │
+│  │                  ┌┬┐       │       │        │
+└─────────────────────┘│└───────────────┼────────┘
+   │                   ▼        │       │
+   │             [( Postgres )]◄────────┘
+   └────────────────────────────┘
+@80 roles
+ nnnNNNNnnn
+     eeee
+        e
+        a
+ eeeennNNNnn
+feFFFFFFFFffffffffffffff
+fe        ee           f
+feeeeeeeeeee           f
+f          a           f
+f nnnNNNNNNNNNNNNNnnn  f
+f     ee   e    ee     f
+f     eeeeeeeeeeee     f
+f     a          a     f
+fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
+feefeffffffffffffeefffff           e
+ eefeFFFFFFFFFfffeeffffffffffffff  e
+ eefe   eeeeeeeeeeeeeeeee       f  e
+ eeeeeeeeeee     ee    ee       f  e
+ e feeeeeeeeeeeeeeeeeeeee       f  e
+ee f      a             a       f  e
+e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
+e  f                    e       f  e
+e  f                    e       f  eeeeeeeeeeeeeee
+e  f                    e       f                e
+e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                            f       e        e
+e  f                  eee       f       e        e
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+   f                   a        f       e
+   f             nnnNNNNNNNNnnnaeeeeeeeee
+   ffffffffffffffffffffffffffffff
+@120
+ (( User ))
+     └──┐
+        │
+        ▼
+ ┌───/ CDN /
+┌│App tier─────────────┐
+││        ┌┐           │
+│└────────┘│           │
+│          ▼           │
+│ {{ Load balancer }}  │
+│     ┌┐   │    ┌┐     │
+│     │└───┴────┘│     │
+│     ▼          ▼     │
+│┌[ Web 1 ]  [ Web 2 ]─────────────┐
+└│┆─│────────────│┆────┘           │
+ │┆┌│Data tier───│┆─────────────┐  │
+ │┆││   ┌┄┄┄┄┄┄┄┄┼┼┄┄┄┄┄┐       │  │
+ │└┄┼┄┄┄┘┌┬┐     │┆    ┌┤       │  │
+ │ │└────┘│└─────┘└┄┄┄┄┘┆       │  │
+┌┘ │      ▼             ▼       │  │
+│  │ [( Redis )]  > Job queue ] │  │
+│  │                    │       │  │
+│  │                    │       │  └─────────────┐
+│  │                    │       │                │
+│  │                    └─────────►[[ Worker ]]  │
+│  │                            │       │        │
+│  │                  ┌┬┐       │       │        │
+└─────────────────────┘│└───────────────┼────────┘
+   │                   ▼        │       │
+   │             [( Postgres )]◄────────┘
+   └────────────────────────────┘
+@120 roles
+ nnnNNNNnnn
+     eeee
+        e
+        a
+ eeeennNNNnn
+feFFFFFFFFffffffffffffff
+fe        ee           f
+feeeeeeeeeee           f
+f          a           f
+f nnnNNNNNNNNNNNNNnnn  f
+f     ee   e    ee     f
+f     eeeeeeeeeeee     f
+f     a          a     f
+fennNNNNNnn  nnNNNNNnneeeeeeeeeeeeee
+feefeffffffffffffeefffff           e
+ eefeFFFFFFFFFfffeeffffffffffffff  e
+ eefe   eeeeeeeeeeeeeeeee       f  e
+ eeeeeeeeeee     ee    ee       f  e
+ e feeeeeeeeeeeeeeeeeeeee       f  e
+ee f      a             a       f  e
+e  f nnnNNNNNnnn  nnNNNNNNNNNnn f  e
+e  f                    e       f  e
+e  f                    e       f  eeeeeeeeeeeeeee
+e  f                    e       f                e
+e  f                    eeeeeeeeeeannnNNNNNNnnn  e
+e  f                            f       e        e
+e  f                  eee       f       e        e
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+   f                   a        f       e
+   f             nnnNNNNNNNNnnnaeeeeeeeee
+   ffffffffffffffffffffffffffffff
