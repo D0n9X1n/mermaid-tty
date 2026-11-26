@@ -469,25 +469,55 @@ test('A4.fit-ladder: wrap takes the first of wrapAt 24, 20, 16, 12, 8 that valid
   assert.notDeepEqual(at(16), at(12))
   assert.deepEqual(flowchart.layout(g, 'wrap', 10), at(8, 10))
 })
-test('A4.fit-ladder: lrToTd draws LR as TB and RL as BT at the tight spacing, trying wrapAt null, 24, 20, 16, 12, 8', () => {
+// At 60 columns this graph is too wide at natural spacing, draws at tight, and draws taller wrapped: lrToTd takes the
+// tight drawing, so it tries tight before it wraps.
+test('A4.fit-ladder: lrToTd tries tight spacing unwrapped before it wraps', () => {
+  const body = 'A[the quick brown fox jumps over the lazy dog]\nC -->|ok| B\nC --> D\nC -->|ok| A\nA --> D'
   for (const [dir, to] of [
     ['LR', 'TB'],
     ['RL', 'BT'],
   ] as const) {
-    const g = graph(`flowchart ${dir}\n${LONG}\nA --> C[fine]`)
-    for (const [columns, tried] of [
-      [80, [null]],
-      [30, [null, 24]],
-      [22, [null, 24, 20, 16]],
-    ] as const) {
-      const td = (wrapAt: number | null) => pipeline({ ...g, dir: to }, { rankGap: 2, nodeGap: 2, wrapAt }, columns)
-      assert.deepEqual(
-        tried.map((w) => verdict(td(w))),
-        tried.map((_, i) => (i === tried.length - 1 ? 'valid' : 'row-too-wide')),
-      )
-      assert.deepEqual(flowchart.layout(g, 'lrToTd', columns), td(tried[tried.length - 1] ?? null), `${dir} ${columns}`)
+    const g = graph(`flowchart ${dir}\n${body}`)
+    const natural = pipeline({ ...g, dir: to }, { rankGap: 3, nodeGap: 4, wrapAt: null }, 60)
+    const tight = pipeline({ ...g, dir: to }, { rankGap: 2, nodeGap: 2, wrapAt: null }, 60)
+    const wrapped = pipeline({ ...g, dir: to }, { rankGap: 2, nodeGap: 2, wrapAt: 24 }, 60)
+    assert.notEqual(verdict(natural), 'valid', dir)
+    assert.equal(verdict(tight), 'valid', dir)
+    assert.notDeepEqual(tight, wrapped, dir)
+
+    assert.deepEqual(flowchart.layout(g, 'lrToTd', 60), tight, dir)
+  }
+})
+
+// A left-to-right graph that cannot draw so falls back to top to bottom, drawn as that graph's own steps would draw it:
+// natural spacing first, then tight, then wrapped at 24, 20, 16, 12 and 8. Its first valid try wins, and across widths
+// each of the three is the one that does.
+test('A4.fit-ladder: lrToTd draws LR as TB and RL as BT the way TB tries it: natural, tight, then wrapped', () => {
+  const order = [
+    { name: 'natural', rankGap: 3, nodeGap: 4, wrapAt: null },
+    { name: 'tight', rankGap: 2, nodeGap: 2, wrapAt: null },
+    ...[24, 20, 16, 12, 8].map((wrapAt) => ({ name: 'wrap', rankGap: 2, nodeGap: 2, wrapAt })),
+  ]
+  const bodies = [`${LONG}\nA --> C[fine]`, 'A[start] --> B[one] & C[two] & D[three] & E[four]']
+  for (const [dir, to] of [
+    ['LR', 'TB'],
+    ['RL', 'BT'],
+  ] as const) {
+    const won = new Set<string>()
+    for (const g of bodies.map((b) => graph(`flowchart ${dir}\n${b}`))) {
+      for (let columns = 12; columns <= 80; columns++) {
+        const td = order.map((o) => pipeline({ ...g, dir: to }, o, columns))
+        const first = td.findIndex((d) => verdict(d) === 'valid')
+        if (first < 0) {
+          assert.notEqual(verdict(flowchart.layout(g, 'lrToTd', columns)), 'valid', `${dir} ${columns}`)
+          continue
+        }
+
+        won.add(order[first]!.name)
+        assert.deepEqual(flowchart.layout(g, 'lrToTd', columns), td[first], `${dir} ${columns}`)
+      }
     }
 
-    assert.equal(g.dir, dir)
+    assert.deepEqual([...won].sort(), ['natural', 'tight', 'wrap'], dir)
   }
 })

@@ -1,516 +1,516 @@
 @60
-┌─Ingest──────────────────────────┐
-│      [ Receive event ]◄────┐    │
-│          ┌───┘             │    │
-│          │                 │    │
-│          ▼                 │    │
-│ [ Validate schema ]        │    │
-│          │                 │    │
-│        ┌─┘                 │    │
-│        │                   │    │
-│        ▼                   │    │
-│ [ Deduplicate ]            │    │
-│        │                   │    │
-│       ┌┘                   │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Enrich ]               │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Normalize ]            retry  │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Partition ]              │    │
-│       │                    │    │
-│      ┌┘                    │    │
-│      │                     │    │
-│      ▼                     │    │
-│  [ Buffer ]                │    │
-│      │                     │    │
-│      └┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Checkpoint ]             │    │
-│       │                    │    │
-│     ┌─┘                    │    │
-│     │                      │    │
-│     ▼                      │    │
-│ [ Batch ]                  │    │
-│     │                      │    │
-│     └─┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Flush ]────────────────┘    │
-└────────│────────────────────────┘
-┌─Serve──│─────────────────────────┐
-│       ┌┘                         │
-│       │                          │
-│       ▼                          │
-│ [ Load batch ]◄────┐             │
-│     ┌─┘            │             │
-│     │              │             │
-│     ▼              │             │
-│ [ Index ]          │             │
-│     │              │             │
-│     └─┐            │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Aggregate ]      │             │
-│       │            │             │
-│       ▼            │             │
-│   [ Cache ]        │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Expose API ]   retry           │
-│       │            │             │
-│       ▼            │             │
-│ [ Authorize ]      │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Rate limit ]     │             │
-│       │            │             │
-│      ┌┘            │             │
-│      │             │             │
-│      ▼             │             │
-│ [ Respond ]        │             │
-│      │             │             │
-│    ┌─┘             │             │
-│    │               │             │
-│    ▼               │             │
-│ [ Log ]            │             │
-│    │               │             │
-│    └─┐             │             │
-│      │             │             │
-│      ▼             │             │
-│  [ Report ]────────┘             │
-└──────────────────────────────────┘
+┌─Ingest────────────────────────────┐
+│        [ Receive event ]◄────┐    │
+│          ┌┐    │             │    │
+│          │└────┘             │    │
+│          ▼                   │    │
+│ [ Validate schema ]          │    │
+│          │                   │    │
+│        ┌─┘                   │    │
+│        │                     │    │
+│        ▼                     │    │
+│ [ Deduplicate ]              │    │
+│        │                     │    │
+│       ┌┘                     │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Enrich ]                 │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Normalize ]              retry  │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Partition ]                │    │
+│       │                      │    │
+│      ┌┘                      │    │
+│      │                       │    │
+│      ▼                       │    │
+│  [ Buffer ]                  │    │
+│      │                       │    │
+│      └┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Checkpoint ]               │    │
+│       │                      │    │
+│     ┌─┘                      │    │
+│     │                        │    │
+│     ▼                        │    │
+│ [ Batch ]                    │    │
+│     │                        │    │
+│     └─┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Flush ]──────────────────┘    │
+└────────│──────────────────────────┘
+┌─Serve──│───────────────────────────┐
+│       ┌┘                           │
+│       │                            │
+│       ▼                            │
+│ [ Load batch ]◄────┐               │
+│     ┌─┘            │               │
+│     │              │               │
+│     ▼              │               │
+│ [ Index ]          │               │
+│     │              │               │
+│     └─┐            │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Aggregate ]      │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Cache ]        │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Expose API ]   retry             │
+│       │            │               │
+│       ▼            │               │
+│ [ Authorize ]      │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Rate limit ]     │               │
+│       │            │               │
+│      ┌┘            │               │
+│      │             │               │
+│      ▼             │               │
+│ [ Respond ]        │               │
+│      │             │               │
+│    ┌─┘             │               │
+│    │               │               │
+│    ▼               │               │
+│ [ Log ]            │               │
+│    │               │               │
+│    └──┐            │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Report ]───────┘               │
+└────────────────────────────────────┘
 @60 roles
-ffFFFFFFfffffffffffffffffffffffffff
-f      nnNNNNNNNNNNNNNnnaeeeee    f
-f          eeeee             e    f
-f          e                 e    f
-f          a                 e    f
-f nnNNNNNNNNNNNNNNNnn        e    f
-f          e                 e    f
-f        eee                 e    f
-f        e                   e    f
-f        a                   e    f
-f nnNNNNNNNNNNNnn            e    f
-f        e                   e    f
-f       ee                   e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNNnn               e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn            LLLLL  f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn              e    f
-f       e                    e    f
-f      ee                    e    f
-f      e                     e    f
-f      a                     e    f
-f  nnNNNNNNnn                e    f
-f      e                     e    f
-f      ee                    e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNNnn             e    f
-f       e                    e    f
-f     eee                    e    f
-f     e                      e    f
-f     a                      e    f
-f nnNNNNNnn                  e    f
-f     e                      e    f
-f     eee                    e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNnneeeeeeeeeeeeeeeee    f
-fffffffffefffffffffffffffffffffffff
-ffFFFFFffeffffffffffffffffffffffffff
-f       ee                         f
-f       e                          f
-f       a                          f
-f nnNNNNNNNNNNnnaeeeee             f
-f     eee            e             f
-f     e              e             f
-f     a              e             f
-f nnNNNNNnn          e             f
-f     e              e             f
-f     eee            e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f   nnNNNNNnn        e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn   LLLLL           f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn     e             f
-f       e            e             f
-f      ee            e             f
-f      e             e             f
-f      a             e             f
-f nnNNNNNNNnn        e             f
-f      e             e             f
-f    eee             e             f
-f    e               e             f
-f    a               e             f
-f nnNNNnn            e             f
-f    e               e             f
-f    eee             e             f
-f      e             e             f
-f      a             e             f
-f  nnNNNNNNnneeeeeeeee             f
-ffffffffffffffffffffffffffffffffffff
+ffFFFFFFfffffffffffffffffffffffffffff
+f        nnNNNNNNNNNNNNNnnaeeeee    f
+f          ee    e             e    f
+f          eeeeeee             e    f
+f          a                   e    f
+f nnNNNNNNNNNNNNNNNnn          e    f
+f          e                   e    f
+f        eee                   e    f
+f        e                     e    f
+f        a                     e    f
+f nnNNNNNNNNNNNnn              e    f
+f        e                     e    f
+f       ee                     e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNNnn                 e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn              LLLLL  f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn                e    f
+f       e                      e    f
+f      ee                      e    f
+f      e                       e    f
+f      a                       e    f
+f  nnNNNNNNnn                  e    f
+f      e                       e    f
+f      ee                      e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNNnn               e    f
+f       e                      e    f
+f     eee                      e    f
+f     e                        e    f
+f     a                        e    f
+f nnNNNNNnn                    e    f
+f     e                        e    f
+f     eee                      e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNnneeeeeeeeeeeeeeeeeee    f
+fffffffffefffffffffffffffffffffffffff
+ffFFFFFffeffffffffffffffffffffffffffff
+f       ee                           f
+f       e                            f
+f       a                            f
+f nnNNNNNNNNNNnnaeeeee               f
+f     eee            e               f
+f     e              e               f
+f     a              e               f
+f nnNNNNNnn          e               f
+f     e              e               f
+f     eee            e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNnn        e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn   LLLLL             f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn     e               f
+f       e            e               f
+f      ee            e               f
+f      e             e               f
+f      a             e               f
+f nnNNNNNNNnn        e               f
+f      e             e               f
+f    eee             e               f
+f    e               e               f
+f    a               e               f
+f nnNNNnn            e               f
+f    e               e               f
+f    eeee            e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNNnneeeeeeee               f
+ffffffffffffffffffffffffffffffffffffff
 @80
-┌─Ingest──────────────────────────┐
-│      [ Receive event ]◄────┐    │
-│          ┌───┘             │    │
-│          │                 │    │
-│          ▼                 │    │
-│ [ Validate schema ]        │    │
-│          │                 │    │
-│        ┌─┘                 │    │
-│        │                   │    │
-│        ▼                   │    │
-│ [ Deduplicate ]            │    │
-│        │                   │    │
-│       ┌┘                   │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Enrich ]               │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Normalize ]            retry  │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Partition ]              │    │
-│       │                    │    │
-│      ┌┘                    │    │
-│      │                     │    │
-│      ▼                     │    │
-│  [ Buffer ]                │    │
-│      │                     │    │
-│      └┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Checkpoint ]             │    │
-│       │                    │    │
-│     ┌─┘                    │    │
-│     │                      │    │
-│     ▼                      │    │
-│ [ Batch ]                  │    │
-│     │                      │    │
-│     └─┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Flush ]────────────────┘    │
-└────────│────────────────────────┘
-┌─Serve──│─────────────────────────┐
-│       ┌┘                         │
-│       │                          │
-│       ▼                          │
-│ [ Load batch ]◄────┐             │
-│     ┌─┘            │             │
-│     │              │             │
-│     ▼              │             │
-│ [ Index ]          │             │
-│     │              │             │
-│     └─┐            │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Aggregate ]      │             │
-│       │            │             │
-│       ▼            │             │
-│   [ Cache ]        │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Expose API ]   retry           │
-│       │            │             │
-│       ▼            │             │
-│ [ Authorize ]      │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Rate limit ]     │             │
-│       │            │             │
-│      ┌┘            │             │
-│      │             │             │
-│      ▼             │             │
-│ [ Respond ]        │             │
-│      │             │             │
-│    ┌─┘             │             │
-│    │               │             │
-│    ▼               │             │
-│ [ Log ]            │             │
-│    │               │             │
-│    └─┐             │             │
-│      │             │             │
-│      ▼             │             │
-│  [ Report ]────────┘             │
-└──────────────────────────────────┘
+┌─Ingest────────────────────────────┐
+│        [ Receive event ]◄────┐    │
+│          ┌┐    │             │    │
+│          │└────┘             │    │
+│          ▼                   │    │
+│ [ Validate schema ]          │    │
+│          │                   │    │
+│        ┌─┘                   │    │
+│        │                     │    │
+│        ▼                     │    │
+│ [ Deduplicate ]              │    │
+│        │                     │    │
+│       ┌┘                     │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Enrich ]                 │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Normalize ]              retry  │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Partition ]                │    │
+│       │                      │    │
+│      ┌┘                      │    │
+│      │                       │    │
+│      ▼                       │    │
+│  [ Buffer ]                  │    │
+│      │                       │    │
+│      └┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Checkpoint ]               │    │
+│       │                      │    │
+│     ┌─┘                      │    │
+│     │                        │    │
+│     ▼                        │    │
+│ [ Batch ]                    │    │
+│     │                        │    │
+│     └─┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Flush ]──────────────────┘    │
+└────────│──────────────────────────┘
+┌─Serve──│───────────────────────────┐
+│       ┌┘                           │
+│       │                            │
+│       ▼                            │
+│ [ Load batch ]◄────┐               │
+│     ┌─┘            │               │
+│     │              │               │
+│     ▼              │               │
+│ [ Index ]          │               │
+│     │              │               │
+│     └─┐            │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Aggregate ]      │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Cache ]        │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Expose API ]   retry             │
+│       │            │               │
+│       ▼            │               │
+│ [ Authorize ]      │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Rate limit ]     │               │
+│       │            │               │
+│      ┌┘            │               │
+│      │             │               │
+│      ▼             │               │
+│ [ Respond ]        │               │
+│      │             │               │
+│    ┌─┘             │               │
+│    │               │               │
+│    ▼               │               │
+│ [ Log ]            │               │
+│    │               │               │
+│    └──┐            │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Report ]───────┘               │
+└────────────────────────────────────┘
 @80 roles
-ffFFFFFFfffffffffffffffffffffffffff
-f      nnNNNNNNNNNNNNNnnaeeeee    f
-f          eeeee             e    f
-f          e                 e    f
-f          a                 e    f
-f nnNNNNNNNNNNNNNNNnn        e    f
-f          e                 e    f
-f        eee                 e    f
-f        e                   e    f
-f        a                   e    f
-f nnNNNNNNNNNNNnn            e    f
-f        e                   e    f
-f       ee                   e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNNnn               e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn            LLLLL  f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn              e    f
-f       e                    e    f
-f      ee                    e    f
-f      e                     e    f
-f      a                     e    f
-f  nnNNNNNNnn                e    f
-f      e                     e    f
-f      ee                    e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNNnn             e    f
-f       e                    e    f
-f     eee                    e    f
-f     e                      e    f
-f     a                      e    f
-f nnNNNNNnn                  e    f
-f     e                      e    f
-f     eee                    e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNnneeeeeeeeeeeeeeeee    f
-fffffffffefffffffffffffffffffffffff
-ffFFFFFffeffffffffffffffffffffffffff
-f       ee                         f
-f       e                          f
-f       a                          f
-f nnNNNNNNNNNNnnaeeeee             f
-f     eee            e             f
-f     e              e             f
-f     a              e             f
-f nnNNNNNnn          e             f
-f     e              e             f
-f     eee            e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f   nnNNNNNnn        e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn   LLLLL           f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn     e             f
-f       e            e             f
-f      ee            e             f
-f      e             e             f
-f      a             e             f
-f nnNNNNNNNnn        e             f
-f      e             e             f
-f    eee             e             f
-f    e               e             f
-f    a               e             f
-f nnNNNnn            e             f
-f    e               e             f
-f    eee             e             f
-f      e             e             f
-f      a             e             f
-f  nnNNNNNNnneeeeeeeee             f
-ffffffffffffffffffffffffffffffffffff
+ffFFFFFFfffffffffffffffffffffffffffff
+f        nnNNNNNNNNNNNNNnnaeeeee    f
+f          ee    e             e    f
+f          eeeeeee             e    f
+f          a                   e    f
+f nnNNNNNNNNNNNNNNNnn          e    f
+f          e                   e    f
+f        eee                   e    f
+f        e                     e    f
+f        a                     e    f
+f nnNNNNNNNNNNNnn              e    f
+f        e                     e    f
+f       ee                     e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNNnn                 e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn              LLLLL  f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn                e    f
+f       e                      e    f
+f      ee                      e    f
+f      e                       e    f
+f      a                       e    f
+f  nnNNNNNNnn                  e    f
+f      e                       e    f
+f      ee                      e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNNnn               e    f
+f       e                      e    f
+f     eee                      e    f
+f     e                        e    f
+f     a                        e    f
+f nnNNNNNnn                    e    f
+f     e                        e    f
+f     eee                      e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNnneeeeeeeeeeeeeeeeeee    f
+fffffffffefffffffffffffffffffffffffff
+ffFFFFFffeffffffffffffffffffffffffffff
+f       ee                           f
+f       e                            f
+f       a                            f
+f nnNNNNNNNNNNnnaeeeee               f
+f     eee            e               f
+f     e              e               f
+f     a              e               f
+f nnNNNNNnn          e               f
+f     e              e               f
+f     eee            e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNnn        e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn   LLLLL             f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn     e               f
+f       e            e               f
+f      ee            e               f
+f      e             e               f
+f      a             e               f
+f nnNNNNNNNnn        e               f
+f      e             e               f
+f    eee             e               f
+f    e               e               f
+f    a               e               f
+f nnNNNnn            e               f
+f    e               e               f
+f    eeee            e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNNnneeeeeeee               f
+ffffffffffffffffffffffffffffffffffffff
 @120
-┌─Ingest──────────────────────────┐
-│      [ Receive event ]◄────┐    │
-│          ┌───┘             │    │
-│          │                 │    │
-│          ▼                 │    │
-│ [ Validate schema ]        │    │
-│          │                 │    │
-│        ┌─┘                 │    │
-│        │                   │    │
-│        ▼                   │    │
-│ [ Deduplicate ]            │    │
-│        │                   │    │
-│       ┌┘                   │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Enrich ]               │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Normalize ]            retry  │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Partition ]              │    │
-│       │                    │    │
-│      ┌┘                    │    │
-│      │                     │    │
-│      ▼                     │    │
-│  [ Buffer ]                │    │
-│      │                     │    │
-│      └┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│ [ Checkpoint ]             │    │
-│       │                    │    │
-│     ┌─┘                    │    │
-│     │                      │    │
-│     ▼                      │    │
-│ [ Batch ]                  │    │
-│     │                      │    │
-│     └─┐                    │    │
-│       │                    │    │
-│       ▼                    │    │
-│   [ Flush ]────────────────┘    │
-└────────│────────────────────────┘
-┌─Serve──│─────────────────────────┐
-│       ┌┘                         │
-│       │                          │
-│       ▼                          │
-│ [ Load batch ]◄────┐             │
-│     ┌─┘            │             │
-│     │              │             │
-│     ▼              │             │
-│ [ Index ]          │             │
-│     │              │             │
-│     └─┐            │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Aggregate ]      │             │
-│       │            │             │
-│       ▼            │             │
-│   [ Cache ]        │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Expose API ]   retry           │
-│       │            │             │
-│       ▼            │             │
-│ [ Authorize ]      │             │
-│       │            │             │
-│       ▼            │             │
-│ [ Rate limit ]     │             │
-│       │            │             │
-│      ┌┘            │             │
-│      │             │             │
-│      ▼             │             │
-│ [ Respond ]        │             │
-│      │             │             │
-│    ┌─┘             │             │
-│    │               │             │
-│    ▼               │             │
-│ [ Log ]            │             │
-│    │               │             │
-│    └─┐             │             │
-│      │             │             │
-│      ▼             │             │
-│  [ Report ]────────┘             │
-└──────────────────────────────────┘
+┌─Ingest────────────────────────────┐
+│        [ Receive event ]◄────┐    │
+│          ┌┐    │             │    │
+│          │└────┘             │    │
+│          ▼                   │    │
+│ [ Validate schema ]          │    │
+│          │                   │    │
+│        ┌─┘                   │    │
+│        │                     │    │
+│        ▼                     │    │
+│ [ Deduplicate ]              │    │
+│        │                     │    │
+│       ┌┘                     │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Enrich ]                 │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Normalize ]              retry  │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Partition ]                │    │
+│       │                      │    │
+│      ┌┘                      │    │
+│      │                       │    │
+│      ▼                       │    │
+│  [ Buffer ]                  │    │
+│      │                       │    │
+│      └┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│ [ Checkpoint ]               │    │
+│       │                      │    │
+│     ┌─┘                      │    │
+│     │                        │    │
+│     ▼                        │    │
+│ [ Batch ]                    │    │
+│     │                        │    │
+│     └─┐                      │    │
+│       │                      │    │
+│       ▼                      │    │
+│   [ Flush ]──────────────────┘    │
+└────────│──────────────────────────┘
+┌─Serve──│───────────────────────────┐
+│       ┌┘                           │
+│       │                            │
+│       ▼                            │
+│ [ Load batch ]◄────┐               │
+│     ┌─┘            │               │
+│     │              │               │
+│     ▼              │               │
+│ [ Index ]          │               │
+│     │              │               │
+│     └─┐            │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Aggregate ]      │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Cache ]        │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Expose API ]   retry             │
+│       │            │               │
+│       ▼            │               │
+│ [ Authorize ]      │               │
+│       │            │               │
+│       ▼            │               │
+│ [ Rate limit ]     │               │
+│       │            │               │
+│      ┌┘            │               │
+│      │             │               │
+│      ▼             │               │
+│ [ Respond ]        │               │
+│      │             │               │
+│    ┌─┘             │               │
+│    │               │               │
+│    ▼               │               │
+│ [ Log ]            │               │
+│    │               │               │
+│    └──┐            │               │
+│       │            │               │
+│       ▼            │               │
+│   [ Report ]───────┘               │
+└────────────────────────────────────┘
 @120 roles
-ffFFFFFFfffffffffffffffffffffffffff
-f      nnNNNNNNNNNNNNNnnaeeeee    f
-f          eeeee             e    f
-f          e                 e    f
-f          a                 e    f
-f nnNNNNNNNNNNNNNNNnn        e    f
-f          e                 e    f
-f        eee                 e    f
-f        e                   e    f
-f        a                   e    f
-f nnNNNNNNNNNNNnn            e    f
-f        e                   e    f
-f       ee                   e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNNnn               e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn            LLLLL  f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNnn              e    f
-f       e                    e    f
-f      ee                    e    f
-f      e                     e    f
-f      a                     e    f
-f  nnNNNNNNnn                e    f
-f      e                     e    f
-f      ee                    e    f
-f       e                    e    f
-f       a                    e    f
-f nnNNNNNNNNNNnn             e    f
-f       e                    e    f
-f     eee                    e    f
-f     e                      e    f
-f     a                      e    f
-f nnNNNNNnn                  e    f
-f     e                      e    f
-f     eee                    e    f
-f       e                    e    f
-f       a                    e    f
-f   nnNNNNNnneeeeeeeeeeeeeeeee    f
-fffffffffefffffffffffffffffffffffff
-ffFFFFFffeffffffffffffffffffffffffff
-f       ee                         f
-f       e                          f
-f       a                          f
-f nnNNNNNNNNNNnnaeeeee             f
-f     eee            e             f
-f     e              e             f
-f     a              e             f
-f nnNNNNNnn          e             f
-f     e              e             f
-f     eee            e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f   nnNNNNNnn        e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn   LLLLL           f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNnn      e             f
-f       e            e             f
-f       a            e             f
-f nnNNNNNNNNNNnn     e             f
-f       e            e             f
-f      ee            e             f
-f      e             e             f
-f      a             e             f
-f nnNNNNNNNnn        e             f
-f      e             e             f
-f    eee             e             f
-f    e               e             f
-f    a               e             f
-f nnNNNnn            e             f
-f    e               e             f
-f    eee             e             f
-f      e             e             f
-f      a             e             f
-f  nnNNNNNNnneeeeeeeee             f
-ffffffffffffffffffffffffffffffffffff
+ffFFFFFFfffffffffffffffffffffffffffff
+f        nnNNNNNNNNNNNNNnnaeeeee    f
+f          ee    e             e    f
+f          eeeeeee             e    f
+f          a                   e    f
+f nnNNNNNNNNNNNNNNNnn          e    f
+f          e                   e    f
+f        eee                   e    f
+f        e                     e    f
+f        a                     e    f
+f nnNNNNNNNNNNNnn              e    f
+f        e                     e    f
+f       ee                     e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNNnn                 e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn              LLLLL  f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNnn                e    f
+f       e                      e    f
+f      ee                      e    f
+f      e                       e    f
+f      a                       e    f
+f  nnNNNNNNnn                  e    f
+f      e                       e    f
+f      ee                      e    f
+f       e                      e    f
+f       a                      e    f
+f nnNNNNNNNNNNnn               e    f
+f       e                      e    f
+f     eee                      e    f
+f     e                        e    f
+f     a                        e    f
+f nnNNNNNnn                    e    f
+f     e                        e    f
+f     eee                      e    f
+f       e                      e    f
+f       a                      e    f
+f   nnNNNNNnneeeeeeeeeeeeeeeeeee    f
+fffffffffefffffffffffffffffffffffffff
+ffFFFFFffeffffffffffffffffffffffffffff
+f       ee                           f
+f       e                            f
+f       a                            f
+f nnNNNNNNNNNNnnaeeeee               f
+f     eee            e               f
+f     e              e               f
+f     a              e               f
+f nnNNNNNnn          e               f
+f     e              e               f
+f     eee            e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNnn        e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn   LLLLL             f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNnn      e               f
+f       e            e               f
+f       a            e               f
+f nnNNNNNNNNNNnn     e               f
+f       e            e               f
+f      ee            e               f
+f      e             e               f
+f      a             e               f
+f nnNNNNNNNnn        e               f
+f      e             e               f
+f    eee             e               f
+f    e               e               f
+f    a               e               f
+f nnNNNnn            e               f
+f    e               e               f
+f    eeee            e               f
+f       e            e               f
+f       a            e               f
+f   nnNNNNNNnneeeeeeee               f
+ffffffffffffffffffffffffffffffffffffff

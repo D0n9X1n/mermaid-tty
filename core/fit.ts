@@ -28,13 +28,15 @@ export const RESCUE_WORK = 50000
 
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a
-// wider claim would pass it), or when validate rejects its drawing. If every step is skipped, the first reason that is
-// not about width, so the debug log names what kept a fitting drawing off the screen; the last step's reason when width
-// is all that failed; 'too-wide' when the ladder has no step. Only then, if the type has a rescue, each step runs again
-// through it, in order, under the same checks, until RESCUE_WORK expansions are spent; the first it draws is taken. If
-// none does, a second rescue pass runs the same way, on RESCUE_WORK of its own, with rip set: the search router then
-// routes again with each edge it got stuck on first. Running them last keeps every drawing the steps find exactly as it
-// is, the second pass keeps every drawing the first finds, and a rescue that draws nothing leaves the steps' reason.
+// wider claim would pass it), or when validate rejects its drawing. The steps run in the ladder's order, in two rounds:
+// first the diagram's own, then its fallbacks, the steps that draw it another way, as a left-to-right graph top to
+// bottom. In each round every step runs plainly; then, if the type has a rescue, each runs again through it, in order,
+// under the same checks, until RESCUE_WORK expansions are spent; then a second rescue pass runs the same way, on
+// RESCUE_WORK of its own, with rip set: the search router then routes again with each edge it got stuck on first. So a
+// diagram draws its own way whenever any step or rescue can, and a fallback only when none can. Running the rescue
+// after a round's plain steps keeps every drawing they find exactly as it is. If nothing draws, the first reason that
+// is not about width, so the debug log names what kept a fitting drawing off the screen; the last reason when width is
+// all that failed; 'too-wide' when the ladder has no step.
 export function fitLadder<M>(
   mod: DiagramModule<M>,
   model: M,
@@ -49,27 +51,31 @@ export function fitLadder<M>(
     }
   }
 
-  for (const step of mod.steps(model)) {
-    const drawing = mod.layout(model, step, columns)
-    const rejected = check(drawing, columns)
-    if (rejected) {
-      skip(rejected)
-      continue
-    }
-
-    return { step, drawing: drawing as Drawing }
-  }
-
-  for (const rip of [false, true]) {
-    const work = { left: RESCUE_WORK, rip }
-    for (const step of mod.rescue ? mod.steps(model) : []) {
-      if (work.left <= 0) {
-        break
+  const steps = mod.steps(model)
+  const fallbacks = new Set(mod.fallbacks?.(model) ?? [])
+  for (const round of [steps.filter((s) => !fallbacks.has(s)), steps.filter((s) => fallbacks.has(s))]) {
+    for (const step of round) {
+      const drawing = mod.layout(model, step, columns)
+      const rejected = check(drawing, columns)
+      if (rejected) {
+        skip(rejected)
+        continue
       }
 
-      const drawing = mod.rescue!(model, step, columns, work)
-      if (!check(drawing, columns)) {
-        return { step, drawing: drawing as Drawing }
+      return { step, drawing: drawing as Drawing }
+    }
+
+    for (const rip of [false, true]) {
+      const work = { left: RESCUE_WORK, rip }
+      for (const step of mod.rescue ? round : []) {
+        if (work.left <= 0) {
+          break
+        }
+
+        const drawing = mod.rescue!(model, step, columns, work)
+        if (!check(drawing, columns)) {
+          return { step, drawing: drawing as Drawing }
+        }
       }
     }
   }

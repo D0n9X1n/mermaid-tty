@@ -298,7 +298,7 @@ This is the shared graph ladder, with conditional steps. The exact ladders are:
 | XY chart, horizontal | `natural` → `wrap` |
 | Quadrant | `natural` → `keyed` |
 
-Graphs and sequence diagrams try wrapping at 24, 20, 16, 12 and 8 columns. Mindmap uses those widths too, then tries an outline. Graph `lrToTd` turns `LR` into `TB` (top-down) and `RL` into `BT`; graph `keyed` also turns horizontal layouts vertical. Other charts use their own available-width calculations, not that universal wrap-width list.
+Graphs and sequence diagrams try wrapping at 24, 20, 16, 12 and 8 columns. Mindmap uses those widths too, then tries an outline. Graph `lrToTd` is the fallback for a graph that cannot draw left to right: it turns `LR` into `TB` (top-down) and `RL` into `BT`, and draws it the way a top-down graph draws, natural spacing first, then tight, then wrapped. It runs only when no step can draw the graph left to right, the rescue included, and then gets a full rescue of its own, so a graph that draws top-down draws. Graph `keyed` also turns horizontal layouts vertical, after `lrToTd`. Other charts use their own available-width calculations, not that universal wrap-width list.
 
 Keys replace eligible text in place and keep the full text in a legend: state notes; class notes and relation labels; ER comments and relation labels; gantt timings; quadrant point labels. `keyedWrap` also wraps gantt task names. Journey's `oneActor` gives each actor a separate row, and XY's `horizontal` turns a vertical plot sideways. Every ladder ends in the source when no drawing passes validation.
 

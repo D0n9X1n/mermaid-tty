@@ -193,3 +193,156 @@ test('a chart the normal ladder draws keeps that drawing at 160 columns, and the
   assert.ok(!isFail(rescued), JSON.stringify(rescued))
   assert.equal(validate(rescued), null)
 })
+
+// A fallback draws the diagram another way, as lrToTd draws a left-to-right graph top to bottom. It runs only once
+// every other step has failed, plainly and through both rescue passes; then it runs the same way, on budgets of its
+// own, whatever the steps before it spent.
+test('a fallback runs only after every other step and rescue pass failed, on rescue budgets of its own', () => {
+  const calls: string[] = []
+  const mod: DiagramModule<null> = {
+    type: 'flowchart',
+    parse: () => fail('unused'),
+    steps: () => ['natural', 'tight', 'lrToTd'],
+    fallbacks: () => ['lrToTd'],
+    layout: (_, step) => {
+      calls.push(`layout ${step}`)
+      return fail('route-conflict')
+    },
+    rescue: (_, step, cols, work) => {
+      calls.push(`rescue${work.rip ? ' rip' : ''} ${step} ${work.left}`)
+      if (step !== 'lrToTd') {
+        work.left -= RESCUE_WORK
+        return fail('route-conflict')
+      }
+
+      return work.rip ? draw(5, cols) : fail('route-conflict')
+    },
+  }
+
+  const r = fitLadder(mod, null, 10)
+
+  assert.deepEqual(r, { step: 'lrToTd', drawing: draw(5, 10) })
+  assert.deepEqual(calls, [
+    'layout natural',
+    'layout tight',
+    `rescue natural ${RESCUE_WORK}`,
+    `rescue rip natural ${RESCUE_WORK}`,
+    'layout lrToTd',
+    `rescue lrToTd ${RESCUE_WORK}`,
+    `rescue rip lrToTd ${RESCUE_WORK}`,
+  ])
+})
+
+// A step the rescue draws in its own direction wins over a fallback that would draw at once.
+test('a diagram draws its own way through the rescue before a fallback draws it another way', () => {
+  const mod: DiagramModule<null> = {
+    type: 'flowchart',
+    parse: () => fail('unused'),
+    steps: () => ['natural', 'lrToTd'],
+    fallbacks: () => ['lrToTd'],
+    layout: (_, step, cols) => (step === 'lrToTd' ? draw(5, cols) : fail('route-conflict')),
+    rescue: (_, step, cols, work) => (work.rip && step === 'natural' ? draw(7, cols) : fail('route-conflict')),
+  }
+
+  assert.deepEqual(fitLadder(mod, null, 10), { step: 'natural', drawing: draw(7, 10) })
+})
+
+// This flowchart fails to route left to right at every step, even with the rescue; top to bottom, on a budget the
+// left-to-right rescue has not spent, it draws, exactly as the same graph written TD draws.
+test('an LR flowchart that only draws top to bottom falls back to it', () => {
+  const source = [
+    'flowchart LR',
+    '  A["Retry"]',
+    '  B["Render"]',
+    '  C["Retry"]',
+    '  D["Load config"]',
+    '  E["Parse"]',
+    '  F["Done"]',
+    '  G["Ask the model"]',
+    '  E -->|yes| G',
+    '  G -->|retry| C',
+    '  B -->|retry| C',
+    '  C -->|ok| B',
+    '  C --> A',
+    '  B -->|ok| G',
+    '  B --> C',
+    '  E --> F',
+  ].join('\n')
+  const turned = explain(source.replace('flowchart LR', 'flowchart TD'), { columns: 80 })
+  assert.ok(!isFail(turned), `TD draws: ${JSON.stringify(turned)}`)
+
+  const r = explain(source, { columns: 80 })
+
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(r.drawing.cells, turned.drawing.cells)
+})
+
+// RL falls back to bottom to top the same way: this graph routes no way right to left at 44 columns, and draws exactly
+// as the same graph written BT does, its rescue trying natural spacing before the tighter ones.
+test('an RL flowchart that only draws bottom to top falls back to it', () => {
+  const source = [
+    'flowchart RL',
+    '  G --> B',
+    '  E -->|ok| E',
+    '  A -->|ok| G',
+    '  B -->|ok| A',
+    '  D --> E',
+    '  E -->|ok| A',
+    '  D --> G',
+    '  B --> F',
+  ].join('\n')
+  const turned = explain(source.replace('flowchart RL', 'flowchart BT'), { columns: 44 })
+  assert.ok(!isFail(turned), `BT draws: ${JSON.stringify(turned)}`)
+
+  const r = explain(source, { columns: 44 })
+
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(r.drawing.cells, turned.drawing.cells)
+})
+
+// On one shared budget the order of the fallback's rescue tries decides which graphs draw, so it tries both orders,
+// each on the budget it started with. At 25 columns natural cannot fit the first graph, and searching it first would
+// spend the budget the tight spacing needs; at 30 the second fits only at natural, and searching the tight spacing
+// first would spend the budget natural needs.
+test('the fallback rescue draws a graph only tight spacing fits, and one only natural spacing fits', () => {
+  const natural = [
+    'flowchart LR',
+    '  B --> E',
+    '  C --> F',
+    '  D --> A',
+    '  A -->|ok| A',
+    '  B --> D',
+    '  F --> D',
+    '  A -->|ok| A',
+    '  D --> F',
+    '  D -->|ok| B',
+  ].join('\n')
+  const td = explain(natural.replace('flowchart LR', 'flowchart TD'), { columns: 30 })
+  assert.ok(!isFail(td), `TD draws: ${JSON.stringify(td)}`)
+  const n = explain(natural, { columns: 30 })
+  assert.ok(!isFail(n), JSON.stringify(n))
+  assert.equal(n.step, 'lrToTd')
+  assert.equal(validate(n.drawing), null)
+
+  const source = [
+    'flowchart RL',
+    '  E -->|ok| C',
+    '  B -->|ok| E',
+    '  C -->|ok| F',
+    '  B -->|ok| B',
+    '  G --> B',
+    '  F --> G',
+    '  A -->|ok| B',
+    '  A -->|ok| A',
+  ].join('\n')
+
+  const r = explain(source, { columns: 25 })
+
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+})

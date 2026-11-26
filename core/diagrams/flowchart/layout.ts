@@ -1,7 +1,7 @@
 // The flowchart diagram module: its parser, and its fit ladder, the graph ladder. It registers itself on import, after
 // registry.ts has run, so MODULES is initialized when register runs.
 import type { Step } from '../../fit.ts'
-import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
+import { drawAt, graphFallbacks, graphSteps, type Build } from '../../graph/ladder.ts'
 import type { Graph } from '../../graph/model.ts'
 import type { DiagramModule } from '../../registry.ts'
 import { register } from '../../registry.ts'
@@ -20,6 +20,7 @@ export const flowchart: DiagramModule<Graph> = {
   type: 'flowchart',
   parse: parseFlowchart,
   steps: (g: Graph): readonly Step[] => graphSteps(g.dir, false),
+  fallbacks: (g: Graph): readonly Step[] => graphFallbacks(g.dir),
   layout: (g, step, columns) => drawAt(build(g), g.dir, step, columns, null),
   rescue: (g, step, columns, work) => drawAt(build(g), g.dir, step, columns, null, work),
 }
