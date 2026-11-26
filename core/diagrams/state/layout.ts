@@ -3,7 +3,7 @@
 // graph drawing (composites frame, transition labels label, notes note).
 import { fieldKey, type LegendRow } from '../../charts/legend.ts'
 import type { Step } from '../../fit.ts'
-import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
+import { drawAt, graphFallbacks, graphSteps, type Build } from '../../graph/ladder.ts'
 import { labelLines } from '../../text.ts'
 import type { DiagramModule } from '../../registry.ts'
 import { register } from '../../registry.ts'
@@ -37,6 +37,7 @@ export const state: DiagramModule<StateModel> = {
   type: 'state',
   parse: parseState,
   steps: (m: StateModel): readonly Step[] => graphSteps(m.graph.dir, true),
+  fallbacks: (m: StateModel): readonly Step[] => graphFallbacks(m.graph.dir),
   layout: (m, step, columns) => drawAt((o) => build(m, o), m.graph.dir, step, columns, m.title),
   rescue: (m, step, columns, work) => drawAt((o) => build(m, o), m.graph.dir, step, columns, m.title, work),
 }

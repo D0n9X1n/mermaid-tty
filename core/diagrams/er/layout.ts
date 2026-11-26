@@ -3,7 +3,7 @@
 // labels take one key sequence, in source order; cardinality is never keyed. It registers itself on import.
 import { fieldKey, type LegendRow } from '../../charts/legend.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
-import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
+import { drawAt, graphFallbacks, graphSteps, type Build } from '../../graph/ladder.ts'
 import { erRows } from '../../graph/members.ts'
 import type { GEdge, GNode, NodeRow } from '../../graph/model.ts'
 import type { DiagramModule } from '../../registry.ts'
@@ -109,6 +109,7 @@ export const er: DiagramModule<ErModel> = {
   type: 'er',
   parse,
   steps: (m) => graphSteps(m.dir, true),
+  fallbacks: (m) => graphFallbacks(m.dir),
   layout: (m, step, columns) => drawAt((o) => build(m, o), m.dir, step, columns, m.title),
   rescue: (m, step, columns, work) => drawAt((o) => build(m, o), m.dir, step, columns, m.title, work),
 }

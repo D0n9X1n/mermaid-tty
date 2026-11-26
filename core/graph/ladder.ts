@@ -47,6 +47,12 @@ export type Build = (o: {
   wrapAt: number | null
 }) => { graph: Graph; legend: readonly LegendRow[]; keyable: NonNullable<Expect['keyable']> } | Fail
 
+// The steps that turn a left-to-right graph top to bottom, lrToTd and keyed, its fallbacks when it cannot draw as
+// written; none for a top-to-bottom graph, whose keyed step keeps its direction.
+export function graphFallbacks(dir: Dir): GraphStep[] {
+  return across(dir) ? ['lrToTd', 'keyed'] : []
+}
+
 // natural, tight and wrap, plus lrToTd for LR and RL, plus keyed when the diagram has items to key.
 export function graphSteps(dir: Dir, keyable: boolean): GraphStep[] {
   return [

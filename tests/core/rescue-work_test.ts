@@ -64,9 +64,9 @@ const UNROUTED = [
   '    F',
   '  end',
 ].join('\n')
-// In each rescue pass the left-to-right steps share RESCUE_WORK, and lrToTd, the fallback top to bottom, starts with
-// RESCUE_WORK of its own: each budget runs out, then its steps stop, and none goes below zero.
-test('a chart no rescue draws spends at most RESCUE_WORK expansions on each budget of each rescue pass, then stops', () => {
+// The rescue runs in two rounds, the left-to-right steps, then lrToTd, the fallback top to bottom; each round runs two
+// passes, each on RESCUE_WORK of its own: the budget runs out, then its steps stop, and none goes below zero.
+test('a chart no rescue draws spends at most RESCUE_WORK expansions on each rescue pass of each round, then stops', () => {
   const model = flowchart.parse(readSource(UNROUTED) as Source) as Graph
   const left: { step: string; before: number; after: number; rip: boolean }[] = []
   const mod = {
@@ -87,27 +87,23 @@ test('a chart no rescue draws spends at most RESCUE_WORK expansions on each budg
   const r = fitLadder(mod, model, 80)
 
   assert.ok(isFail(r), JSON.stringify(r))
-  for (const rip of [false, true]) {
-    const pass = left.filter((x) => x.rip === rip)
-    const budgets = [pass.filter((x) => x.step !== 'lrToTd'), pass.filter((x) => x.step === 'lrToTd')]
-    assert.deepEqual(
-      pass.map((x) => x.step === 'lrToTd'),
-      [...budgets[0]!.map(() => false), ...budgets[1]!.map(() => true)],
-      `rip ${rip}: lrToTd runs last`,
-    )
-    for (const budget of budgets) {
-      assert.equal(budget[0]!.before, RESCUE_WORK, `rip ${rip}`)
-      assert.equal(budget.at(-1)!.after, 0, `rip ${rip}`)
+  const fallback = left.findIndex((x) => x.step === 'lrToTd')
+  assert.ok(fallback > 0 && left.slice(fallback).every((x) => x.step === 'lrToTd'), 'lrToTd runs after every pass')
+  for (const round of [left.slice(0, fallback), left.slice(fallback)]) {
+    for (const rip of [false, true]) {
+      const pass = round.filter((x) => x.rip === rip)
+      assert.equal(pass[0]!.before, RESCUE_WORK, `rip ${rip}`)
+      assert.equal(pass.at(-1)!.after, 0, `rip ${rip}`)
       assert.ok(
-        budget.slice(0, -1).every((x) => x.after > 0 && x.after === budget[budget.indexOf(x) + 1]!.before),
+        pass.slice(0, -1).every((x, k) => x.after > 0 && x.after === pass[k + 1]!.before),
         `rip ${rip}`,
       )
       assert.ok(
-        budget.every((x) => x.after >= 0 && x.after <= x.before),
+        pass.every((x) => x.after >= 0 && x.after <= x.before),
         `rip ${rip}`,
       )
     }
-  }
 
-  assert.ok(left.findIndex((x) => x.rip) === left.filter((x) => !x.rip).length)
+    assert.ok(round.findIndex((x) => x.rip) === round.filter((x) => !x.rip).length)
+  }
 })

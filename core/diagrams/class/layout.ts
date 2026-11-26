@@ -2,7 +2,7 @@
 // its «annot» row, its label, then its member rows (members.ts). It registers itself on import, as flowchart's does.
 import { fieldKey, type LegendRow } from '../../charts/legend.ts'
 import { fail, isFail, type Fail } from '../../fail.ts'
-import { drawAt, graphSteps, type Build } from '../../graph/ladder.ts'
+import { drawAt, graphFallbacks, graphSteps, type Build } from '../../graph/ladder.ts'
 import { classRows } from '../../graph/members.ts'
 import type { GEdge, GNode, NodeRow } from '../../graph/model.ts'
 import type { DiagramModule } from '../../registry.ts'
@@ -141,6 +141,7 @@ export const classDiagram: DiagramModule<ClassModel> = {
   type: 'class',
   parse,
   steps: (m: ClassModel) => graphSteps(m.dir, items(m).length > 0),
+  fallbacks: (m: ClassModel) => graphFallbacks(m.dir),
   layout: (m, step, columns) => drawAt(build(m), m.dir, step, columns, m.title),
   rescue: (m, step, columns, work) => drawAt(build(m), m.dir, step, columns, m.title, work),
 }

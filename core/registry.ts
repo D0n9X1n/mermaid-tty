@@ -119,6 +119,9 @@ export type DiagramModule<M = unknown> = {
   // The step laid out again by a slower method, which fitLadder tries only after every step failed. work is the path
   // search expansions left to the whole rescue pass; the rescue takes what it spends from it, and stops when it is out.
   rescue?(model: M, step: Step, columns: number, work: { left: number; rip?: boolean }): Drawing | Fail
+  // The ladder's steps that draw the diagram another way, as a left-to-right graph top to bottom: fitLadder tries them
+  // only once every other step has failed, its rescue too.
+  fallbacks?(model: M): readonly Step[]
 }
 
 // Each type's module, filed by register under the module's own type. It starts empty: each type's layout module

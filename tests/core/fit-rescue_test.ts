@@ -194,34 +194,61 @@ test('a chart the normal ladder draws keeps that drawing at 160 columns, and the
   assert.equal(validate(rescued), null)
 })
 
-// lrToTd is a left-to-right graph's last way to draw, top to bottom. The left-to-right steps before it can spend the
-// rescue pass's whole budget, so it starts each rescue pass with a budget of its own.
-test('the rescue gives lrToTd a budget of its own, whatever the steps before it spent', () => {
-  const budgets: string[] = []
+// A fallback draws the diagram another way, as lrToTd draws a left-to-right graph top to bottom. It runs only once
+// every other step has failed, plainly and through both rescue passes; then it runs the same way, on budgets of its
+// own, whatever the steps before it spent.
+test('a fallback runs only after every other step and rescue pass failed, on rescue budgets of its own', () => {
+  const calls: string[] = []
   const mod: DiagramModule<null> = {
     type: 'flowchart',
     parse: () => fail('unused'),
-    steps: () => ['natural', 'tight', 'wrap', 'lrToTd'],
-    layout: () => fail('route-conflict'),
+    steps: () => ['natural', 'tight', 'lrToTd'],
+    fallbacks: () => ['lrToTd'],
+    layout: (_, step) => {
+      calls.push(`layout ${step}`)
+      return fail('route-conflict')
+    },
     rescue: (_, step, cols, work) => {
-      budgets.push(`${step} ${work.left}`)
+      calls.push(`rescue${work.rip ? ' rip' : ''} ${step} ${work.left}`)
       if (step !== 'lrToTd') {
         work.left -= RESCUE_WORK
         return fail('route-conflict')
       }
 
-      return draw(5, cols)
+      return work.rip ? draw(5, cols) : fail('route-conflict')
     },
   }
 
   const r = fitLadder(mod, null, 10)
 
   assert.deepEqual(r, { step: 'lrToTd', drawing: draw(5, 10) })
-  assert.deepEqual(budgets, [`natural ${RESCUE_WORK}`, `lrToTd ${RESCUE_WORK}`])
+  assert.deepEqual(calls, [
+    'layout natural',
+    'layout tight',
+    `rescue natural ${RESCUE_WORK}`,
+    `rescue rip natural ${RESCUE_WORK}`,
+    'layout lrToTd',
+    `rescue lrToTd ${RESCUE_WORK}`,
+    `rescue rip lrToTd ${RESCUE_WORK}`,
+  ])
+})
+
+// A step the rescue draws in its own direction wins over a fallback that would draw at once.
+test('a diagram draws its own way through the rescue before a fallback draws it another way', () => {
+  const mod: DiagramModule<null> = {
+    type: 'flowchart',
+    parse: () => fail('unused'),
+    steps: () => ['natural', 'lrToTd'],
+    fallbacks: () => ['lrToTd'],
+    layout: (_, step, cols) => (step === 'lrToTd' ? draw(5, cols) : fail('route-conflict')),
+    rescue: (_, step, cols, work) => (work.rip && step === 'natural' ? draw(7, cols) : fail('route-conflict')),
+  }
+
+  assert.deepEqual(fitLadder(mod, null, 10), { step: 'natural', drawing: draw(7, 10) })
 })
 
 // This flowchart fails to route left to right at every step, even with the rescue; top to bottom, on a budget the
-// left-to-right rescue has not spent, it draws. RL falls back to BT the same way.
+// left-to-right rescue has not spent, it draws, exactly as the same graph written TD draws.
 test('an LR flowchart that only draws top to bottom falls back to it', () => {
   const source = [
     'flowchart LR',
@@ -241,17 +268,13 @@ test('an LR flowchart that only draws top to bottom falls back to it', () => {
     '  B --> C',
     '  E --> F',
   ].join('\n')
-  for (const [from, to] of [
-    ['LR', 'TD'],
-    ['RL', 'BT'],
-  ]) {
-    const turned = explain(source.replace('flowchart LR', `flowchart ${to}`), { columns: 80 })
-    assert.ok(!isFail(turned), `${to} draws: ${JSON.stringify(turned)}`)
+  const turned = explain(source.replace('flowchart LR', 'flowchart TD'), { columns: 80 })
+  assert.ok(!isFail(turned), `TD draws: ${JSON.stringify(turned)}`)
 
-    const r = explain(source.replace('flowchart LR', `flowchart ${from}`), { columns: 80 })
+  const r = explain(source, { columns: 80 })
 
-    assert.ok(!isFail(r), `${from}: ${JSON.stringify(r)}`)
-    assert.equal(r.step, 'lrToTd')
-    assert.equal(validate(r.drawing), null)
-  }
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+  assert.deepEqual(r.drawing.cells, turned.drawing.cells)
 })
