@@ -104,3 +104,57 @@ test('A3: complete fans and many arrow styles into one node draw', () => {
     draws(flow(dir, 'A --> X', 'B ==> X', 'C -.-> X', 'D --o X', 'E --x X', 'F <--> X', 'G o--o X', 'H x--x X'), 80)
   }
 })
+
+// A labelled edge back over a subgraph it does not enter runs in a lane past everything: its label stays in that lane,
+// never moved beside an end the subgraph's frame stands between, and an end level with the subgraph keeps to the lane's
+// side of it, closed off as a block or open to an edge from outside. A label or bend moved toward its end never jumps
+// over a frame, and an edge passing over a subgraph's top border has room to run along it.
+test('A3: a labelled edge back past a subgraph between its ends draws', () => {
+  const minimal = [
+    'N4 --> N6["Load config"]',
+    'N6 --> N10{"Pane placed?"}',
+    'N10 -->|x| N11["Notify user"]',
+    'N13 -->|x| N14["Call API"]',
+    'N11 -->|x| N4',
+    'subgraph G1 ["Fork path"]',
+    '  N13',
+    '  N14',
+    'end',
+  ]
+  const open = [
+    'N4 --> N6["Load config"]',
+    'N6 --> N10{"Pane placed?"}',
+    'N10 -->|x| N11["Notify user"]',
+    'N9 --> N13{"Pane placed?"}',
+    'N11 -->|x| N4',
+    'subgraph G1 ["Fork path"]',
+    '  N13',
+    'end',
+  ]
+  const cycle = ['B -.->|x| E{{"Log"}}', 'E -.-> B', 'subgraph S1 ["Worker tier"]', '  E', '  G', 'end']
+  for (const dir of ['LR', 'RL', 'TD', 'BT']) {
+    for (const columns of [80, 120]) {
+      draws(flow(dir, ...minimal), columns)
+      draws(flow(dir, ...open), columns)
+      draws(flow(dir, ...cycle), columns)
+    }
+  }
+
+  draws(
+    flow(
+      'TD',
+      'N10 -->|x| N11["Render"]',
+      'N12 -->|x| N14["Queue job"]',
+      'N11 --> N18{"Pane placed?"}',
+      'N18 -->|x| N20["Parse request"]',
+      'N13 --> N21{"Pane placed?"}',
+      'N14 --> N23{"Pane placed?"}',
+      'N23 -->|x| N1',
+      'subgraph G1 ["Validation"]',
+      '  N20',
+      '  N21',
+      'end',
+    ),
+    120,
+  )
+})

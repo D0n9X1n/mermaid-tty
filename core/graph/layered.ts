@@ -254,7 +254,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
         f.row < candidate.row + candidate.rows &&
         candidate.col < f.col + f.cols &&
         f.col < candidate.col + candidate.cols
-      return within(label) ? !within(candidate) : intersects
+      return within(label) ? !within(candidate) : intersects || between(label, candidate, f, across)
     })
     if (cross >= 0 && !overlaps && !frameConflict) {
       boxes.set(`${e.id}:label`, candidate)
@@ -283,7 +283,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
               candidate.row < f.row + f.rows &&
               candidate.col >= f.col &&
               candidate.col < f.col + f.cols &&
-              !within(candidate))
+              !within(candidate)) ||
+            between(b, candidate, f, across)
           )
         })
         if (!overlap && !crossesFrame) {
@@ -416,9 +417,21 @@ function stripLanes(
   return new Set([...home.values()].flat().map((e) => e.id))
 }
 
+// Whether frame f stands across the way from box a to b, a moved along the cross axis to b's place: level with a on the
+// main axis and wholly between the two on the cross one. A move past it would put a label or a bend on the frame's far
+// side, where its edge must cross the frame to reach it, so it never moves so.
+function between(a: Box, b: Box, f: Box, across: boolean): boolean {
+  const [u, v] = across ? [a.row, b.row] : [a.col, b.col]
+  const [lo, hi] = [Math.min(u, v), Math.max(u, v)]
+  const [start, size] = across ? [f.row, f.rows] : [f.col, f.cols]
+  const [main, long, fMain, fLong] = across ? [a.col, a.cols, f.col, f.cols] : [a.row, a.rows, f.row, f.rows]
+  return start > lo && start + size - 1 < hi && main < fMain + fLong && fMain < main + long
+}
+
 // A back edge's label in its lane, moved along it to just past the turn out of the edge's drawn source, a cell of line
-// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, and only onto
-// cells no other box, dummy or frame holds. Else the label as given.
+// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, only onto
+// cells no other box, dummy or frame holds, and only when no frame the source is outside stands between it and the
+// lane, as the edge could not cross that frame to reach its label. Else the label as given.
 function nearSource(
   e: GEdge,
   label: Box,
@@ -455,8 +468,17 @@ function nearSource(
   const candidate = across ? { ...label, col: start } : { ...label, row: start }
   const meets = (u: Box, v: Box) =>
     u.row < v.row + v.rows && v.row < u.row + u.rows && u.col < v.col + v.cols && v.col < u.col + u.cols
+  // From the source's far side out to the lane, over the main-axis span from the turn to the label's far end.
+  const [from, to] = [Math.min(am, start), Math.max(am, start + size - 1)]
+  const near = across ? a.row + a.rows : a.col + a.cols
+  const out = across ? label.row : label.col
+  const corridor = across
+    ? { row: near, col: from, rows: out - near, cols: to - from + 1 }
+    : { row: from, col: near, rows: to - from + 1, cols: out - near }
+  const holds = (f: Box) =>
+    a.row > f.row && a.col > f.col && a.row + a.rows < f.row + f.rows && a.col + a.cols < f.col + f.cols
   const taken =
     [...boxes].some(([id, x]) => id !== `${e.id}:label` && !id.startsWith(`${e.id}#`) && meets(candidate, x)) ||
-    [...frames.values()].some((f) => meets(candidate, f) && !meets(label, f))
+    [...frames.values()].some((f) => (meets(candidate, f) && !meets(label, f)) || (meets(corridor, f) && !holds(f)))
   return taken ? label : candidate
 }

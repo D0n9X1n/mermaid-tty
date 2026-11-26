@@ -17,12 +17,15 @@ function moveBeside(rank: Item[], it: Item, side: Side, inStrip: (it: Item) => b
 
 // ranks with each edge's items kept to one side of every strip, as above. spans: each strip's first and last rank. Only
 // items at the strip's own level move, so no other strip's items are split apart; each strip is set right up to three
-// times, as moving an end for one edge can put another edge of that end on the wrong side.
+// times, as moving an end for one edge can put another edge of that end on the wrong side. backs: the back edges. One
+// with a label or a bend runs in a lane past everything at its level, after every strip (layered.ts): so an end of it
+// outside a strip and level with it keeps to the strip's after side, where it can reach that lane.
 export function keepSides(
   ranks: Item[][],
   segs: readonly Seg[],
   path: (o: string | null) => string[],
   spans: ReadonlyMap<string, readonly [number, number]>,
+  backs: ReadonlySet<string> = new Set(),
 ): Item[][] {
   const byId = new Map(ranks.flat().map((it) => [it.id, it]))
   const chains = new Map<string, Item[]>()
@@ -55,12 +58,21 @@ export function keepSides(
       }
       // An edge that enters the strip: its items outside it, level with it, keep to its outer end's side.
       const passing: Item[][] = []
-      for (const items of chains.values()) {
+      const laned = new Set<Item>()
+      for (const [edge, items] of chains) {
         const chain = items.toSorted((a, b) => a.rank - b.rank)
         const top = chain[0]!
         const bottom = chain.at(-1)!
         if (inStrip(top) && inStrip(bottom)) {
           continue
+        }
+
+        if (backs.has(edge) && chain.length > 2) {
+          for (const end of [top, bottom]) {
+            if (!inStrip(end) && end.rank >= lo && end.rank <= hi && sideOf(end) !== null) {
+              laned.add(end)
+            }
+          }
         }
 
         const flank = (walk: readonly Item[]) =>
@@ -117,6 +129,10 @@ export function keepSides(
           want = sideOf(items[0]!)!
         }
 
+        if (items.some((it) => laned.has(it))) {
+          want = 'after'
+        }
+
         for (const it of items) {
           const movable = it.kind === 'label' || it.kind === 'dummy' || (it.kind === 'node' && beside(it))
           if (sideOf(it) !== want && movable) {
@@ -124,6 +140,16 @@ export function keepSides(
             moved = true
           }
         }
+      }
+
+      // A laned back edge's end no group above placed: it goes after the strip on its own.
+      for (const it of laned) {
+        if (group.has(it) || sideOf(it) === 'after' || !(it.kind === 'node' && beside(it))) {
+          continue
+        }
+
+        moveBeside(ranks[it.rank]!, it, 'after', inStrip)
+        moved = true
       }
     }
 

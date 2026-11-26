@@ -260,10 +260,18 @@ function searchOnce(
     const fs = fences(p, e)
     // A drawn frame that holds neither end, nor is one, is a wall to this edge, inside and border: a path through it is
     // one crossesTrue refuses, so the search goes round it from the start instead of finding only that path.
-    const shut = [...p.frames]
-      .filter(([id]) => id !== e.from && id !== e.to && !frameless.has(id))
-      .filter(([, f]) => !holds(f, e.from) && !holds(f, e.to))
-      .map(([, f]) => f)
+    const drawnFrames = [...p.frames].filter(([id]) => id !== e.from && id !== e.to && !frameless.has(id))
+    const shut = drawnFrames.filter(([, f]) => !holds(f, e.from) && !holds(f, e.to)).map(([, f]) => f)
+    // A frame that holds one end is crossed once, by the leg of the route that runs between a point outside it and one
+    // inside. Every other leg keeps to its side: a leg from outside to outside goes round it, as the shortest way
+    // through would cross it twice more; one from inside to inside stays in. A leg with an end on the border may cross
+    // there, so it keeps to neither.
+    const once = drawnFrames.filter(([, f]) => holds(f, e.from) !== holds(f, e.to)).map(([, f]) => f)
+    const sided = (from: Point, to: Point) => {
+      const out = once.filter((f) => !inside(from, f) && !inside(to, f))
+      const kept = once.filter((f) => within(from, f) && within(to, f))
+      return (c: Point) => out.some((f) => inside(c, f)) || kept.some((f) => !within(c, f))
+    }
     const blocked = (c: Point) =>
       shut.some((f) => inside(c, f)) ||
       (stems.has(keyOf(c)) && keyOf(c) !== keyOf(move(target.at, target.face))) ||
@@ -404,6 +412,7 @@ function searchOnce(
 
       const last = i === stops.length - 1
       const outgoing = last ? back(target.face) : direction
+      const side = sided(current, stop)
       const part = findPath(
         { ...source, at: current, face: incoming },
         { ...target, at: stop, face: outgoing },
@@ -411,6 +420,7 @@ function searchOnce(
           const key = keyOf(c)
           return (
             blocked(c) ||
+            side(c) ||
             used.has(key) ||
             (e.tail !== 'none' && key === sourceKey) ||
             (e.head !== 'none' && key === targetKey) ||

@@ -52,7 +52,8 @@ export function place(
   }
 
   const fits = new Map([...fit].filter(([c]) => span.has(c)))
-  const placed = keepSides(order(ranks, level.segs, path), level.segs, path, span)
+  const backs = new Set(level.edges.filter((e) => e.reversed && e.style !== 'invisible').map((e) => e.id))
+  const placed = lanedPastBlocks(keepSides(order(ranks, level.segs, path), level.segs, path, span, backs), level, backs)
   const x = crossAxis(placed, level.segs, gap.nodeGap, path, across ? new Map() : fits)
   const heights = placed.map((r) => Math.max(...r.map((i) => i.main)))
   const channel = channels(tracks(placed, level.segs), gap.rankGap)
@@ -90,7 +91,27 @@ export function place(
           held(s.lower)
         )
       })
-    if ([...branches.values()].includes(3) || entered) {
+    // An edge from the rank above that holds neither end but leaves from over the strip, or passes it to the other
+    // side, must run along its top border's outside: the gap gets the exterior rows for that run and its turns too. A
+    // laned back edge always passes it so, as its lane lies past everything (layered.ts).
+    const left = x.get(LEFT(cluster))!
+    const right = x.get(RIGHT(cluster))!
+    const over = level.segs.some((s) => {
+      const upper = items.get(s.upper)
+      const lower = items.get(s.lower)
+      if (!upper || !lower || upper.rank !== lo - 1 || held(s.upper) || held(s.lower)) {
+        return false
+      }
+
+      if (backs.has(s.edge) && level.segs.filter((t) => t.edge === s.edge).length > 1) {
+        return true
+      }
+
+      const from = Math.min(x.get(s.upper)!, x.get(s.lower)!)
+      const to = Math.max(x.get(s.upper)! + upper.cross, x.get(s.lower)! + lower.cross) - 1
+      return from <= right && to >= left
+    })
+    if ([...branches.values()].includes(3) || entered || over) {
       exterior.add(lo)
     }
   }
@@ -162,4 +183,33 @@ export function place(
     wide,
     long: length,
   }
+}
+
+// ranks with each end of a laned back edge, one with a label or a bend, placed after every block on its rank. Such an
+// edge leaves its ends straight out toward its lane, past everything at this level (layered.ts); a block between an end
+// and that lane is a frame the edge cannot cross, and going round it leaves a turn its end has no room for.
+function lanedPastBlocks(ranks: Item[][], level: Level, backs: ReadonlySet<string>): Item[][] {
+  const laned = new Set<string>()
+  const counts = new Map<string, number>()
+  for (const s of level.segs) {
+    counts.set(s.edge, (counts.get(s.edge) ?? 0) + 1)
+  }
+
+  for (const e of level.edges) {
+    if (backs.has(e.id) && (counts.get(e.id) ?? 0) > 1) {
+      laned.add(e.from)
+      laned.add(e.to)
+    }
+  }
+
+  for (const rank of ranks) {
+    const last = rank.findLastIndex((it) => it.kind === 'block')
+    const ends = rank.slice(0, Math.max(0, last)).filter((it) => it.kind === 'node' && laned.has(it.id))
+    for (const it of ends) {
+      rank.splice(rank.indexOf(it), 1)
+      rank.splice(rank.findLastIndex((x) => x.kind === 'block') + 1, 0, it)
+    }
+  }
+
+  return ranks
 }
