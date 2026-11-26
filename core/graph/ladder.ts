@@ -24,14 +24,17 @@ export const SPACING: Readonly<Record<Row, { TB: Gaps; LR: Gaps }>> = {
   wrap: { TB: { rankGap: 2, nodeGap: 2 }, LR: { rankGap: 4, nodeGap: 1 } },
 }
 const WRAPS = [24, 20, 16, 12, 8] as const
-// Each ladder step's spacing row and wrapAt tries. Typed by GraphStep, so a step added there with no row fails to
-// compile.
-const PLAN: Readonly<Record<GraphStep, { row: Row; wraps: readonly (number | null)[] }>> = {
-  natural: { row: 'natural', wraps: [null] },
-  tight: { row: 'tight', wraps: [null] },
-  wrap: { row: 'wrap', wraps: WRAPS },
-  lrToTd: { row: 'wrap', wraps: [null, ...WRAPS] },
-  keyed: { row: 'wrap', wraps: [null, ...WRAPS] },
+type Try = { row: Row; wrapAt: number | null }
+const tries = (row: Row, wraps: readonly (number | null)[]): Try[] => wraps.map((wrapAt) => ({ row, wrapAt }))
+// Each ladder step's tries, in order: a spacing row and a wrapAt each. Typed by GraphStep, so a step added there with
+// no tries fails to compile. lrToTd is a left-to-right graph that cannot draw so, falling back to top to bottom: it
+// tries what a top-to-bottom graph's own steps try, natural, then tight, then wrap, so it draws as that graph would.
+const PLAN: Readonly<Record<GraphStep, readonly Try[]>> = {
+  natural: tries('natural', [null]),
+  tight: tries('tight', [null]),
+  wrap: tries('wrap', WRAPS),
+  lrToTd: [...tries('natural', [null]), ...tries('tight', [null]), ...tries('wrap', WRAPS)],
+  keyed: tries('wrap', [null, ...WRAPS]),
 }
 const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
@@ -116,10 +119,10 @@ function attempt(
   return last
 }
 
-// step's drawing at columns: each of its wrapAt tries in order, the first drawing validate accepts, else the last try.
-// lrToTd and keyed draw LR as TB and RL as BT; only keyed builds keyed. A step off the graph ladder fails 'step'. With
-// work, every try routes on the rescue pass's shared budget: a graph module's rescue layout, which fitLadder runs only
-// after every step failed without it, so a drawing the normal ladder finds is never replaced.
+// step's drawing at columns: each of its tries in order, the first drawing validate accepts, else the last try. lrToTd
+// and keyed draw LR as TB and RL as BT; only keyed builds keyed. A step off the graph ladder fails 'step'. With work,
+// every try routes on the rescue pass's shared budget: a graph module's rescue layout, which fitLadder runs only after
+// every step failed without it, so a drawing the normal ladder finds is never replaced.
 export function drawAt(
   build: Build,
   dir: Dir,
@@ -132,14 +135,13 @@ export function drawAt(
     return fail('step')
   }
 
-  const { row, wraps } = PLAN[step]
   const turn = step === 'lrToTd' || step === 'keyed'
   // A step that turns the graph draws a left-to-right graph top to bottom, and right-to-left bottom to top.
   const TURNED: Partial<Record<Dir, Dir>> = { LR: 'TB', RL: 'BT' }
   const drawn: Dir = turn ? (TURNED[dir] ?? dir) : dir
-  const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
   let last: Drawing | Fail = fail('too-wide')
-  for (const wrapAt of wraps) {
+  for (const { row, wrapAt } of PLAN[step]) {
+    const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
     last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title, work)
     if (!isFail(last) && validate(last) === null) {
       return last

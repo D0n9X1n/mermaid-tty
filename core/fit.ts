@@ -26,15 +26,20 @@ const WIDTH = new Set(['too-wide', 'row-too-wide', 'word-too-wide'])
 // A rescue that draws needs well under this; one that cannot stops here instead of searching on.
 export const RESCUE_WORK = 50000
 
+// The steps that draw the diagram another way when its own layout cannot: lrToTd, a left-to-right graph top to bottom.
+// The steps before one can spend a rescue pass's whole budget, so it starts with RESCUE_WORK of its own.
+const FALLBACK: ReadonlySet<Step> = new Set(['lrToTd'])
+
 // The first step whose drawing validate accepts, with that drawing. A step is skipped when its layout fails, when its
 // drawing declares other columns than it was given (validate measures rows against the drawing's own columns, so a
 // wider claim would pass it), or when validate rejects its drawing. If every step is skipped, the first reason that is
 // not about width, so the debug log names what kept a fitting drawing off the screen; the last step's reason when width
 // is all that failed; 'too-wide' when the ladder has no step. Only then, if the type has a rescue, each step runs again
-// through it, in order, under the same checks, until RESCUE_WORK expansions are spent; the first it draws is taken. If
-// none does, a second rescue pass runs the same way, on RESCUE_WORK of its own, with rip set: the search router then
-// routes again with each edge it got stuck on first. Running them last keeps every drawing the steps find exactly as it
-// is, the second pass keeps every drawing the first finds, and a rescue that draws nothing leaves the steps' reason.
+// through it, in order, under the same checks, until RESCUE_WORK expansions are spent, a FALLBACK step on RESCUE_WORK
+// of its own; the first it draws is taken. If none does, a second rescue pass runs the same way, on RESCUE_WORK of its
+// own, with rip set: the search router then routes again with each edge it got stuck on first. Running them last keeps
+// every drawing the steps find exactly as it is, the second pass keeps every drawing the first finds, and a rescue that
+// draws nothing leaves the steps' reason.
 export function fitLadder<M>(
   mod: DiagramModule<M>,
   model: M,
@@ -61,10 +66,14 @@ export function fitLadder<M>(
   }
 
   for (const rip of [false, true]) {
-    const work = { left: RESCUE_WORK, rip }
+    let work = { left: RESCUE_WORK, rip }
     for (const step of mod.rescue ? mod.steps(model) : []) {
+      if (FALLBACK.has(step)) {
+        work = { left: RESCUE_WORK, rip }
+      }
+
       if (work.left <= 0) {
-        break
+        continue
       }
 
       const drawing = mod.rescue!(model, step, columns, work)

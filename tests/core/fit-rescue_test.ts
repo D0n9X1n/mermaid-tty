@@ -193,3 +193,65 @@ test('a chart the normal ladder draws keeps that drawing at 160 columns, and the
   assert.ok(!isFail(rescued), JSON.stringify(rescued))
   assert.equal(validate(rescued), null)
 })
+
+// lrToTd is a left-to-right graph's last way to draw, top to bottom. The left-to-right steps before it can spend the
+// rescue pass's whole budget, so it starts each rescue pass with a budget of its own.
+test('the rescue gives lrToTd a budget of its own, whatever the steps before it spent', () => {
+  const budgets: string[] = []
+  const mod: DiagramModule<null> = {
+    type: 'flowchart',
+    parse: () => fail('unused'),
+    steps: () => ['natural', 'tight', 'wrap', 'lrToTd'],
+    layout: () => fail('route-conflict'),
+    rescue: (_, step, cols, work) => {
+      budgets.push(`${step} ${work.left}`)
+      if (step !== 'lrToTd') {
+        work.left -= RESCUE_WORK
+        return fail('route-conflict')
+      }
+
+      return draw(5, cols)
+    },
+  }
+
+  const r = fitLadder(mod, null, 10)
+
+  assert.deepEqual(r, { step: 'lrToTd', drawing: draw(5, 10) })
+  assert.deepEqual(budgets, [`natural ${RESCUE_WORK}`, `lrToTd ${RESCUE_WORK}`])
+})
+
+// This flowchart fails to route left to right at every step, even with the rescue; top to bottom, on a budget the
+// left-to-right rescue has not spent, it draws. RL falls back to BT the same way.
+test('an LR flowchart that only draws top to bottom falls back to it', () => {
+  const source = [
+    'flowchart LR',
+    '  A["Retry"]',
+    '  B["Render"]',
+    '  C["Retry"]',
+    '  D["Load config"]',
+    '  E["Parse"]',
+    '  F["Done"]',
+    '  G["Ask the model"]',
+    '  E -->|yes| G',
+    '  G -->|retry| C',
+    '  B -->|retry| C',
+    '  C -->|ok| B',
+    '  C --> A',
+    '  B -->|ok| G',
+    '  B --> C',
+    '  E --> F',
+  ].join('\n')
+  for (const [from, to] of [
+    ['LR', 'TD'],
+    ['RL', 'BT'],
+  ]) {
+    const turned = explain(source.replace('flowchart LR', `flowchart ${to}`), { columns: 80 })
+    assert.ok(!isFail(turned), `${to} draws: ${JSON.stringify(turned)}`)
+
+    const r = explain(source.replace('flowchart LR', `flowchart ${from}`), { columns: 80 })
+
+    assert.ok(!isFail(r), `${from}: ${JSON.stringify(r)}`)
+    assert.equal(r.step, 'lrToTd')
+    assert.equal(validate(r.drawing), null)
+  }
+})
