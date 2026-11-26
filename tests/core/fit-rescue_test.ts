@@ -278,3 +278,52 @@ test('an LR flowchart that only draws top to bottom falls back to it', () => {
   assert.equal(validate(r.drawing), null)
   assert.deepEqual(r.drawing.cells, turned.drawing.cells)
 })
+
+// RL falls back to bottom to top the same way: this graph routes no way right to left at 44 columns, and draws bottom
+// to top, as the same graph written BT does. Both draw through the rescue, the fallback at its tighter spacing first.
+test('an RL flowchart that only draws bottom to top falls back to it', () => {
+  const source = [
+    'flowchart RL',
+    '  G --> B',
+    '  E -->|ok| E',
+    '  A -->|ok| G',
+    '  B -->|ok| A',
+    '  D --> E',
+    '  E -->|ok| A',
+    '  D --> G',
+    '  B --> F',
+  ].join('\n')
+  const turned = explain(source.replace('flowchart RL', 'flowchart BT'), { columns: 44 })
+  assert.ok(!isFail(turned), `BT draws: ${JSON.stringify(turned)}`)
+
+  const r = explain(source, { columns: 44 })
+
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+  const top = (d: Drawing, id: string) => d.cells.findIndex((row) => row.some((c) => c?.owners.includes(id)))
+  assert.ok(top(r.drawing, 'D') > top(r.drawing, 'A'), 'D, the source, draws below A, as bottom to top puts it')
+})
+
+// The fallback's rescue shares one budget across its tries. At 25 columns natural spacing cannot fit this graph, and
+// searching it would spend that budget before the tight spacing that draws it gets a turn: the rescue tries tight
+// first.
+test('the fallback rescue tries the tight spacing before natural, so a narrow terminal still draws', () => {
+  const source = [
+    'flowchart RL',
+    '  E -->|ok| C',
+    '  B -->|ok| E',
+    '  C -->|ok| F',
+    '  B -->|ok| B',
+    '  G --> B',
+    '  F --> G',
+    '  A -->|ok| B',
+    '  A -->|ok| A',
+  ].join('\n')
+
+  const r = explain(source, { columns: 25 })
+
+  assert.ok(!isFail(r), JSON.stringify(r))
+  assert.equal(r.step, 'lrToTd')
+  assert.equal(validate(r.drawing), null)
+})

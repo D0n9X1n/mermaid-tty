@@ -36,6 +36,12 @@ const PLAN: Readonly<Record<GraphStep, readonly Try[]>> = {
   lrToTd: [...tries('natural', [null]), ...tries('tight', [null]), ...tries('wrap', WRAPS)],
   keyed: tries('wrap', [null, ...WRAPS]),
 }
+// A step's tries on the rescue pass, where they share one budget, when they differ from its plain tries. natural, the
+// widest, can spend that budget at a width only a tighter spacing fits, so lrToTd's rescue tries the tight spacing
+// first, wrapped as the terminal needs, then natural.
+const RESCUE: Readonly<Partial<Record<GraphStep, readonly Try[]>>> = {
+  lrToTd: [...tries('wrap', [null, ...WRAPS]), ...tries('natural', [null])],
+}
 const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
 
@@ -146,7 +152,7 @@ export function drawAt(
   const TURNED: Partial<Record<Dir, Dir>> = { LR: 'TB', RL: 'BT' }
   const drawn: Dir = turn ? (TURNED[dir] ?? dir) : dir
   let last: Drawing | Fail = fail('too-wide')
-  for (const { row, wrapAt } of PLAN[step]) {
+  for (const { row, wrapAt } of (work && RESCUE[step]) || PLAN[step]) {
     const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
     last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title, work)
     if (!isFail(last) && validate(last) === null) {
