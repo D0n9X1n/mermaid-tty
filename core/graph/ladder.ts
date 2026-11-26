@@ -36,11 +36,13 @@ const PLAN: Readonly<Record<GraphStep, readonly Try[]>> = {
   lrToTd: [...tries('natural', [null]), ...tries('tight', [null]), ...tries('wrap', WRAPS)],
   keyed: tries('wrap', [null, ...WRAPS]),
 }
-// A step's tries on the rescue pass, where they share one budget, when they differ from its plain tries. natural, the
-// widest, can spend that budget at a width only a tighter spacing fits, so lrToTd's rescue tries the tight spacing
-// first, wrapped as the terminal needs, then natural.
+// A step's further tries on the rescue pass, after its plain tries, on the budget those started with. On one shared
+// budget the order of lrToTd's tries decides which graphs draw: natural first can spend it all at a width only tight
+// spacing fits, tight first can spend it all before natural, which alone fits, gets a turn. So the rescue tries the
+// plain order, as a top-to-bottom graph's own rescue does, then, on that budget again, the tight spacing first, wrapped
+// as the terminal needs, as lrToTd always did.
 const RESCUE: Readonly<Partial<Record<GraphStep, readonly Try[]>>> = {
-  lrToTd: [...tries('wrap', [null, ...WRAPS]), ...tries('natural', [null])],
+  lrToTd: tries('wrap', [null, ...WRAPS]),
 }
 const isGraphStep = (s: Step): s is GraphStep => Object.hasOwn(PLAN, s)
 const across = (d: Dir): boolean => d === 'LR' || d === 'RL'
@@ -152,11 +154,19 @@ export function drawAt(
   const TURNED: Partial<Record<Dir, Dir>> = { LR: 'TB', RL: 'BT' }
   const drawn: Dir = turn ? (TURNED[dir] ?? dir) : dir
   let last: Drawing | Fail = fail('too-wide')
-  for (const { row, wrapAt } of (work && RESCUE[step]) || PLAN[step]) {
-    const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
-    last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title, work)
-    if (!isFail(last) && validate(last) === null) {
-      return last
+  const start = work?.left
+  const orders = [PLAN[step], ...(work && RESCUE[step] ? [RESCUE[step]] : [])]
+  for (const order of orders) {
+    if (work && start !== undefined) {
+      work.left = start
+    }
+
+    for (const { row, wrapAt } of order) {
+      const gaps = SPACING[row][across(drawn) ? 'LR' : 'TB']
+      last = attempt(build, drawn, step === 'keyed', gaps, wrapAt, columns, title, work)
+      if (!isFail(last) && validate(last) === null) {
+        return last
+      }
     }
   }
 

@@ -305,10 +305,30 @@ test('an RL flowchart that only draws bottom to top falls back to it', () => {
   assert.ok(top(r.drawing, 'D') > top(r.drawing, 'A'), 'D, the source, draws below A, as bottom to top puts it')
 })
 
-// The fallback's rescue shares one budget across its tries. At 25 columns natural spacing cannot fit this graph, and
-// searching it would spend that budget before the tight spacing that draws it gets a turn: the rescue tries tight
-// first.
-test('the fallback rescue tries the tight spacing before natural, so a narrow terminal still draws', () => {
+// On one shared budget the order of the fallback's rescue tries decides which graphs draw, so it tries both orders,
+// each on the budget it started with. At 25 columns natural cannot fit the first graph, and searching it first would
+// spend the budget the tight spacing needs; at 30 the second fits only at natural, and searching the tight spacing
+// first would spend the budget natural needs.
+test('the fallback rescue draws a graph only tight spacing fits, and one only natural spacing fits', () => {
+  const natural = [
+    'flowchart LR',
+    '  B --> E',
+    '  C --> F',
+    '  D --> A',
+    '  A -->|ok| A',
+    '  B --> D',
+    '  F --> D',
+    '  A -->|ok| A',
+    '  D --> F',
+    '  D -->|ok| B',
+  ].join('\n')
+  const td = explain(natural.replace('flowchart LR', 'flowchart TD'), { columns: 30 })
+  assert.ok(!isFail(td), `TD draws: ${JSON.stringify(td)}`)
+  const n = explain(natural, { columns: 30 })
+  assert.ok(!isFail(n), JSON.stringify(n))
+  assert.equal(n.step, 'lrToTd')
+  assert.equal(validate(n.drawing), null)
+
   const source = [
     'flowchart RL',
     '  E -->|ok| C',
