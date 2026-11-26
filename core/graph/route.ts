@@ -47,12 +47,14 @@ function routeAsPlaced(p: Placed, work?: { left: number }): Route[] | Fail {
 
   const routed = routeWith(p, backs, work)
   const sharedEnd = backs.some((a) => backs.some((b) => a !== b && (a.from === b.from || a.to === b.to)))
-  if (Array.isArray(routed) || !sharedEnd) {
+  if (Array.isArray(routed) || backs.length === 0 || (!sharedEnd && !work)) {
     return routed
   }
 
-  // Outside lanes use each face's middle. Shared back-edge endpoints may need separate slots on other faces; the
-  // bounded general search can use those slots while still obeying the dummy and label waypoints.
+  // Outside lanes leave each end by its face's middle, straight out. Back edges sharing an end may need other slots;
+  // and, on the rescue pass, when nothing else drew, a node beside an end may stand where its lane would leave. The
+  // bounded general search can take any free slot and go round, while still obeying the dummy and label waypoints. Only
+  // on the rescue pass for a lane blocked so: a later step's lanes, where they route, draw it more plainly.
   const searched = searchRoutes(p, false, [], work)
   return Array.isArray(searched) ? searched : searchRoutes(p, true, [], work)
 }

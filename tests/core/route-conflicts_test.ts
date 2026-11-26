@@ -86,3 +86,12 @@ test('A3: a node many edges fan into keeps the row before its face free for each
   draws(flow('TD', ...BTW_FLOW), 80)
   draws(flow('TD', 'A --> B & C & D', 'B -->|x| N', 'C -->|y| N', 'D -->|z| N', 'A -->|w| N'), 80)
 })
+
+// A labelled edge back to an earlier node takes an outside lane, past everything at its level. When another node sits
+// right beside its end, where the lane would leave, it routes through its label by the general search instead.
+test('A3: a labelled edge back beside an unrelated part of the graph draws', () => {
+  for (const dir of ['LR', 'RL', 'TD', 'BT']) {
+    draws(flow(dir, 'C -.-> E["Error"]', 'E -->|x| C', 'I --> J & K'))
+    draws(flow(dir, 'B ---|x| D(("Read config"))', 'F --> C', 'D ==> B'))
+  }
+})
