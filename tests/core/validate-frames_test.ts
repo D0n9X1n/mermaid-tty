@@ -387,3 +387,18 @@ test('A5.mutation-tests: every subgraph draws round its own nodes', () => {
     assert.equal(validate(r.drawing), null)
   }
 })
+
+// A keyed node inside a frame draws its key there and its full text in a legend row below the drawing: the legend row
+// names it, so the frame still holds it.
+test('A5.mutation-tests: a keyed node in a frame, its legend row below, is still held by the frame', () => {
+  const sources = [
+    'classDiagram\nnamespace Work {\n  note "DeliveryConfirmation"\n}',
+    'flowchart TD\n  subgraph S [Work]\n    A["A label far too long to draw in place here"]\n  end',
+  ]
+  for (const source of sources) {
+    const r = explain(source, { columns: 24 })
+
+    assert.ok('drawing' in r, `${source}: ${JSON.stringify(r)}`)
+    assert.equal(validate(r.drawing), null)
+  }
+})

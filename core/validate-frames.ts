@@ -125,10 +125,12 @@ export function frames(d: Drawing, all: readonly Spot[]): Fail | null {
 
 // Each frame holds its own nodes: every cell drawn for one of them, by its owners, lies strictly inside the frame's
 // box. A node drawn outside, or across the border, reads as belonging elsewhere. A node with no cells has nothing to
-// place. Run after frames, so every listed frame spans a box.
+// place. A legend row, one holding a legend key cell, names a keyed node below the drawing rather than drawing it, so
+// its cells do not count. Run after frames, so every listed frame spans a box.
 export function held(d: Drawing, all: readonly Spot[]): Fail | null {
+  const legend = new Set(all.filter((p) => p.cell.legend).map((p) => p.r))
   const drawn = new Map<string, Spot[]>()
-  for (const p of all) {
+  for (const p of all.filter((p) => !legend.has(p.r))) {
     for (const o of p.cell.owners) {
       drawn.set(o, [...(drawn.get(o) ?? []), p])
     }
