@@ -2,7 +2,6 @@
 // already placed. The fallback when the channel router fails, and the router for edges beside reserved lanes.
 import { fail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
-import { width } from '../width.ts'
 import { gaps } from './gaps.ts'
 import type { Box, Placed } from './layered.ts'
 import type { GEdge } from './model.ts'
@@ -23,10 +22,14 @@ import {
   middle,
   portOf,
   straightCrossing,
+  titleCells,
   walls,
+  within,
 } from './route-base.ts'
 import type { Point, Route, Segment } from './route-base.ts'
 
+// How many times the rescue's second pass routes again, each time with the edge it got stuck on first.
+const RIP_TRIES = 4
 // The cell just outside box b on face (0 above, 1 right, 2 below, 3 left), at slot i along that face.
 function slotCell(b: Box, face: number, i: number): Point {
   if (face === 0) {
@@ -62,8 +65,42 @@ export function searchRoutes(
   p: Placed,
   constrainedFirst = false,
   reserved: Route[] = [],
-  work?: { left: number },
+  work?: { left: number; rip?: boolean },
 ): Route[] | Fail {
+  // With work.rip, the rescue's second pass: each edge the search gets stuck on routes first next time, up to RIP_TRIES
+  // times, so an edge an earlier one walled in gets its turn before it. Never twice for one edge, and never past work.
+  const tries = work?.rip ? RIP_TRIES : 1
+  const first: string[] = []
+  const size = { rows: p.rows, cols: p.cols }
+  for (let t = 0; t < tries; t++) {
+    p.rows = size.rows
+    p.cols = size.cols
+    const r = searchOnce(p, constrainedFirst, reserved, work, first)
+    if (Array.isArray(r)) {
+      return r
+    }
+
+    if (r.stuck === undefined || first.includes(r.stuck) || (work && work.left <= 0)) {
+      break
+    }
+
+    first.unshift(r.stuck)
+  }
+
+  p.rows = size.rows
+  p.cols = size.cols
+  return fail('route-conflict')
+}
+
+// One search over every edge, those named in first routed first, in that order: the routes, or the edge it got stuck
+// on.
+function searchOnce(
+  p: Placed,
+  constrainedFirst: boolean,
+  reserved: Route[],
+  work: { left: number } | undefined,
+  first: readonly string[],
+): Route[] | { stuck: string } {
   const groups = mergeGroups(p)
   const edges = p.graph.edges.filter((e) => e.style !== 'invisible').sort((a, b) => a.order - b.order)
   if (constrainedFirst) {
@@ -74,6 +111,11 @@ export function searchRoutes(
         b.minlen - a.minlen ||
         a.order - b.order,
     )
+  }
+
+  if (first.length) {
+    const rank = (e: GEdge) => (first.includes(e.id) ? first.indexOf(e.id) : first.length)
+    edges.sort((a, b) => rank(a) - rank(b))
   }
 
   const routes: Route[] = []
@@ -136,17 +178,14 @@ export function searchRoutes(
     const b = (p.boxes.get(id) ?? p.frames.get(id))!
     return port.face % 2 ? port.at.r - b.row : port.at.c - b.col
   }
-  const titleCells = new Set<string>()
-  for (const n of p.graph.clusters) {
-    const b = p.frames.get(n.id)
-    if (b && n.title !== null) {
-      for (let c = b.col + 2; c <= b.col + 3 + width(n.title); c++) {
-        titleCells.add(`${b.row},${c}`)
-      }
-    }
+  const titles = titleCells(p)
+  const title = (c: Point) => titles.has(keyOf(c))
+  const frameless = new Set(p.graph.clusters.filter((c) => c.frameless).map((c) => c.id))
+  // Whether frame f holds the box of id strictly inside its border.
+  const holds = (f: Box, id: string) => {
+    const b = p.boxes.get(id) ?? p.frames.get(id)
+    return !!b && within({ r: b.row, c: b.col }, f) && within({ r: b.row + b.rows - 1, c: b.col + b.cols - 1 }, f)
   }
-
-  const title = (c: Point) => titleCells.has(keyOf(c))
   const candidates = (
     id: string,
     style: string,
@@ -219,7 +258,23 @@ export function searchRoutes(
     const label = p.boxes.get(`${e.id}:label`)
     const ink = labelInk(p, e)
     const fs = fences(p, e)
+    // A drawn frame that holds neither end, nor is one, is a wall to this edge, inside and border: a path through it is
+    // one crossesTrue refuses, so the search goes round it from the start instead of finding only that path.
+    const drawnFrames = [...p.frames].filter(([id]) => id !== e.from && id !== e.to && !frameless.has(id))
+    const shut = drawnFrames.filter(([, f]) => !holds(f, e.from) && !holds(f, e.to)).map(([, f]) => f)
+    // A frame that holds one end is crossed once, by the leg of the route that runs between a point outside it and one
+    // inside. Every other leg keeps to its side: a leg from outside to outside goes round it, as the shortest way
+    // through would cross it twice more; one from inside to inside stays in. A leg with an end on the border may cross
+    // there, so it keeps to neither.
+    const once = drawnFrames.filter(([, f]) => holds(f, e.from) !== holds(f, e.to)).map(([, f]) => f)
+    const sided = (from: Point, to: Point) => {
+      const out = once.filter((f) => !inside(from, f) && !inside(to, f))
+      const kept = once.filter((f) => within(from, f) && within(to, f))
+      return (c: Point) => out.some((f) => inside(c, f)) || kept.some((f) => !within(c, f))
+    }
     const blocked = (c: Point) =>
+      shut.some((f) => inside(c, f)) ||
+      (stems.has(keyOf(c)) && keyOf(c) !== keyOf(move(target.at, target.face))) ||
       title(c) ||
       !fenced(fs, c) ||
       (margins.get(keyOf(c)) ?? []).some(
@@ -357,6 +412,7 @@ export function searchRoutes(
 
       const last = i === stops.length - 1
       const outgoing = last ? back(target.face) : direction
+      const side = sided(current, stop)
       const part = findPath(
         { ...source, at: current, face: incoming },
         { ...target, at: stop, face: outgoing },
@@ -364,6 +420,7 @@ export function searchRoutes(
           const key = keyOf(c)
           return (
             blocked(c) ||
+            side(c) ||
             used.has(key) ||
             (e.tail !== 'none' && key === sourceKey) ||
             (e.head !== 'none' && key === targetKey) ||
@@ -461,7 +518,27 @@ export function searchRoutes(
     return { edge: e.id, style: e.style as Route['style'], cells, ends }
   }
   const preferred = { TB: 2, BT: 0, LR: 1, RL: 3 }[p.graph.dir]
-  for (const e of edges) {
+  // The cells in front of each slot on the incoming face of every node an edge still to route ends on: an arrowhead
+  // there needs the cell for its straight stem, so an edge routed earlier keeps its runs off them. An edge that cannot
+  // route so routes again without them.
+  const stemsBefore = (from: number) => {
+    const out = new Set<string>()
+    const face = back(preferred)
+    for (const n of edges.slice(from)) {
+      const b = p.boxes.get(n.to)
+      if (!b || n.head === 'none' || n.from === n.to) {
+        continue
+      }
+
+      for (let i = 0; i < (face % 2 ? b.rows : b.cols); i++) {
+        out.add(keyOf(move(slotCell(b, face, i), face)))
+      }
+    }
+
+    return out
+  }
+  let stems = new Set<string>()
+  for (const [k, e] of edges.entries()) {
     const sources = candidates(e.from, e.style, e.tail, preferred, portOf(groups, e, 'tail'))
     const fanInOut =
       e.from !== e.to &&
@@ -514,7 +591,13 @@ export function searchRoutes(
 
       return null
     }
+    stems = stemsBefore(k + 1)
     let result = first(true)
+    if (!result && stems.size > 0) {
+      stems = new Set()
+      result = first(true)
+    }
+
     if (!result && work && work.left > 0 && budget.left <= 0 && !refilled) {
       refilled = true
       budget.left = 5000
@@ -522,7 +605,7 @@ export function searchRoutes(
     }
 
     if (!result) {
-      return fail('route-conflict')
+      return { stuck: e.id }
     }
 
     const { route, source, target } = result

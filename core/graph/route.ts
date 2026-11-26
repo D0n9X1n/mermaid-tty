@@ -8,14 +8,30 @@ import { channelsRoute } from './channels.ts'
 import { outsideRoute } from './lanes.ts'
 import type { Route } from './route-base.ts'
 import { searchRoutes } from './search.ts'
+import { mirrorAxis, turn, turnBack } from './mirror.ts'
 
 export type { Route } from './route-base.ts'
 
 // May extend rows/cols for exterior routing lanes; node, label and frame boxes never move. A back edge with no dummy
 // and no label routes first with the forward edges, in the nearest free column, so a 2-cycle draws as two parallel
 // edges, not a long detour; else, as each back edge with a dummy or label, in an outside lane. work, a rescue pass's
-// shared budget, bounds every path search and lets the search router refill its own budget once (searchRoutes).
+// shared budget, bounds every path search and lets the search router refill its own budget once (searchRoutes). p's
+// routes, or why it has none. A bottom-to-top or right-to-left layout none of the routers draws as it stands is routed
+// turned over, as top to bottom or left to right, and its routes turned back (mirror.ts); p then takes the size the
+// turned routes need.
 export function routeGraph(p: Placed, work?: { left: number }): Route[] | Fail {
+  const routes = routeAsPlaced(p, work)
+  const axis = mirrorAxis(p.graph.dir)
+  if (Array.isArray(routes) || axis === null || (work && work.left <= 0)) {
+    return routes
+  }
+
+  const q = turn(p, axis)
+  const turned = routeAsPlaced(q, work)
+  return Array.isArray(turned) ? turnBack(p, q, turned, axis) : routes
+}
+
+function routeAsPlaced(p: Placed, work?: { left: number }): Route[] | Fail {
   const backs = p.graph.edges.filter((e) => e.reversed && e.style !== 'invisible')
   const laned = (e: GEdge) =>
     p.boxes.has(`${e.id}:label`) || [...p.boxes.keys()].some((id) => id.startsWith(`${e.id}#`))
@@ -31,12 +47,14 @@ export function routeGraph(p: Placed, work?: { left: number }): Route[] | Fail {
 
   const routed = routeWith(p, backs, work)
   const sharedEnd = backs.some((a) => backs.some((b) => a !== b && (a.from === b.from || a.to === b.to)))
-  if (Array.isArray(routed) || !sharedEnd) {
+  if (Array.isArray(routed) || backs.length === 0 || (!sharedEnd && !work)) {
     return routed
   }
 
-  // Outside lanes use each face's middle. Shared back-edge endpoints may need separate slots on other faces; the
-  // bounded general search can use those slots while still obeying the dummy and label waypoints.
+  // Outside lanes leave each end by its face's middle, straight out. Back edges sharing an end may need other slots;
+  // and, on the rescue pass, when nothing else drew, a node beside an end may stand where its lane would leave. The
+  // bounded general search can take any free slot and go round, while still obeying the dummy and label waypoints. Only
+  // on the rescue pass for a lane blocked so: a later step's lanes, where they route, draw it more plainly.
   const searched = searchRoutes(p, false, [], work)
   return Array.isArray(searched) ? searched : searchRoutes(p, true, [], work)
 }

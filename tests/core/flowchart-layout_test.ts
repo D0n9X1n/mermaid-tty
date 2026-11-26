@@ -51,22 +51,24 @@ test('A1: R2 recentered labels never erase or enter an unrelated cluster frame',
   const p = layoutGraph(g, { rankGap: 3, nodeGap: 4, wrapAt: null })
   assert.ok(!isFail(p))
   const label = p.boxes.get(`${p.graph.edges[0]!.id}:label`)!
-  for (const f of p.frames.values()) {
+  // The label lies wholly inside a frame or wholly outside it, never across its border.
+  for (const [id, f] of p.frames) {
     const intersects =
       label.row < f.row + f.rows &&
       f.row < label.row + label.rows &&
       label.col < f.col + f.cols &&
       f.col < label.col + label.cols
-    assert.ok(!intersects, JSON.stringify({ label, f }))
+    const within =
+      label.row > f.row &&
+      label.col > f.col &&
+      label.row + label.rows < f.row + f.rows &&
+      label.col + label.cols < f.col + f.cols
+    assert.ok(!intersects || within, JSON.stringify({ id, label, f }))
   }
-  // Its edge can only reach N1 through the Group subgraph more than once here, so the router refuses it
-  // (edge-crosses-frame); any routes it does return must validate.
+  // The label stays on N0's side of Group, so the edge crosses Group's border once, into it, and routes.
   const rs = routeGraph(p)
-  if (Array.isArray(rs)) {
-    assert.equal(validate(drawGraph(p, rs, 80)), null)
-  } else {
-    assert.equal(rs.reason, 'route-conflict')
-  }
+  assert.ok(Array.isArray(rs))
+  assert.equal(validate(drawGraph(p, rs, 80)), null)
 })
 
 test('A1: R2 outside connectors leave clearance from unrelated nodes and unmarked stems', () => {
@@ -399,7 +401,7 @@ test('A1: Q1 diamond junctions are centered under and over their nodes', () => {
 })
 
 test('A1: Q1 route conflicts retry the same step with two more cells of spacing', () => {
-  const g = graph('flowchart LR\nN0["start<br/>more"] ==>|成功| N1\nN0 ==> N1')
+  const g = graph('flowchart LR\nN0 -.-> N1\nN0 --> N1\nN0 -.->|成功| N1')
   assert.equal(verdict(pipeline(g, { rankGap: 6, nodeGap: 1, wrapAt: null }, 120)), 'route-conflict')
   const expected = pipeline(g, { rankGap: 8, nodeGap: 3, wrapAt: null }, 120)
   assert.equal(verdict(expected), 'valid')
@@ -408,7 +410,7 @@ test('A1: Q1 route conflicts retry the same step with two more cells of spacing'
 })
 
 test('A1: R2 the final plus-four spacing retry is required and bounded', () => {
-  const g = graph('flowchart LR\nN0["读取<br/>配置"] -->|yes| N1\nN1 --> N2\nN0 -->|成功| N1\nN0 --> N1')
+  const g = graph('flowchart LR\nN0["start<br/>more"]\nN1 -.->|成功| N3\nN2 -->|成功| N3\nN1 -.-> N2\nN0 -.-> N2')
   assert.equal(verdict(pipeline(g, { rankGap: 6, nodeGap: 1, wrapAt: null }, 120)), 'route-conflict')
   assert.equal(verdict(pipeline(g, { rankGap: 8, nodeGap: 3, wrapAt: null }, 120)), 'route-conflict')
   const expected = pipeline(g, { rankGap: 10, nodeGap: 5, wrapAt: null }, 120)

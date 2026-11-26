@@ -17,19 +17,18 @@ const S = (t: string): Drawing =>
   sequence.layout(parseSequence(readSource(`sequenceDiagram\n${t}`) as Source) as any, 'natural', 80) as Drawing
 const show = (d: Drawing) => text(d).join('\n')
 
-// QA's repro, whose edge label's row once ran through both sides of the Group subgraph: the layout keeps the label off
-// its border (R2 in flowchart-layout_test.ts), but its edge can reach N1 only by running through it and back in, three
-// crossings where one is due, so the router refuses it (edge-crosses-frame) and the fence falls back. The validator
-// half of the finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on
-// between() further down.
-test("A5.mutation-tests: QA's cluster-border repro, its edge through S0 and back, falls back", () => {
+// QA's repro, whose edge label's row once ran through both sides of the Group subgraph. Its label stays on N0's side of
+// Group, so the edge crosses Group's border once, into it, and the drawing validates. The validator half of the
+// finding, a label drawn on a border, is pinned on a hand-built frame below; a frame crossed wrongly, on between()
+// further down.
+test("A5.mutation-tests: QA's cluster-border repro crosses S0's border once, its label on N0's side", () => {
   const src =
     'flowchart BT\nsubgraph S0 [Group]\n  N1\n  subgraph S1 [后端]\n  end\nend\nN0 -.->|long label text here| N1'
-  assert.deepEqual(flowchart.layout(parseFlowchart(readSource(src) as Source) as any, 'natural', 80), {
-    reason: 'route-conflict',
-  })
   for (const columns of [60, 80, 120]) {
-    assert.ok(!('drawing' in explain(src, { columns })), `${columns}`)
+    const r = explain(src, { columns })
+
+    assert.ok('drawing' in r, `${columns}`)
+    assert.equal(validate(r.drawing), null)
   }
 })
 test('A5.mutation-tests: an edge label drawn over a cluster border fails frame-broken', () => {
@@ -353,4 +352,99 @@ test('An edge from a frame that runs through the frame fails edge-crosses-frame'
     frames: ['F'],
   })
   assert.equal(validate(d)?.reason, 'edge-crosses-frame', show(d))
+})
+
+// F holds B, at row 4, strictly inside its box; A, at row 0, sits outside it. A frame listed as holding A reads A drawn
+// outside its own frame, as belonging elsewhere.
+test('A5.mutation-tests: a node drawn outside the frame that holds it fails node-outside-frame', () => {
+  const holding = (nodes: string[]) => {
+    const d = framed(straight)
+    return { ...d, expect: { ...d.expect, held: [{ frame: 'F', nodes }] } }
+  }
+
+  assert.equal(validate(holding(['B'])), null)
+  assert.equal(validate(holding(['A', 'B']))?.reason, 'node-outside-frame')
+})
+
+// A layout that moved a node out of its own subgraph's run on a rank drew that subgraph empty, its nodes beside it.
+test('A5.mutation-tests: every subgraph draws round its own nodes', () => {
+  const src = [
+    'flowchart RL',
+    'A --> B; B --> C; C --> D; A -->|yes| F; D -->|retry| C; F --> A',
+    'subgraph S0; A; B; end',
+    'subgraph S1; C; D; end',
+    'subgraph S2; X; end',
+  ].join('\n')
+  for (const columns of [60, 80, 120]) {
+    const r = explain(src, { columns })
+
+    assert.ok('drawing' in r, `${columns}: ${JSON.stringify(r)}`)
+    assert.deepEqual(r.drawing.expect.held, [
+      { frame: 'S0', nodes: ['A', 'B'] },
+      { frame: 'S1', nodes: ['C', 'D'] },
+      { frame: 'S2', nodes: ['X'] },
+    ])
+    assert.equal(validate(r.drawing), null)
+  }
+})
+
+// A keyed node inside a frame draws its key there and its full text in the legend below the drawing, wrapped onto more
+// rows when it is long: the legend names it, so the frame still holds it.
+test('A5.mutation-tests: a keyed node in a frame, its legend lines below, is still held by the frame', () => {
+  for (const text of ['DeliveryConfirmation', 'DeliveryConfirmation pending', 'DeliveryConfirmation pending review']) {
+    const r = explain(`classDiagram\nnamespace Work {\n  note "${text}"\n}`, { columns: 24 })
+
+    assert.ok('drawing' in r, `${text}: ${JSON.stringify(r)}`)
+    assert.equal(r.step, 'keyed', text)
+    assert.equal(validate(r.drawing), null, text)
+  }
+})
+
+// Only a keyed item's own legend cells are exempt: another node's cells moved onto a legend row are drawn outside its
+// frame, and fail.
+test('A5.mutation-tests: a node moved onto a legend row still fails node-outside-frame', () => {
+  const r = explain('classDiagram\nnamespace Work {\n  class A\n  note "Read the long description"\n}', {
+    columns: 20,
+  })
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(r.step, 'keyed')
+  assert.equal(validate(r.drawing), null)
+  const cells = r.drawing.cells.map((row) => [...row])
+  const own = cells.flatMap((row, i) => row.flatMap((c, j) => (c?.owners.includes('A') ? [[i, j] as const] : [])))
+  const legendRow = cells.findIndex((row) => row.some((c) => c?.legend))
+  assert.ok(own.length > 0 && legendRow >= 0)
+
+  const moved = own.map(([i, j]) => cells[i]![j]!)
+  for (const [i, j] of own) {
+    cells[i]![j] = null
+  }
+
+  const end = cells[legendRow]!.length
+  moved.forEach((c, k) => (cells[legendRow]![end + 1 + k] = c))
+
+  assert.equal(validate({ ...r.drawing, cells })?.reason, 'node-outside-frame')
+})
+
+// A keyed node's own key cells, drawn in place, are not legend cells: moved below the legend, they leave the frame
+// empty and the node outside it, and fail.
+test('A5.mutation-tests: a keyed node moved below its legend fails node-outside-frame', () => {
+  const r = explain('classDiagram\nnamespace Work {\n  note "DeliveryConfirmation"\n}', { columns: 24 })
+  assert.ok('drawing' in r, JSON.stringify(r))
+  assert.equal(r.step, 'keyed')
+  assert.equal(validate(r.drawing), null)
+  const named = new Set((r.drawing.expect.named ?? []).map(({ at }) => `${at.r},${at.c}`))
+  const cells = r.drawing.cells.map((row) => [...row])
+  const own = cells.flatMap((row, i) =>
+    row.flatMap((c, j) => (c?.owners.includes('note0') && !named.has(`${i},${j}`) ? [[i, j] as const] : [])),
+  )
+  assert.ok(own.length > 0)
+
+  const below = own.map(([i, j]) => cells[i]![j]!)
+  for (const [i, j] of own) {
+    cells[i]![j] = null
+  }
+
+  cells.push(below.map((c) => c))
+
+  assert.equal(validate({ ...r.drawing, cells })?.reason, 'node-outside-frame')
 })

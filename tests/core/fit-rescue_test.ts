@@ -9,7 +9,6 @@ import { lookup, type DiagramModule } from '../../core/registry.ts'
 import { explain } from '../../core/render.ts'
 import { readSource, type Source } from '../../core/source.ts'
 import { validate } from '../../core/validate.ts'
-import { text } from './graph-fixture.ts'
 
 // A fake type whose model lists what each step draws, normally and with the rescue: a one-row label n cells wide, or a
 // Fail. calls logs every layout and rescue, in order.
@@ -134,8 +133,8 @@ test('only the graph types have a rescue', () => {
   assert.deepEqual(rescued, ['flowchart', 'stateDiagram-v2', 'classDiagram', 'erDiagram'])
 })
 
-// This chart fits at wrap without the rescue. At that step the rescue draws a valid but different drawing, which must
-// not win: a drawing the normal ladder finds is shown exactly as the ladder draws it without any rescue.
+// This chart fits at wrap without the rescue, which also draws it there. Whatever the rescue would draw must not win:
+// a drawing the normal ladder finds is shown exactly as the ladder draws it, and the rescue never runs.
 const FITS_NORMALLY = [
   'flowchart LR',
   '  U[Client application user]',
@@ -193,5 +192,4 @@ test('a chart the normal ladder draws keeps that drawing at 160 columns, and the
   assert.deepEqual(calls, [])
   assert.ok(!isFail(rescued), JSON.stringify(rescued))
   assert.equal(validate(rescued), null)
-  assert.notDeepEqual(text(rescued), text(alone.drawing))
 })

@@ -1,6 +1,5 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { isFail } from '../../core/fail.ts'
 import { fitLadder, RESCUE_WORK } from '../../core/fit.ts'
 import { findPath } from '../../core/graph/find-path.ts'
@@ -41,18 +40,44 @@ test('a path search with no work left expands nothing', () => {
   assert.equal(budget.left, 1000)
 })
 
-// No rescue draws this chart at 80 columns: unbounded, its rescue searched about twice what its normal ladder did. The
-// whole rescue pass, every step, wrap, gap and search, shares RESCUE_WORK expansions, and stops once they are spent.
-test('a chart no rescue draws spends at most RESCUE_WORK expansions in the whole rescue pass, then stops', () => {
-  const src = readFileSync(new URL('../../fixtures/flowchart/flowchart-reject-06.mmd', import.meta.url), 'utf8')
-  const model = flowchart.parse(readSource(src) as Source) as Graph
-  const left: number[][] = []
+// A chart no step and no rescue routes at 80 columns, so both rescue passes run to their ends. Each pass, every step,
+// wrap, gap and search, shares its own RESCUE_WORK expansions, and stops once they are spent; the second, with rip set,
+// starts only when the first has drawn nothing.
+const UNROUTED = [
+  'flowchart LR',
+  '  A("Parse request") -->|成功| B{{"Draw diagram"}}',
+  '  A ---|Esc| C>"Any text?"]',
+  '  B -->|answered| D[("Native /btw")]',
+  '  B -.->|ok| E{{"Ask the model"}}',
+  '  E --- F["Fallback"]',
+  '  D --> G{"Timeout?"}',
+  '  F --> H>"Parse request"]',
+  '  A --> H',
+  '  E -.->|hit| G',
+  '  E -.-> B',
+  '  A --> B & C',
+  '  subgraph S1 ["Group"]',
+  '    direction TB',
+  '    C',
+  '    D',
+  '    E',
+  '    F',
+  '  end',
+].join('\n')
+test('a chart no rescue draws spends at most RESCUE_WORK expansions in each rescue pass, then stops', () => {
+  const model = flowchart.parse(readSource(UNROUTED) as Source) as Graph
+  const left: { before: number; after: number; rip: boolean }[] = []
   const mod = {
     ...flowchart,
-    rescue: (m: Graph, step: Parameters<typeof flowchart.layout>[1], columns: number, work: { left: number }) => {
+    rescue: (
+      m: Graph,
+      step: Parameters<typeof flowchart.layout>[1],
+      columns: number,
+      work: { left: number; rip?: boolean },
+    ) => {
       const before = work.left
       const d = flowchart.rescue!(m, step, columns, work)
-      left.push([before, work.left])
+      left.push({ before, after: work.left, rip: work.rip === true })
       return d
     },
   }
@@ -60,8 +85,19 @@ test('a chart no rescue draws spends at most RESCUE_WORK expansions in the whole
   const r = fitLadder(mod, model, 80)
 
   assert.ok(isFail(r), JSON.stringify(r))
-  assert.equal(left[0]![0], RESCUE_WORK)
-  assert.equal(left.at(-1)![1], 0)
-  assert.ok(left.slice(0, -1).every(([, after]) => after > 0))
-  assert.ok(left.every(([before, after]) => after >= 0 && after <= before))
+  for (const rip of [false, true]) {
+    const pass = left.filter((x) => x.rip === rip)
+    assert.equal(pass[0]!.before, RESCUE_WORK, `rip ${rip}`)
+    assert.equal(pass.at(-1)!.after, 0, `rip ${rip}`)
+    assert.ok(
+      pass.slice(0, -1).every((x) => x.after > 0),
+      `rip ${rip}`,
+    )
+    assert.ok(
+      pass.every((x) => x.after >= 0 && x.after <= x.before),
+      `rip ${rip}`,
+    )
+  }
+
+  assert.ok(left.findIndex((x) => x.rip) === left.filter((x) => !x.rip).length)
 })

@@ -17,16 +17,12 @@ function random(seed: number) {
 }
 
 const classes = ['dag', 'mixed', 'clusters', 'loops'] as const
-// Strict clearance can require another spacing attempt; both rates have a two-point regression allowance.
-const ceilings = { dag: 3.0, mixed: 6.2, clusters: 31.0, loops: 11.8 }
-// clusters rose when validate began rejecting an edge outside its frame (raw 17.6 -> 22.0, retry 6.8 -> 11.6): each
-// graph lost had an edge between nodes of its frame, most often a back edge on the outside lane, routed out of the
-// frame and back, which validate rejects (edge-outside-frame). Most came back once a back edge between nodes of one
-// open frame took a lane inside it (raw 18.2, retry 7.4). clusters rose with edge-crosses-frame (2026-10-29; raw 18.2
-// -> 37.8, retry 7.4 -> 29.0): each graph lost had an edge that entered a frame holding neither of its ends, or crossed
-// one more than once, which validate now rejects and the router now refuses. Routing such edges round the frame instead
-// lowers these again.
-const rawCeilings = { dag: 3.4, mixed: 15.0, clusters: 39.8, loops: 23.0 }
+// The share of each class's graphs no spacing attempt routes, in percent, and the share the first attempt does not
+// route: each the measured rate (dag 0.6, mixed 1.0, clusters 2.8, loops 2.4; raw 1.6, 2.4, 7.2, 7.8) plus a regression
+// allowance. Clusters stay highest: an edge may not cross a frame that holds neither of its ends, or one more than
+// once, and a random cluster often stands right in an edge's way.
+const ceilings = { dag: 1.5, mixed: 2.0, clusters: 4.0, loops: 3.5 }
+const rawCeilings = { dag: 2.5, mixed: 3.5, clusters: 9.0, loops: 9.5 }
 
 function graphFor(kind: (typeof classes)[number], index: number, next: (n: number) => number) {
   const count = 2 + next(11)

@@ -4,159 +4,159 @@
   ▼
   ◇
   │
-  ├──────────────┐
-  │              │
- go              │
-  │              │
-  ▼              │
- ━━━           stop
-  │              │
-  ├──────────┐   │
-  │          │   │
-  ▼          ▼   │
-( a )      ( b ) │
-  │          │   │
-  │   ┌┬┐    │   │
-  └───┘│└────┘   │
-       ▼         │
-      ━━━        │
-       │         │
-       │   ┌┐    │
-       │   │└────┘
-       │   ▼
-       └──►◉
+  ├───────────┐
+  │           │
+ go           │
+  │           │
+  ▼           │
+ ━━━        stop
+  │           │
+  ├────────┐  │
+  │        │  └───┐
+  ▼        ▼      │
+( a )    ( b )    │
+  │        │      │
+  └───┬┐   │      │
+      │└───┘      │
+      ▼       ┌┐  │
+     ━━━      │└──┘
+      │       │
+      │  ┌┐   │
+      │  │└───┘
+      │  ▼
+      └─►◉
 @60 roles
   n
   e
   a
   d
   e
-  eeeeeeeeeeeeeeee
-  e              e
- LL              e
-  e              e
-  a              e
- nnn           LLLL
-  e              e
-  eeeeeeeeeeee   e
-  e          e   e
-  a          a   e
-nnNnn      nnNnn e
-  e          e   e
-  e   eee    e   e
-  eeeeeeeeeeee   e
-       a         e
-      nnn        e
-       e         e
-       e   ee    e
-       e   eeeeeee
-       e   a
-       eeean
+  eeeeeeeeeeeee
+  e           e
+ LL           e
+  e           e
+  a           e
+ nnn        LLLL
+  e           e
+  eeeeeeeeee  e
+  e        e  eeeee
+  a        a      e
+nnNnn    nnNnn    e
+  e        e      e
+  eeeeee   e      e
+      eeeeee      e
+      a       ee  e
+     nnn      eeeee
+      e       e
+      e  ee   e
+      e  eeeeee
+      e  a
+      eean
 @80
   ●
   │
   ▼
   ◇
   │
-  ├──────────────┐
-  │              │
- go              │
-  │              │
-  ▼              │
- ━━━           stop
-  │              │
-  ├──────────┐   │
-  │          │   │
-  ▼          ▼   │
-( a )      ( b ) │
-  │          │   │
-  │   ┌┬┐    │   │
-  └───┘│└────┘   │
-       ▼         │
-      ━━━        │
-       │         │
-       │   ┌┐    │
-       │   │└────┘
-       │   ▼
-       └──►◉
+  ├───────────┐
+  │           │
+ go           │
+  │           │
+  ▼           │
+ ━━━        stop
+  │           │
+  ├────────┐  │
+  │        │  └───┐
+  ▼        ▼      │
+( a )    ( b )    │
+  │        │      │
+  └───┬┐   │      │
+      │└───┘      │
+      ▼       ┌┐  │
+     ━━━      │└──┘
+      │       │
+      │  ┌┐   │
+      │  │└───┘
+      │  ▼
+      └─►◉
 @80 roles
   n
   e
   a
   d
   e
-  eeeeeeeeeeeeeeee
-  e              e
- LL              e
-  e              e
-  a              e
- nnn           LLLL
-  e              e
-  eeeeeeeeeeee   e
-  e          e   e
-  a          a   e
-nnNnn      nnNnn e
-  e          e   e
-  e   eee    e   e
-  eeeeeeeeeeee   e
-       a         e
-      nnn        e
-       e         e
-       e   ee    e
-       e   eeeeeee
-       e   a
-       eeean
+  eeeeeeeeeeeee
+  e           e
+ LL           e
+  e           e
+  a           e
+ nnn        LLLL
+  e           e
+  eeeeeeeeee  e
+  e        e  eeeee
+  a        a      e
+nnNnn    nnNnn    e
+  e        e      e
+  eeeeee   e      e
+      eeeeee      e
+      a       ee  e
+     nnn      eeeee
+      e       e
+      e  ee   e
+      e  eeeeee
+      e  a
+      eean
 @120
   ●
   │
   ▼
   ◇
   │
-  ├──────────────┐
-  │              │
- go              │
-  │              │
-  ▼              │
- ━━━           stop
-  │              │
-  ├──────────┐   │
-  │          │   │
-  ▼          ▼   │
-( a )      ( b ) │
-  │          │   │
-  │   ┌┬┐    │   │
-  └───┘│└────┘   │
-       ▼         │
-      ━━━        │
-       │         │
-       │   ┌┐    │
-       │   │└────┘
-       │   ▼
-       └──►◉
+  ├───────────┐
+  │           │
+ go           │
+  │           │
+  ▼           │
+ ━━━        stop
+  │           │
+  ├────────┐  │
+  │        │  └───┐
+  ▼        ▼      │
+( a )    ( b )    │
+  │        │      │
+  └───┬┐   │      │
+      │└───┘      │
+      ▼       ┌┐  │
+     ━━━      │└──┘
+      │       │
+      │  ┌┐   │
+      │  │└───┘
+      │  ▼
+      └─►◉
 @120 roles
   n
   e
   a
   d
   e
-  eeeeeeeeeeeeeeee
-  e              e
- LL              e
-  e              e
-  a              e
- nnn           LLLL
-  e              e
-  eeeeeeeeeeee   e
-  e          e   e
-  a          a   e
-nnNnn      nnNnn e
-  e          e   e
-  e   eee    e   e
-  eeeeeeeeeeee   e
-       a         e
-      nnn        e
-       e         e
-       e   ee    e
-       e   eeeeeee
-       e   a
-       eeean
+  eeeeeeeeeeeee
+  e           e
+ LL           e
+  e           e
+  a           e
+ nnn        LLLL
+  e           e
+  eeeeeeeeee  e
+  e        e  eeeee
+  a        a      e
+nnNnn    nnNnn    e
+  e        e      e
+  eeeeee   e      e
+      eeeeee      e
+      a       ee  e
+     nnn      eeeee
+      e       e
+      e  ee   e
+      e  eeeeee
+      e  a
+      eean

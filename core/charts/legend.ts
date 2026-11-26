@@ -132,7 +132,10 @@ export function legendRows(rows: readonly LegendRow[], columns: number): Drawing
     top += lines
   }
 
-  return c.toDrawing({ labels, edges: [], edgeLabels: [], frames: [] })
+  const d = c.toDrawing({ labels, edges: [], edgeLabels: [], frames: [] })
+  // Every cell the legend drew, by its place: it names its item, so the frame check skips exactly these.
+  const named = d.cells.flatMap((row, r) => row.flatMap((cell, col) => (cell ? [{ at: { r, c: col } }] : [])))
+  return { ...d, expect: { ...d.expect, named } }
 }
 
 // d with rows' legend stacked under it, columns wide. Its expect.keys gains every row's key and its expect.keyable

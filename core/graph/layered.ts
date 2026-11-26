@@ -16,7 +16,8 @@ export type Spacing = { rankGap: number; nodeGap: number; wrapAt: number | null 
 // A level's rank band along its main axis, rows or columns from to to: block is null for the top level, else the sealed
 // cluster laid out on its own. Placed.bands lists each level's in order; gaps() reads the gaps between them.
 export type Band = { block: string | null; axis: 'row' | 'col'; from: number; to: number }
-// notes: each side note's box, by note id, beside its node's pill in boxes.
+// notes: each side note's box, by note id, beside its node's pill in boxes. titles: the cells frame titles take, by
+// "row,col", when they are not where each frame's top border puts them, as in a layout routed mirrored (mirror.ts).
 export type Placed = {
   graph: Graph
   boxes: ReadonlyMap<string, Box>
@@ -25,9 +26,17 @@ export type Placed = {
   cols: number
   bands?: readonly Band[]
   notes?: ReadonlyMap<string, Box>
+  titles?: ReadonlySet<string>
 }
 
 const shift = (b: Box, row: number, col: number): Box => ({ ...b, row: b.row + row, col: b.col + col })
+// Whether box a overlaps box b, or, unless touching is allowed, comes within a cell of it.
+function near(a: Box, b: Box, touching: boolean): boolean {
+  const m = touching ? 0 : 1
+  return (
+    a.row < b.row + b.rows + m && b.row < a.row + a.rows + m && a.col < b.col + b.cols + m && b.col < a.col + a.cols + m
+  )
+}
 
 // The cells a back edge's lane takes across the ranks: its label's extent that way, or one cell with no label.
 function laneWidth(label: Box | undefined, across: boolean): number {
@@ -146,6 +155,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     across ? { ...s, rankGap: s.rankGap + extra } : { ...s, nodeGap: s.nodeGap + extra },
     fit,
     across,
+    nested,
   )
   // LR swaps the axes; BT and RL mirror the main one.
   const at = (main: number, long: number) => (g.dir === 'BT' || g.dir === 'RL' ? p.long - main - long : main)
@@ -231,13 +241,10 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     const cross =
       (single && Math.abs(source - target) <= 1 ? source : target) - ((across ? label.rows : label.cols) >> 1)
     const candidate = across ? { ...label, row: cross } : { ...label, col: cross }
+    // The router walls off a cell beside any box but the edge's own ends, label and bends, so a label moved there would
+    // leave its edge no way past: it keeps that cell free, as it keeps off the boxes themselves.
     const overlaps = [...boxes].some(
-      ([id, n]) =>
-        id !== `${e.id}:label` &&
-        candidate.row < n.row + n.rows &&
-        n.row < candidate.row + candidate.rows &&
-        candidate.col < n.col + n.cols &&
-        n.col < candidate.col + candidate.cols,
+      ([id, n]) => id !== `${e.id}:label` && near(candidate, n, id === e.from || id === e.to),
     )
     const frameConflict = [...frames.values()].some((f) => {
       const within = (b: Box) =>
@@ -247,7 +254,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
         f.row < candidate.row + candidate.rows &&
         candidate.col < f.col + f.cols &&
         f.col < candidate.col + candidate.cols
-      return within(label) ? !within(candidate) : intersects
+      return within(label) ? !within(candidate) : intersects || between(label, candidate, f, across)
     })
     if (cross >= 0 && !overlaps && !frameConflict) {
       boxes.set(`${e.id}:label`, candidate)
@@ -264,14 +271,9 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     for (const [id, b] of boxes) {
       if (id.startsWith(`${e.id}#`)) {
         const candidate = across ? { ...b, row: axis } : { ...b, col: axis }
-        const overlap = [...boxes].some(
-          ([other, n]) =>
-            other !== id &&
-            candidate.row < n.row + n.rows &&
-            n.row < candidate.row + candidate.rows &&
-            candidate.col < n.col + n.cols &&
-            n.col < candidate.col + candidate.cols,
-        )
+        const own = (other: string) =>
+          other === e.from || other === e.to || other === `${e.id}:label` || other.startsWith(`${e.id}#`)
+        const overlap = [...boxes].some(([other, n]) => other !== id && near(candidate, n, own(other)))
         const crossesFrame = [...frames.values()].some((f) => {
           const within = (b: Box) =>
             b.row > f.row && b.col > f.col && b.row + b.rows < f.row + f.rows && b.col + b.cols < f.col + f.cols
@@ -281,7 +283,8 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
               candidate.row < f.row + f.rows &&
               candidate.col >= f.col &&
               candidate.col < f.col + f.cols &&
-              !within(candidate))
+              !within(candidate)) ||
+            between(b, candidate, f, across)
           )
         })
         if (!overlap && !crossesFrame) {
@@ -414,9 +417,21 @@ function stripLanes(
   return new Set([...home.values()].flat().map((e) => e.id))
 }
 
+// Whether frame f stands across the way from box a to b, a moved along the cross axis to b's place: level with a on the
+// main axis and wholly between the two on the cross one. A move past it would put a label or a bend on the frame's far
+// side, where its edge must cross the frame to reach it, so it never moves so.
+function between(a: Box, b: Box, f: Box, across: boolean): boolean {
+  const [u, v] = across ? [a.row, b.row] : [a.col, b.col]
+  const [lo, hi] = [Math.min(u, v), Math.max(u, v)]
+  const [start, size] = across ? [f.row, f.rows] : [f.col, f.cols]
+  const [main, long, fMain, fLong] = across ? [a.col, a.cols, f.col, f.cols] : [a.row, a.rows, f.row, f.rows]
+  return start > lo && start + size - 1 < hi && main < fMain + fLong && fMain < main + long
+}
+
 // A back edge's label in its lane, moved along it to just past the turn out of the edge's drawn source, a cell of line
-// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, and only onto
-// cells no other box, dummy or frame holds. Else the label as given.
+// between, so it reads beside that end rather than mid-span: only nearer that turn, short of the far one, only onto
+// cells no other box, dummy or frame holds, and only when no frame the source is outside stands between it and the
+// lane, as the edge could not cross that frame to reach its label. Else the label as given.
 function nearSource(
   e: GEdge,
   label: Box,
@@ -453,8 +468,17 @@ function nearSource(
   const candidate = across ? { ...label, col: start } : { ...label, row: start }
   const meets = (u: Box, v: Box) =>
     u.row < v.row + v.rows && v.row < u.row + u.rows && u.col < v.col + v.cols && v.col < u.col + u.cols
+  // From the source's far side out to the lane, over the main-axis span from the turn to the label's far end.
+  const [from, to] = [Math.min(am, start), Math.max(am, start + size - 1)]
+  const near = across ? a.row + a.rows : a.col + a.cols
+  const out = across ? label.row : label.col
+  const corridor = across
+    ? { row: near, col: from, rows: out - near, cols: to - from + 1 }
+    : { row: from, col: near, rows: to - from + 1, cols: out - near }
+  const holds = (f: Box) =>
+    a.row > f.row && a.col > f.col && a.row + a.rows < f.row + f.rows && a.col + a.cols < f.col + f.cols
   const taken =
     [...boxes].some(([id, x]) => id !== `${e.id}:label` && !id.startsWith(`${e.id}#`) && meets(candidate, x)) ||
-    [...frames.values()].some((f) => meets(candidate, f) && !meets(label, f))
+    [...frames.values()].some((f) => (meets(candidate, f) && !meets(label, f)) || (meets(corridor, f) && !holds(f)))
   return taken ? label : candidate
 }

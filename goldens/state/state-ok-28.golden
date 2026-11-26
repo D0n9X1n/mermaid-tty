@@ -20,14 +20,14 @@ holds stock for 30 min ┄┄( Pending )
       │                      │            │
       ▼                      │            │
  ( Shipped )                 │            │
-      ├───────────────┐      │            │
-      │               │      └──┐         │
-      │               │         │         │
-   signed          refused      │         │
-      │               │         └──┐      │
-      │               │            │      │
-      │               │      ┌─────┼─┐    │
-      ▼               ▼      │     │ │    │
+      ├───────────┐          │            │
+      │           │          └──┐         │
+      │           │             │         │
+   signed      refused          │         │
+      │           │             └──┐      │
+      │           │                │      │
+      │           │          ┌─────┼─┐    │
+      ▼           ▼          │     │ │    │
 ( Delivered )    ( Returned )┘     │ └────┘
       │                            │
       └─────────────┬──────────────┘
@@ -56,14 +56,14 @@ OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
       e                      e            e
       a                      e            e
  nnNNNNNNNnn                 e            e
-      eeeeeeeeeeeeeeeee      e            e
-      e               e      eeee         e
-      e               e         e         e
-   LLLLLL          LLLLLLL      e         e
-      e               e         eeee      e
-      e               e            e      e
-      e               e      eeeeeeeee    e
-      a               a      e     e e    e
+      eeeeeeeeeeeee          e            e
+      e           e          eeee         e
+      e           e             e         e
+   LLLLLL      LLLLLLL          e         e
+      e           e             eeee      e
+      e           e                e      e
+      e           e          eeeeeeeee    e
+      a           a          e     e e    e
 nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
       e                            e
       eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
@@ -92,14 +92,14 @@ holds stock for 30 min ┄┄( Pending )
       │                      │            │
       ▼                      │            │
  ( Shipped )                 │            │
-      ├───────────────┐      │            │
-      │               │      └──┐         │
-      │               │         │         │
-   signed          refused      │         │
-      │               │         └──┐      │
-      │               │            │      │
-      │               │      ┌─────┼─┐    │
-      ▼               ▼      │     │ │    │
+      ├───────────┐          │            │
+      │           │          └──┐         │
+      │           │             │         │
+   signed      refused          │         │
+      │           │             └──┐      │
+      │           │                │      │
+      │           │          ┌─────┼─┐    │
+      ▼           ▼          │     │ │    │
 ( Delivered )    ( Returned )┘     │ └────┘
       │                            │
       └─────────────┬──────────────┘
@@ -128,14 +128,14 @@ OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
       e                      e            e
       a                      e            e
  nnNNNNNNNnn                 e            e
-      eeeeeeeeeeeeeeeee      e            e
-      e               e      eeee         e
-      e               e         e         e
-   LLLLLL          LLLLLLL      e         e
-      e               e         eeee      e
-      e               e            e      e
-      e               e      eeeeeeeee    e
-      a               a      e     e e    e
+      eeeeeeeeeeeee          e            e
+      e           e          eeee         e
+      e           e             e         e
+   LLLLLL      LLLLLLL          e         e
+      e           e             eeee      e
+      e           e                e      e
+      e           e          eeeeeeeee    e
+      a           a          e     e e    e
 nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
       e                            e
       eeeeeeeeeeeeeeeeeeeeeeeeeeeeee
@@ -164,14 +164,14 @@ holds stock for 30 min ┄┄( Pending )
       │                      │            │
       ▼                      │            │
  ( Shipped )                 │            │
-      ├───────────────┐      │            │
-      │               │      └──┐         │
-      │               │         │         │
-   signed          refused      │         │
-      │               │         └──┐      │
-      │               │            │      │
-      │               │      ┌─────┼─┐    │
-      ▼               ▼      │     │ │    │
+      ├───────────┐          │            │
+      │           │          └──┐         │
+      │           │             │         │
+   signed      refused          │         │
+      │           │             └──┐      │
+      │           │                │      │
+      │           │          ┌─────┼─┐    │
+      ▼           ▼          │     │ │    │
 ( Delivered )    ( Returned )┘     │ └────┘
       │                            │
       └─────────────┬──────────────┘
@@ -200,14 +200,14 @@ OOOOOOOOOOOOOOOOOOOOOOooonnNNNNNNNnn
       e                      e            e
       a                      e            e
  nnNNNNNNNnn                 e            e
-      eeeeeeeeeeeeeeeee      e            e
-      e               e      eeee         e
-      e               e         e         e
-   LLLLLL          LLLLLLL      e         e
-      e               e         eeee      e
-      e               e            e      e
-      e               e      eeeeeeeee    e
-      a               a      e     e e    e
+      eeeeeeeeeeeee          e            e
+      e           e          eeee         e
+      e           e             e         e
+   LLLLLL      LLLLLLL          e         e
+      e           e             eeee      e
+      e           e                e      e
+      e           e          eeeeeeeee    e
+      a           a          e     e e    e
 nnNNNNNNNNNnn    nnNNNNNNNNnne     e eeeeee
       e                            e
       eeeeeeeeeeeeeeeeeeeeeeeeeeeeee

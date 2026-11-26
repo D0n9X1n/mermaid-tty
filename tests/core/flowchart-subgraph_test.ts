@@ -341,9 +341,9 @@ test('A5.errors: matrix row flowchart-reject-02, a subgraph with no end, falls b
   assert.deepEqual(P('subgraph s\n  A --> B'), { reason: 'unclosed-subgraph' }, 'flowchart-reject-02')
 })
 
-// An LR chart with two subgraphs. Case 1 (flowchart-reject-06) can reach Data tier only by crossing it more than once
-// or not at all, so it falls back at every width. Case 2 draws at 120, 80 and 60, each edge crossing a frame once: at
-// 80 and 60 the search's rescue routes the dotted W2 → Job queue edge around Data tier rather than through it.
+// An LR chart with two subgraphs. Case 1 (flowchart-ok-63) draws at every width, its golden. Case 2 draws at 120, 80
+// and 60, each edge crossing a frame once: at 80 and 60 the search's rescue routes the dotted W2 → Job queue edge
+// around Data tier rather than through it.
 test('An LR chart with two subgraphs, case 2, draws at 120, 80 and 60 columns', () => {
   const src =
     'flowchart LR\n  User((User)) --> CDN[/CDN/] --> LB{{Load balancer}}\n  subgraph app [App tier]\n    LB --> W1[Web 1] & W2[Web 2]\n  end\n' +

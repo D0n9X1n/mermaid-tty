@@ -2,7 +2,6 @@
 // breadth-first detour around anything in the way. The fast first try; any conflict sends the whole graph to search.
 import { fail } from '../fail.ts'
 import type { Fail } from '../fail.ts'
-import { width } from '../width.ts'
 import { gaps } from './gaps.ts'
 import type { Box, Placed } from './layered.ts'
 import {
@@ -20,6 +19,7 @@ import {
   middle,
   portOf,
   routeObstacles,
+  titleCells,
   walls,
 } from './route-base.ts'
 import type { Point, Route } from './route-base.ts'
@@ -112,11 +112,8 @@ export function channelsRoute(p: Placed): Route[] | Fail {
   // The first main-axis line past box b, and b's own first line, in the signed coordinates point takes.
   const pastLine = (b: Box) => (sign === 1 ? mainEdge(b) + mainSize(b) : -mainEdge(b) + 1)
   const firstLine = (b: Box) => (sign === 1 ? mainEdge(b) : -(mainEdge(b) + mainSize(b) - 1))
-  const titleCell = (c: Point) =>
-    p.graph.clusters.some((cluster) => {
-      const f = p.frames.get(cluster.id)
-      return f && cluster.title !== null && c.r === f.row && c.c >= f.col + 2 && c.c <= f.col + 3 + width(cluster.title)
-    })
+  const titles = titleCells(p)
+  const titleCell = (c: Point) => titles.has(keyOf(c))
   const port = (id: string, source: boolean, style: string, end: string, group: string): number => {
     const b = (p.boxes.get(id) ?? p.frames.get(id))!
     const peers = edges.filter((e) => (source ? e.from : e.to) === id)

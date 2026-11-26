@@ -150,7 +150,27 @@ export const border = (c: Point, b: Box) =>
     : 0
 
 // The frames drawn as a border: every frame box but a frameless region's, which draws none, so an edge may run through
-// it.
+// it. The cells, by "row,col", that frame titles take: each titled frame's top border from two cells in to its title's
+// end and one past it, or p.titles when the layout says where they are. A route never runs through a title.
+export function titleCells(p: Placed): ReadonlySet<string> {
+  if (p.titles) {
+    return p.titles
+  }
+
+  const out = new Set<string>()
+  for (const n of p.graph.clusters) {
+    const b = p.frames.get(n.id)
+    if (b && n.title !== null) {
+      const end = b.col + 3 + width(n.title)
+      for (let c = b.col + 2; c <= end; c++) {
+        out.add(`${b.row},${c}`)
+      }
+    }
+  }
+
+  return out
+}
+
 export const walls = (p: Placed): Box[] => {
   const frameless = new Set(p.graph.clusters.filter((c) => c.frameless).map((c) => c.id))
   return [...p.frames].filter(([id]) => !frameless.has(id)).map(([, b]) => b)

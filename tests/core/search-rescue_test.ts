@@ -14,8 +14,8 @@ import { parseFlowchart } from '../../core/diagrams/flowchart/parse.ts'
 import type { Graph } from '../../core/graph/model.ts'
 import { readSource } from '../../core/source.ts'
 
-// W's dotted line to WD tries W's right face first, against every slot on WD, and none routes; without the rescue those
-// tries spend the whole search budget before W's bottom face, which routes, is tried.
+// W's dotted line to WD tries W's right face first, against every slot on WD, before W's bottom face, which routes. The
+// rescue's budget lets a later source slot be tried when the first spends its share.
 const SOURCE = [
   'flowchart LR',
   '  U[Client application user]',
@@ -57,10 +57,16 @@ function placed(src = SOURCE, rankGap = 6, nodeGap = 1): Placed {
   return layoutGraph(withNotes(graph), { rankGap, nodeGap, wrapAt: null }) as Placed
 }
 
-test('without the rescue, the search runs out on the line whose first source slot reaches no target', () => {
-  const routes = routeGraph(placed())
+// The tries from W's right face once ran through subgraphs that hold neither end of the line, each refused only after
+// its search, and spent the budget before W's bottom face was tried. The search goes round such a subgraph now, so the
+// line routes without the rescue too.
+test('without the rescue, the line goes round the subgraphs that hold neither end and every edge routes', () => {
+  const p = placed()
 
-  assert.deepEqual(routes, { reason: 'route-conflict' })
+  const routes = routeGraph(p)
+
+  assert.ok(Array.isArray(routes), JSON.stringify(routes))
+  assert.equal(validate(drawGraph(p, routes, p.cols)), null)
 })
 
 test('with the rescue, the line takes a later source slot and every edge routes', () => {
