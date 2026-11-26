@@ -42,14 +42,16 @@ export function bandTops(
 // above the first band itself), so an edge into the strip has its in-stem and head inside; its bottom border just below
 // its last band. Top borders stack outermost first, bottom borders innermost first, and strips at one depth share a
 // row: they never overlap. exterior marks gaps where a fan-out reaches both inside and outside a starting strip; those
-// gaps need two exterior cells for a turn and its arrow stem. before[k], after[k]: the border rows above and below band
-// k; up(c), down(c): how far c's top border sits above its first band, and its bottom border below its last.
+// gaps need two exterior cells for a turn and its arrow stem. room[k] free rows lie between band k and the bottom
+// borders after it, inside every strip that ends there. before[k], after[k]: the border rows above and below band k;
+// up(c), down(c): how far c's top border sits above its first band, and its bottom border below its last.
 export function borders(
   spans: ReadonlyMap<string, readonly [number, number]>,
   depth: (c: string) => number,
   channel: readonly number[],
   n: number,
   exterior: ReadonlySet<number> = new Set(),
+  room: ReadonlyMap<number, number> = new Map(),
 ) {
   const starts = Array.from({ length: n }, () => new Set<number>())
   const ends = Array.from({ length: n }, () => new Set<number>())
@@ -61,11 +63,14 @@ export function borders(
   const out = (at: Set<number>, c: string) => 1 + [...at].filter((d) => d > depth(c)).length
   return {
     before: starts.map((x, rank) => x.size + 2 * Number(exterior.has(rank))),
-    after: ends.map((x) => x.size),
+    after: ends.map((x, rank) => x.size + (x.size > 0 ? (room.get(rank) ?? 0) : 0)),
     up: (c: string) => {
       const lo = spans.get(c)![0]
       return out(starts[lo]!, c) + (lo > 0 ? channel[lo - 1]! : 0)
     },
-    down: (c: string) => out(ends[spans.get(c)![1]]!, c),
+    down: (c: string) => {
+      const hi = spans.get(c)![1]
+      return out(ends[hi]!, c) + (room.get(hi) ?? 0)
+    },
   }
 }

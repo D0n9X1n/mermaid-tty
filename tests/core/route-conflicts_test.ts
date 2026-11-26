@@ -44,3 +44,13 @@ test('A3: a graph that draws top to bottom or left to right also draws mirrored'
     }
   }
 })
+
+// A self-loop turns round its node, so a subgraph holding that node leaves room for the loop inside it.
+test('A3: a self-loop on a node inside a subgraph draws, labelled or not, in every direction', () => {
+  for (const dir of ['TD', 'BT', 'LR', 'RL']) {
+    for (const loop of ['G --> G', 'G -->|x| G', 'G -.->|again| G']) {
+      draws(flow(dir, loop, 'subgraph S1 [Group]', '  G', 'end'))
+      draws(flow(dir, 'A --> G', loop, 'subgraph S1 [Group]', '  G', '  H', 'end', 'G --> H'))
+    }
+  }
+})

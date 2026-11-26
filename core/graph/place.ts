@@ -8,6 +8,8 @@ import { order } from './order.ts'
 import { keepSides } from './sides.ts'
 import { addSpacers, pathOf, spans } from './strips.ts'
 
+// The free rows a self-loop needs past the last item it turns round: a turn, then its arrowhead's two cells.
+const LOOP_ROOM = 3
 // A rectangle along the axes: its start and size across the ranks (cross, wide) and along them (main, long).
 export type Rect = { cross: number; main: number; wide: number; long: number }
 // bands: each rank's band along the main axis, its start and size: as tall as its tallest item, or as a title grew it.
@@ -22,7 +24,7 @@ export type Placement = {
 
 // outer: each strip at this level and the strip around it, or null. fit: a strip's least frame width, for its title.
 // The title runs across the ranks, or along them when across (LR, RL): there a strip too short for it grows its middle
-// band.
+// band. framed: the level is a block's, its frame drawn round it, so nothing past its last band can be routed.
 export function place(
   units: readonly Unit[],
   edges: readonly GEdge[],
@@ -31,6 +33,7 @@ export function place(
   gap: { rankGap: number; nodeGap: number },
   fit: ReadonlyMap<string, number> = new Map(),
   across = false,
+  framed = false,
 ): Placement {
   const paths = new Map<string | null, string[]>()
   const path = (o: string | null) => paths.get(o) ?? paths.set(o, pathOf(outer, o)).get(o)!
@@ -92,7 +95,24 @@ export function place(
     }
   }
 
-  const b = borders(span, (c) => path(c).length, channel, placed.length, exterior)
+  // A self-loop turns round the last item it passes, its label or else its node: past it, a turn, then the cell before
+  // its arrowhead and the arrowhead's stem, which the router keeps free. On a strip's last rank that item has the
+  // strip's bottom border right after it, which the loop may not cross, so the rank gets those rows before that border;
+  // on a framed level's last rank, the frame is that border.
+  const room = new Map<number, number>()
+  let tail = 0
+  for (const e of level.edges.filter((e) => e.from === e.to && e.style !== 'invisible')) {
+    const turn = items.get(`${e.id}:label`) ?? items.get(e.from)
+    if (turn && [...span].some(([c, [, hi]]) => hi === turn.rank && path(turn.owner).includes(c))) {
+      room.set(turn.rank, LOOP_ROOM)
+    }
+
+    if (turn && framed && turn.rank === placed.length - 1) {
+      tail = LOOP_ROOM
+    }
+  }
+
+  const b = borders(span, (c) => path(c).length, channel, placed.length, exterior, room)
   if (across) {
     for (const [c, w] of [...fits].sort(([a], [z]) => path(z).length - path(a).length)) {
       const [lo, hi] = span.get(c)!
@@ -105,7 +125,8 @@ export function place(
     }
   }
 
-  const { tops, length } = bandTops(heights, channel, b.before, b.after)
+  const { tops, length: bands } = bandTops(heights, channel, b.before, b.after)
+  const length = bands + tail
   const rects = new Map<string, Rect>()
   for (const it of placed.flat()) {
     if (it.kind === 'spacer') {

@@ -148,6 +148,7 @@ export function layoutGraph(g: Graph, s: Spacing, nested = false): Placed | Fail
     across ? { ...s, rankGap: s.rankGap + extra } : { ...s, nodeGap: s.nodeGap + extra },
     fit,
     across,
+    nested,
   )
   // LR swaps the axes; BT and RL mirror the main one.
   const at = (main: number, long: number) => (g.dir === 'BT' || g.dir === 'RL' ? p.long - main - long : main)
