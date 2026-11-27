@@ -1,6 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { width } from '../../core/width.ts'
-import { KEPT_CHARS, KEPT_ROWS } from '../../hooks/btw.ts'
 import { ANSWER, answered, BTW, engine, held, pane, placesRows, row, start, tick } from './btw-kit.tsx'
 
 // A flowchart that needs 112 columns: a reply draws it at 130, and the btw pane, docked at 45% of a 130-column
@@ -445,30 +444,25 @@ test('A6.row: a row id that is already kept, as after a reload, is passed over a
   expect(await fresh.find({ type: 'Markdown', text: 'the new answer' })).toBeDefined()
 })
 
-test('A6.row: only the newest answers are kept, by count and by size, so a session keeps a bounded few', async ($, on) => {
-  const answers = Array.from({ length: KEPT_ROWS + 1 }, (_, i) => answered(`answer ${i}`))
-  const e = engine(on, ...answers, answered('y'.repeat(KEPT_CHARS)))
+// A write made only while an id was never written misses at a version past 0 when the id is kept; at version 0 nothing
+// is there, so the engine did not make the write, and the answer goes to the pane rather than to another id.
+test('A6.row: a write the engine does not make, at an id never written, falls back to the pane', async ($, on) => {
+  const e = engine(on, answered('in the pane'))
   placesRows(e)
+  let first = true
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if ((ev.ref?.key ?? ev.key) === 'btwRow' && first) {
+      first = false
+      return { value: { isSet: false, version: 0 } }
+    }
+
+    return next(ev)
+  })
   await start($)
 
-  for (let i = 0; i <= KEPT_ROWS; i++) {
-    await BTW($, `q${i}`)
-  }
+  const r = await BTW($, 'q')
 
-  const first = await row($, e.places[0]!)
-  const firstText = await first.find({ type: 'Markdown', text: 'answer 0' })
-  await first.unmount()
-  const second = await row($, e.places[1]!)
-  const secondText = await second.find({ type: 'Markdown', text: 'answer 1' })
-  await second.unmount()
-  await BTW($, 'huge')
-  const kept = await row($, e.places[KEPT_ROWS]!)
-  const keptText = await kept.find({ type: 'Markdown', text: `answer ${KEPT_ROWS}` })
-  await kept.unmount()
-  const huge = await row($, e.places.at(-1)!)
-
-  expect(firstText).toBeUndefined()
-  expect(secondText).toBeDefined()
-  expect(keptText).toBeUndefined()
-  expect(await huge.find({ key: 'btw-question' })).toBeDefined()
+  expect(r).toEqual({})
+  expect(e.places).toEqual([])
+  expect(e.opens).toHaveLength(1)
 })

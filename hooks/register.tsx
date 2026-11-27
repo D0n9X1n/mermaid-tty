@@ -1,18 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
-import {
-  BTW_STATUS,
-  forkPrompt,
-  isBtw,
-  isWindows,
-  markerPath,
-  overflow,
-  rowId,
-  takesBtw,
-  usesMarker,
-  type Btw,
-} from './btw.ts'
+import { BTW_STATUS, forkPrompt, isBtw, isWindows, markerPath, rowId, takesBtw, usesMarker, type Btw } from './btw.ts'
 import {
   ANSWER_TOKENS,
   answerText,
@@ -216,12 +205,6 @@ async function loadImages($: any): Promise<Images> {
   return kept
 }
 
-// The rows this load placed, oldest first, each with its answer's size, so the oldest are emptied past KEPT_ROWS or
-// KEPT_CHARS (hooks/btw.ts). Only ids are kept here, never answers: $.state alone holds those. A reload starts the list
-// over, so rows placed before it are not counted; shortcut: that bounds the rows a load placed, not every row of the
-// session, until the engine can list a family's members.
-type Placed = { id: string; size: number }[]
-
 // Shows a /btw answer, n the /btw's number, in a transcript row of its own; true once the row stands. A row is display
 // only: the main thread's model never reads it and the transcript file never holds it, as the pane before it. It is
 // drawn at the transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the
@@ -232,9 +215,8 @@ type Placed = { id: string; size: number }[]
 // answer the engine refuses or does not keep, a place that throws, as on a Claude Code with no $.ui.place, or one that
 // places nothing, says false, so the answer goes to the pane, which keeps it too; what was kept for a row not placed is
 // emptied. Once a row stands, a pane an earlier answer fell back to is closed, so it holds no room beside the
-// transcript, and the oldest rows past the bounds are emptied. A function declaration: the engine's loader follows $
-// only into one.
-async function showRow($: any, isStale: () => boolean, n: number, btw: Btw, placed: Placed) {
+// transcript. A function declaration: the engine's loader follows $ only into one.
+async function showRow($: any, isStale: () => boolean, n: number, btw: Btw) {
   if (isStale()) {
     return false
   }
@@ -249,6 +231,9 @@ async function showRow($: any, isStale: () => boolean, n: number, btw: Btw, plac
       const set = await $.state.set({ plugin: 'mermaid-tty', key: 'btwRow', id }, btw, { ifVersion: 0 })
       if (set?.isSet !== false) {
         kept = id
+      } else if (!(set.version > 0)) {
+        // Missed with nothing written there: not an id already kept, but a write the engine did not make.
+        return false
       }
     }
 
@@ -256,12 +241,6 @@ async function showRow($: any, isStale: () => boolean, n: number, btw: Btw, plac
       const shown = await $.ui.place({ id: kept })
       if (shown.isPlaced || typeof shown.requestId === 'string') {
         await $.ui.close({ id: BTW_PANE }).catch(() => {})
-        const { gone, kept: still } = overflow([...placed, { id: kept, size: btw.question.length + btw.text.length }])
-        placed.splice(0, placed.length, ...still)
-        for (const r of gone) {
-          await $.state.set({ plugin: 'mermaid-tty', key: 'btwRow', id: r.id }, null).catch(() => {})
-        }
-
         return true
       }
     }
@@ -544,8 +523,6 @@ export const register: Register = (on, options) => {
     turns = run.catch(() => {})
     return run
   }
-  // The rows this load placed (Placed).
-  const placed: Placed = []
   // The /btw cue: which /btw it stands for, where it is shown, and its writes (Cues).
   const cues: Cues = { answering: 0, shown: null, tried: 0, turns: Promise.resolve() }
 
@@ -606,8 +583,6 @@ export const register: Register = (on, options) => {
     // side, so a marker write that is slow to finish never eats into the short time an ending session gives the
     // pictures.
     asked++
-    // A cleared conversation's rows are gone, and the engine lets their answers go with them.
-    placed.length = 0
     cues.answering = 0
     const pictures = inTerminal
       ? sweepPictures($, Math.max(100, Math.min(1000, next.budget?.remainingMs ?? 1000)), true)
@@ -848,7 +823,7 @@ export const register: Register = (on, options) => {
     const question = e.args.trim()
     const shown = await inTurn(
       async () =>
-        (answer !== undefined && (await showRow($, isStale, mine, { question, text: answer }, placed))) ||
+        (answer !== undefined && (await showRow($, isStale, mine, { question, text: answer }))) ||
         showBtw($, isStale, question, answer),
     )
     await done()

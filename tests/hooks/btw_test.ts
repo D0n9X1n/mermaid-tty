@@ -5,10 +5,7 @@ import {
   forkPrompt,
   isBtw,
   isWindows,
-  KEPT_CHARS,
-  KEPT_ROWS,
   markerPath,
-  overflow,
   rowId,
   SIDE_QUESTION,
   takesBtw,
@@ -52,34 +49,6 @@ test('A6.row: a row id is a plain name the engine takes, apart by the time, the 
   assert.notEqual(rowId(1764245000123, 8), id)
   assert.notEqual(rowId(1764245000124, 7), id)
   assert.notEqual(rowId(1764245000123, 7, 1), id)
-})
-
-test('A6.row: past the rows kept, the oldest go, and the newest is kept', () => {
-  const rows = Array.from({ length: KEPT_ROWS + 2 }, (_, i) => ({ id: `r${i}`, size: 1 }))
-
-  const { gone, kept } = overflow(rows)
-
-  assert.deepEqual(
-    gone.map((r) => r.id),
-    ['r0', 'r1'],
-  )
-  assert.equal(kept.length, KEPT_ROWS)
-  assert.equal(kept.at(-1)?.id, `r${KEPT_ROWS + 1}`)
-})
-
-test('A6.row: past the characters kept, the oldest go, and the newest stays however large', () => {
-  const third = Math.floor(KEPT_CHARS / 3)
-  const rows = [0, 1, 2, 3].map((i) => ({ id: `r${i}`, size: third }))
-
-  assert.deepEqual(
-    overflow(rows).gone.map((r) => r.id),
-    ['r0'],
-  )
-  assert.deepEqual(
-    overflow([...rows, { id: 'huge', size: KEPT_CHARS * 2 }]).kept.map((r) => r.id),
-    ['huge'],
-  )
-  assert.deepEqual(overflow([]), { gone: [], kept: [] })
 })
 
 test('A6.status: the status row names the /btw being answered', () => {
