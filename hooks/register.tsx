@@ -218,16 +218,22 @@ async function loadImages($: any): Promise<Images> {
   return kept
 }
 
+// The rows' store as this module last wrote it, or undefined before its first write. A hook's $.state reads are as of
+// its dispatch, so a /btw queued behind another would read the store from before that one's write or its undoing; the
+// /btw answers are shown one at a time (inTurn), so this copy is always the newest. A reload starts it over, and the
+// first /btw after reads $.state, which no /btw is writing then.
+type RowsHeld = { value: unknown }
+
 // Shows a /btw answer in a transcript row of its own; true once the row stands. A row is display only: the main
 // thread's model never reads it and the transcript file never holds it, as the pane before it. It is drawn at the
 // transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the terminal. A row
 // not placed for now but given a request id stands, and draws once a surface attaches. A row placed is not taken back:
 // whether a /btw is still the newest is asked as its row is placed, so one overtaken while the engine places it keeps
-// its row beside the newer one's. A place that throws, as on a Claude Code with no $.ui.place, or one that places
-// nothing, puts the kept rows back as they were and says false, so the answer goes to the pane and takes no row's
-// place. Once a row stands, a pane an earlier answer fell back to is closed, so it holds no room beside the transcript.
-// A function declaration: the engine's loader follows $ only into one.
-async function showRow($: any, isStale: () => boolean, btw: Btw) {
+// its row beside the newer one's. A store the engine refuses or does not set, a place that throws, as on a Claude Code
+// with no $.ui.place, or one that places nothing, puts the kept rows back as they were and says false, so the answer
+// goes to the pane and takes no row's place. Once a row stands, a pane an earlier answer fell back to is closed, so it
+// holds no room beside the transcript. A function declaration: the engine's loader follows $ only into one.
+async function showRow($: any, isStale: () => boolean, btw: Btw, held: RowsHeld) {
   if (isStale()) {
     return false
   }
@@ -236,9 +242,14 @@ async function showRow($: any, isStale: () => boolean, btw: Btw) {
   let stored = false
   try {
     const now = await $.clock.now()
-    before = (await $.state.get(BTW_ROWS)).value
+    before = held.value !== undefined ? held.value : (await $.state.get(BTW_ROWS)).value
     const { id, store } = keepRow(before, btw, now)
-    await $.state.set(BTW_ROWS, store)
+    const set = await $.state.set(BTW_ROWS, store)
+    if (set?.isSet === false) {
+      return false
+    }
+
+    held.value = store
     stored = true
     if (!isStale()) {
       const placed = await $.ui.place({ id })
@@ -250,7 +261,10 @@ async function showRow($: any, isStale: () => boolean, btw: Btw) {
   } catch {}
 
   if (stored) {
-    await $.state.set(BTW_ROWS, before).catch(() => {})
+    // A store never written reads as empty, as undefined does: $.state takes no undefined to put it back.
+    const back = before === undefined ? { seq: 0, rows: [] } : before
+    held.value = back
+    await $.state.set(BTW_ROWS, back).catch(() => {})
   }
 
   return false
@@ -526,6 +540,8 @@ export const register: Register = (on, options) => {
     turns = run.catch(() => {})
     return run
   }
+  // The rows' store as this module last wrote it (RowsHeld).
+  const rowsHeld: RowsHeld = { value: undefined }
   // The /btw cue: which /btw it stands for, where it is shown, and its writes (Cues).
   const cues: Cues = { answering: 0, shown: null, tried: 0, turns: Promise.resolve() }
 
@@ -826,7 +842,7 @@ export const register: Register = (on, options) => {
     const question = e.args.trim()
     const shown = await inTurn(
       async () =>
-        (answer !== undefined && (await showRow($, isStale, { question, text: answer }))) ||
+        (answer !== undefined && (await showRow($, isStale, { question, text: answer }, rowsHeld))) ||
         showBtw($, isStale, question, answer),
     )
     await done()

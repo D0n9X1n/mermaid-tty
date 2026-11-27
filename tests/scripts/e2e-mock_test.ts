@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { connect } from 'node:net'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { chunks, replyFor, startMock } from '../../scripts/e2e/mock.ts'
+import { asksLast, chunks, replyFor, startMock } from '../../scripts/e2e/mock.ts'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from '../../scripts/e2e/reply.ts'
 import { splitFences } from '../../hooks/fences.ts'
 
@@ -565,4 +565,20 @@ test('A9.harness: a hold covers only the next side question, and stop() ends one
   assert.equal(came, true)
   assert.equal(text(second), REPLY_BTW)
   assert.equal(await within(third, 2000), true)
+})
+
+test('A9.harness: a request is picked by its last user message, whatever the rest of it holds', () => {
+  const main = JSON.stringify({
+    messages: [
+      { role: 'user', content: 'lead' },
+      { role: 'assistant', content: 'Side answer: a side question leaked here' },
+      { role: 'user', content: [{ type: 'text', text: 'lead again' }] },
+    ],
+  })
+  const side = JSON.stringify({ messages: [{ role: 'user', content: 'a side question: lead again?' }] })
+
+  assert.equal(asksLast(main, 'lead again'), true)
+  assert.equal(asksLast(main, 'side question'), false)
+  assert.equal(asksLast(side, 'side question'), true)
+  assert.equal(asksLast('not json', 'lead again'), false)
 })

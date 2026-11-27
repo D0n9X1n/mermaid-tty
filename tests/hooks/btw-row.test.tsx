@@ -1,5 +1,6 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { width } from '../../core/width.ts'
+import { KEPT_CHARS } from '../../hooks/btw.ts'
 import { ANSWER, answered, BTW, engine, held, pane, placesRows, row, start, tick } from './btw-kit.tsx'
 
 // A flowchart that needs 112 columns: a reply draws it at 130, and the btw pane, docked at 45% of a 130-column
@@ -40,6 +41,12 @@ test('A6.row: /btw answers in a transcript row of its own that draws its fences,
   expect(e.places).toHaveLength(1)
   expect(e.places[0]).toMatch(/^btw-\d+-\d+$/)
   expect((await ui.find({ key: 'btw-question' }))?.text).toContain('/btw how does it flow?')
+  expect(
+    (await ui.findAll({ type: 'Text' })).some((t: any) => t.text === '/btw how does it flow?' && t.props.dimColor),
+  ).toBe(true)
+  expect(
+    (await ui.findAll({ type: 'Box' })).some((b: any) => b.props.borderStyle === 'round' && b.props.borderDimColor),
+  ).toBe(true)
   expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
   expect(await ui.find({ type: 'Markdown', text: 'Here is the flow:\n\n' })).toBeDefined()
   expect(await ui.find({ type: 'Markdown', text: '\nThat is all.' })).toBeDefined()
@@ -55,18 +62,13 @@ test('A6.row: a row draws at the full width a flowchart the 45% dock is too narr
   const full = await row($, e.places[0]!, 130)
   const drawn = await full.find({ key: 'mermaid-0' })
   await full.unmount()
-  const dock = await $.ui.mount({
-    plugin: 'mermaid-tty',
-    surface: 'terminal',
-    component: 'Pane',
-    requestId: 'btw',
-    props: { title: 'btw', isFocused: true, bodyColumns: 57, placement: 'dock' },
-    viewport: { columns: 130, rows: 40 },
-  })
+  // The same answer 61 columns wide leaves the 57 a dock gives it: too narrow, so it shows as source.
+  const narrow = await row($, e.places[0]!, 61)
 
   expect(drawn?.text).toContain('register.tsx')
   expect(drawn?.text).toContain('core renderer')
-  expect(await dock.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await narrow.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await narrow.find({ type: 'Markdown', text: WIDE })).toBeDefined()
 })
 
 test('A6.row: every drawn line fits inside the row, its border and padding', async ($, on) => {
@@ -311,4 +313,65 @@ test('A6.row: a row drawn where no width was measured shows its whole answer as 
   expect((await ui.find({ key: 'btw-question' }))?.text).toContain('/btw q')
   expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
   expect(await ui.find({ type: 'Markdown', text: ANSWER })).toBeDefined()
+})
+
+// Each /btw's state is read as its hook was dispatched, so a /btw queued behind one whose row is refused must not keep
+// what that one stored: the answer it let go is put back, and stays.
+test('A6.row: a row refused after its answer let an older one go puts that one back, and a queued /btw keeps it', async ($, on) => {
+  // Alone past the size kept, so storing it lets every older answer go.
+  const big = 'x'.repeat(KEPT_CHARS)
+  const placing = held()
+  const e = engine(on, answered('the first answer'), answered(big), answered('the third answer'))
+  let n = 0
+  e.placing.value = (id: string) => {
+    n++
+    return n === 2 ? placing.promise : { isPlaced: true, requestId: `req-${id}` }
+  }
+  await start($)
+  await BTW($, 'first')
+
+  const second = BTW($, 'second')
+  await tick()
+  const third = BTW($, 'third')
+  await tick()
+  placing.settle({ isPlaced: false, reason: 'no conversation' })
+  await Promise.all([second, third])
+  const first = await row($, e.places[0]!)
+  const firstText = await first.find({ type: 'Markdown', text: 'the first answer' })
+  await first.unmount()
+  const last = await row($, e.places.at(-1)!)
+
+  expect(firstText).toBeDefined()
+  expect(await last.find({ type: 'Markdown', text: 'the third answer' })).toBeDefined()
+})
+
+test('A6.row: a first row that is refused leaves no answer kept under its id', async ($, on) => {
+  const e = engine(on, answered('in the pane'))
+  e.placing.value = { isPlaced: false, reason: 'no conversation' }
+  await start($)
+
+  await BTW($, 'q')
+  const ui = await row($, e.places[0]!)
+
+  expect(e.opens).toHaveLength(1)
+  expect(await ui.find({ type: 'Markdown', text: 'in the pane' })).toBeUndefined()
+})
+
+test('A6.row: a store the engine answers as not set falls back to the pane', async ($, on) => {
+  const e = engine(on, answered('in the pane'))
+  placesRows(e)
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if (ev.ref?.key === 'btwRows' || ev.key === 'btwRows') {
+      return { value: { isSet: false, version: 0 } }
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const r = await BTW($, 'q')
+
+  expect(r).toEqual({})
+  expect(e.places).toEqual([])
+  expect(e.opens).toHaveLength(1)
 })

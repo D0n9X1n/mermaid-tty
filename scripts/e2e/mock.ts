@@ -55,6 +55,9 @@ function lastAsks(messages: unknown, word: string): boolean {
   return texts.some((t) => typeof t === 'string' && t.includes(word))
 }
 
+// Whether the request body raw, as requests() gives it, asks word in its last user message.
+export const asksLast = (raw: string, word: string) => lastAsks(parse(raw).messages, word)
+
 // Whether the system prompt, a string or text blocks, contains word.
 function systemAsks(system: unknown, word: string): boolean {
   const texts = Array.isArray(system) ? system.map((b) => b?.text) : [system]

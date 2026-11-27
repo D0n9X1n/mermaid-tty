@@ -22,3 +22,16 @@ export function untested(published: string[], done: string[], limit = 20): strin
         .filter((v) => !seen.has(v))
         .slice(0, limit)
 }
+
+// Whether stable version v is floor or later, each a major.minor.patch, compared part by part as numbers.
+export function atLeast(v: string, floor: string): boolean {
+  const a = v.split('.').map(Number)
+  const b = floor.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) {
+      return (a[i] ?? 0) > (b[i] ?? 0)
+    }
+  }
+
+  return true
+}

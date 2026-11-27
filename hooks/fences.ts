@@ -396,7 +396,7 @@ export function splitFences(reply: string): Segment[] {
       while (m) {
         first = m[3] ?? ''
         const start = at + m[1]!.length
-        const gap = advance(m[2] ?? '', start) - start
+        const gap: number = advance(m[2] ?? '', start) - start
         wide = isBlank(first) || gap > 4
         at = wide ? start + 1 : start + gap
         items.push(at)

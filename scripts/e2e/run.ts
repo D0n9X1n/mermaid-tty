@@ -30,10 +30,11 @@ import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCh
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import type { Cell } from './screen.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
-import { startMock, type Mock } from './mock.ts'
+import { asksLast, startMock, type Mock } from './mock.ts'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
 import { BTW_STATUS } from '../../hooks/btw.ts'
 import { splitFences } from '../../hooks/fences.ts'
+import { atLeast } from '../lib/cc-versions.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
 
@@ -145,9 +146,11 @@ async function showDiagrams(s: Session): Promise<void> {
 // One run of one scenario, in a sandbox of its own: a temp HOME, config dir and cwd, the mock, and the seeded config.
 // Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp
 // leaves a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the
-// session's: the seeds are merged into its files, and the session starts without --plugin-dir.
+// session's: the seeds are merged into its files, and the session starts without --plugin-dir. version is Claude
+// Code's.
 async function runOne(
   claude: string,
+  version: string,
   run: Run,
   driver: Driver,
   scenario: Scenario,
@@ -189,7 +192,7 @@ async function runOne(
     })
     // A /btw scenario's layout is set for its own sessions alone, by a settings file on the command line: an installed
     // config dir is shared by every run, so a setting saved there would carry into the next.
-    const isBtw = scenario.startsWith('btw')
+    const isBtw = scenario.startsWith('btw') && atLeast(version, ROWS_FROM)
     const layout = join(base, 'fullscreen.json')
     if (isBtw) {
       writeFileSync(layout, FULLSCREEN)
@@ -246,10 +249,12 @@ const SOURCE = splitFences(REPLY)
 // any width from it down to well under it, so Claude Code's margins do not change them; REPLY_BTW's, from 90 columns
 // up, so they draw the same in the /btw scenarios' wider sessions too.
 const DRAW_COLUMNS = 100
-// The /btw scenarios' session: 130 columns, in Claude Code's fullscreen layout, where a pane docks beside the
-// transcript at 45% of the terminal, 57 columns, too narrow for REPLY_BTW's flowchart, which a transcript row draws
-// whole.
+// The /btw scenarios' session on a Claude Code that places transcript rows (ROWS_FROM): 130 columns, in Claude Code's
+// fullscreen layout, where a pane docks beside the transcript at 45% of the terminal, 57 columns, too narrow for
+// REPLY_BTW's flowchart, which a transcript row draws whole. An earlier Claude Code answers in the pane, which is drawn
+// above the prompt at the session's full width in its own 100 columns.
 const BTW_COLUMNS = 130
+const ROWS_FROM = '2.1.314'
 const FULLSCREEN = JSON.stringify({ tui: 'fullscreen' })
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
 const colorOf = (r: Run): ColorCheck => (r.theme === 'mono' ? 'none' : r.color)
@@ -452,8 +457,11 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   await submit(s, 'lead again')
   const main =
     (await poll(() => {
-      const out = mock.requests().slice(sent)
-      return out.some((b) => b.includes('lead again')) ? out.filter((b) => !b.includes('side question')) : undefined
+      const out = mock
+        .requests()
+        .slice(sent)
+        .filter((b) => asksLast(b, 'lead again'))
+      return out.length ? out : undefined
     }, 30000)) ?? []
   if (main.length === 0) {
     problems.push('btw: the main thread sent no request after the answer')
@@ -722,6 +730,7 @@ async function main(): Promise<number> {
       const last = ++n === total
       const problems = await runOne(
         claude,
+        version,
         run,
         driver,
         scenario,

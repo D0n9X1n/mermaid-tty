@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { tested, untested } from '../lib/cc-versions.ts'
+import { atLeast, tested, untested } from '../lib/cc-versions.ts'
 const P = ['2.1.306', '2.1.307', '2.2.0-beta.1', '2.1.308', '2.1.309', '2.1.310']
 test('untested stable versions after the newest tested one, oldest first; prereleases skipped; capped', () => {
   assert.deepEqual(untested(P, ['2.1.306', '2.1.308']), ['2.1.309', '2.1.310'])
@@ -49,4 +49,14 @@ test('the CLI lists untested versions from artifact names, retries one, and refu
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+test('a version is at least a floor part by part, as numbers, not as text', () => {
+  assert.equal(atLeast('2.1.314', '2.1.314'), true)
+  assert.equal(atLeast('2.1.326', '2.1.314'), true)
+  assert.equal(atLeast('2.1.1000', '2.1.314'), true)
+  assert.equal(atLeast('2.2.0', '2.1.314'), true)
+  assert.equal(atLeast('3.0.0', '2.1.314'), true)
+  assert.equal(atLeast('2.1.313', '2.1.314'), false)
+  assert.equal(atLeast('2.1.308', '2.1.314'), false)
+  assert.equal(atLeast('2.0.999', '2.1.314'), false)
 })
