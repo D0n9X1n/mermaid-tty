@@ -34,10 +34,32 @@ export const isBtw = (v: unknown): v is Btw =>
 // gets at most 45% of the terminal, too narrow for many diagrams. Claude Code 2.1.314 and later place rows; an earlier
 // one has no $.ui.place, and the answer goes to the btw pane instead.
 //
-// A row's id: 1 to 64 letters, digits, _ and -, as the engine takes it. The time keeps it apart from a row placed
-// before a reload, which starts the count n over, since placing an id that stands redraws that row instead of placing
-// one.
-export const rowId = (now: number, n: number) => `btw-${now}-${n}`
+// A row's id: 1 to 64 letters, digits, _ and -, as the engine takes it, from the time, the /btw's number in this load
+// and, when that id is already kept, the attempt that passed it over. A reload numbers its /btw from 1 again, and
+// placing an id that stands redraws that row instead of placing one, so an id is written only while it was never
+// written (ifVersion 0).
+export const rowId = (now: number, n: number, attempt = 0) => `btw-${now}-${n}${attempt ? `-${attempt}` : ''}`
+
+// How many answers the rows a load placed keep at most, the newest, and how many characters of them: a session's state
+// stays bounded however many /btw it asks. The oldest past either is emptied, and its row then draws nothing of
+// mermaid-tty's. The newest is always kept whole, so an answer is never cut to fit.
+export const KEPT_ROWS = 50
+export const KEPT_CHARS = 1_000_000
+
+// The rows a load placed, oldest first, each with its answer's size: the ids past KEPT_ROWS, or while the sizes pass
+// KEPT_CHARS, the newest always staying, and the rows still kept.
+export function overflow<T extends { size: number }>(rows: readonly T[]): { gone: T[]; kept: T[] } {
+  const kept = rows.slice(-KEPT_ROWS)
+  const gone = rows.slice(0, rows.length - kept.length)
+  let size = kept.reduce((n, r) => n + r.size, 0)
+  while (kept.length > 1 && size > KEPT_CHARS) {
+    const r = kept.shift()!
+    size -= r.size
+    gone.push(r)
+  }
+
+  return { gone, kept }
+}
 
 // The row mermaid-tty pins under the prompt while it answers a /btw, which Claude Code shows after the plugin's name
 // (mermaid-tty: answering /btw…), so the person sees the side question is being worked on: the fork can take a minute,

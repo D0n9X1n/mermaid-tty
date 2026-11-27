@@ -58,9 +58,9 @@ export const engine = (on: any, ...replies: unknown[]) => {
     closes.push(e.id)
     return { value: undefined }
   })
-  // The clock a row's id is read from: a fixed start, a millisecond more each read.
-  let now = 1764245000000
-  on('clock.now', async () => ({ value: now++ }))
+  // The clock a row's id is read from: a fixed start, a millisecond more each read unless a test stops it.
+  const clock = { now: 1764245000000, isStopped: false }
+  on('clock.now', async () => ({ value: clock.isStopped ? clock.now : clock.now++ }))
   on('ui.place', async (_$: any, e: any) => {
     places.push(e.id)
     const answer = placing.value
@@ -85,6 +85,7 @@ export const engine = (on: any, ...replies: unknown[]) => {
     openings,
     places,
     placing,
+    clock,
     completions,
     completed,
     conversation,
