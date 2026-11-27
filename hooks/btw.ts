@@ -28,56 +28,16 @@ export type Btw = { question: string; text: string }
 export const isBtw = (v: unknown): v is Btw =>
   typeof v === 'object' && v !== null && typeof (v as Btw).question === 'string' && typeof (v as Btw).text === 'string'
 
-// A /btw answered in a transcript row of its own: the row's id, and the question and answer it draws. A row is drawn at
-// the transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the terminal, too
-// narrow for many diagrams. Claude Code 2.1.314 and later place rows; an earlier one has no $.ui.place, and the answer
-// goes to the btw pane instead.
-export type BtwRow = Btw & { id: string }
-
-// What the rows keep in $.state: the newest answers, oldest first, and how many rows this session has placed, which
-// numbers the next one. The count lives in $.state, not the module, since a reload starts the module over while the
-// rows it placed stand, and placing an id that stands redraws that row instead of placing one.
-export type BtwRows = { seq: number; rows: BtwRow[] }
-
-// How many answers the rows keep at most, the newest, and how much of their JSON: a session's state stays bounded
-// however many /btw it asks, well under the 4 MiB a $.state value may hold even when every character takes three bytes.
-// A row whose answer is gone draws nothing of mermaid-tty's.
-export const KEPT_ROWS = 50
-export const KEPT_CHARS = 1_000_000
-
-const isBtwRow = (v: unknown): v is BtwRow => isBtw(v) && typeof (v as BtwRow).id === 'string'
-
-// The kept rows, read whole: a value that is not the store, or an entry that is not a whole row, is left out, so one
-// written by an earlier version never breaks a /btw.
-function readRows(stored: unknown): BtwRows {
-  const v = typeof stored === 'object' && stored !== null ? (stored as Partial<BtwRows>) : {}
-  const seq = typeof v.seq === 'number' && Number.isSafeInteger(v.seq) && v.seq >= 0 ? v.seq : 0
-  return { seq, rows: Array.isArray(v.rows) ? v.rows.filter(isBtwRow) : [] }
-}
-
-// A row's id: 1 to 64 letters, digits, _ and -, as the engine takes it. The count keeps it apart from every row this
-// session placed before, across reloads; the time, from a row of a conversation whose state was started over.
-export const rowId = (seq: number, now: number) => `btw-${seq}-${now}`
-
-// The store with btw kept last under a new row's id, and that id. The oldest rows go past KEPT_ROWS, or while their
-// JSON passes KEPT_CHARS; the newest always stays, so an answer is never cut to fit.
-export function keepRow(stored: unknown, btw: Btw, now: number): { id: string; store: BtwRows } {
-  const { seq, rows } = readRows(stored)
-  const id = rowId(seq + 1, now)
-  const kept = [...rows, { id, question: btw.question, text: btw.text }].slice(-KEPT_ROWS)
-  let size = kept.reduce((n, r) => n + JSON.stringify(r).length, 0)
-  while (kept.length > 1 && size > KEPT_CHARS) {
-    size -= JSON.stringify(kept.shift()).length
-  }
-
-  return { id, store: { seq: seq + 1, rows: kept } }
-}
-
-// The question and answer the row id draws, or undefined when none is kept under it.
-export function rowFor(stored: unknown, id: string): Btw | undefined {
-  const found = readRows(stored).rows.find((r) => r.id === id)
-  return found ? { question: found.question, text: found.text } : undefined
-}
+// A /btw answered in a transcript row of its own is kept under the row's id, one value per row, so a /btw never reads
+// or writes another's: a hook's $.state reads are as of its dispatch, so a /btw queued behind another could not see
+// that one's write. A row is drawn at the transcript's full width, where a pane docked beside a fullscreen transcript
+// gets at most 45% of the terminal, too narrow for many diagrams. Claude Code 2.1.314 and later place rows; an earlier
+// one has no $.ui.place, and the answer goes to the btw pane instead.
+//
+// A row's id: 1 to 64 letters, digits, _ and -, as the engine takes it. The time keeps it apart from a row placed
+// before a reload, which starts the count n over, since placing an id that stands redraws that row instead of placing
+// one.
+export const rowId = (now: number, n: number) => `btw-${now}-${n}`
 
 // The row mermaid-tty pins under the prompt while it answers a /btw, which Claude Code shows after the plugin's name
 // (mermaid-tty: answering /btw…), so the person sees the side question is being worked on: the fork can take a minute,

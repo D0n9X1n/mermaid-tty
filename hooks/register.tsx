@@ -1,18 +1,7 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
-import {
-  BTW_STATUS,
-  forkPrompt,
-  isBtw,
-  isWindows,
-  keepRow,
-  markerPath,
-  rowFor,
-  takesBtw,
-  usesMarker,
-  type Btw,
-} from './btw.ts'
+import { BTW_STATUS, forkPrompt, isBtw, isWindows, markerPath, rowId, takesBtw, usesMarker, type Btw } from './btw.ts'
 import {
   ANSWER_TOKENS,
   answerText,
@@ -70,8 +59,6 @@ const SIZE = { plugin: 'mermaid-tty', key: 'size' } as const
 const UNTOLD = { plugin: 'mermaid-tty', key: 'untold' } as const
 // The latest /btw answered in the btw pane, where no row can be placed.
 const BTW = { plugin: 'mermaid-tty', key: 'btw' } as const
-// The newest /btw answers, each drawn by the transcript row placed under its id (hooks/btw.ts).
-const BTW_ROWS = { plugin: 'mermaid-tty', key: 'btwRows' } as const
 const BTW_PANE = 'btw'
 // The columns a /btw row's frame takes from the transcript's width: its round border and one column of padding, each
 // side.
@@ -218,39 +205,32 @@ async function loadImages($: any): Promise<Images> {
   return kept
 }
 
-// The rows' store as this module last wrote it, or undefined before its first write. A hook's $.state reads are as of
-// its dispatch, so a /btw queued behind another would read the store from before that one's write or its undoing; the
-// /btw answers are shown one at a time (inTurn), so this copy is always the newest. A reload starts it over, and the
-// first /btw after reads $.state, which no /btw is writing then.
-type RowsHeld = { value: unknown }
-
-// Shows a /btw answer in a transcript row of its own; true once the row stands. A row is display only: the main
-// thread's model never reads it and the transcript file never holds it, as the pane before it. It is drawn at the
-// transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the terminal. A row
+// Shows a /btw answer, n the /btw's number, in a transcript row of its own; true once the row stands. A row is display
+// only: the main thread's model never reads it and the transcript file never holds it, as the pane before it. It is
+// drawn at the transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the
+// terminal. The answer is kept under the row's id before the row is placed, since the row draws it from there. A row
 // not placed for now but given a request id stands, and draws once a surface attaches. A row placed is not taken back:
 // whether a /btw is still the newest is asked as its row is placed, so one overtaken while the engine places it keeps
-// its row beside the newer one's. A store the engine refuses or does not set, a place that throws, as on a Claude Code
-// with no $.ui.place, or one that places nothing, puts the kept rows back as they were and says false, so the answer
-// goes to the pane and takes no row's place. Once a row stands, a pane an earlier answer fell back to is closed, so it
-// holds no room beside the transcript. A function declaration: the engine's loader follows $ only into one.
-async function showRow($: any, isStale: () => boolean, btw: Btw, held: RowsHeld) {
+// its row beside the newer one's. An answer the engine refuses or does not keep, a place that throws, as on a Claude
+// Code with no $.ui.place, or one that places nothing, says false, so the answer goes to the pane; what was kept for a
+// row not placed is emptied. Once a row stands, a pane an earlier answer fell back to is closed, so it holds no room
+// beside the transcript. A function declaration: the engine's loader follows $ only into one.
+async function showRow($: any, isStale: () => boolean, n: number, btw: Btw) {
   if (isStale()) {
     return false
   }
 
-  let before: unknown
-  let stored = false
+  // Each answer is kept under its row's id, one value per row, so a /btw never reads or writes another's
+  // (hooks/btw.ts).
+  let kept: string | undefined
   try {
-    const now = await $.clock.now()
-    before = held.value !== undefined ? held.value : (await $.state.get(BTW_ROWS)).value
-    const { id, store } = keepRow(before, btw, now)
-    const set = await $.state.set(BTW_ROWS, store)
+    const id = rowId(await $.clock.now(), n)
+    const set = await $.state.set({ plugin: 'mermaid-tty', key: 'btwRow', id }, btw)
     if (set?.isSet === false) {
       return false
     }
 
-    held.value = store
-    stored = true
+    kept = id
     if (!isStale()) {
       const placed = await $.ui.place({ id })
       if (placed.isPlaced || typeof placed.requestId === 'string') {
@@ -260,11 +240,8 @@ async function showRow($: any, isStale: () => boolean, btw: Btw, held: RowsHeld)
     }
   } catch {}
 
-  if (stored) {
-    // A store never written reads as empty, as undefined does: $.state takes no undefined to put it back.
-    const back = before === undefined ? { seq: 0, rows: [] } : before
-    held.value = back
-    await $.state.set(BTW_ROWS, back).catch(() => {})
+  if (kept !== undefined) {
+    await $.state.set({ plugin: 'mermaid-tty', key: 'btwRow', id: kept }, null).catch(() => {})
   }
 
   return false
@@ -282,8 +259,8 @@ async function showBtw($: any, isStale: () => boolean, question: string, answer:
   let before: unknown
   try {
     before = (await $.state.get(BTW)).value
-    await $.state.set(BTW, { question, text: answer })
-    if (!isStale()) {
+    const set = await $.state.set(BTW, { question, text: answer })
+    if (set?.isSet !== false && !isStale()) {
       const opened = await $.ui.open({ id: BTW_PANE, title: 'btw', focus: true, closeOnEscape: true })
       if (opened.isPlaced) {
         return true
@@ -540,8 +517,6 @@ export const register: Register = (on, options) => {
     turns = run.catch(() => {})
     return run
   }
-  // The rows' store as this module last wrote it (RowsHeld).
-  const rowsHeld: RowsHeld = { value: undefined }
   // The /btw cue: which /btw it stands for, where it is shown, and its writes (Cues).
   const cues: Cues = { answering: 0, shown: null, tried: 0, turns: Promise.resolve() }
 
@@ -842,7 +817,7 @@ export const register: Register = (on, options) => {
     const question = e.args.trim()
     const shown = await inTurn(
       async () =>
-        (answer !== undefined && (await showRow($, isStale, { question, text: answer }, rowsHeld))) ||
+        (answer !== undefined && (await showRow($, isStale, mine, { question, text: answer }))) ||
         showBtw($, isStale, question, answer),
     )
     await done()
@@ -871,8 +846,11 @@ export const register: Register = (on, options) => {
   // measured. Another plugin's row, a row whose answer is no longer kept, or one this module never placed, draws what
   // is beneath.
   on('ui.render', { component: 'Placed' }, async ($, e, next) => {
-    const v = e.props.plugin === 'mermaid-tty' ? rowFor((await $.state.get(BTW_ROWS)).value, e.props.id) : undefined
-    if (!v) {
+    const v =
+      e.props.plugin === 'mermaid-tty'
+        ? (await $.state.get({ plugin: 'mermaid-tty', key: 'btwRow', id: e.props.id })).value
+        : undefined
+    if (!isBtw(v)) {
       return next(e)
     }
 

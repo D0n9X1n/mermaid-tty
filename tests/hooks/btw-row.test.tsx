@@ -1,6 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { width } from '../../core/width.ts'
-import { KEPT_CHARS } from '../../hooks/btw.ts'
 import { ANSWER, answered, BTW, engine, held, pane, placesRows, row, start, tick } from './btw-kit.tsx'
 
 // A flowchart that needs 112 columns: a reply draws it at 130, and the btw pane, docked at 45% of a 130-column
@@ -287,7 +286,7 @@ test('A6.row: a row whose state cannot be written falls back to the pane', async
   placesRows(e)
   // Only the rows' store is refused, as a value over 4 MiB is: the pane's value stays writable.
   on('state.set', async (_$: any, ev: any, next: any) => {
-    if (ev.ref?.key === 'btwRows' || ev.key === 'btwRows') {
+    if (ev.ref?.key === 'btwRow' || ev.key === 'btwRow') {
       return { deny: 'over 4 MiB' }
     }
 
@@ -315,13 +314,11 @@ test('A6.row: a row drawn where no width was measured shows its whole answer as 
   expect(await ui.find({ type: 'Markdown', text: ANSWER })).toBeDefined()
 })
 
-// Each /btw's state is read as its hook was dispatched, so a /btw queued behind one whose row is refused must not keep
-// what that one stored: the answer it let go is put back, and stays.
-test('A6.row: a row refused after its answer let an older one go puts that one back, and a queued /btw keeps it', async ($, on) => {
-  // Alone past the size kept, so storing it lets every older answer go.
-  const big = 'x'.repeat(KEPT_CHARS)
+// A hook's $.state reads are as of its dispatch, so a /btw queued behind one whose row is refused reads the state from
+// before that one's write: each answer is kept on its own, so nothing it writes takes another answer's place.
+test('A6.row: a /btw queued behind a refused row keeps every earlier answer, and its own', async ($, on) => {
   const placing = held()
-  const e = engine(on, answered('the first answer'), answered(big), answered('the third answer'))
+  const e = engine(on, answered('the first answer'), answered('the second answer'), answered('the third answer'))
   let n = 0
   e.placing.value = (id: string) => {
     n++
@@ -339,10 +336,35 @@ test('A6.row: a row refused after its answer let an older one go puts that one b
   const first = await row($, e.places[0]!)
   const firstText = await first.find({ type: 'Markdown', text: 'the first answer' })
   await first.unmount()
-  const last = await row($, e.places.at(-1)!)
+  const refused = await row($, e.places[1]!)
+  const refusedText = await refused.find({ type: 'Markdown', text: 'the second answer' })
+  await refused.unmount()
+  const last = await row($, e.places[2]!)
 
+  expect(e.places).toHaveLength(3)
   expect(firstText).toBeDefined()
+  expect(refusedText).toBeUndefined()
   expect(await last.find({ type: 'Markdown', text: 'the third answer' })).toBeDefined()
+})
+
+// What the engine keeps is what a row draws, whatever was asked: a hook beneath that rewrites an answer, as one that
+// redacts it may, is drawn so, and a later /btw leaves it so.
+test('A6.row: a row draws its answer as the engine kept it, and a later /btw leaves it so', async ($, on) => {
+  const e = engine(on, answered('a secret answer'), answered('another answer'))
+  placesRows(e)
+  on('state.set', async (_$: any, ev: any, next: any) =>
+    JSON.stringify(ev).includes('a secret answer')
+      ? next({ ...ev, value: { question: 'q', text: 'redacted' } })
+      : next(ev),
+  )
+  await start($)
+
+  await BTW($, 'first')
+  await BTW($, 'second')
+  const ui = await row($, e.places[0]!)
+
+  expect(await ui.find({ type: 'Markdown', text: 'redacted' })).toBeDefined()
+  expect(await ui.find({ type: 'Markdown', text: 'a secret answer' })).toBeUndefined()
 })
 
 test('A6.row: a first row that is refused leaves no answer kept under its id', async ($, on) => {
@@ -361,7 +383,7 @@ test('A6.row: a store the engine answers as not set falls back to the pane', asy
   const e = engine(on, answered('in the pane'))
   placesRows(e)
   on('state.set', async (_$: any, ev: any, next: any) => {
-    if (ev.ref?.key === 'btwRows' || ev.key === 'btwRows') {
+    if (ev.ref?.key === 'btwRow' || ev.key === 'btwRow') {
       return { value: { isSet: false, version: 0 } }
     }
 
@@ -374,4 +396,21 @@ test('A6.row: a store the engine answers as not set falls back to the pane', asy
   expect(r).toEqual({})
   expect(e.places).toEqual([])
   expect(e.opens).toHaveLength(1)
+})
+
+test('A6.row: a pane whose store the engine answers as not set hands /btw to Claude Code', async ($, on) => {
+  const e = engine(on, answered('nowhere to keep it'))
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if (ev.ref?.key === 'btw' || ev.key === 'btw') {
+      return { value: { isSet: false, version: 0 } }
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const r = await BTW($, 'q')
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.builtin).toEqual(['q'])
 })

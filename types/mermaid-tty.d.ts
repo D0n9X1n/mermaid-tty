@@ -9,8 +9,8 @@ declare module 'claude-code' {
       direction: 'LR' | 'TB' | 'off'
       untold: boolean // true while this conversation is owed a direction note that was refused
       btw: { question: string; text: string } // the latest /btw answered in the btw pane, where no row can be placed
-      // the newest /btw answers, each drawn in the transcript row placed under its id, and how many rows were placed
-      btwRows: { seq: number; rows: { id: string; question: string; text: string }[] }
+      // each /btw answered in a transcript row, under the row's id; null for a row that was not placed
+      btwRow: StateFamily<{ question: string; text: string } | null>
       // whether crossing edges are colored apart; unset: the configured setting
       crossings: 'on' | 'off'
       // how large a diagram's picture is shown; unset: the configured size
