@@ -59,7 +59,7 @@ Set it like `theme`, for example `echo '{"direction":"TB"}' | claude plugin conf
 | `on` | Each crossing edge takes a color of its own. This is the default. |
 | `off` | Every cell keeps its theme's own color, as before crossing lines were colored. |
 
-Set it like `theme`, for example `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty crossings on|off`. The command redraws the replies on screen and the `/btw` pane at once, and saves the option the same way `/mermaid-tty theme` does; a save that is refused lasts for the session, and the reply says so. `/mermaid-tty crossings` reports the setting in force. An unset or unknown value is `on`.
+Set it like `theme`, for example `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`, or while Claude Code runs with `/mermaid-tty crossings on|off`. The command redraws the replies and `/btw` answers on screen at once, and saves the option the same way `/mermaid-tty theme` does; a save that is refused lasts for the session, and the reply says so. `/mermaid-tty crossings` reports the setting in force. An unset or unknown value is `on`.
 
 ## The size option
 

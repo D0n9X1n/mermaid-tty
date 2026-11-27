@@ -33,13 +33,15 @@ export const REPLY = [
   'A --> B',
 ].join('\n')
 
-// REPLY_BTW: the answer to a /btw side question, a diagram between two lines of prose.
+// REPLY_BTW: the answer to a /btw side question, a diagram between two lines of prose. The flowchart needs 90 columns
+// left to right, wider than a pane docked beside a fullscreen transcript (45% of the session's 100), so it draws as
+// written only at the transcript's full width; a narrower drawing turns it top to bottom.
 export const REPLY_BTW = [
   'Side answer:',
   '',
   '```mermaid',
   'flowchart LR',
-  'Q[侧问] --> R[回答]',
+  'Q[侧问 side question] --> F[fork the transcript] --> M[ask the model] --> R[回答 the answer]',
   '```',
   '',
   'Side done.',

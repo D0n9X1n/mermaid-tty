@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm install -g @anthropic-ai/claude-code@2.1.308
+      - run: npm install -g @anthropic-ai/claude-code@2.1.326
       # check.sh currently discovers tests/ only, not scripts/tests/ or docs specs.
       - id: node-tests
         run: node --test
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm install -g @anthropic-ai/claude-code@2.1.308
+      - run: npm install -g @anthropic-ai/claude-code@2.1.326
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y tmux
       - if: runner.os == 'macOS'
@@ -103,7 +103,7 @@ jobs:
         name: A9 in real Claude Code, all scenarios, themes and 256-color coverage
         env:
           LC_ALL: ${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}
-        run: node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all
+        run: node scripts/e2e/run.ts --claude-version 2.1.326 --scenario all
 
   gallery:
     runs-on: ubuntu-latest

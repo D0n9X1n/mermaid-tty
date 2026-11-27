@@ -8,13 +8,13 @@ import { ciErrors, releaseErrors, stepIds } from '../docs/ci-rules.ts'
 const SHA = 'a'.repeat(40)
 const PIN = (a: string, v: string) => `      - uses: actions/${a}@${SHA} # ${v}\n`
 const NODE = PIN('setup-node', 'v7.1.0') + '        with:\n          node-version: 24\n'
-const CLAUDE = '      - run: npm install -g @anthropic-ai/claude-code@2.1.308\n'
+const CLAUDE = '      - run: npm install -g @anthropic-ai/claude-code@2.1.326\n'
 const OS3 =
   '    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, macos-latest, windows-latest]\n    runs-on: ${{ matrix.os }}\n    steps:\n'
 const CI =
   'on:\n  pull_request:\n  push:\npermissions:\n  contents: read\nconcurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\njobs:\n' +
   `  check:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - id: style-tooling\n        run: npm ci --prefix scripts/style\n      - id: style\n        run: node scripts/style/run.ts\n      - id: check\n        shell: bash\n        run: bash scripts/check.sh\n        env:\n          GH_TOKEN: \${{ github.token }}\n` +
-  `  e2e:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - if: runner.os == 'Linux'\n        run: sudo apt-get update && sudo apt-get install -y tmux\n      - if: runner.os == 'macOS'\n        run: brew install tmux\n      - id: e2e-tooling\n        run: npm ci --prefix scripts/e2e\n      - id: e2e\n        env:\n          LC_ALL: \${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}\n        run: node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all\n` +
+  `  e2e:\n${OS3}${PIN('checkout', 'v7.0.1')}${NODE}${CLAUDE}      - if: runner.os == 'Linux'\n        run: sudo apt-get update && sudo apt-get install -y tmux\n      - if: runner.os == 'macOS'\n        run: brew install tmux\n      - id: e2e-tooling\n        run: npm ci --prefix scripts/e2e\n      - id: e2e\n        env:\n          LC_ALL: \${{ runner.os == 'Linux' && 'C.UTF-8' || '' }}\n        run: node scripts/e2e/run.ts --claude-version 2.1.326 --scenario all\n` +
   `  gallery:\n    runs-on: ubuntu-latest\n    steps:\n      - id: gallery\n        run: node scripts/render-gallery.ts gallery\n${PIN('upload-artifact', 'v7.0.2')}`
 const REL =
   "on:\n  push:\n    tags: ['v*']\npermissions:\n  contents: read\njobs:\n  release:\n    permissions:\n      contents: write\n      actions: read\n    steps:\n" +
@@ -23,7 +23,7 @@ const REL =
   '      - id: release-tag\n        run: node scripts/check-release.ts tag "$GITHUB_REF_NAME"\n' +
   '      - id: release-notes\n        run: python3 scripts/release-notes.py "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"\n      - id: release-notes-published\n        run: gh release view "$GITHUB_REF_NAME" --json body -q .body | node scripts/check-release.ts notes -\n' +
   '      - id: release-wiki-run\n        run: |\n          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-wiki.yml/runs?branch=main&head_sha=${GITHUB_SHA}&per_page=1" -q \'.workflow_runs[0].conclusion\')"\n          test "$conclusion" = success\n' +
-  '      - id: release-install\n        run: claude plugin marketplace add D0n9X1n/mermaid-tty\n      - id: release-e2e\n        run: node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.308 --scenario all\n'
+  '      - id: release-install\n        run: claude plugin marketplace add D0n9X1n/mermaid-tty\n      - id: release-e2e\n        run: node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.326 --scenario all\n'
 test('complete CI and release fixtures pass', () => assert.deepEqual([ciErrors(CI), releaseErrors(REL)], [[], []]))
 test('unreadable null steps report parser errors rather than throwing', () => {
   assert.ok(
@@ -35,7 +35,7 @@ const cases: [(s: string) => string[], string, string, string, string][] = [
   [ciErrors, CI, 'run: node scripts/style/run.ts', 'run: true', 'the code style gate'],
   [ciErrors, CI, '  push:\n', '  push:\n    branches: [main]\n', 'push trigger on every branch'],
   [ciErrors, CI, 'cancel-in-progress: true', 'cancel-in-progress: false', 'concurrency'],
-  [ciErrors, CI, 'claude-code@2.1.308', 'claude-code@latest', 'pinned Claude Code'],
+  [ciErrors, CI, 'claude-code@2.1.326', 'claude-code@latest', 'pinned Claude Code'],
   [ciErrors, CI, ', windows-latest]', ']', '3-OS matrix'],
   [ciErrors, CI, 'fail-fast: false', 'fail-fast: true', 'fail-fast'],
   [ciErrors, CI, 'node-version: 24', 'node-version: 22', 'Node 24'],
@@ -159,7 +159,7 @@ test('CI preserves every interim check and runs all A9 scenarios on each OS', ()
 
   assert.ok(runs('e2e').includes('npm ci --prefix scripts/e2e'))
   assert.ok(runs('e2e').includes('node --test scripts/e2e/screen.e2etest.ts scripts/e2e/driver.e2etest.ts'))
-  assert.ok(runs('e2e').includes('node scripts/e2e/run.ts --claude-version 2.1.308 --scenario all'))
+  assert.ok(runs('e2e').includes('node scripts/e2e/run.ts --claude-version 2.1.326 --scenario all'))
 })
 test('release checks tag, notes and wiki before publication; tests the fresh installed copy afterwards', () => {
   const w = readWorkflow('release.yml', read('.github/workflows/release.yml')).value as any
@@ -200,6 +200,6 @@ test('release checks tag, notes and wiki before publication; tests the fresh ins
   assert.match(install, /Version: \$\{GITHUB_REF_NAME#v\}/)
   assert.equal(
     job.steps.find((s: any) => s.id === 'release-e2e').run,
-    'node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.308 --scenario all',
+    'node scripts/e2e/run.ts --installed "$CLAUDE_CONFIG_DIR" --claude-version 2.1.326 --scenario all',
   )
 })

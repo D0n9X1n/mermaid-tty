@@ -6,7 +6,7 @@ How to install mermaid-tty, where it draws, which diagrams it draws, how to see 
 
 ## Install
 
-mermaid-tty needs Claude Code 2.1.287 or later, and is tested on 2.1.308. Check your version:
+mermaid-tty needs Claude Code 2.1.287 or later, and is tested on 2.1.326. Check your version:
 
 ```sh
 claude --version
@@ -120,15 +120,16 @@ ctrl+o doesn't switch a diagram to its source. To read the source, run `/mermaid
 - It asks the question the way Claude Code's `/btw` does: over the session's own conversation, with no tools, as a one-off answer. While Claude works, it answers from the conversation as of Claude's last finished request.
 - A session that has sent no request of its own yet, such as one just resumed with `--continue` or `--resume`, or one whose first reply hasn't finished, has no request for that. mermaid-tty then sends the model the conversation itself as background, since the last compaction: the newest turns, up to about 50,000 tokens, with each tool call and its result cut to 2,000 characters. Such an answer starts with nothing cached, so it costs more than one that shares Claude's request. A session with nothing said yet sends the question alone, and the model answers from what it knows, as Claude Code's `/btw` does there. An answer that reaches its 8,192-token limit ends with a note that it was cut short.
 - While it answers, Claude Code shows the command as running. A prompt you send meanwhile is queued, and runs once the answer shows.
-- The answer opens in a `btw` pane above the prompt, or beside the transcript in fullscreen: the question, dimmed, then the answer, with its diagrams drawn as in a reply and its other text as Markdown. A diagram that can't be drawn shows its source, as in a reply.
-- Nothing is added to the conversation: Claude never sees the question or the answer.
-- Esc closes the pane, as does its close mark. A new `/btw` replaces the answer in it; an answer that comes back after a newer `/btw` was asked is dropped.
+- The answer shows in a framed row of its own at the end of the transcript, as wide as the transcript, in fullscreen too: the question, dimmed, then the answer, with its diagrams drawn as in a reply and its other text as Markdown. A diagram that can't be drawn at that width shows its source, as in a reply.
+- Nothing is added to the conversation: Claude never sees the question or the answer, and the transcript file doesn't keep the row, so `--continue` and `--resume` don't bring it back.
+- Each `/btw` gets its own row, which scrolls with the conversation. An answer that comes back after a newer `/btw` was asked is dropped. A session keeps up to its 50 newest answers, about a million characters in all; an older row is left empty.
+- Claude Code 2.1.313 and earlier can't place such a row. There the answer opens in a `btw` pane above the prompt, or beside the transcript in fullscreen, where Claude Code makes the pane at most 45% of the window wide, so a wide diagram shows its source. Esc closes the pane, as does its close mark, and a new `/btw` replaces the answer in it.
 
-Claude Code's own `/btw` runs instead, as if mermaid-tty weren't installed, in source mode, outside the terminal, with no question, when the answer fails or comes back empty, and when the pane can't be shown. Claude Code also runs its own `/btw` when one is sent in the first moment after a session starts, before Claude Code has loaded mermaid-tty's hooks. Pressing Esc while it answers cancels the question. The pane shows only the latest answer: it has none of the built-in panel's history, copy or fork keys.
+Claude Code's own `/btw` runs instead, as if mermaid-tty weren't installed, in source mode, outside the terminal, with no question, when the answer fails or comes back empty, and when neither a row nor the pane can be shown. Claude Code also runs its own `/btw` when one is sent in the first moment after a session starts, before Claude Code has loaded mermaid-tty's hooks. Pressing Esc while it answers cancels the question. mermaid-tty's answers have none of the built-in panel's history, copy or fork keys.
 
 ### While a /btw is answered
 
-While mermaid-tty answers a `/btw`, a status row under the prompt reads `mermaid-tty: answering /btw…`. Claude Code adds the plugin's name and a ⚠ mark to the row. The row goes once the answer opens in the pane, is handed to Claude Code's own `/btw`, or is cancelled. A newer `/btw` takes the row over, and an older answer that comes back late leaves it alone. A new session, a `/clear` and a plugin reload each start with no row. The row is best effort: another plugin that holds Claude Code's status calls can make it show or go out of turn (see [Architecture](Architecture)). When no `/btw` is being answered, mermaid-tty sends another clear as each `/btw` ends and as a session ends, but a show held longer can still land after it. The marker below has no such limit.
+While mermaid-tty answers a `/btw`, a status row under the prompt reads `mermaid-tty: answering /btw…`. Claude Code adds the plugin's name and a ⚠ mark to the row. The row goes once the answer shows, is handed to Claude Code's own `/btw`, or is cancelled. A newer `/btw` takes the row over, and an older answer that comes back late leaves it alone. A new session, a `/clear` and a plugin reload each start with no row. The row is best effort: another plugin that holds Claude Code's status calls can make it show or go out of turn (see [Architecture](Architecture)). When no `/btw` is being answered, mermaid-tty sends another clear as each `/btw` ends and as a session ends, but a show held longer can still land after it. The marker below has no such limit.
 
 A custom status line can show the same cue instead. Set `MERMAID_TTY_BTW_STATUS=file`, for example in the `env` block of Claude Code's `settings.json`, which its status line command inherits too. mermaid-tty then shows no row of its own, so the cue appears once, and writes a marker file:
 

@@ -1,7 +1,18 @@
 import type { Register, RenderElement, StateDollar } from 'claude-code'
 import type { Rows } from '../core/render.ts'
 import type { ThemeName } from '../core/themes.ts'
-import { BTW_STATUS, forkPrompt, isBtw, isWindows, markerPath, takesBtw, usesMarker } from './btw.ts'
+import {
+  BTW_STATUS,
+  forkPrompt,
+  isBtw,
+  isWindows,
+  keepRow,
+  markerPath,
+  rowFor,
+  takesBtw,
+  usesMarker,
+  type Btw,
+} from './btw.ts'
 import {
   ANSWER_TOKENS,
   answerText,
@@ -46,7 +57,8 @@ import { safePlan, sweepPictures } from './plan.ts'
 // write; it never changes how a diagram is drawn. /mermaid-tty crossings on|off sets, the same way as the theme,
 // whether each edge that crosses another is drawn in a color of its own, and /mermaid-tty size full|compact how large a
 // diagram's picture is shown. In a terminal session /btw, the side question, is answered here (hooks/btw.ts) and shown
-// in a pane that draws its fences as a reply does.
+// in a transcript row of its own, at the transcript's full width, that draws its fences as a reply does; a Claude Code
+// with no rows shows it in a pane.
 const SOURCE = { plugin: 'mermaid-tty', key: 'source' } as const
 const IMAGES = { plugin: 'mermaid-tty', key: 'images' } as const
 const THEME = { plugin: 'mermaid-tty', key: 'theme' } as const
@@ -56,9 +68,14 @@ const SIZE = { plugin: 'mermaid-tty', key: 'size' } as const
 // Whether this conversation has not been told the direction in force, its note refused. Kept in $.state, not in the
 // module, since a reload (a /config change) starts the module over within the same conversation.
 const UNTOLD = { plugin: 'mermaid-tty', key: 'untold' } as const
-// The latest /btw answered, which the btw pane shows.
+// The latest /btw answered in the btw pane, where no row can be placed.
 const BTW = { plugin: 'mermaid-tty', key: 'btw' } as const
+// The newest /btw answers, each drawn by the transcript row placed under its id (hooks/btw.ts).
+const BTW_ROWS = { plugin: 'mermaid-tty', key: 'btwRows' } as const
 const BTW_PANE = 'btw'
+// The columns a /btw row's frame takes from the transcript's width: its round border and one column of padding, each
+// side.
+const ROW_FRAME = 4
 const SECTION_ID = 'mermaid-tty:flowchart-direction'
 // The value each mode keeps in $.state, as mode() reads it back.
 const STORED: Readonly<Record<Mode, true | 'text' | false>> = { source: true, text: 'text', diagram: false }
@@ -199,6 +216,44 @@ async function loadImages($: any): Promise<Images> {
   const kept = await storedImages($)
   await $.state.set(IMAGES, kept)
   return kept
+}
+
+// Shows a /btw answer in a transcript row of its own; true once the row stands. A row is display only: the main
+// thread's model never reads it and the transcript file never holds it, as the pane before it. It is drawn at the
+// transcript's full width, where a pane docked beside a fullscreen transcript gets at most 45% of the terminal. A row
+// not placed for now but given a request id stands, and draws once a surface attaches. A row placed is not taken back:
+// whether a /btw is still the newest is asked as its row is placed, so one overtaken while the engine places it keeps
+// its row beside the newer one's. A place that throws, as on a Claude Code with no $.ui.place, or one that places
+// nothing, puts the kept rows back as they were and says false, so the answer goes to the pane and takes no row's
+// place. Once a row stands, a pane an earlier answer fell back to is closed, so it holds no room beside the transcript.
+// A function declaration: the engine's loader follows $ only into one.
+async function showRow($: any, isStale: () => boolean, btw: Btw) {
+  if (isStale()) {
+    return false
+  }
+
+  let before: unknown
+  let stored = false
+  try {
+    const now = await $.clock.now()
+    before = (await $.state.get(BTW_ROWS)).value
+    const { id, store } = keepRow(before, btw, now)
+    await $.state.set(BTW_ROWS, store)
+    stored = true
+    if (!isStale()) {
+      const placed = await $.ui.place({ id })
+      if (placed.isPlaced || typeof placed.requestId === 'string') {
+        await $.ui.close({ id: BTW_PANE }).catch(() => {})
+        return true
+      }
+    }
+  } catch {}
+
+  if (stored) {
+    await $.state.set(BTW_ROWS, before).catch(() => {})
+  }
+
+  return false
 }
 
 // Shows a /btw answer in the btw pane; true once the pane is placed. With no answer, a refused store, an open that
@@ -403,6 +458,47 @@ function fenceElement(p: { rows: Rows } | { picture: Picture }, key: string, ui:
     </Box>
   )
 }
+
+// A /btw's question, dim, and under it its answer, drawn as a reply is: each fence that draws as a diagram or a
+// picture, the prose between as markdown. When nothing draws, the plan fails, the mode is source or the surface is not
+// the terminal, or columns, the width the answer is planned at, is unknown, the whole answer is one markdown block. The
+// rest of the settings are read as a reply reads them, so a change to any of them redraws it. A function declaration:
+// the engine's loader follows $ only into one.
+async function btwTree(
+  $: any,
+  e: any,
+  v: Btw,
+  columns: number | undefined,
+  settings: BtwSettings,
+): Promise<RenderElement> {
+  const reply = { ...e, viewport: { ...e.viewport, columns }, props: { ...e.props, text: v.text } }
+  const plan = await safePlan(
+    $,
+    reply,
+    await theme($, settings.theme),
+    () => mode($),
+    undefined,
+    () => images($),
+    () => crossings($, settings.crossings),
+    () => size($, settings.size),
+  )
+  const { Box, Text, Markdown } = $.ui.resolve(e)
+  const parts = plan ? plan.parts : [{ prose: v.text }]
+  let n = 0
+  return (
+    <Box flexDirection="column">
+      <Box key="btw-question">
+        <Text dimColor>{`/btw ${v.question}`}</Text>
+      </Box>
+      {parts.map((p, i) =>
+        'prose' in p ? <Markdown key={`prose-${i}`} text={p.prose} /> : fenceElement(p, `mermaid-${n++}`, plan!),
+      )}
+    </Box>
+  )
+}
+
+// The configured settings a /btw answer is drawn with, unless the command set others for the session.
+type BtwSettings = { theme: ThemeName; crossings: Crossings; size: Size }
 
 export const register: Register = (on, options) => {
   // nord unless the setting names another theme: an unset or unknown value draws in nord, the manifest's default.
@@ -724,9 +820,15 @@ export const register: Register = (on, options) => {
       answer = undefined
     }
 
-    // The answer is shown, or the pane closed, one /btw at a time, each step taken only while this one is the newest:
-    // an older one still storing, opening or closing finishes before a newer one starts, and then does nothing more.
-    const shown = await inTurn(() => showBtw($, isStale, e.args.trim(), answer))
+    // The answer is shown, in a row or else the pane, one /btw at a time, each step taken only while this one is the
+    // newest: an older one still storing, placing, opening or closing finishes before a newer one starts, and then does
+    // nothing more.
+    const question = e.args.trim()
+    const shown = await inTurn(
+      async () =>
+        (answer !== undefined && (await showRow($, isStale, { question, text: answer }))) ||
+        showBtw($, isStale, question, answer),
+    )
     await done()
     if (isStale()) {
       return {}
@@ -735,42 +837,34 @@ export const register: Register = (on, options) => {
     return shown ? {} : next(e)
   })
 
-  // The btw pane: the question, dim, and under it the answer, drawn as a reply is: each fence that draws as a diagram
-  // or a picture, the prose between as markdown. In source mode, or when nothing draws or the drawing fails, the whole
-  // answer is one markdown block. The answer is read while drawing, so a newer one redraws the pane.
+  const settings = (): BtwSettings => ({ theme: configured, crossings: configuredCrossings, size: configuredSize })
+
+  // The btw pane, where a Claude Code with no rows shows a /btw answer (btwTree), at the pane's body width. The answer
+  // is read while drawing, so a newer one redraws the pane.
   on('ui.render', { component: 'Pane', requestId: BTW_PANE }, async ($, e, next) => {
     const v = e.surface === 'terminal' ? (await $.state.get(BTW)).value : undefined
     if (!isBtw(v)) {
       return next(e)
     }
 
-    // The answer is drawn as a reply at the pane's body width: the plan reads the reply's surface, text and columns.
-    const reply = {
-      ...e,
-      viewport: { ...e.viewport, columns: e.props.bodyColumns },
-      props: { ...e.props, text: v.text },
+    return btwTree($, e, v, e.props.bodyColumns, settings())
+  })
+
+  // A /btw answer's transcript row, at the transcript's full width less its border and padding (btwTree). It draws on
+  // every surface the conversation shows on, the whole answer as markdown off the terminal or where no width was
+  // measured. Another plugin's row, a row whose answer is no longer kept, or one this module never placed, draws what
+  // is beneath.
+  on('ui.render', { component: 'Placed' }, async ($, e, next) => {
+    const v = e.props.plugin === 'mermaid-tty' ? rowFor((await $.state.get(BTW_ROWS)).value, e.props.id) : undefined
+    if (!v) {
+      return next(e)
     }
-    const plan = await safePlan(
-      $,
-      reply,
-      await theme($, configured),
-      () => mode($),
-      undefined,
-      () => images($),
-      () => crossings($, configuredCrossings),
-      () => size($, configuredSize),
-    )
-    const { Box, Text, Markdown } = $.ui.resolve(e)
-    const parts = plan ? plan.parts : [{ prose: v.text }]
-    let n = 0
+
+    const columns = e.viewport?.columns
+    const { Box } = $.ui.resolve(e)
     return (
-      <Box flexDirection="column">
-        <Box key="btw-question">
-          <Text dimColor>{`/btw ${v.question}`}</Text>
-        </Box>
-        {parts.map((p, i) =>
-          'prose' in p ? <Markdown key={`prose-${i}`} text={p.prose} /> : fenceElement(p, `mermaid-${n++}`, plan!),
-        )}
+      <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+        {await btwTree($, e, v, columns === undefined ? undefined : Math.max(1, columns - ROW_FRAME), settings())}
       </Box>
     )
   })

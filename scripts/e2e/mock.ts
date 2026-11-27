@@ -4,8 +4,9 @@
 // REPLY_CROSS when it contains crossing; or REPLY_LEAD when it contains lead: as SSE when the request has stream: true,
 // else as one JSON message. Any other method or path gets an empty 404, CONNECT is refused, and stop() closes every
 // connection. holdSide() keeps the next side question unanswered until its release is called, and says through arrived
-// when that question has come in, so a scenario can read the screen while a /btw is being answered. Node built-ins
-// only, so the main suite needs nothing installed.
+// when that question has come in, so a scenario can read the screen while a /btw is being answered. requests() gives
+// each request's body as it came, oldest first, so a scenario can see what a model was sent. Node built-ins only, so
+// the main suite needs nothing installed.
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
@@ -74,10 +75,11 @@ export function replyFor(messages: unknown, system?: unknown): string {
 }
 
 export type Hold = { release(): void; arrived: Promise<void> }
-export type Mock = { url: string; stop(): Promise<void>; holdSide(): Hold }
+export type Mock = { url: string; stop(): Promise<void>; holdSide(): Hold; requests(): string[] }
 
 export async function startMock(): Promise<Mock> {
   let n = 0
+  const bodies: string[] = []
   // The hold the next side question waits on, taken by that request, and how it says it came in; null when side
   // questions are answered at once.
   let sideHold: { until: Promise<void>; came: () => void } | null = null
@@ -98,7 +100,9 @@ export async function startMock(): Promise<Mock> {
       return
     }
 
-    const body = parse(Buffer.concat(parts).toString('utf8'))
+    const raw = Buffer.concat(parts).toString('utf8')
+    bodies.push(raw)
+    const body = parse(raw)
     const text = replyFor(body.messages, body.system)
     if (text === REPLY_BTW && sideHold) {
       const hold = sideHold
@@ -165,5 +169,5 @@ export async function startMock(): Promise<Mock> {
     sideHold = { until, came }
     return { release, arrived }
   }
-  return { url: `http://127.0.0.1:${port}`, stop, holdSide }
+  return { url: `http://127.0.0.1:${port}`, stop, holdSide, requests: () => [...bodies] }
 }
