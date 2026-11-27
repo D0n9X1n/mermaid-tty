@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { safePlan } from '../../hooks/plan.ts'
+import { DRAWN_CHARS, safePlan } from '../../hooks/plan.ts'
 
 // Fail closed at the hook: an error in the plugin's own work gives null, and the hook then sends the reply through
 // next(e) unchanged. The debug log is best-effort: a failing log never stops a drawing.
@@ -246,4 +246,30 @@ test('A5.errors: a throwing picture lookup still draws the text', async () => {
     'rows',
     'prose',
   ])
+})
+
+// Claude Code draws at most 100,000 characters of a drawing and drops the rest, so a reply drawn past that would show
+// only in part. Such a reply goes through as its source, whole, and one under it draws as before.
+test('A5.errors: a reply whose drawing would pass the characters Claude Code draws goes through as its source', async () => {
+  const seq = (n: number) =>
+    [
+      '```mermaid',
+      'sequenceDiagram',
+      'participant A as First',
+      `participant B as ${'B'.repeat(45)}`,
+      `participant C as ${'C'.repeat(45)}`,
+      'participant D as Last',
+      ...Array(n).fill('A->>D: OK'),
+      'D-->>A: FINAL STEP',
+      '```',
+      '',
+    ].join('\n')
+  const wide = (text: string) => ({ ...ev(text), viewport: { columns: 126, rows: 40 } })
+
+  const big = await safePlan({ ui }, wide(`a\n${seq(460)}b`), 'nord', diagram)
+  const small = await safePlan({ ui }, wide(`a\n${seq(20)}b`), 'nord', diagram)
+
+  assert.equal(big, null)
+  assert.ok(small)
+  assert.ok(DRAWN_CHARS <= 100_000)
 })

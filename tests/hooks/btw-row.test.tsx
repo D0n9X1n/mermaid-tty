@@ -44,7 +44,9 @@ test('A6.row: /btw answers in a transcript row of its own that draws its fences,
     (await ui.findAll({ type: 'Text' })).some((t: any) => t.text === '/btw how does it flow?' && t.props.dimColor),
   ).toBe(true)
   expect(
-    (await ui.findAll({ type: 'Box' })).some((b: any) => b.props.borderStyle === 'round' && b.props.borderDimColor),
+    (await ui.findAll({ type: 'Box' })).some(
+      (b: any) => b.props.borderStyle === 'round' && b.props.borderDimColor && b.props.width === '100%',
+    ),
   ).toBe(true)
   expect((await ui.find({ key: 'mermaid-0' }))?.text).toContain('读取')
   expect(await ui.find({ type: 'Markdown', text: 'Here is the flow:\n\n' })).toBeDefined()
@@ -463,6 +465,31 @@ test('A6.row: a write the engine does not make, at an id never written, falls ba
   const r = await BTW($, 'q')
 
   expect(r).toEqual({})
+  expect(e.places).toEqual([])
+  expect(e.opens).toHaveLength(1)
+})
+
+// A row id is tried a few times at most: an engine that answers every write as already kept gets the answer in the
+// pane, never an endless search for a free id.
+test('A6.row: a row whose every id is already kept goes to the pane after a few tries', async ($, on) => {
+  const e = engine(on, answered('in the pane'))
+  placesRows(e)
+  const tried: string[] = []
+  on('state.set', async (_$: any, ev: any, next: any) => {
+    if ((ev.ref?.key ?? ev.key) === 'btwRow' && ev.ifVersion === 0) {
+      tried.push(ev.ref?.id ?? ev.id)
+      return { value: { isSet: false, version: 1 } }
+    }
+
+    return next(ev)
+  })
+  await start($)
+
+  const r = await BTW($, 'q')
+
+  expect(r).toEqual({})
+  expect(tried).toHaveLength(3)
+  expect(new Set(tried).size).toBe(3)
   expect(e.places).toEqual([])
   expect(e.opens).toHaveLength(1)
 })

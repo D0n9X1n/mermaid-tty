@@ -18,6 +18,11 @@ import {
 import { passThrough, type Crossings, type Images, type Mode, type Size } from './mode.ts'
 
 const renderer = createRenderer(64)
+
+// The most characters of drawn rows and prose a reply's drawing holds. Claude Code draws at most 100,000 characters of
+// a drawing and drops the rest, so a reply past that would show only in part; it goes through as its source instead,
+// whole. The margin leaves room for what is drawn around the reply's own text, as a /btw row's question and frame.
+export const DRAWN_CHARS = 90_000
 const pictures = createPictures()
 
 // Removes the picture temp dirs this session's renders still hold, and any stale ones; within timeoutMs, quietly. At
@@ -144,6 +149,19 @@ async function planReply(
   }
 
   if (!parts.some((p) => !('prose' in p))) {
+    return null
+  }
+
+  // A picture is an image, not text, so only rows and prose count.
+  const drawn = parts.reduce((n, p) => {
+    if ('prose' in p) {
+      return n + p.prose.length
+    }
+
+    return 'rows' in p ? n + p.rows.reduce((m, row) => m + row.reduce((k, c) => k + c.text.length, 0), 0) : n
+  }, 0)
+  if (drawn > DRAWN_CHARS) {
+    log(`drawing of ${drawn} characters passes ${DRAWN_CHARS}`)
     return null
   }
 

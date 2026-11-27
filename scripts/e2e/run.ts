@@ -256,6 +256,8 @@ const DRAW_COLUMNS = 100
 const BTW_COLUMNS = 130
 const ROWS_FROM = '2.1.314'
 const FULLSCREEN = JSON.stringify({ tui: 'fullscreen' })
+// REPLY_BTW's diagram lines past its header, which nothing but the answer holds.
+const BTW_LINES = fenceBody(REPLY_BTW).split('\n').slice(1)
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
 const colorOf = (r: Run): ColorCheck => (r.theme === 'mono' ? 'none' : r.color)
 // A curated palette's role colors, as 0xRRGGBB; none for default, which follows the user's Claude Code theme, and mono.
@@ -446,8 +448,8 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
 
   const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
   const stored = files().map((f) => readFileSync(f, 'utf8'))
-  for (const word of ['Side answer:', 'what does it do?']) {
-    if (stored.some((t) => t.includes(word))) {
+  for (const word of ['Side answer:', 'what does it do?', ...BTW_LINES]) {
+    if (stored.some((t) => t.includes(JSON.stringify(word).slice(1, -1)))) {
       problems.push(`btw: the stored transcript holds ${JSON.stringify(word)}`)
     }
   }
@@ -468,8 +470,11 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   }
 
   await sleep(1000)
-  for (const word of ['Side answer:', 'Side done.']) {
-    if (main.some((b) => b.includes(word))) {
+  // The answer's prose, its question and its diagram's own lines: none of the row may reach the main thread. The
+  // header, flowchart LR, is left out, as mermaid-tty's system prompt asks for it by name.
+  const row = ['Side answer:', 'Side done.', 'what does it do?', ...BTW_LINES]
+  for (const word of row) {
+    if (main.some((b) => b.includes(JSON.stringify(word).slice(1, -1)))) {
       problems.push(`btw: the main thread's next request holds ${JSON.stringify(word)}`)
     }
   }

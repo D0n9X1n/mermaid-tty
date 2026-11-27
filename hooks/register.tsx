@@ -863,7 +863,7 @@ export const register: Register = (on, options) => {
     const columns = e.viewport?.columns
     const { Box } = $.ui.resolve(e)
     return (
-      <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+      <Box flexDirection="column" width="100%" borderStyle="round" borderDimColor paddingX={1}>
         {await btwTree($, e, v, columns === undefined ? undefined : Math.max(1, columns - ROW_FRAME), settings())}
       </Box>
     )
