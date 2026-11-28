@@ -493,3 +493,22 @@ test('A6.row: a row whose every id is already kept goes to the pane after a few 
   expect(e.places).toEqual([])
   expect(e.opens).toHaveLength(1)
 })
+
+// The question is drawn above the answer in the same row, so its length counts against what Claude Code draws.
+test('A6.row: a question long enough to tip the drawing past what Claude Code draws shows the answer as source', async ($, on) => {
+  const answer = `${'prose '.repeat(14_000)}\n${ANSWER}`
+  const e = engine(on, answered(answer), answered(answer))
+  placesRows(e)
+  await start($)
+
+  await BTW($, 'q')
+  await BTW($, 'q'.repeat(15_000))
+  const short = await row($, e.places[0]!, 130)
+  const drawn = await short.find({ key: 'mermaid-0' })
+  await short.unmount()
+  const long = await row($, e.places[1]!, 130)
+
+  expect(drawn).toBeDefined()
+  expect(await long.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await long.find({ type: 'Markdown', text: answer })).toBeDefined()
+})

@@ -478,6 +478,8 @@ async function btwTree(
     () => images($),
     () => crossings($, settings.crossings),
     () => size($, settings.size),
+    // The question line is drawn above the answer in the same tree.
+    v.question.length + 8,
   )
   const { Box, Text, Markdown } = $.ui.resolve(e)
   const parts = plan ? plan.parts : [{ prose: v.text }]

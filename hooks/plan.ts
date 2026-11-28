@@ -19,10 +19,35 @@ import { passThrough, type Crossings, type Images, type Mode, type Size } from '
 
 const renderer = createRenderer(64)
 
-// The most characters of drawn rows and prose a reply's drawing holds. Claude Code draws at most 100,000 characters of
-// a drawing and drops the rest, so a reply past that would show only in part; it goes through as its source instead,
-// whole. The margin leaves room for what is drawn around the reply's own text, as a /btw row's question and frame.
+// The most a reply's drawing holds: characters of drawn rows and prose, and elements. Claude Code draws at most 100,000
+// characters of a drawing and drops the rest, and draws none of one past 20,000 elements, so a reply past either would
+// show in part or not at all; it goes through as its source instead, whole. Each margin leaves room for what is drawn
+// around the reply's own parts, as a /btw row's frame and question line, which the caller counts in as around.
 export const DRAWN_CHARS = 90_000
+export const DRAWN_NODES = 15_000
+
+// Whether parts, with around characters drawn beside them, fit what Claude Code draws. A drawn row is a Text of one
+// Text per run of a color, each holding its string; a picture is an image, not text, and one element.
+export function fitsDrawing(parts: readonly ({ prose: string } | { rows: Rows } | { picture: Picture })[], around = 0) {
+  let chars = around
+  let nodes = 1
+  for (const p of parts) {
+    if ('prose' in p) {
+      chars += p.prose.length
+      nodes += 2
+    } else if ('rows' in p) {
+      nodes += 1
+      for (const row of p.rows) {
+        nodes += 2 + 2 * row.length
+        chars += row.reduce((n, c) => n + c.text.length, 0)
+      }
+    } else {
+      nodes += 1
+    }
+  }
+
+  return chars <= DRAWN_CHARS && nodes <= DRAWN_NODES
+}
 const pictures = createPictures()
 
 // Removes the picture temp dirs this session's renders still hold, and any stale ones; within timeoutMs, quietly. At
@@ -69,7 +94,8 @@ function sized(p: Picture, size: Size, columns: number): Picture {
 
 // planReply, or null when it throws: the hook then sends the reply through next(e) unchanged. images reads the picture
 // setting; left out, or failing, it is auto. crossings reads whether crossing lines are colored apart; left out, on.
-// size reads how large a picture is shown; left out, full, the size a picture was always shown at.
+// size reads how large a picture is shown; left out, full, the size a picture was always shown at. around is how many
+// characters the caller draws beside the reply, counted against what Claude Code draws (fitsDrawing).
 export async function safePlan(
   $: any,
   e: any,
@@ -79,9 +105,10 @@ export async function safePlan(
   images: () => Promise<Images> = async () => 'auto',
   crossings: () => Promise<Crossings> = async () => 'on',
   size: () => Promise<Size> = async () => 'full',
+  around = 0,
 ) {
   try {
-    return await planReply($, e, theme, mode, store, images, crossings, size)
+    return await planReply($, e, theme, mode, store, images, crossings, size, around)
   } catch {
     return null
   }
@@ -102,6 +129,7 @@ async function planReply(
   images: () => Promise<Images>,
   crossings: () => Promise<Crossings>,
   size: () => Promise<Size>,
+  around: number,
 ) {
   const columns = e.viewport?.columns
   const m = await mode()
@@ -152,16 +180,8 @@ async function planReply(
     return null
   }
 
-  // A picture is an image, not text, so only rows and prose count.
-  const drawn = parts.reduce((n, p) => {
-    if ('prose' in p) {
-      return n + p.prose.length
-    }
-
-    return 'rows' in p ? n + p.rows.reduce((m, row) => m + row.reduce((k, c) => k + c.text.length, 0), 0) : n
-  }, 0)
-  if (drawn > DRAWN_CHARS) {
-    log(`drawing of ${drawn} characters passes ${DRAWN_CHARS}`)
+  if (!fitsDrawing(parts, around)) {
+    log(`drawing passes the ${DRAWN_CHARS} characters or ${DRAWN_NODES} elements Claude Code draws`)
     return null
   }
 

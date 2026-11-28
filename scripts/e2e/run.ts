@@ -446,14 +446,6 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
     problems.push('btw: the answer row does not show the question')
   }
 
-  const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
-  const stored = files().map((f) => readFileSync(f, 'utf8'))
-  for (const word of ['Side answer:', 'what does it do?', ...BTW_LINES]) {
-    if (stored.some((t) => t.includes(JSON.stringify(word).slice(1, -1)))) {
-      problems.push(`btw: the stored transcript holds ${JSON.stringify(word)}`)
-    }
-  }
-
   // The main thread's next request holds none of the answer row: a row is display only.
   const sent = mock.requests().length
   await submit(s, 'lead again')
@@ -469,13 +461,29 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
     problems.push('btw: the main thread sent no request after the answer')
   }
 
-  await sleep(1000)
   // The answer's prose, its question and its diagram's own lines: none of the row may reach the main thread. The
   // header, flowchart LR, is left out, as mermaid-tty's system prompt asks for it by name.
   const row = ['Side answer:', 'Side done.', 'what does it do?', ...BTW_LINES]
   for (const word of row) {
     if (main.some((b) => b.includes(JSON.stringify(word).slice(1, -1)))) {
       problems.push(`btw: the main thread's next request holds ${JSON.stringify(word)}`)
+    }
+  }
+
+  // Nor the transcript file, read once that turn's reply is written, so a session that had none before the /btw (the
+  // fresh one) has one to read.
+  const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
+  const written = await poll(() => {
+    const all = files().map((f) => readFileSync(f, 'utf8'))
+    return all.some((t) => t.includes('lead again') && t.includes('After the diagram.')) ? all : undefined
+  }, 10000)
+  if (!written) {
+    problems.push(`btw: no transcript holds the turn after the answer (${files().length} .jsonl files)`)
+  }
+
+  for (const word of ['Side answer:', 'Side done.', 'what does it do?', ...BTW_LINES]) {
+    if ((written ?? []).some((t) => t.includes(JSON.stringify(word).slice(1, -1)))) {
+      problems.push(`btw: the stored transcript holds ${JSON.stringify(word)}`)
     }
   }
 

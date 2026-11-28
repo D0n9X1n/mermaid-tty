@@ -179,7 +179,7 @@ When mermaid-tty can't draw a diagram exactly, it shows the original code block,
 - its frontmatter, title or config is outside the scanner's subset, or a config setting is not on the allowlist (see Known limits);
 - a label or title has a character that terminals draw at differing widths;
 - no step of the fit ladder fits the terminal's width, or the validator rejects every drawing;
-- the reply's drawings and text together would pass 90,000 characters. Claude Code draws at most 100,000 characters of a drawing and drops the rest, so such a reply shows as its source, whole, every diagram in it included.
+- the reply's drawings and text together would pass 90,000 characters or 15,000 elements. Claude Code draws at most 100,000 characters of a drawing and drops the rest, and draws none of one past 20,000 elements, so such a reply shows as its source, whole, every diagram in it included. A `/btw` answer counts its question too.
 
 Some features always fall back, by design, because a terminal can't show them as Mermaid does: `fa:` icons render as SVG or through Font Awesome CSS, `$$…$$` math needs typesetting, and `htmlLabels: false` follows different text rules. Whitespace that a diagram's lexer rejects, such as an unquoted no-break space in pie or gitGraph, fails in Mermaid too.
 
