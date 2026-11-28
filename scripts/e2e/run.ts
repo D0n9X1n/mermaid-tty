@@ -30,10 +30,11 @@ import { checkDiagramScreen, drawnDiagrams, drawnRows, sourceShown, type ColorCh
 import { startSession, TMUX_SOCKET, type Session } from './driver.ts'
 import type { Cell } from './screen.ts'
 import { mergeJson, sessionEnv, seedConfig, seedSettings, type Color, type Driver } from './env.ts'
-import { startMock, type Mock } from './mock.ts'
+import { asksLast, startMock, type Mock } from './mock.ts'
 import { REPLY, REPLY_BTW, REPLY_CROSS, REPLY_LEAD } from './reply.ts'
 import { BTW_STATUS } from '../../hooks/btw.ts'
 import { splitFences } from '../../hooks/fences.ts'
+import { atLeast } from '../lib/cc-versions.ts'
 import { isMain } from '../lib/is-main.ts'
 import { clipboardStubs, fenceBody, findReply } from './stored.ts'
 
@@ -145,9 +146,11 @@ async function showDiagrams(s: Session): Promise<void> {
 // One run of one scenario, in a sandbox of its own: a temp HOME, config dir and cwd, the mock, and the seeded config.
 // Resolves to its problems, [] when it passes. Under --keep the sandbox stays, with screen.ansi in it, and keepUp
 // leaves a tmux session up. With installed (A9.release), that config dir, where the plugin is installed, is the
-// session's: the seeds are merged into its files, and the session starts without --plugin-dir.
+// session's: the seeds are merged into its files, and the session starts without --plugin-dir. version is Claude
+// Code's.
 async function runOne(
   claude: string,
+  version: string,
   run: Run,
   driver: Driver,
   scenario: Scenario,
@@ -187,12 +190,24 @@ async function runOne(
       driver,
       path: [bin, process.env.PATH ?? ''].join(delimiter),
     })
-    const argv = installed ? [claude] : [claude, '--plugin-dir', repoRoot]
-    s = await startSession({ driver, argv, cwd, env })
+    // A /btw scenario's layout is set for its own sessions alone, by a settings file on the command line: an installed
+    // config dir is shared by every run, so a setting saved there would carry into the next.
+    const isBtw = scenario.startsWith('btw') && atLeast(version, ROWS_FROM)
+    const layout = join(base, 'fullscreen.json')
+    if (isBtw) {
+      writeFileSync(layout, FULLSCREEN)
+    }
+
+    const argv = [
+      ...(installed ? [claude] : [claude, '--plugin-dir', repoRoot]),
+      ...(isBtw ? ['--settings', layout] : []),
+    ]
+    const cols = isBtw ? BTW_COLUMNS : undefined
+    s = await startSession({ driver, argv, cwd, env, cols })
     await s.waitFor(/❯/, 15000)
     const resume = async () => {
       await s?.stop()
-      s = await startSession({ driver, argv: [...argv, '--continue'], cwd, env })
+      s = await startSession({ driver, argv: [...argv, '--continue'], cwd, env, cols })
       await s.waitFor(/❯/, 15000)
       return s
     }
@@ -231,8 +246,18 @@ const SOURCE = splitFences(REPLY)
   .slice(0, 2)
   .flatMap((f) => (f.kind === 'mermaid' ? f.body.split('\n') : []))
 // The width the expected rows are drawn at: the session's (driver.ts's COLS). The replies' diagrams draw the same at
-// any width from it down to well under it, so Claude Code's margins do not change them.
+// any width from it down to well under it, so Claude Code's margins do not change them; REPLY_BTW's, from 90 columns
+// up, so they draw the same in the /btw scenarios' wider sessions too.
 const DRAW_COLUMNS = 100
+// The /btw scenarios' session on a Claude Code that places transcript rows (ROWS_FROM): 130 columns, in Claude Code's
+// fullscreen layout, where a pane docks beside the transcript at 45% of the terminal, 57 columns, too narrow for
+// REPLY_BTW's flowchart, which a transcript row draws whole. An earlier Claude Code answers in the pane, which is drawn
+// above the prompt at the session's full width in its own 100 columns.
+const BTW_COLUMNS = 130
+const ROWS_FROM = '2.1.314'
+const FULLSCREEN = JSON.stringify({ tui: 'fullscreen' })
+// REPLY_BTW's diagram lines past its header, which nothing but the answer holds.
+const BTW_LINES = fenceBody(REPLY_BTW).split('\n').slice(1)
 // The color a run's diagram rows must carry: none under mono (A3), else its color mode.
 const colorOf = (r: Run): ColorCheck => (r.theme === 'mono' ? 'none' : r.color)
 // A curated palette's role colors, as 0xRRGGBB; none for default, which follows the user's Claude Code theme, and mono.
@@ -347,10 +372,11 @@ async function lead({ s, run }: Ctx): Promise<string[]> {
 }
 
 // btw: while a /btw side question asked after a reply is answered, mermaid-tty's status row says so; then the answer
-// shows in mermaid-tty's pane, its diagram drawn, not its source, the row gone, and nothing of it reaches the stored
-// transcript. Escape closes the pane. With resumed, the /btw is asked in a session that continues that conversation and
-// has sent nothing yet, so there is no request of its own a fork could share: mermaid-tty still answers it. With fresh,
-// it is asked before any prompt, in a session with no conversation at all: mermaid-tty answers the question alone.
+// shows in a transcript row of mermaid-tty's at the transcript's full width, its diagram drawn as written, not its
+// source nor turned top to bottom, the status row gone, and nothing of it reaches the stored transcript. With resumed,
+// the /btw is asked in a session that continues that conversation and has sent nothing yet, so there is no request of
+// its own a fork could share: mermaid-tty still answers it. With fresh, it is asked before any prompt, in a session
+// with no conversation at all: mermaid-tty answers the question alone.
 async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   const { run, config, mock } = c
   let s = c.s
@@ -396,8 +422,12 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   await s.waitFor(/Side done\./, 30000)
   await sleep(500)
   const text = await s.text()
-  // The pane's rows inside its frame: each row between a │ in the first column and one in the last.
-  const inside = (await s.cells()).map((row) => (row[0]?.ch === '│' && row.at(-1)?.ch === '│' ? row.slice(1, -1) : row))
+  // The answer row's lines inside its frame: each line from a │ in the first column to the last │ on it, wherever the
+  // row's width ends it.
+  const inside = (await s.cells()).map((row) => {
+    const end = row.findLastIndex((c) => c.ch === '│')
+    return row[0]?.ch === '│' && end > 0 ? row.slice(1, end) : row
+  })
   problems.push(
     ...checkDiagramScreen(inside, {
       labels: { 侧问: 'node', 回答: 'node' },
@@ -413,19 +443,52 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   }
 
   if (!text.includes('/btw what does it do?')) {
-    problems.push('btw: the pane does not show the question')
+    problems.push('btw: the answer row does not show the question')
   }
 
+  // The main thread's next request holds none of the answer row: a row is display only.
+  const sent = mock.requests().length
+  await submit(s, 'lead again')
+  const main =
+    (await poll(() => {
+      const out = mock
+        .requests()
+        .slice(sent)
+        .filter((b) => asksLast(b, 'lead again'))
+      return out.length ? out : undefined
+    }, 30000)) ?? []
+  if (main.length === 0) {
+    problems.push('btw: the main thread sent no request after the answer')
+  }
+
+  // The answer's prose, its question and its diagram's own lines: none of the row may reach the main thread. The
+  // header, flowchart LR, is left out, as mermaid-tty's system prompt asks for it by name.
+  const row = ['Side answer:', 'Side done.', 'what does it do?', ...BTW_LINES]
+  for (const word of row) {
+    if (main.some((b) => b.includes(JSON.stringify(word).slice(1, -1)))) {
+      problems.push(`btw: the main thread's next request holds ${JSON.stringify(word)}`)
+    }
+  }
+
+  // Nor the transcript file, read once that turn's reply is written after its prompt, so a session that had none before
+  // the /btw (the fresh one) has one to read, and an earlier reply is not taken for this one.
   const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
-  const stored = files().map((f) => readFileSync(f, 'utf8'))
-  for (const word of ['Side answer:', 'what does it do?']) {
-    if (stored.some((t) => t.includes(word))) {
+  const written = await poll(() => {
+    const all = files().map((f) => readFileSync(f, 'utf8'))
+    const replied = (t: string) =>
+      t.includes('lead again') && t.indexOf('After the diagram.', t.indexOf('lead again')) >= 0
+    return all.some(replied) ? all : undefined
+  }, 10000)
+  if (!written) {
+    problems.push(`btw: no transcript holds the turn after the answer (${files().length} .jsonl files)`)
+  }
+
+  for (const word of ['Side answer:', 'Side done.', 'what does it do?', ...BTW_LINES]) {
+    if ((written ?? []).some((t) => t.includes(JSON.stringify(word).slice(1, -1)))) {
       problems.push(`btw: the stored transcript holds ${JSON.stringify(word)}`)
     }
   }
 
-  await s.key('escape')
-  await s.waitFor(/^(?![\s\S]*Side done\.)/, 10000).catch(() => problems.push('btw: escape left the pane open'))
   if (resumed) {
     problems.push(...(await btwCancelled(s, mock)))
   }
@@ -433,11 +496,14 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
   return problems
 }
 
-// Esc while a /btw is still being answered cancels it: no answer shows, neither in mermaid-tty's pane nor in Claude
-// Code's own panel, and the status row goes. Esc is pressed only once the request is out and held at the mock, so it
-// cuts a request in flight, not one yet to start.
+// Esc while a /btw is still being answered cancels it: no answer shows, neither in a row of mermaid-tty's nor in Claude
+// Code's own panel, and the status row goes. The answer an earlier /btw showed stays in its own row, so answers are
+// counted, not looked for. Esc is pressed only once the request is out and held at the mock, so it cuts a request in
+// flight, not one yet to start.
 async function btwCancelled(s: Session, mock: Mock): Promise<string[]> {
   const problems: string[] = []
+  const answers = (t: string) => t.split('Side done.').length - 1
+  const before = answers(await s.text())
   const hold = mock.holdSide()
   try {
     await submit(s, '/btw and now?')
@@ -462,7 +528,7 @@ async function btwCancelled(s: Session, mock: Mock): Promise<string[]> {
 
   await sleep(2000)
   const text = await s.text()
-  if (text.includes('Side done.') || text.includes('Answering')) {
+  if (answers(text) > before || text.includes('Answering')) {
     problems.push('btw: an answer shows after escape cancelled it')
   }
 
@@ -679,6 +745,7 @@ async function main(): Promise<number> {
       const last = ++n === total
       const problems = await runOne(
         claude,
+        version,
         run,
         driver,
         scenario,

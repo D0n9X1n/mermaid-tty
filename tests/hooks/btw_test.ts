@@ -6,6 +6,7 @@ import {
   isBtw,
   isWindows,
   markerPath,
+  rowId,
   SIDE_QUESTION,
   takesBtw,
   usesMarker,
@@ -37,6 +38,17 @@ test('A6.command: a stored answer is read back only whole', () => {
   assert.equal(isBtw({ question: 1, text: 't' }), false)
   assert.equal(isBtw(null), false)
   assert.equal(isBtw('q'), false)
+})
+
+test('A6.row: a row id is a plain name the engine takes, apart by the time, the count and the attempt', () => {
+  const id = rowId(1764245000123, 7)
+
+  assert.equal(id, 'btw-1764245000123-7')
+  assert.equal(rowId(1764245000123, 7, 2), 'btw-1764245000123-7-2')
+  assert.match(rowId(8640000000000000, Number.MAX_SAFE_INTEGER, 2), /^[A-Za-z0-9_-]{1,64}$/)
+  assert.notEqual(rowId(1764245000123, 8), id)
+  assert.notEqual(rowId(1764245000124, 7), id)
+  assert.notEqual(rowId(1764245000123, 7, 1), id)
 })
 
 test('A6.status: the status row names the /btw being answered', () => {

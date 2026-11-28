@@ -102,7 +102,7 @@ Reviewed, not enforced: comments say why (the Mermaid behavior mirrored, the ter
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.308 installed from npm.
+`.github/workflows/ci.yml` runs on every push and pull request. The `check` and `e2e` jobs use `ubuntu-latest`, `macos-latest` and `windows-latest`, with Node 24 and Claude Code 2.1.326 installed from npm.
 
 - **check**, on all three OSes: the code style gate (`node scripts/style/run.ts`), bare `node --test`, typecheck, docs-tooling tests, wiki-publisher tests, the local-marketplace install test, `scripts/check.sh` and docs checks. The install test adds the local marketplace and installs `mermaid-tty@mermaid-tty` into a fresh config, then verifies its version. On Linux, it also runs the release-notes tests (Python, against real Git histories and a fake `gh`).
 - **e2e**, on all three OSes: the real-Claude-Code harness with `--scenario all`, covering source view, stored text, themes including `mono`, and 256-color output. Windows uses ConPTY; macOS and Linux use tmux.
@@ -179,6 +179,6 @@ flowchart LR
 3. **Publish the wiki first.** Wait for `publish-wiki` to succeed on the exact `main` commit to be tagged, and check the published pages. GitHub creates a wiki's repository only after its first page is saved in the web UI. If cloning fails, save one page there, then re-run the workflow.
 4. Push a tag equal to `v` plus the plugin version, such as `v1.0.0`, on that commit. Do not create the GitHub Release manually: the tag workflow creates it.
 5. `.github/workflows/release.yml` checks the tag, generates the notes and checks them, requires a successful wiki-publish run for that SHA, and compares the published wiki with `wiki/`. Only then does it create the GitHub Release and check the published notes.
-6. The workflow installs from the GitHub marketplace into a fresh config, checks the listed version, and runs A9 with `--installed`, `--claude-version 2.1.308` and `--scenario all` against that installed copy. A published release alone does not mean this final verification passed.
+6. The workflow installs from the GitHub marketplace into a fresh config, checks the listed version, and runs A9 with `--installed`, `--claude-version 2.1.326` and `--scenario all` against that installed copy. A published release alone does not mean this final verification passed.
 
 Don't make the tag with `claude plugin tag`: it makes a tag such as `mermaid-tty--v1.0.0`, which doesn't start with `v`, so `release.yml` doesn't run.

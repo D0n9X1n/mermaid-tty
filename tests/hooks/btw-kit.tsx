@@ -33,6 +33,12 @@ export const engine = (on: any, ...replies: unknown[]) => {
   const placed = { value: { isPlaced: true } as object }
   // Each open answers the next of these in turn, a promise held to order it, then placed; one that rejects throws.
   const openings: unknown[] = []
+  // What each $.ui.place was given, and how it answers. Unset, it throws as $.ui.place does on a Claude Code before
+  // 2.1.314, which has no transcript rows, so a test that sets nothing runs the btw pane: the path such a Claude Code
+  // takes. A test of the rows sets it to a UiPlaceResult, or to a function of the place's id that answers one, or a
+  // promise of one, held to order it.
+  const places: string[] = []
+  const placing = { value: undefined as unknown }
   on('model.fork', async (_$: any, e: any) => {
     prompts.push(e.prompt)
     forks.onFork()
@@ -52,14 +58,55 @@ export const engine = (on: any, ...replies: unknown[]) => {
     closes.push(e.id)
     return { value: undefined }
   })
+  // The clock a row's id is read from: a fixed start, a millisecond more each read unless a test stops it.
+  const clock = { now: 1764245000000, isStopped: false }
+  on('clock.now', async () => ({ value: clock.isStopped ? clock.now : clock.now++ }))
+  on('ui.place', async (_$: any, e: any) => {
+    places.push(e.id)
+    const answer = placing.value
+    if (answer === undefined) {
+      throw new TypeError('$.ui.place is not a function')
+    }
+
+    return { value: await (typeof answer === 'function' ? answer(e.id) : answer) }
+  })
   on('command.run', { command: 'btw' }, async (_$: any, e: any) => {
     builtin.push(e.args)
     return { text: 'the built-in /btw' }
   })
   on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }))
   on('command.register', async (_$: any, e: any) => ({ value: { command: e.name } }))
-  return { prompts, opens, closes, builtin, placed, openings, completions, completed, conversation, model }
+  return {
+    prompts,
+    opens,
+    closes,
+    builtin,
+    placed,
+    openings,
+    places,
+    placing,
+    clock,
+    completions,
+    completed,
+    conversation,
+    model,
+  }
 }
+// Every place answered as placed, each with a request id of its own.
+export const placesRows = (e: { placing: { value: unknown } }) => {
+  e.placing.value = (id: string) => ({ isPlaced: true, requestId: `req-${id}` })
+}
+// The transcript row placed under id, drawn at columns, or with no viewport when columns is null; plugin is the one
+// that placed it.
+export const row = ($: any, id: string, columns: number | null = 100, surface = 'terminal', plugin = 'mermaid-tty') =>
+  $.ui.mount({
+    plugin,
+    surface,
+    component: 'Placed',
+    requestId: `req-${id}`,
+    props: { id, plugin },
+    ...(columns === null ? {} : { viewport: { columns, rows: 40 } }),
+  })
 export const pane = ($: any, surface = 'terminal') =>
   $.ui.mount({
     plugin: 'mermaid-tty',

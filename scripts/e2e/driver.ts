@@ -1,7 +1,7 @@
-// The e2e session driver: runs a program, in the e2e scenarios a real Claude Code, at 100×40, types into it and reads
-// its screen back as cells. The pty driver runs it under node-pty and parses its output into a screen. The tmux driver,
-// E1's fallback on Linux and macOS, runs it in a tmux server of its own and parses each read's capture-pane into a
-// fresh screen.
+// The e2e session driver: runs a program, in the e2e scenarios a real Claude Code, at 100×40 unless a session asks for
+// more columns, types into it and reads its screen back as cells. The pty driver runs it under node-pty and parses its
+// output into a screen. The tmux driver, E1's fallback on Linux and macOS, runs it in a tmux server of its own and
+// parses each read's capture-pane into a fresh screen.
 import { execFile, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -33,8 +33,8 @@ export type Session = {
   // the program or the server is gone already. Called again, resolves at once.
   stop(): Promise<void>
 }
-// env is the session's whole env, as sessionEnv builds it.
-export type SessionOptions = { driver: Driver; argv: string[]; cwd: string; env: Record<string, string> }
+// env is the session's whole env, as sessionEnv builds it; cols its width, COLS when left out.
+export type SessionOptions = { driver: Driver; argv: string[]; cwd: string; env: Record<string, string>; cols?: number }
 
 const COLS = 100
 const ROWS = 40
@@ -166,8 +166,9 @@ async function ptySession(o: SessionOptions): Promise<Session> {
   const { spawn } = await import('node-pty')
   ensureSpawnHelper()
   const { file, args } = ptyCommand(o.argv, process.platform, o.env)
-  const screen = createScreen(COLS, ROWS)
-  const p = spawn(file, args, { name: 'xterm-256color', cols: COLS, rows: ROWS, cwd: o.cwd, env: o.env })
+  const cols = o.cols ?? COLS
+  const screen = createScreen(cols, ROWS)
+  const p = spawn(file, args, { name: 'xterm-256color', cols, rows: ROWS, cwd: o.cwd, env: o.env })
   // The program's process group, recorded now: node-pty makes the program lead a session of its own (on Windows, p.pid
   // is the root of its tree).
   const pgid = p.pid
@@ -316,9 +317,11 @@ function tmuxRead(env: Record<string, string>, args: string[], signal?: AbortSig
   )
 }
 
-// The server sizes its window 100×40 with no client attached; gives the pane the pty driver's TERM rather than its own;
-// keeps an OSC 52 copy as a buffer; and keeps the pane after its program exits, so that its last screen stays readable.
+// The server sizes its window, 100×40 unless the session asks for more columns, with no client attached; gives the pane
+// the pty driver's TERM rather than its own; keeps an OSC 52 copy as a buffer; and keeps the pane after its program
+// exits, so that its last screen stays readable.
 function tmuxSession(o: SessionOptions): Session {
+  const cols = o.cols ?? COLS
   const run = (...args: string[]) => tmux(o.env, args)
   // new-session prints the server's pid, the program's and the socket's path. window-size is set only once the session
   // exists: tmux 3.6 (ubuntu-latest) exits with "server exited unexpectedly" when it is set first; -x/-y fix the size.
@@ -328,7 +331,7 @@ function tmuxSession(o: SessionOptions): Session {
     'set',
     '-g',
     'default-size',
-    `${COLS}x${ROWS}`,
+    `${cols}x${ROWS}`,
     ';',
     'set',
     '-g',
@@ -353,7 +356,7 @@ function tmuxSession(o: SessionOptions): Session {
     '-s',
     'mtty-e2e',
     '-x',
-    String(COLS),
+    String(cols),
     '-y',
     String(ROWS),
     '-c',
@@ -377,7 +380,7 @@ function tmuxSession(o: SessionOptions): Session {
   // it.
   const ansi = (signal?: AbortSignal) => tmuxRead(o.env, ['capture-pane', '-p', '-e', '-t', 'mtty-e2e'], signal)
   const capture = async (signal?: AbortSignal) => {
-    const screen = createScreen(COLS, ROWS)
+    const screen = createScreen(cols, ROWS)
     await screen.write((await ansi(signal)).replace(/\n$/, '').replaceAll('\n', '\r\n'))
     return screen
   }

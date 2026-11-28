@@ -102,7 +102,7 @@ Prettier（`.prettierrc.json`）使用单引号、不加分号、两个空格缩
 
 ## 持续集成
 
-`.github/workflows/ci.yml` 在每次 push 和 pull request 时运行。`check` 和 `e2e` 使用 `ubuntu-latest`、`macos-latest`、`windows-latest`，配置 Node 24，并从 npm 安装 Claude Code 2.1.308。
+`.github/workflows/ci.yml` 在每次 push 和 pull request 时运行。`check` 和 `e2e` 使用 `ubuntu-latest`、`macos-latest`、`windows-latest`，配置 Node 24，并从 npm 安装 Claude Code 2.1.326。
 
 - **check** 在三个系统上运行：代码风格检查（`node scripts/style/run.ts`）、裸 `node --test`、类型检查、文档工具测试、百科发布测试、本地市场安装测试、`scripts/check.sh` 和文档检查。安装测试在全新配置中添加本地市场并安装 `mermaid-tty@mermaid-tty`，然后核验版本。在 Linux 上还会运行发布说明测试（Python，使用真实的 Git 历史和模拟的 `gh`）。
 - **e2e** 在三个系统上运行真实 Claude Code 框架，使用 `--scenario all`，覆盖源码视图、存储文本、包括 `mono` 的主题和 256 色输出。Windows 使用 ConPTY，macOS 和 Linux 使用 tmux。
@@ -179,6 +179,6 @@ flowchart LR
 3. **先发布百科。** 等待待打标签的那个 `main` 提交完成 `publish-wiki`，并确认发布的页面。GitHub 只有在网页界面保存第一个百科页面后才创建百科仓库；若克隆失败，先保存一页，再重跑工作流。
 4. 在该提交上推送等于 `v` 加插件版本的标签，如 `v1.0.0`。不要手动创建 GitHub Release，标签工作流会创建。
 5. `.github/workflows/release.yml` 检查标签，生成发布说明并检查它，要求该 SHA 的百科发布成功，并比较已发布百科与 `wiki/`。全部通过后才创建 GitHub Release，再检查发布后的说明。
-6. 工作流从 GitHub 插件市场安装到全新配置，核验列出的版本，再针对该副本运行 A9，使用 `--installed`、`--claude-version 2.1.308` 和 `--scenario all`。Release 已发布不代表最后的验证一定通过。
+6. 工作流从 GitHub 插件市场安装到全新配置，核验列出的版本，再针对该副本运行 A9，使用 `--installed`、`--claude-version 2.1.326` 和 `--scenario all`。Release 已发布不代表最后的验证一定通过。
 
 不要使用 `claude plugin tag` 创建发布标签：它生成 `mermaid-tty--v1.0.0` 这样的名称，不以 `v` 开头，因此不会触发 `release.yml`。

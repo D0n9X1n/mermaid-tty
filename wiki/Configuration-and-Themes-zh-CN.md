@@ -59,7 +59,7 @@ mermaid-tty 在加载时读取该选项，因此用 `claude plugin configure` �
 | `on` | 每条交叉的边使用各自的颜色。这是默认值。 |
 | `off` | 每个单元格保持主题自身的颜色，与给交叉连线着色之前相同。 |
 
-设置方式与 `theme` 相同，例如 `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty crossings on|off`。该命令立即重绘屏幕上的回复和 `/btw` 窗格，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty crossings` 报告当前设置。未设置或无法识别的值视为 `on`。
+设置方式与 `theme` 相同，例如 `echo '{"crossings":"off"}' | claude plugin configure mermaid-tty@mermaid-tty --values-stdin`；也可以在 Claude Code 运行时使用 `/mermaid-tty crossings on|off`。该命令立即重绘屏幕上的回复和 `/btw` 回答，并像 `/mermaid-tty theme` 一样保存该选项；保存被拒绝时，设置在本次会话内有效，回复会说明。`/mermaid-tty crossings` 报告当前设置。未设置或无法识别的值视为 `on`。
 
 ## size 选项
 

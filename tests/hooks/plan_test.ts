@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { safePlan } from '../../hooks/plan.ts'
+import { DRAWN_CHARS, DRAWN_NODES, fitsDrawing, safePlan } from '../../hooks/plan.ts'
 
 // Fail closed at the hook: an error in the plugin's own work gives null, and the hook then sends the reply through
 // next(e) unchanged. The debug log is best-effort: a failing log never stops a drawing.
@@ -246,4 +246,58 @@ test('A5.errors: a throwing picture lookup still draws the text', async () => {
     'rows',
     'prose',
   ])
+})
+
+// Claude Code draws at most 100,000 characters of a drawing and drops the rest, so a reply drawn past that would show
+// only in part. Such a reply goes through as its source, whole, and one under it draws as before.
+test('A5.errors: a reply whose drawing would pass the characters Claude Code draws goes through as its source', async () => {
+  const seq = (n: number) =>
+    [
+      '```mermaid',
+      'sequenceDiagram',
+      'participant A as First',
+      `participant B as ${'B'.repeat(45)}`,
+      `participant C as ${'C'.repeat(45)}`,
+      'participant D as Last',
+      ...Array(n).fill('A->>D: OK'),
+      'D-->>A: FINAL STEP',
+      '```',
+      '',
+    ].join('\n')
+  const wide = (text: string) => ({ ...ev(text), viewport: { columns: 126, rows: 40 } })
+
+  const big = await safePlan({ ui }, wide(`a\n${seq(460)}b`), 'nord', diagram)
+  const small = await safePlan({ ui }, wide(`a\n${seq(20)}b`), 'nord', diagram)
+
+  assert.equal(big, null)
+  assert.ok(small)
+  assert.ok(DRAWN_CHARS <= 100_000)
+})
+
+// Claude Code also drops a drawing of more than 20,000 elements. A diagram of many short rows, each a Text of a few
+// colored runs, passes that well before it passes the characters, and the whole row would then not draw.
+test('A5.errors: a reply whose drawing would pass the elements Claude Code draws goes through as its source', async () => {
+  const seq = [
+    '```mermaid',
+    'sequenceDiagram',
+    ...'ABCDEFGHIJ'.split('').map((p) => `participant ${p}`),
+    ...Array(650).fill('A->>J: X'),
+    'J-->>A: FINAL STEP',
+    '```',
+    '',
+  ].join('\n')
+  const wide = { ...ev(`a\n${seq}b`), viewport: { columns: 126, rows: 40 } }
+
+  assert.equal(await safePlan({ ui }, wide, 'nord', diagram), null)
+  assert.ok(DRAWN_NODES <= 20_000)
+})
+
+test('A5.errors: what is drawn around a reply counts too, so a long /btw question can tip it into its source', () => {
+  const rows = [[{ text: 'x'.repeat(10), role: 'node' }]]
+  const parts = [{ prose: 'p'.repeat(DRAWN_CHARS - 20) }, { rows }]
+
+  assert.equal(fitsDrawing(parts as any), true)
+  assert.equal(fitsDrawing(parts as any, 5), true)
+  assert.equal(fitsDrawing(parts as any, 50), false)
+  assert.equal(fitsDrawing([{ prose: 'p' }] as any, DRAWN_CHARS), false)
 })

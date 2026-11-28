@@ -28,6 +28,20 @@ export type Btw = { question: string; text: string }
 export const isBtw = (v: unknown): v is Btw =>
   typeof v === 'object' && v !== null && typeof (v as Btw).question === 'string' && typeof (v as Btw).text === 'string'
 
+// A /btw answered in a transcript row of its own is kept under the row's id, one value per row, so a /btw never reads
+// or writes another's: a hook's $.state reads are as of its dispatch, so a /btw queued behind another could not see
+// that one's write. A row is drawn at the transcript's full width, where a pane docked beside a fullscreen transcript
+// gets at most 45% of the terminal, too narrow for many diagrams. Claude Code 2.1.314 and later place rows; an earlier
+// one has no $.ui.place, and the answer goes to the btw pane instead.
+//
+// A row's id: 1 to 64 letters, digits, _ and -, as the engine takes it, from the time, the /btw's number in this load
+// and, when that id is already kept, the attempt that passed it over. A reload numbers its /btw from 1 again, and
+// placing an id that stands redraws that row instead of placing one, so an id is written only while it was never
+// written (ifVersion 0). Each answer is kept as long as the conversation, as its row is, and a /clear lets it go: no
+// value holds more than one answer, so none nears the engine's limit for a value, and a session holds what it asked, as
+// its transcript holds every reply.
+export const rowId = (now: number, n: number, attempt = 0) => `btw-${now}-${n}${attempt ? `-${attempt}` : ''}`
+
 // The row mermaid-tty pins under the prompt while it answers a /btw, which Claude Code shows after the plugin's name
 // (mermaid-tty: answering /btw…), so the person sees the side question is being worked on: the fork can take a minute,
 // and the pane only opens once it is done.
