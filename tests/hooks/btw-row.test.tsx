@@ -547,3 +547,35 @@ test('A6.row: an answer too large to draw but small enough to show is shown as i
   expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
   expect(await ui.find({ type: 'Markdown', text: answer })).toBeDefined()
 })
+
+// A left-to-right flowchart too wide to draw that way at a row's width draws top to bottom there, as in a reply.
+test('A6.row: a flowchart too wide left to right draws top to bottom in its row', async ($, on) => {
+  const flow = [
+    '```mermaid',
+    'flowchart LR',
+    '  A[User types /btw question] --> B{takesBtw: terminal and not source mode?}',
+    '  B -->|no| C[Claude Code built-in /btw panel]',
+    '  B -->|yes| D[model.fork with SIDE_QUESTION prompt]',
+    '  D --> E{Answered?}',
+    '  E -->|nothing-to-fork| F[fromConversation over session messages]',
+    '  E -->|yes| G[showBtw stores answer and opens pane]',
+    '  F --> G',
+    '  G --> H[ui.render Pane draws fences via safePlan]',
+    '```',
+    '',
+  ].join('\n')
+  const e = engine(on, answered(flow))
+  placesRows(e)
+  on('ui.log', async () => ({ value: undefined }))
+  await start($)
+  await BTW($, 'how does it flow?')
+
+  const ui = await row($, e.places[0]!, 61)
+  const drawn = await ui.find({ key: 'mermaid-0' })
+
+  expect(drawn).toBeDefined()
+  expect(drawn?.text).toContain('▼')
+  expect(drawn?.text).toContain('User types /btw question')
+  expect(drawn?.text).toContain('ui.render Pane draws')
+  expect(drawn?.text).toContain('fences via safePlan')
+})
