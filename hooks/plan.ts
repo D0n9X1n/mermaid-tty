@@ -25,6 +25,9 @@ const renderer = createRenderer(64)
 // around the reply's own parts, as a /btw row's frame and question line, which the caller counts in as around.
 export const DRAWN_CHARS = 90_000
 export const DRAWN_NODES = 15_000
+// The most characters of question and answer a /btw shows as its source, one Markdown element under its question:
+// what Claude Code draws, less what the row draws of its own. An answer past it fits in no drawing of a plugin's.
+export const SOURCE_CHARS = 99_000
 
 // Whether parts, with around characters drawn beside them, fit what Claude Code draws. A drawn row is a Text of one
 // Text per run of a color, each holding its string; a picture is an image, not text, and one element.

@@ -528,3 +528,22 @@ test('A6.row: an answer too long for any drawing goes to Claude Code, whole', as
   expect(e.places).toEqual([])
   expect(e.opens).toEqual([])
 })
+
+// What does not fit as a drawing may still fit as its source: Claude Code draws up to 100,000 characters, and the row
+// shows the answer it was given, asked once, rather than asking again.
+test('A6.row: an answer too large to draw but small enough to show is shown as its source, asked once', async ($, on) => {
+  const answer = `${'p'.repeat(91_000)}\n${WIDE}\nSide done.`
+  const e = engine(on, answered(answer))
+  placesRows(e)
+  on('ui.log', async () => ({ value: undefined }))
+  await start($)
+
+  const r = await BTW($, 'q')
+  const ui = await row($, e.places[0]!, 130)
+
+  expect(r).toEqual({})
+  expect(e.prompts).toHaveLength(1)
+  expect(e.builtin).toEqual([])
+  expect(await ui.find({ key: 'mermaid-0' })).toBeUndefined()
+  expect(await ui.find({ type: 'Markdown', text: answer })).toBeDefined()
+})

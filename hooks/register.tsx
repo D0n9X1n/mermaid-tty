@@ -32,7 +32,7 @@ import {
   type Images,
   type Mode,
 } from './mode.ts'
-import { DRAWN_CHARS, safePlan, sweepPictures } from './plan.ts'
+import { safePlan, SOURCE_CHARS, sweepPictures } from './plan.ts'
 
 // Draws a terminal reply's closed mermaid fences as colored rows. Prose, and a fence that fails to draw (joined to the
 // prose around it), goes through next() unchanged, as does a reply with nothing drawn. A reply that opens on a diagram
@@ -819,10 +819,11 @@ export const register: Register = (on, options) => {
       answer = undefined
     }
 
-    // An answer that, with its question, passes what one drawing holds would show in a row or the pane only in part:
-    // Claude Code draws at most 100,000 characters of a plugin's drawing. Claude Code's own /btw shows it whole.
+    // An answer that, with its question, passes what one drawing holds even as its source would show in a row or the
+    // pane only in part: Claude Code draws at most 100,000 characters of a plugin's drawing. Claude Code's own /btw
+    // shows it whole, though it asks again; an answer that fits as source, if not as a drawing, is shown as it came.
     const question = e.args.trim()
-    if (answer !== undefined && question.length + answer.length > DRAWN_CHARS) {
+    if (answer !== undefined && question.length + answer.length > SOURCE_CHARS) {
       answer = undefined
     }
 
