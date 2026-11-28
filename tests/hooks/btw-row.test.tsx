@@ -494,21 +494,37 @@ test('A6.row: a row whose every id is already kept goes to the pane after a few 
   expect(e.opens).toHaveLength(1)
 })
 
-// The question is drawn above the answer in the same row, so its length counts against what Claude Code draws.
+// The question is drawn above the answer in the same row, so its length counts against what Claude Code draws. The
+// flowchart draws in more characters than its source, so a question can leave room for the answer as source, which the
+// row then shows, but not for its drawing.
 test('A6.row: a question long enough to tip the drawing past what Claude Code draws shows the answer as source', async ($, on) => {
-  const answer = `${'prose '.repeat(14_000)}\n${ANSWER}`
+  const answer = `${'p'.repeat(70_000)}\n${WIDE}`
   const e = engine(on, answered(answer), answered(answer))
   placesRows(e)
+  on('ui.log', async () => ({ value: undefined }))
   await start($)
 
   await BTW($, 'q')
-  await BTW($, 'q'.repeat(15_000))
+  await BTW($, 'q'.repeat(19_000))
   const short = await row($, e.places[0]!, 130)
   const drawn = await short.find({ key: 'mermaid-0' })
   await short.unmount()
   const long = await row($, e.places[1]!, 130)
 
+  expect(e.places).toHaveLength(2)
   expect(drawn).toBeDefined()
   expect(await long.find({ key: 'mermaid-0' })).toBeUndefined()
   expect(await long.find({ type: 'Markdown', text: answer })).toBeDefined()
+})
+
+test('A6.row: an answer too long for any drawing goes to Claude Code, whole', async ($, on) => {
+  const e = engine(on, answered(`${'prose '.repeat(16_500)}\nSide done.`))
+  placesRows(e)
+  await start($)
+
+  const r = await BTW($, 'q'.repeat(2_000))
+
+  expect(r).toEqual({ text: 'the built-in /btw' })
+  expect(e.places).toEqual([])
+  expect(e.opens).toEqual([])
 })

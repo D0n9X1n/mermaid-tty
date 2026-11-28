@@ -470,12 +470,14 @@ async function btw(c: Ctx, resumed = false, fresh = false): Promise<string[]> {
     }
   }
 
-  // Nor the transcript file, read once that turn's reply is written, so a session that had none before the /btw (the
-  // fresh one) has one to read.
+  // Nor the transcript file, read once that turn's reply is written after its prompt, so a session that had none before
+  // the /btw (the fresh one) has one to read, and an earlier reply is not taken for this one.
   const files = () => jsonlFiles(join(config, 'projects')).filter((f) => statSync(f).mtimeMs >= since)
   const written = await poll(() => {
     const all = files().map((f) => readFileSync(f, 'utf8'))
-    return all.some((t) => t.includes('lead again') && t.includes('After the diagram.')) ? all : undefined
+    const replied = (t: string) =>
+      t.includes('lead again') && t.indexOf('After the diagram.', t.indexOf('lead again')) >= 0
+    return all.some(replied) ? all : undefined
   }, 10000)
   if (!written) {
     problems.push(`btw: no transcript holds the turn after the answer (${files().length} .jsonl files)`)
